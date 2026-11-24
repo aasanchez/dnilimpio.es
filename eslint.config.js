@@ -24,5 +24,11 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Numeric kernels index fixed-size arrays inside bounds-checked loops; with noUncheckedIndexedAccess
+    // the alternative to `!` is a runtime check per pixel. Allowed only here and in tests.
+    files: ['src/geometry/**/*.ts', 'tests/**/*.ts'],
+    rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
+  },
   { files: ['eslint.config.js'], ...tseslint.configs.disableTypeChecked },
 );
