@@ -17,12 +17,26 @@ export function configureFileInput (input: HTMLInputElement): void {
   input.setAttribute('capture', 'environment')
 }
 
+/**
+ * Decodes and delivers the result unless the screen that asked for it was torn down meanwhile
+ * (e.g. a language change re-renders the UI). A discarded bitmap is closed to free its memory.
+ */
+function decodeFor (file: File, signal: AbortSignal, onResult: (r: DecodeResult) => void): void {
+  void decodeImage(file, file.name).then((r) => {
+    if (signal.aborted) {
+      if (r.ok) r.bitmap.close()
+      return
+    }
+    onResult(r)
+  })
+}
+
 export function wireCapture (target: CaptureTarget, signal: AbortSignal): void {
   const { input, dropZone, onResult } = target
   configureFileInput(input)
   const handle = (file: File | null): void => {
     if (!file) return
-    void decodeImage(file, file.name).then(onResult)
+    decodeFor(file, signal, onResult)
   }
   input.addEventListener('change', () => {
     // Take the file as chosen (not filtered) so a wrong type gets a clear error instead of silence.
@@ -48,6 +62,6 @@ export function wirePaste (pickTarget: () => CaptureTarget | null, signal: Abort
     const file = e.clipboardData ? firstImageFile(e.clipboardData.files) : null
     if (!target || !file) return
     e.preventDefault()
-    void decodeImage(file, file.name).then(target.onResult)
+    decodeFor(file, signal, target.onResult)
   }, { signal })
 }
