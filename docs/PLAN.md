@@ -29,13 +29,14 @@ Status: scaffold done. Redaction work blocked on zone-coordinate source (step 3)
 - Playwright runs against `vite preview` (production build) and checks: exact CSP, referrer, SRI on all assets, no inline script/style, no CSP/TT violations, no non-self requests.
 - `.npmrc`: `ignore-scripts=true`, `save-exact=true`.
 
-## Open decisions
+## Decisions
 
-1. **Zone-coordinate source** (blocks step 3). See thread.
-2. **SRI vs "dist zip works from disk"** (§5.2 vs §7). Verified in Chromium 1.63: from `file://`, module scripts and `crossorigin` assets are blocked by CORS (origin `null`), and any `integrity` attribute blocks the asset ("requires the request to be CORS enabled"). A classic `<script defer>` with no `crossorigin` and no `integrity` works, and the CSP still applies. Proposal: two outputs from one commit. `dist/` (Pages, module + SRI) and `dist-local/` (classic script, single bundle, no SRI; integrity comes from the release checksums and provenance attestation). Both reproducible and both covered by the e2e suite.
-3. **PDF library**: proposal is no library. A ~150-line PDF writer that embeds one raw RGB image per side with `FlateDecode` (via the browser's `CompressionStream('deflate')`) at exact mm size on A4. Lossless, so the redaction pixel test needs no JPEG tolerance, and "exactly one image per side" is obvious from the code. Fallback if rejected: `pdf-lib` vs `jsPDF` size comparison.
+1. **Zone-coordinate source** (blocks step 3): official DNI 4.0 specimen on dnielectronico.es, read in Alexis's browser.
+2. **Run-from-disk zip**: dropped (2026-11-24, Alexis). One build, with SRI. Offline use = load once, then disable the network.
+3. **PDF library**: third-party library allowed. Measured (minified, tree-shaken, PNG embed only): pdf-lib 1.17.1 = 629 kB (last release 2021); jsPDF 4.2.1 = 551 kB plus lazy html2canvas / DOMPurify chunks that would have to be aliased out. Choice made at step 6.
 4. **Service worker vs `connect-src 'none'`**: to be tested at step 9. Will report before changing the CSP.
-5. **Repository**: none linked yet. `REPO_URL` env var feeds the "Código fuente" link; placeholder until chosen.
+5. **Repository**: github.com/aasanchez/dnilimpio.es (from the local git origin).
+6. **Languages**: es (source), ca, ca-ES-valencia, gl, eu, en. JSON per language in `src/i18n/locales/`, managed with Crowdin through its GitHub integration (`crowdin.yml`). All languages are bundled; the app makes no request to Crowdin and the CSP is unchanged. Initial ca / valencià / gl / eu strings are drafts for native review in Crowdin.
 
 ## Dev dependencies (all named in the spec, versions pinned exactly)
 

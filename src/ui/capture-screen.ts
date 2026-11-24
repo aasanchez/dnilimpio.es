@@ -32,6 +32,19 @@ export function renderCapture(lang: Lang, state: CaptureState, onChange: () => v
       el('h3', { text: t(lang, side) }), button, el('p', { className: 'hint', text: t(lang, 'dropHint') }), preview, status);
     input.setAttribute('aria-describedby', status.id);
 
+    const show = (bitmap: ImageBitmap): void => {
+      const scale = Math.min(1, 480 / bitmap.width);
+      preview.width = Math.round(bitmap.width * scale);
+      preview.height = Math.round(bitmap.height * scale);
+      preview.getContext('2d')?.drawImage(bitmap, 0, 0, preview.width, preview.height);
+    };
+    // Re-rendering (e.g. after a language change) keeps already loaded images.
+    const existing = state[side];
+    if (existing) {
+      show(existing);
+      status.textContent = t(lang, 'loaded');
+    }
+
     const onResult = (r: DecodeResult): void => {
       if (!r.ok) {
         status.textContent = t(lang, ERROR_KEY[r.error.kind]);
@@ -40,10 +53,7 @@ export function renderCapture(lang: Lang, state: CaptureState, onChange: () => v
       }
       state[side]?.close();
       state[side] = r.bitmap;
-      const scale = Math.min(1, 480 / r.bitmap.width);
-      preview.width = Math.round(r.bitmap.width * scale);
-      preview.height = Math.round(r.bitmap.height * scale);
-      preview.getContext('2d')?.drawImage(r.bitmap, 0, 0, preview.width, preview.height);
+      show(r.bitmap);
       status.setAttribute('role', 'status');
       status.textContent = t(lang, 'loaded');
       onChange();

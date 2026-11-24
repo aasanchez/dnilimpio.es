@@ -2,8 +2,8 @@
 import { defineConfig } from 'vite';
 import { securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts';
 
-// TODO: set once the GitHub repository is chosen.
-const REPO_URL = process.env['REPO_URL'] ?? 'https://github.com/REPLACE-ME/dni-redactor';
+// Override with REPO_URL for forks.
+const REPO_URL = process.env['REPO_URL'] ?? 'https://github.com/aasanchez/dnilimpio.es';
 
 export default defineConfig({
   define: { __REPO_URL__: JSON.stringify(REPO_URL) },

@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Crowdin works only on this repository: it reads the Spanish source file and opens PRs with
+# translations. The app itself never contacts Crowdin; every language is bundled at build time.
+# Credentials come from the Crowdin GitHub integration, never from this file.
+project_id_env: CROWDIN_PROJECT_ID
+api_token_env: CROWDIN_PERSONAL_TOKEN
+preserve_hierarchy: true
+files:
+  - source: /src/i18n/locales/es.json
+    translation: /src/i18n/locales/%locale%.json
+    languages_mapping:
+      locale:
+        ca: ca
+        gl: gl
+        eu: eu
+        en: en
+        val-ES: ca-ES-valencia

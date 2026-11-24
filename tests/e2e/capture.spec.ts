@@ -44,3 +44,13 @@ test('accepts a dropped image', async ({ page }) => {
   await zone.dispatchEvent('drop', { dataTransfer: dt });
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.');
 });
+
+test('switching language keeps loaded images and updates text', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'));
+  await expect(page.locator('#status-front')).toHaveText('Imagen cargada.');
+  await page.locator('#lang').selectOption('eu');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'eu');
+  await expect(page.locator('#status-front')).toHaveText('Irudia kargatu da.');
+  await expect(page.locator('#lang')).toBeFocused();
+});

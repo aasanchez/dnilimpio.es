@@ -1,0 +1,16 @@
+{
+  "appTitle": "DNI limpio",
+  "tagline": "Oculta los datos sensibles de tu DNI antes de compartir una copia. Todo ocurre en tu dispositivo: nada se envía.",
+  "sourceCode": "Código fuente",
+  "language": "Idioma",
+  "stepCapture": "Paso 1 de 6: añade las fotos del DNI",
+  "front": "Anverso (cara con la foto)",
+  "back": "Reverso (cara con las líneas de texto de la parte inferior)",
+  "chooseOrTake": "Hacer foto o elegir imagen",
+  "dropHint": "También puedes arrastrar la imagen aquí o pegarla con Ctrl+V.",
+  "loaded": "Imagen cargada.",
+  "errNotImage": "El archivo no es una imagen. Usa una foto JPEG, PNG o HEIC.",
+  "errHeic": "Este navegador no puede abrir fotos HEIC. Haz una captura de pantalla de la foto o cámbiala a JPEG en tu dispositivo.",
+  "errTooLarge": "La imagen es demasiado grande (máximo 40 MB).",
+  "errDecode": "No se ha podido abrir la imagen. Prueba con otra foto."
+}
