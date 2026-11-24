@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
+// Code style: neostandard (maintained successor of standard / ts-standard), with TypeScript support.
+// On top: typescript-eslint strict type-checked rules and project-specific security bans (§2, §5.1).
+import neostandard from 'neostandard'
+import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist/', 'node_modules/', 'test-results/', 'playwright-report/'] },
-  js.configs.recommended,
+  { ignores: ['dist/', 'test-results/', 'playwright-report/'] },
+  ...neostandard({ ts: true, noJsx: true }),
   ...tseslint.configs.strictTypeChecked,
   {
     languageOptions: { parserOptions: { projectService: { allowDefaultProject: ['eslint.config.js'] }, tsconfigRootDir: import.meta.dirname } },
@@ -13,6 +15,8 @@ export default tseslint.config(
       'no-eval': 'error',
       'no-implied-eval': 'error',
       'no-new-func': 'error',
+      // `void promise` marks intentionally unawaited promises (typescript-eslint no-floating-promises).
+      'no-void': ['error', { allowAsStatement: true }],
       'no-restricted-properties': ['error',
         { property: 'innerHTML', message: 'Use textContent / createElement (Trusted Types).' },
         { property: 'outerHTML', message: 'Use textContent / createElement (Trusted Types).' },
@@ -30,5 +34,5 @@ export default tseslint.config(
     files: ['src/geometry/**/*.ts', 'tests/**/*.ts'],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
-  { files: ['eslint.config.js'], ...tseslint.configs.disableTypeChecked },
-);
+  { files: ['eslint.config.js'], ...tseslint.configs.disableTypeChecked }
+)

@@ -38,6 +38,8 @@ Status: scaffold done. Redaction work blocked on zone-coordinate source (step 3)
 5. **Repository**: github.com/aasanchez/dnilimpio.es (from the local git origin).
 6. **Languages**: es (source), ca, ca-ES-valencia, gl, eu, en. JSON per language in `src/i18n/locales/`, managed with Crowdin through its GitHub integration (`crowdin.yml`). All languages are bundled; the app makes no request to Crowdin and the CSP is unchanged. Initial ca / valencià / gl / eu strings are drafts for native review in Crowdin.
 
+7. **Code style**: neostandard 0.14.1 (the maintained successor of standard / ts-standard: ESLint flat config, typescript-eslint, @stylistic). Layered with typescript-eslint `strictTypeChecked` and the project bans. `npm run lint:fix` formats.
+
 ## Dev dependencies (all named in the spec, versions pinned exactly)
 
-vite 8.3.8, typescript 6.0.3 (typescript-eslint does not support TS 7 yet), vitest 5.1.1, @playwright/test 1.63.0 (matches the installed browser), eslint 10.15.0, @eslint/js 10.0.1, typescript-eslint 8.74.0, @types/node 22. No runtime dependencies.
+vite 8.3.8, typescript 6.0.3 (typescript-eslint does not support TS 7 yet), vitest 5.1.1, @playwright/test 1.63.0 (matches the installed browser), eslint 10.15.0, neostandard 0.14.1, typescript-eslint 8.74.0, @types/node 22. No runtime dependencies.
