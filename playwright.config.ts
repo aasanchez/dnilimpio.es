@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
 // e2e tests run against the production build (`vite preview`), never the dev server,
 // so they see the real CSP, SRI and bundle.
@@ -13,4 +13,4 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: { command: 'npm run preview', url: 'http://localhost:4173/', reuseExistingServer: !process.env['CI'] },
-});
+})

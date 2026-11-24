@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { defineConfig } from 'vite';
-import { securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts';
+import { defineConfig } from 'vite'
+import { securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
 
 // Override with REPO_URL for forks.
-const REPO_URL = process.env['REPO_URL'] ?? 'https://github.com/aasanchez/dnilimpio.es';
+const REPO_URL = process.env['REPO_URL'] ?? 'https://github.com/aasanchez/dnilimpio.es'
 
 export default defineConfig({
   define: { __REPO_URL__: JSON.stringify(REPO_URL) },
@@ -18,4 +18,4 @@ export default defineConfig({
     assetsInlineLimit: 0,
   },
   plugins: [securityHeaders(), subresourceIntegrity()],
-});
+})

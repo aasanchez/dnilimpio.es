@@ -3,20 +3,20 @@
 // Spanish (es.json) is the source: it defines the keys. Other files are managed through Crowdin
 // at repository level; every language is bundled at build time, so the app never fetches anything.
 // A key missing from a translation falls back to Spanish.
-import es from './locales/es.json';
-import en from './locales/en.json';
-import ca from './locales/ca.json';
-import caValencia from './locales/ca-ES-valencia.json';
-import gl from './locales/gl.json';
-import eu from './locales/eu.json';
+import es from './locales/es.json'
+import en from './locales/en.json'
+import ca from './locales/ca.json'
+import caValencia from './locales/ca-ES-valencia.json'
+import gl from './locales/gl.json'
+import eu from './locales/eu.json'
 
-export type Key = keyof typeof es;
-export type Dictionary = Readonly<Record<Key, string>>;
-type Translation = Readonly<Record<string, string>>;
+export type Key = keyof typeof es
+export type Dictionary = Readonly<Record<Key, string>>
+type Translation = Readonly<Record<string, string>>
 
 /** BCP 47 tags. `ca-ES-valencia` is the registered tag for Valencian. */
-export const LANGS = ['es', 'ca', 'ca-ES-valencia', 'gl', 'eu', 'en'] as const;
-export type Lang = (typeof LANGS)[number];
+export const LANGS = ['es', 'ca', 'ca-ES-valencia', 'gl', 'eu', 'en'] as const
+export type Lang = (typeof LANGS)[number]
 
 /** Each language's own name, shown in the selector. */
 export const AUTONYMS: Readonly<Record<Lang, string>> = {
@@ -26,34 +26,34 @@ export const AUTONYMS: Readonly<Record<Lang, string>> = {
   gl: 'Galego',
   eu: 'Euskara',
   en: 'English',
-};
+}
 
-const translations: Readonly<Record<Lang, Translation>> = { es, en, ca, 'ca-ES-valencia': caValencia, gl, eu };
+const translations: Readonly<Record<Lang, Translation>> = { es, en, ca, 'ca-ES-valencia': caValencia, gl, eu }
 
-export function isLang(tag: string): tag is Lang {
-  return (LANGS as readonly string[]).includes(tag);
+export function isLang (tag: string): tag is Lang {
+  return (LANGS as readonly string[]).includes(tag)
 }
 
 /** Matches browser language tags (navigator.languages) against the supported list. */
-export function pickLang(preferred: readonly string[]): Lang {
+export function pickLang (preferred: readonly string[]): Lang {
   for (const raw of preferred) {
-    const tag = raw.toLowerCase();
+    const tag = raw.toLowerCase()
     // Valencian: ca-ES-valencia (BCP 47) or the legacy ca-valencia / val tags.
-    if (tag.startsWith('ca') && tag.includes('valencia')) return 'ca-ES-valencia';
-    if (tag === 'val' || tag.startsWith('val-')) return 'ca-ES-valencia';
-    const base = tag.split('-')[0];
-    if (base !== undefined && isLang(base)) return base;
+    if (tag.startsWith('ca') && tag.includes('valencia')) return 'ca-ES-valencia'
+    if (tag === 'val' || tag.startsWith('val-')) return 'ca-ES-valencia'
+    const base = tag.split('-')[0]
+    if (base !== undefined && isLang(base)) return base
   }
-  return 'es';
+  return 'es'
 }
 
-export function t(lang: Lang, key: Key): string {
-  return translations[lang][key] ?? es[key];
+export function t (lang: Lang, key: Key): string {
+  return translations[lang][key] ?? es[key]
 }
 
 /** Keys of `es` that a translation lacks, and keys it has that `es` does not. For tests and CI. */
-export function diffKeys(lang: Lang): { missing: Key[]; extra: string[] } {
-  const own = Object.keys(translations[lang]);
-  const src = Object.keys(es) as Key[];
-  return { missing: src.filter((k) => !own.includes(k)), extra: own.filter((k) => !(k in es)) };
+export function diffKeys (lang: Lang): { missing: Key[]; extra: string[] } {
+  const own = Object.keys(translations[lang])
+  const src = Object.keys(es) as Key[]
+  return { missing: src.filter((k) => !own.includes(k)), extra: own.filter((k) => !(k in es)) }
 }

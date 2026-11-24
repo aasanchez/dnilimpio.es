@@ -4,13 +4,13 @@
 // PENDING: coordinates are intentionally empty until the specimen source is confirmed.
 // Each zone will cite the specimen it was measured on (URL, publication date, retrieval date).
 
-export type Side = 'front' | 'back';
-export type DniModel = 'dni-4.0';
+export type Side = 'front' | 'back'
+export type DniModel = 'dni-4.0'
 
 export type ZoneId =
   | 'signature' | 'issueDate' | 'expiryDate' | 'supportNumber' | 'can' // front, hidden by default
   | 'mrz' // back, hidden by default
-  | 'address' | 'placeOfBirth' | 'parents' | 'dateOfBirth'; // optional
+  | 'address' | 'placeOfBirth' | 'parents' | 'dateOfBirth' // optional
 
 export interface Zone {
   readonly id: ZoneId;
@@ -31,4 +31,4 @@ export interface ModelZones {
 
 export const DNI_ZONES: Readonly<Record<DniModel, ModelZones | null>> = {
   'dni-4.0': null,
-};
+}

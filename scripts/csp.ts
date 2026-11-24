@@ -15,6 +15,6 @@ export const CSP_DIRECTIVES: readonly string[] = [
   "base-uri 'none'",
   "object-src 'none'",
   "require-trusted-types-for 'script'",
-];
+]
 
-export const CSP = CSP_DIRECTIVES.join('; ');
+export const CSP = CSP_DIRECTIVES.join('; ')
