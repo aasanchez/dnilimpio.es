@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { AUTONYMS, LANGS, isLang, pickLang, t, type Lang } from './i18n/index.ts'
+import { AUTONYMS, LANGS, dir, isLang, pickLang, t, type Lang } from './i18n/index.ts'
 import { el } from './ui/dom.ts'
 import { renderCapture, type CaptureState } from './ui/capture-screen.ts'
 
@@ -14,6 +14,7 @@ function languageSelector (onChange: (l: Lang) => void): HTMLElement {
     const option = el('option', { text: AUTONYMS[l] })
     option.value = l
     option.lang = l
+    option.dir = dir(l)
     option.selected = l === lang
     select.append(option)
   }
@@ -27,6 +28,7 @@ function render (root: HTMLElement): void {
   controller.abort() // drop listeners from the previous render
   controller = new AbortController()
   document.documentElement.lang = lang
+  document.documentElement.dir = dir(lang)
   document.title = t(lang, 'appTitle')
   const link = el('a', { text: t(lang, 'sourceCode') })
   link.href = __REPO_URL__

@@ -1,6 +1,6 @@
 # dni-redactor v1: implementation plan
 
-Status: scaffold done. Redaction work blocked on zone-coordinate source (step 3).
+Status: scaffold, capture, homography, i18n and DNI 4.0 zone data done. Next: corner editor (step 2 UI), then redaction.
 
 ## Order (spec §12)
 
@@ -35,11 +35,23 @@ Status: scaffold done. Redaction work blocked on zone-coordinate source (step 3)
 2. **Run-from-disk zip**: dropped (2026-11-24, Alexis). One build, with SRI. Offline use = load once, then disable the network.
 3. **PDF library**: third-party library allowed. Measured (minified, tree-shaken, PNG embed only): pdf-lib 1.17.1 = 629 kB (last release 2021); jsPDF 4.2.1 = 551 kB plus lazy html2canvas / DOMPurify chunks that would have to be aliased out. Choice made at step 6.
 4. **Service worker vs `connect-src 'none'`**: to be tested at step 9. Will report before changing the CSP.
-5. **Repository**: github.com/aasanchez/dnilimpio.es (from the local git origin).
-6. **Languages**: es (source), ca, ca-ES-valencia, gl, eu, en. JSON per language in `src/i18n/locales/`, managed with Crowdin through its GitHub integration (`crowdin.yml`). All languages are bundled; the app makes no request to Crowdin and the CSP is unchanged. Initial ca / valencià / gl / eu strings are drafts for native review in Crowdin.
+5. **Repository**: github.com/aasanchez/dnilimpio.es (from the local git origin). Default branch stays `master`; branch protection goes on `master`.
+6. **Languages**: es (source), ca, ca-ES-valencia, gl, eu, en, fr, nl, sv, fi, uk, ro, ar. Arabic is Modern Standard Arabic (Darija has no standard written form); `dir="rtl"` is set from the language. JSON per language in `src/i18n/locales/`, managed with Crowdin through its GitHub integration (`crowdin.yml`). All languages are bundled; the app makes no request to Crowdin and the CSP is unchanged. All non-Spanish strings except English are drafts for native review in Crowdin.
 
 7. **Code style**: neostandard 0.14.1 (the maintained successor of standard / ts-standard: ESLint flat config, typescript-eslint, @stylistic). Layered with typescript-eslint `strictTypeChecked` and the project bans. `npm run lint:fix` formats.
 
 ## Dev dependencies (all named in the spec, versions pinned exactly)
 
 vite 8.3.8, typescript 6.0.3 (typescript-eslint does not support TS 7 yet), vitest 5.1.1, @playwright/test 1.63.0 (matches the installed browser), eslint 10.15.0, neostandard 0.14.1, typescript-eslint 8.74.0, @types/node 22. No runtime dependencies.
+
+## NIE / TIE (added to scope 2026-11-24, overrides spec §10)
+
+- **TIE** (Tarjeta de Identidad de Extranjero) is an ID-1 card: same capture, alignment and redaction pipeline as the DNI. Needs its own zone file measured on an official specimen (Policía Nacional / PRADO), with CAN and MRZ like the DNI.
+- **NIE for EU citizens** is usually the *Certificado de Registro de Ciudadano de la Unión* (green paper, A4 or folded card size), not an ID-1 card. Needs a document-type step and a second working size/aspect ratio for alignment.
+- The NIE number itself appears on both; it stays visible (like the DNI number).
+
+Order of work, changed:
+1. Finish the DNI flow end to end (corner editor, redaction, manual editor, watermark, export) so the pipeline is proven once.
+2. Generalise: document-type selector (DNI 4.0, TIE, EU registration certificate), per-document size, zone files under `src/zones/` (one per document), and document-neutral UI strings.
+3. Measure TIE zones, then EU certificate zones, each from an official specimen, with the same method as `docs/ZONES.md`.
+4. Continue with share, cleanup, PWA, hardening, CI/CD (branch protection on `master`), docs.

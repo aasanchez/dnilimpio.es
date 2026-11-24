@@ -14,4 +14,11 @@ files:
         gl: gl
         eu: eu
         en: en
+        fr: fr
+        nl: nl
+        sv: sv
+        fi: fi
+        uk: uk
+        ro: ro
+        ar: ar
         val-ES: ca-ES-valencia

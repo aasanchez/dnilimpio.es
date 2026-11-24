@@ -54,3 +54,11 @@ test('switching language keeps loaded images and updates text', async ({ page })
   await expect(page.locator('#status-front')).toHaveText('Irudia kargatu da.')
   await expect(page.locator('#lang')).toBeFocused()
 })
+
+test('Arabic switches the page to right-to-left', async ({ page }) => {
+  await page.goto('/')
+  await page.locator('#lang').selectOption('ar')
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+  await page.locator('#lang').selectOption('fr')
+  await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
+})
