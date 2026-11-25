@@ -6,6 +6,7 @@ import App from './App.svelte'
 import { blockStrayDrops } from './capture/input.ts'
 import { loadExport } from './engine/load-export.ts'
 import { registerServiceWorker } from './offline/register.ts'
+import { watchForUpdates } from './offline/update.ts'
 import { installTrustedTypesPolicy } from './security/trusted-types.ts'
 import { pickLang, t } from './i18n/index.ts'
 
@@ -40,4 +41,5 @@ else setTimeout(preload, 2000)
 
 // Offline support: production builds only (the dev server has no worker and no CSP).
 // A failure (private mode, file://, old browser) leaves the app working online.
-if (import.meta.env.PROD) void registerServiceWorker().catch(() => undefined)
+// A new build is applied as soon as the page is idle and is the app's only tab (offline/update.ts).
+if (import.meta.env.PROD) void registerServiceWorker().then(watchForUpdates).catch(() => undefined)

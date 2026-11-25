@@ -101,6 +101,9 @@ covered by tests (see [Security reviews](#security-reviews)).
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
   The corner model (about 2.6 MB) is not part of that first copy: it is stored the first time you use
   it online. Offline before that, classic edge detection places the corners, or you place them by hand.
+  A new version reaches an open tab by itself: when the tab is on the start screen with no photos, and
+  it is the only tab of the tool, it switches to the new version and reloads once. Work in progress is
+  never interrupted.
 - **Camera stays on the device.** The live camera (capture coach) is analysed frame by frame in
   memory. No frame is stored or sent, and the camera turns off when you close the view, finish both
   sides or leave the tab.

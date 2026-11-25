@@ -9,8 +9,9 @@
 //   downloaded with their integrity on first use (or when the page asks with a 'prepare' message) and
 //   then kept. Every other request from the page or its workers (OCR) is refused and never reaches the
 //   network: another origin, another path, a query string, a method other than GET (route()).
-// - Activate: deletes the caches of older builds. A new build activates only once no tab runs the
-//   old one, so no open page loses files it still needs.
+// - Activate: deletes the caches of older builds. A new build activates once no tab runs the old
+//   one, or earlier when the app's only tab is idle and asks for it ('activate' message), so no open
+//   page loses files it still needs.
 // It never stores user data: images and PDFs live in memory and blob: URLs, which never reach it.
 // The build (scripts/vite-plugins.ts) replaces the manifest placeholder below with the file list.
 
@@ -88,8 +89,9 @@ sw.addEventListener('install', (event) => {
       await caches.delete(CACHE)
       throw e
     }
-    // No skipWaiting(): an update waits until every tab of the previous build is closed, so those
+    // No skipWaiting() here: an update waits until every tab of the previous build is closed, so those
     // tabs keep their own worker and cache (including the PDF chunk they may still need to load).
+    // The one exception is the 'activate' message below, from the app's only, idle tab.
   })())
 })
 
@@ -121,6 +123,15 @@ async function ensureOnDemand (url: string): Promise<Response> {
 // { type: 'status', paths } answers whether all of them are already in this build's cache.
 sw.addEventListener('message', (event) => {
   const msg = event.data as { type?: unknown; paths?: unknown } | null
+  // { type: 'activate' }: an idle page asks this new build to take over (src/offline/update.ts).
+  // Only when that page is the app's only tab, so no other tab loses the files of its build.
+  if (msg?.type === 'activate') {
+    event.waitUntil((async () => {
+      const tabs = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      if (tabs.length <= 1) await sw.skipWaiting()
+    })())
+    return
+  }
   const port = event.ports[0]
   if (!port || (msg?.type !== 'prepare' && msg?.type !== 'status') || !Array.isArray(msg.paths)) return
   const urls = (msg.paths as unknown[]).filter((p): p is string => typeof p === 'string').map(urlOf)

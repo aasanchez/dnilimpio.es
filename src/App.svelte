@@ -18,6 +18,7 @@
   import { prefetchCornerModel } from './detect/corners.ts'
   import { stopOcrIfLoaded } from './ocr/load-ocr.ts'
   import { noticeDue, rememberNoticeClosed } from './ui/notice-memory.ts'
+  import { setAppIdle } from './offline/update.ts'
   import Editor from './components/Editor.svelte'
   import { emptyEditState, type Phase } from './ui/edit-state.ts'
 
@@ -69,6 +70,11 @@
     const leave = (): void => { reset() }
     addEventListener('pagehide', leave)
     return () => { removeEventListener('pagehide', leave) }
+  })
+
+  // Idle (start screen, no photos): a new build of the app may replace this one (offline/update.ts).
+  $effect(() => {
+    setAppIdle(step === 'home' && capture.front === null && capture.back === null)
   })
 
   $effect(() => {
