@@ -1,6 +1,9 @@
 {
   "appTitle": "Ren DNI",
   "sourceCode": "Källkod",
+  "buildVersion": "Version",
+  "buildDeployed": "publicerad {when}",
+  "buildDev": "utveckling",
   "language": "Språk",
   "continue": "Fortsätt",
   "goBack": "Tillbaka",

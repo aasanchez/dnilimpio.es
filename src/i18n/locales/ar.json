@@ -1,6 +1,9 @@
 {
   "appTitle": "DNI نظيف",
   "sourceCode": "الشيفرة المصدرية",
+  "buildVersion": "الإصدار",
+  "buildDeployed": "نُشر {when}",
+  "buildDev": "تطوير",
   "language": "اللغة",
   "continue": "متابعة",
   "goBack": "رجوع",

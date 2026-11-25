@@ -1,6 +1,9 @@
 {
   "appTitle": "Schone DNI",
   "sourceCode": "Broncode",
+  "buildVersion": "Versie",
+  "buildDeployed": "uitgerold {when}",
+  "buildDev": "ontwikkeling",
   "language": "Taal",
   "continue": "Doorgaan",
   "goBack": "Terug",

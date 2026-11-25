@@ -1,6 +1,9 @@
 {
   "appTitle": "DNI limpio",
   "sourceCode": "Código fuente",
+  "buildVersion": "Versión",
+  "buildDeployed": "desplegado {when}",
+  "buildDev": "desarrollo",
   "language": "Idioma",
   "continue": "Continuar",
   "goBack": "Atrás",

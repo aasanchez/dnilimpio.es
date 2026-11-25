@@ -1,6 +1,9 @@
 {
   "appTitle": "Puhdas DNI",
   "sourceCode": "Lähdekoodi",
+  "buildVersion": "Versio",
+  "buildDeployed": "julkaistu {when}",
+  "buildDev": "kehitys",
   "language": "Kieli",
   "continue": "Jatka",
   "goBack": "Takaisin",

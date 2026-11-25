@@ -1,6 +1,9 @@
 {
   "appTitle": "DNI propre",
   "sourceCode": "Code source",
+  "buildVersion": "Version",
+  "buildDeployed": "déployé {when}",
+  "buildDev": "développement",
   "language": "Langue",
   "continue": "Continuer",
   "goBack": "Retour",

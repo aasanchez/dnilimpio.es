@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, test } from '@playwright/test'
-import { CARD, fixture, pixel, snapCorners, toAlign } from './helpers.ts'
+import { CARD, dragCorner, fixture, pixel, snapCorners, toAlign } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
@@ -31,16 +31,9 @@ test('Adjust corners from the editor: mark them by hand, Continue straightens ag
 
 test('crossed corners disable Continue; Back returns to the editor, then the document and the photos', async ({ page }) => {
   await toAlign(page)
-  const canvas = page.locator('canvas.corner-editor')
-  const box = await canvas.boundingBox()
-  if (!box) throw new Error('no canvas box')
-  const k = box.width / 1600
   // Drag the top-left corner past the bottom-right one.
   // The corners start where the card was found.
-  await page.mouse.move(box.x + CARD[0]!.x * k, box.y + CARD[0]!.y * k)
-  await page.mouse.down()
-  await page.mouse.move(box.x + 1500 * k, box.y + 1100 * k, { steps: 5 })
-  await page.mouse.up()
+  await dragCorner(page, CARD[0]!, { x: 1500, y: 1100 })
   await expect(page.locator('#align-continue')).toBeDisabled()
   await expect(page.locator('#align-status')).toHaveAttribute('role', 'alert')
   await page.locator('#back').click()
@@ -87,15 +80,8 @@ test.describe('touch', () => {
 
 test('corners confirmed by hand survive replacing only the other photo', async ({ page }) => {
   await toAlign(page)
-  const canvas = page.locator('canvas.corner-editor')
-  const box = await canvas.boundingBox()
-  if (!box) throw new Error('no canvas box')
-  const k = box.width / 1600
   // Move the top-left corner out onto the dark table: the straightened front then starts dark there.
-  await page.mouse.move(box.x + CARD[0]!.x * k, box.y + CARD[0]!.y * k)
-  await page.mouse.down()
-  await page.mouse.move(box.x + 60 * k, box.y + 60 * k, { steps: 5 })
-  await page.mouse.up()
+  await dragCorner(page, CARD[0]!, { x: 60, y: 60 })
   await page.locator('#align-continue').click()
   await expect(page.locator('#preview')).toHaveJSProperty('width', 1712)
   const dark = async (): Promise<number> => (await pixel(page, '#preview', 8, 8))[0] ?? 255

@@ -1,6 +1,9 @@
 {
   "appTitle": "NAN garbia",
   "sourceCode": "Iturburu-kodea",
+  "buildVersion": "Bertsioa",
+  "buildDeployed": "zabaldua: {when}",
+  "buildDev": "garapena",
   "language": "Hizkuntza",
   "continue": "Jarraitu",
   "goBack": "Atzera",
