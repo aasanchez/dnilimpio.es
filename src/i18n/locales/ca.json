@@ -62,5 +62,13 @@
   "downloaded": "PDF creat. Busca'l a la carpeta de baixades.",
   "errExport": "No s'ha pogut crear el PDF. Torna-ho a provar.",
   "reset": "Torna a començar",
-  "backToEdit": "Torna a editar"
+  "backToEdit": "Torna a editar",
+  "drawBox": "Dibuixa un requadre negre",
+  "addBox": "Afegeix un requadre",
+  "deleteBox": "Elimina el requadre",
+  "undo": "Desfés",
+  "redo": "Refés",
+  "boxHint": "Fes servir requadres negres addicionals per al que la llista no cobreix. Per dibuixar, activa Dibuixa un requadre negre i arrossega sobre la imatge. Selecciona un requadre per moure'l o arrossega'n les cantonades per canviar-ne la mida. Amb teclat: Afegeix un requadre; després les fletxes el mouen, Maj+fletxes en canvien la mida, N selecciona el següent i Supr l'elimina.",
+  "summaryBoxes": "Requadres negres addicionals: {n}",
+  "boxesLabel": "Requadres negres addicionals"
 }

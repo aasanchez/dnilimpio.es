@@ -4,11 +4,13 @@
   import { untrack } from 'svelte'
   import { fieldsOf, masksFor, mrzLeaks } from '../engine/fields.ts'
   import { renderSecure } from '../engine/render.ts'
+  import { canRedo, canUndo, commit, redo, undo } from '../engine/history.ts'
+  import { HANDLES, centredBox, fromPoints, grow, handlePoint, hitTest, isUsable, move, resize, type Handle, type Point } from '../engine/masks.ts'
   import { toPixels } from '../redact/zones.ts'
   import { t, tf, type Key, type Lang } from '../i18n/index.ts'
   import type { AlignState } from '../ui/align-state.ts'
   import type { EditState } from '../ui/edit-state.ts'
-  import { DNI_4_0, type Side, type ZoneId } from '../zones/dni.ts'
+  import { DNI_4_0, type Rect, type Side, type ZoneId } from '../zones/dni.ts'
   import Review from './Review.svelte'
 
   const { lang, align, edit, onAdjust, onReset }: {
@@ -29,6 +31,114 @@
   /** Sanitised rasters, one per side: the only images the preview, the review and the PDF use. */
   const secure: Record<Side, HTMLCanvasElement> = { front: document.createElement('canvas'), back: document.createElement('canvas') }
   let version = $state(0)
+  let drawMode = $state(false)
+  /** Index of the selected manual box on the current side. */
+  let selected = $state<number | null>(null)
+  /** Box being drawn, moved or resized; shown as an outline until the pointer is released. */
+  let draft = $state<{ index: number | null; rect: Rect } | null>(null)
+  let drag: { pointerId: number; start: Point; handle: Handle | null; origin: Rect | null } | null = null
+  const boxes = $derived(edit.boxes.present[side])
+
+  function setBoxes (list: readonly Rect[]): void {
+    edit.boxes = commit(edit.boxes, { ...edit.boxes.present, [side]: list })
+  }
+
+  function history (op: 'undo' | 'redo'): void {
+    edit.boxes = op === 'undo' ? undo(edit.boxes) : redo(edit.boxes)
+    selected = null
+  }
+
+  function addBox (): void {
+    setBoxes([...boxes, centredBox()])
+    selected = boxes.length - 1
+    display?.focus()
+  }
+
+  function deleteBox (): void {
+    if (selected === null) return
+    setBoxes(boxes.filter((_, i) => i !== selected))
+    selected = null
+  }
+
+  /** Pointer position in normalised card coordinates. */
+  function toCard (e: PointerEvent): Point {
+    const r = (e.currentTarget as HTMLCanvasElement).getBoundingClientRect()
+    return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }
+  }
+
+  function onPointerDown (e: PointerEvent): void {
+    if (drag || !e.isPrimary || finalPreview) return
+    const canvas = e.currentTarget as HTMLCanvasElement
+    const p = toCard(e)
+    const r = canvas.getBoundingClientRect()
+    const tolPx = e.pointerType === 'touch' ? 24 : 12
+    const hit = hitTest(boxes, selected, p, tolPx / r.width, tolPx / r.height)
+    if (hit) {
+      selected = hit.index
+      drag = { pointerId: e.pointerId, start: p, handle: hit.handle, origin: boxes[hit.index] ?? null }
+    } else if (drawMode) {
+      selected = null
+      drag = { pointerId: e.pointerId, start: p, handle: null, origin: null }
+    } else {
+      selected = null
+      return
+    }
+    e.preventDefault()
+    // preventDefault() also stops the click from moving focus; focus the canvas so the keys work next.
+    canvas.focus()
+    try { canvas.setPointerCapture(e.pointerId) } catch { /* synthetic events cannot be captured */ }
+  }
+
+  function onPointerMove (e: PointerEvent): void {
+    if (!drag || e.pointerId !== drag.pointerId) return
+    e.preventDefault()
+    const p = toCard(e)
+    const o = drag.origin
+    if (!o) draft = { index: null, rect: fromPoints(drag.start, p) }
+    else if (drag.handle) draft = { index: selected, rect: resize(o, drag.handle, p) }
+    else draft = { index: selected, rect: move(o, p.x - drag.start.x, p.y - drag.start.y) }
+  }
+
+  function onPointerUp (e: PointerEvent): void {
+    if (!drag || e.pointerId !== drag.pointerId) return
+    const d = draft
+    drag = null
+    draft = null
+    if (!d) return
+    if (d.index === null) {
+      if (!isUsable(d.rect)) return
+      setBoxes([...boxes, d.rect])
+      selected = boxes.length - 1
+    } else {
+      setBoxes(boxes.map((b, i) => (i === d.index ? d.rect : b)))
+    }
+  }
+
+  function onKeyDown (e: KeyboardEvent): void {
+    const step = e.shiftKey ? 0.02 : 0.005
+    const dirs: Partial<Record<string, [number, number]>> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
+    const d = dirs[e.key]
+    const r = selected === null ? undefined : boxes[selected]
+    if (d && r) {
+      e.preventDefault()
+      const next = e.shiftKey ? grow(r, d[0] * step, d[1] * step) : move(r, d[0] * step, d[1] * step)
+      setBoxes(boxes.map((b, i) => (i === selected ? next : b)))
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && r) {
+      e.preventDefault()
+      deleteBox()
+    } else if ((e.key === 'n' || e.key === 'N') && boxes.length > 0) {
+      e.preventDefault()
+      selected = selected === null ? 0 : (selected + 1) % boxes.length
+    }
+  }
+
+  /** Ctrl/Cmd+Z undoes, Ctrl/Cmd+Shift+Z or Ctrl+Y redoes, anywhere in the editor except text fields. */
+  function onEditorKey (e: KeyboardEvent): void {
+    if (!(e.ctrlKey || e.metaKey) || e.target instanceof HTMLInputElement) return
+    const k = e.key.toLowerCase()
+    if (k === 'z' && !e.shiftKey && canUndo(edit.boxes)) { e.preventDefault(); history('undo') }
+    if (((k === 'z' && e.shiftKey) || k === 'y') && canRedo(edit.boxes)) { e.preventDefault(); history('redo') }
+  }
 
   const fieldKey = (id: ZoneId): Key => `field_${id}`
 
@@ -41,7 +151,7 @@
     const opts = { greyscale: edit.greyscale, watermark: edit.watermark }
     for (const s of SIDES) {
       const card = align.warped[s]
-      if (card) renderSecure(card, { ...opts, masks: masksFor(DNI_4_0, s, hidden) }, secure[s])
+      if (card) renderSecure(card, { ...opts, masks: [...masksFor(DNI_4_0, s, hidden), ...edit.boxes.present[s]] }, secure[s])
     }
     version = untrack(() => version) + 1
   })
@@ -72,6 +182,34 @@
         ctx.lineDashOffset = 0
       }
     }
+    // Selected box and the box being drawn: solid outline with corner handles.
+    const w = src.width
+    const h = src.height
+    const outline = (r: Rect, handles: boolean): void => {
+      ctx.setLineDash([])
+      for (const [lw, c] of [[7, '#ffffff'], [3, '#0b57d0']] as const) {
+        ctx.lineWidth = lw
+        ctx.strokeStyle = c
+        ctx.strokeRect(r.x * w, r.y * h, r.w * w, r.h * h)
+      }
+      if (!handles) return
+      for (const hd of HANDLES) {
+        const p = handlePoint(r, hd)
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(p.x * w - 12, p.y * h - 12, 24, 24)
+        ctx.strokeRect(p.x * w - 12, p.y * h - 12, 24, 24)
+      }
+    }
+    const sel = selected === null ? undefined : boxes[selected]
+    if (draft) {
+      if (draft.index === null) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
+        ctx.fillRect(draft.rect.x * w, draft.rect.y * h, draft.rect.w * w, draft.rect.h * h)
+      }
+      outline(draft.rect, draft.index !== null)
+    } else if (sel) {
+      outline(sel, true)
+    }
   })
 
   // Free the rasters when the editor goes away (Reset, or adjusting corners).
@@ -94,16 +232,29 @@
 <section class="step">
   <h2 tabindex="-1">{t(lang, 'stepEdit')}</h2>
   {#if !reviewing}
-    <div class="editor">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="editor" onkeydown={onEditorKey}>
       <div class="editor-preview">
         <div class="tabs">
           {#each SIDES as s (s)}
-            <button type="button" class="tab" id="tab-{s}" aria-pressed={side === s} onclick={() => { side = s }}>{t(lang, s === 'front' ? 'tabFront' : 'tabBack')}</button>
+            <button type="button" class="tab" id="tab-{s}" aria-pressed={side === s} onclick={() => { side = s; selected = null }}>{t(lang, s === 'front' ? 'tabFront' : 'tabBack')}</button>
           {/each}
         </div>
-        <div role="img" aria-label={tf(lang, 'previewLabel', { side: t(lang, side === 'front' ? 'tabFront' : 'tabBack') })}>
-          <canvas id="preview" class="card-result" bind:this={display} aria-hidden="true"></canvas>
+        <!-- role=application: the canvas is a keyboard-operable box editor (keys described in #box-hint). -->
+        <!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
+        <canvas id="preview" class="card-result box-editor" class:is-drawing={drawMode} bind:this={display} tabindex="0" role="application"
+          aria-label={tf(lang, 'previewLabel', { side: t(lang, side === 'front' ? 'tabFront' : 'tabBack') })}
+          aria-describedby="box-hint"
+          onpointerdown={onPointerDown} onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp}
+          onkeydown={onKeyDown}></canvas>
+        <div class="actions" role="group" aria-label={t(lang, 'boxesLabel')}>
+          <button type="button" class="button secondary" id="draw-box" aria-pressed={drawMode} disabled={finalPreview} onclick={() => { drawMode = !drawMode }}>{t(lang, 'drawBox')}</button>
+          <button type="button" class="button secondary" id="add-box" disabled={finalPreview} onclick={addBox}>{t(lang, 'addBox')}</button>
+          <button type="button" class="button secondary" id="delete-box" disabled={selected === null || finalPreview} onclick={deleteBox}>{t(lang, 'deleteBox')}</button>
+          <button type="button" class="button secondary" id="undo" disabled={!canUndo(edit.boxes)} onclick={() => { history('undo') }}>{t(lang, 'undo')}</button>
+          <button type="button" class="button secondary" id="redo" disabled={!canRedo(edit.boxes)} onclick={() => { history('redo') }}>{t(lang, 'redo')}</button>
         </div>
+        <p class="hint" id="box-hint">{t(lang, 'boxHint')}</p>
         <div class="actions">
           <label class="check"><input type="checkbox" id="final-preview" bind:checked={finalPreview} /> {t(lang, 'finalPreview')}</label>
           <button type="button" class="button secondary" id="adjust-{side}" onclick={() => { onAdjust(side) }}>{t(lang, 'adjust')}</button>
@@ -148,7 +299,7 @@
       </div>
     </div>
   {:else}
-    <Review {lang} {secure} hiddenCount={hidden.size} watermark={edit.watermark} greyscale={edit.greyscale}
+    <Review {lang} {secure} hiddenCount={hidden.size} boxCount={edit.boxes.present.front.length + edit.boxes.present.back.length} watermark={edit.watermark} greyscale={edit.greyscale}
       onBack={() => { reviewing = false }} {onReset} />
   {/if}
 </section>

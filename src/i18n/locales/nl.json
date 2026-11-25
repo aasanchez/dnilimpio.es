@@ -62,5 +62,13 @@
   "downloaded": "PDF gemaakt. Kijk in je downloadmap.",
   "errExport": "De PDF kon niet worden gemaakt. Probeer het opnieuw.",
   "reset": "Opnieuw beginnen",
-  "backToEdit": "Terug naar bewerken"
+  "backToEdit": "Terug naar bewerken",
+  "drawBox": "Zwart vak tekenen",
+  "addBox": "Vak toevoegen",
+  "deleteBox": "Vak verwijderen",
+  "undo": "Ongedaan maken",
+  "redo": "Opnieuw",
+  "boxHint": "Gebruik extra zwarte vakken voor alles wat de lijst niet dekt. Tekenen: zet Zwart vak tekenen aan en sleep over de afbeelding. Selecteer een vak om het te verplaatsen, of sleep aan de hoeken om het groter of kleiner te maken. Met het toetsenbord: Vak toevoegen, daarna verplaatsen de pijltjestoetsen het, Shift+pijltjes veranderen de grootte, N selecteert het volgende vak en Delete verwijdert het.",
+  "summaryBoxes": "Extra zwarte vakken: {n}",
+  "boxesLabel": "Extra zwarte vakken"
 }

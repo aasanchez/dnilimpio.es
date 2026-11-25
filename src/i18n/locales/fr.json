@@ -62,5 +62,13 @@
   "downloaded": "PDF créé. Consultez votre dossier de téléchargements.",
   "errExport": "Impossible de créer le PDF. Réessayez.",
   "reset": "Recommencer",
-  "backToEdit": "Revenir à l'édition"
+  "backToEdit": "Revenir à l'édition",
+  "drawBox": "Dessiner un rectangle noir",
+  "addBox": "Ajouter un rectangle",
+  "deleteBox": "Supprimer le rectangle",
+  "undo": "Annuler",
+  "redo": "Rétablir",
+  "boxHint": "Utilisez des rectangles noirs supplémentaires pour ce que la liste ne couvre pas. Pour dessiner, activez Dessiner un rectangle noir et faites glisser sur l'image. Sélectionnez un rectangle pour le déplacer, ou faites glisser ses coins pour le redimensionner. Au clavier : Ajouter un rectangle, puis les flèches le déplacent, Maj+flèches le redimensionnent, N sélectionne le suivant et Suppr le supprime.",
+  "summaryBoxes": "Rectangles noirs supplémentaires : {n}",
+  "boxesLabel": "Rectangles noirs supplémentaires"
 }

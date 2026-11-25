@@ -106,3 +106,65 @@ test('reset clears photos and choices', async ({ page }) => {
   await expect(page.locator('#status-front')).toHaveText('')
   await expect(page.locator('#capture-continue')).toBeDisabled()
 })
+
+/** Drags with the mouse between two points given as fractions of the preview canvas. */
+async function dragOnPreview (page: Page, from: [number, number], to: [number, number]): Promise<void> {
+  const box = await page.locator('#preview').boundingBox()
+  if (!box) throw new Error('no preview box')
+  await page.mouse.move(box.x + from[0] * box.width, box.y + from[1] * box.height)
+  await page.mouse.down()
+  await page.mouse.move(box.x + to[0] * box.width, box.y + to[1] * box.height, { steps: 5 })
+  await page.mouse.up()
+}
+
+const at = (f: [number, number]): [number, number] => [Math.round(f[0] * 1712), Math.round(f[1] * 1080)]
+
+test('manual black boxes: draw, move, undo, redo, delete, keyboard, and they reach the PDF', async ({ page }) => {
+  await toEditor(page)
+  const photo = at(PHOTO)
+  expect((await pixel(page, '#preview', ...photo))[2]).toBeGreaterThan(100) // dark blue photo block
+
+  // Draw a box over the photo block.
+  await page.locator('#draw-box').click()
+  await expect(page.locator('#draw-box')).toHaveAttribute('aria-pressed', 'true')
+  await dragOnPreview(page, [0.08, 0.3], [0.3, 0.7])
+  await expect.poll(async () => await pixel(page, '#preview', ...photo)).toEqual([0, 0, 0])
+
+  await page.locator('#undo').click()
+  await expect.poll(async () => (await pixel(page, '#preview', ...photo))[2]).toBeGreaterThan(100)
+  await page.locator('#redo').click()
+  await expect.poll(async () => await pixel(page, '#preview', ...photo)).toEqual([0, 0, 0])
+
+  // Move it away by dragging its middle; the photo shows again.
+  await page.locator('#draw-box').click()
+  await dragOnPreview(page, [0.2, 0.5], [0.6, 0.5])
+  await expect.poll(async () => (await pixel(page, '#preview', ...photo))[2]).toBeGreaterThan(100)
+
+  // Keyboard: the drag focused the canvas, so Delete removes the selected box and Ctrl+Z brings it back.
+  await expect(page.locator('#preview')).toBeFocused()
+  await page.keyboard.press('Delete')
+  await expect(page.locator('#delete-box')).toBeDisabled()
+  await page.keyboard.press('Control+z')
+  // Keyboard: Add box puts a box in the centre; arrows move it onto the photo block.
+  await page.locator('#add-box').click()
+  await expect(page.locator('#preview')).toBeFocused()
+  await expect.poll(async () => await pixel(page, '#preview', 856, 540)).toEqual([0, 0, 0])
+  // Arrow keys move it by 0.5 % of the width; 50 presses take its left edge from 40 % to 15 %.
+  for (let i = 0; i < 50; i++) await page.keyboard.press('ArrowLeft')
+  await expect.poll(async () => await pixel(page, '#preview', ...photo)).toEqual([0, 0, 0])
+  // Shift+arrow keys resize it from the bottom-right corner.
+  for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowDown')
+  await expect.poll(async () => await pixel(page, '#preview', Math.round(0.25 * 1712), Math.round(0.65 * 1080))).toEqual([0, 0, 0])
+
+  // Boxes are side-specific and survive in the PDF.
+  await page.locator('#tab-back').click()
+  expect((await pixel(page, '#preview', 856, 300))[0]).toBeGreaterThan(0)
+  await page.locator('#review').click()
+  await expect(page.locator('#review-summary')).toContainText('Recuadros negros extra: 2')
+  await page.locator('#review-confirm').check()
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
+  const [front] = jpegs(readFileSync(await download.path()))
+  if (!front) throw new Error('no front image')
+  const f = await samples(page, front, [PHOTO])
+  for (const c of f.px[0] ?? []) expect(c).toBeLessThan(16)
+})

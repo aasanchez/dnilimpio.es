@@ -62,5 +62,13 @@
   "downloaded": "PDF creado. Búscao no cartafol de descargas.",
   "errExport": "Non se puido crear o PDF. Téntao de novo.",
   "reset": "Comezar de novo",
-  "backToEdit": "Volver editar"
+  "backToEdit": "Volver editar",
+  "drawBox": "Debuxar recadro negro",
+  "addBox": "Engadir recadro",
+  "deleteBox": "Eliminar recadro",
+  "undo": "Desfacer",
+  "redo": "Refacer",
+  "boxHint": "Usa recadros negros extra para o que a lista non cobre. Para debuxar, activa Debuxar recadro negro e arrastra sobre a imaxe. Selecciona un recadro para movelo ou arrastra as súas esquinas para cambiar o seu tamaño. Co teclado: Engadir recadro; logo as frechas móveno, Maiús+frechas cambian o tamaño, N selecciona o seguinte e Supr elimínao.",
+  "summaryBoxes": "Recadros negros extra: {n}",
+  "boxesLabel": "Recadros negros extra"
 }

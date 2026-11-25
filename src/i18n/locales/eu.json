@@ -62,5 +62,13 @@
   "downloaded": "PDFa sortu da. Begiratu deskargen karpetan.",
   "errExport": "Ezin izan da PDFa sortu. Saiatu berriro.",
   "reset": "Hasi berriro",
-  "backToEdit": "Itzuli editatzera"
+  "backToEdit": "Itzuli editatzera",
+  "drawBox": "Marraztu lauki beltza",
+  "addBox": "Gehitu laukia",
+  "deleteBox": "Ezabatu laukia",
+  "undo": "Desegin",
+  "redo": "Berregin",
+  "boxHint": "Erabili lauki beltz gehigarriak zerrendak hartzen ez duenerako. Marrazteko, aktibatu Marraztu lauki beltza eta arrastatu irudiaren gainean. Hautatu lauki bat mugitzeko, edo arrastatu haren ertzak tamaina aldatzeko. Teklatuarekin: Gehitu laukia; ondoren, geziek mugitzen dute, Shift+geziek tamaina aldatzen dute, N teklak hurrengoa hautatzen du eta Supr teklak ezabatzen du.",
+  "summaryBoxes": "Lauki beltz gehigarriak: {n}",
+  "boxesLabel": "Lauki beltz gehigarriak"
 }
