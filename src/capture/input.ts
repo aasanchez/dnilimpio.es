@@ -4,21 +4,30 @@
 import { decodeImage, firstImageFile, type DecodeResult } from './decode.ts'
 
 export interface CaptureTarget {
-  /** The <input type=file> for this side. */
+  /** The <input type=file> for this side that opens the file or gallery picker. */
   readonly input: HTMLInputElement;
+  /** Optional second input that opens the camera directly (touch devices only). */
+  readonly cameraInput?: HTMLInputElement;
   /** Element that accepts drops; usually the label wrapping the input. */
   readonly dropZone: HTMLElement;
   readonly onResult: (result: DecodeResult) => void;
 }
 
 /**
- * No `capture` attribute: on mobile it opens the camera directly and hides the gallery.
- * Without it, iOS and Android show a chooser that offers both the camera and the photo library.
+ * `pick`: no `capture` attribute, so mobile browsers open the gallery or file chooser.
+ * `camera`: `capture="environment"`, so mobile browsers open the rear camera directly.
+ * Desktop browsers ignore `capture`; the UI shows the camera input on touch devices only.
  */
-export function configureFileInput (input: HTMLInputElement): void {
+export function configureFileInput (input: HTMLInputElement, mode: 'pick' | 'camera' = 'pick'): void {
   input.type = 'file'
   input.accept = 'image/*'
-  input.removeAttribute('capture')
+  if (mode === 'camera') input.setAttribute('capture', 'environment')
+  else input.removeAttribute('capture')
+}
+
+/** True on phones and tablets: the primary pointer is a finger, so a camera button makes sense. */
+export function prefersCameraButton (matchMedia: (q: string) => { matches: boolean }): boolean {
+  return matchMedia('(pointer: coarse)').matches
 }
 
 /**
@@ -36,17 +45,20 @@ function decodeFor (file: File, signal: AbortSignal, onResult: (r: DecodeResult)
 }
 
 export function wireCapture (target: CaptureTarget, signal: AbortSignal): void {
-  const { input, dropZone, onResult } = target
-  configureFileInput(input)
+  const { input, cameraInput, dropZone, onResult } = target
+  configureFileInput(input, 'pick')
+  if (cameraInput) configureFileInput(cameraInput, 'camera')
   const handle = (file: File | null): void => {
     if (!file) return
     decodeFor(file, signal, onResult)
   }
-  input.addEventListener('change', () => {
-    // Take the file as chosen (not filtered) so a wrong type gets a clear error instead of silence.
-    handle(input.files?.[0] ?? null)
-    input.value = '' // drop the File reference held by the input (§4.8)
-  }, { signal })
+  for (const i of cameraInput ? [input, cameraInput] : [input]) {
+    i.addEventListener('change', () => {
+      // Take the file as chosen (not filtered) so a wrong type gets a clear error instead of silence.
+      handle(i.files?.[0] ?? null)
+      i.value = '' // drop the File reference held by the input (§4.8)
+    }, { signal })
+  }
   dropZone.addEventListener('dragover', (e) => {
     e.preventDefault()
     dropZone.classList.add('is-dragover')

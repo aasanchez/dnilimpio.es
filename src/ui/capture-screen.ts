@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { DecodeError, DecodeResult } from '../capture/decode.ts'
-import { wireCapture, wirePaste, type CaptureTarget } from '../capture/input.ts'
+import { prefersCameraButton, wireCapture, wirePaste, type CaptureTarget } from '../capture/input.ts'
 import type { Side } from '../zones/dni.ts'
 import { t, type Key, type Lang } from '../i18n/index.ts'
 import { el } from './dom.ts'
@@ -18,6 +18,7 @@ export interface CaptureState { front: ImageBitmap | null; back: ImageBitmap | n
 export function renderCapture (lang: Lang, state: CaptureState, onChange: () => void, signal: AbortSignal): HTMLElement {
   const targets: Partial<Record<Side, CaptureTarget>> = {}
   const section = el('section', { className: 'step' }, el('h2', { text: t(lang, 'stepCapture') }))
+  const withCamera = prefersCameraButton((q) => window.matchMedia(q))
 
   for (const side of ['front', 'back'] as const) {
     const input = el('input', { id: `file-${side}`, className: 'visually-hidden' })
@@ -26,11 +27,20 @@ export function renderCapture (lang: Lang, state: CaptureState, onChange: () => 
     const preview = el('canvas', { className: 'preview' })
     preview.width = 0
     preview.height = 0
-    const button = el('label', { className: 'button', text: t(lang, 'chooseOrTake') }, input)
+    const button = el('label', { className: 'button', text: t(lang, 'choosePhoto') }, input)
     button.htmlFor = input.id
-    const zone = el('div', { className: 'dropzone' },
-      el('h3', { text: t(lang, side) }), button, el('p', { className: 'hint', text: t(lang, 'dropHint') }), preview, status)
     input.setAttribute('aria-describedby', status.id)
+    const buttons = el('div', { className: 'buttons' }, button)
+    let cameraInput: HTMLInputElement | undefined
+    if (withCamera) {
+      cameraInput = el('input', { id: `camera-${side}`, className: 'visually-hidden' })
+      cameraInput.setAttribute('aria-describedby', status.id)
+      const cameraButton = el('label', { className: 'button', text: t(lang, 'takePhoto') }, cameraInput)
+      cameraButton.htmlFor = cameraInput.id
+      buttons.prepend(cameraButton)
+    }
+    const zone = el('div', { className: 'dropzone' },
+      el('h3', { text: t(lang, side) }), buttons, el('p', { className: 'hint', text: t(lang, 'dropHint') }), preview, status)
 
     const show = (bitmap: ImageBitmap): void => {
       const scale = Math.min(1, 480 / bitmap.width)
@@ -58,7 +68,7 @@ export function renderCapture (lang: Lang, state: CaptureState, onChange: () => 
       status.textContent = t(lang, 'loaded')
       onChange()
     }
-    const target: CaptureTarget = { input, dropZone: zone, onResult }
+    const target: CaptureTarget = cameraInput ? { input, cameraInput, dropZone: zone, onResult } : { input, dropZone: zone, onResult }
     targets[side] = target
     wireCapture(target, signal)
     section.append(zone)
