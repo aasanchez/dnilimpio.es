@@ -10,3 +10,4 @@ project specification on purpose).
 | [0002](0002-no-standalone-release.md) | No standalone offline release | accepted, deviates from spec §25 |
 | [0003](0003-svelte-vite-pnpm.md) | Svelte 5 + Vite; Node.js and pnpm pinned to latest stable | accepted |
 | [0004](0004-offline-service-worker.md) | Offline mode with a verified service worker; one Trusted Types policy for its URL | accepted |
+| [0005](0005-guided-flow-and-visual-style.md) | Guided phone-first flow; openaggregator.io-style visuals with self-hosted fonts | accepted |

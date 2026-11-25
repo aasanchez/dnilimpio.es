@@ -1,17 +1,35 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { devices, expect, test } from '@playwright/test'
+import { devices, expect, test, type Page } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
 
 const fixture = (name: string): string => fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url))
 
 test.use({ locale: 'es-ES' })
 
-test('loads front and back through the file inputs', async ({ page }) => {
+/** Opens the app and goes from the start screen to the photo step. */
+async function openCapture (page: Page): Promise<void> {
   await page.goto('/')
+  await page.locator('#start').click()
+}
+
+test('the start screen leads to the photo step, front first', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('h1')).toBeVisible()
+  await page.locator('#start').click()
+  await expect(page.locator('h2')).toHaveText('Foto del anverso')
+  await expect(page.locator('h2')).toBeFocused()
+  await expect(page.locator('.progress [aria-current="step"]')).toContainText('Fotos')
+})
+
+test('loads front and back through the file inputs, moving to the back by itself', async ({ page }) => {
+  await openCapture(page)
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
-  await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
+  await expect(page.locator('h2')).toHaveText('Foto del reverso')
+  await expect(page.locator('#pick-back')).toHaveAttribute('aria-pressed', 'true')
+  await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await expect(page.locator('#status-back')).toHaveText('Imagen cargada.')
+  await expect(page.locator('#capture-continue')).toBeEnabled()
   const input = page.locator('#file-front')
   await expect(input).toHaveAttribute('accept', 'image/*')
   // `capture` would force the camera on mobile and block picking from the gallery.
@@ -20,8 +38,8 @@ test('loads front and back through the file inputs', async ({ page }) => {
 })
 
 test('desktop shows only the choose-image button', async ({ page }) => {
-  await page.goto('/')
-  await expect(page.getByText('Elegir imagen')).toHaveCount(2)
+  await openCapture(page)
+  await expect(page.getByText('Elegir imagen').filter({ visible: true })).toHaveCount(1)
   await expect(page.getByText('Hacer foto')).toHaveCount(0)
   await expect(page.locator('#camera-front')).toHaveCount(0)
 })
@@ -30,10 +48,10 @@ test.describe('on a touch device', () => {
   const { defaultBrowserType: _, ...pixel } = devices['Pixel 7']
   test.use({ ...pixel, locale: 'es-ES' })
 
-  test('shows take-photo and choose-image buttons for each side', async ({ page }) => {
-    await page.goto('/')
-    await expect(page.getByText('Hacer foto')).toHaveCount(2)
-    await expect(page.getByText('Elegir imagen')).toHaveCount(2)
+  test('shows take-photo and gallery buttons for the side on screen', async ({ page }) => {
+    await openCapture(page)
+    await expect(page.getByText('Hacer foto').filter({ visible: true })).toHaveCount(1)
+    await expect(page.getByText('Galería').filter({ visible: true })).toHaveCount(1)
     await expect(page.locator('#camera-front')).toHaveAttribute('capture', 'environment')
     await expect(page.locator('#camera-back')).toHaveAttribute('capture', 'environment')
     await expect(page.locator('#file-front')).not.toHaveAttribute('capture')
@@ -44,20 +62,21 @@ test.describe('on a touch device', () => {
 })
 
 test('shows a clear error for a non-image file', async ({ page }) => {
-  await page.goto('/')
+  await openCapture(page)
   await page.locator('#file-front').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hola') })
   await expect(page.locator('#status-front')).toHaveAttribute('role', 'alert')
   await expect(page.locator('#status-front')).toContainText('no es una imagen')
+  await expect(page.locator('#error-front')).toBeVisible()
 })
 
 test('shows a decode error for a corrupt image', async ({ page }) => {
-  await page.goto('/')
+  await openCapture(page)
   await page.locator('#file-back').setInputFiles({ name: 'x.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('not a jpeg') })
   await expect(page.locator('#status-back')).toContainText('No se ha podido abrir')
 })
 
 test('accepts a dropped image', async ({ page }) => {
-  await page.goto('/')
+  await openCapture(page)
   const bytes = (await import('node:fs')).readFileSync(fixture('synthetic-front.png')).toString('base64')
   const dt = await page.evaluateHandle((b64) => {
     const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
@@ -72,7 +91,7 @@ test('accepts a dropped image', async ({ page }) => {
 })
 
 test('switching language keeps loaded images and updates text', async ({ page }) => {
-  await page.goto('/')
+  await openCapture(page)
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
   // Mark the selector node: a language change must update text in place, not rebuild the page

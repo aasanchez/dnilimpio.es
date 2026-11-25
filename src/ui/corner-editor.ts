@@ -54,7 +54,7 @@ export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
   const layout = (): void => {
     const dpr = window.devicePixelRatio || 1
     const maxW = wrap.clientWidth
-    const maxH = window.innerHeight * 0.65
+    const maxH = window.innerHeight * 0.55
     if (maxW <= 0) return
     const s = Math.min(maxW / bw, maxH / bh)
     // The bitmap is drawn at display resolution; full resolution is kept for the warp.
@@ -87,7 +87,7 @@ export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
     ctx.fill('evenodd')
 
-    const color = valid ? '#2e7dff' : '#e53935'
+    const color = valid ? '#f36716' : '#e53935'
     ctx.lineJoin = 'round'
     // Outline: white halo under the coloured line keeps it visible on any background.
     for (const [w, c] of [[4 * u, '#ffffff'], [2 * u, color]] as const) {
@@ -162,7 +162,7 @@ export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
     ctx.moveTo(cx, cy - r)
     ctx.lineTo(cx, cy + r)
     ctx.lineWidth = 1 * u
-    ctx.strokeStyle = '#2e7dff'
+    ctx.strokeStyle = '#f36716'
     ctx.stroke()
     ctx.beginPath()
     ctx.arc(cx, cy, r, 0, Math.PI * 2)

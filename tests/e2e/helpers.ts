@@ -14,10 +14,12 @@ export const START = [{ x: 240, y: 600 - H / 2 }, { x: 1360, y: 600 - H / 2 }, {
 
 export async function loadBoth (page: Page): Promise<void> {
   await page.goto('/')
-  await expect(page.locator('#capture-continue')).toBeDisabled()
+  await page.locator('#start').click()
+  // Continue appears once both sides are loaded.
+  await expect(page.locator('#capture-continue')).toHaveCount(0)
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
-  await expect(page.locator('#capture-continue')).toBeDisabled()
+  await expect(page.locator('#capture-continue')).toHaveCount(0)
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await expect(page.locator('#capture-continue')).toBeEnabled()
 }

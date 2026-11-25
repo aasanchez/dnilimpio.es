@@ -6,3 +6,19 @@ version = 1
 path = ["src/i18n/locales/*.json", "tests/fixtures/**", "package.json", "pnpm-lock.yaml"]
 SPDX-FileCopyrightText = "dnilimpio.es contributors"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# Self-hosted fonts (latin and latin-ext subsets from Fontsource 5.3.0), SIL Open Font License 1.1.
+[[annotations]]
+path = "src/ui/fonts/bricolage-grotesque-*.woff2"
+SPDX-FileCopyrightText = "2022 The Bricolage Grotesque Project Authors (https://github.com/ateliertriay/bricolage)"
+SPDX-License-Identifier = "OFL-1.1"
+
+[[annotations]]
+path = "src/ui/fonts/jetbrains-mono-*.woff2"
+SPDX-FileCopyrightText = "2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)"
+SPDX-License-Identifier = "OFL-1.1"
+
+[[annotations]]
+path = "src/ui/fonts/caveat-*.woff2"
+SPDX-FileCopyrightText = "2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)"
+SPDX-License-Identifier = "OFL-1.1"

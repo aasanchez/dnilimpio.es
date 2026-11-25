@@ -1,32 +1,44 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Step 3: fields to hide, watermark, black and white, live preview (spec §12, §14, §15). -->
+<!-- Step 3: choose what to hide, on the card itself or in the list (spec §12, §14, §15); then review
+     and download (Review.svelte). The editor owns the sanitised rasters that both screens show. -->
 <script lang="ts">
   import { untrack } from 'svelte'
-  import { fieldsOf, masksFor, mrzLeaks } from '../engine/fields.ts'
+  import { defaultHidden, fieldsOf, masksFor, mrzLeaks } from '../engine/fields.ts'
   import { renderSecure } from '../engine/render.ts'
   import { canRedo, canUndo, commit, redo, undo } from '../engine/history.ts'
   import { HANDLES, centredBox, fromPoints, grow, handlePoint, hitTest, isUsable, move, resize, type Handle, type Point } from '../engine/masks.ts'
   import { toPixels } from '../redact/zones.ts'
   import { t, tf, type Key, type Lang } from '../i18n/index.ts'
   import type { AlignState } from '../ui/align-state.ts'
-  import type { EditState } from '../ui/edit-state.ts'
+  import type { EditState, Phase } from '../ui/edit-state.ts'
   import { DNI_4_0, type Rect, type Side, type ZoneId } from '../zones/dni.ts'
   import Review from './Review.svelte'
 
-  const { lang, align, edit, onAdjust, onReset }: {
+  let { lang, align, edit, phase = $bindable(), onAdjust, onReset, onPhase }: {
     lang: Lang
     align: AlignState
     edit: EditState
+    phase: Phase
     onAdjust: (side: Side) => void
     onReset: () => void
+    /** Called after the phase changes, so the shell can move focus to the new heading. */
+    onPhase: () => void
   } = $props()
 
+  type Tool = 'fields' | 'boxes' | 'mark'
   const SIDES = ['front', 'back'] as const
+  const TOOLS: ReadonlyArray<{ id: Tool; key: Key }> = [
+    { id: 'fields', key: 'toolFields' },
+    { id: 'boxes', key: 'toolBoxes' },
+    { id: 'mark', key: 'toolMark' },
+  ]
   const fields = fieldsOf(DNI_4_0)
+  const recommended = [...defaultHidden(DNI_4_0)]
   const hidden = $derived(new Set<ZoneId>(edit.hidden))
   let side = $state<Side>('front')
+  let tool = $state<Tool>('fields')
+  const sideFields = $derived(fields.filter((f) => f.sides.includes(side)))
   let finalPreview = $state(false)
-  let reviewing = $state(false)
   let display: HTMLCanvasElement | undefined = $state()
   /** Sanitised rasters, one per side: the only images the preview, the review and the PDF use. */
   const secure: Record<Side, HTMLCanvasElement> = { front: document.createElement('canvas'), back: document.createElement('canvas') }
@@ -36,8 +48,12 @@
   let selected = $state<number | null>(null)
   /** Box being drawn, moved or resized; shown as an outline until the pointer is released. */
   let draft = $state<{ index: number | null; rect: Rect } | null>(null)
-  let drag: { pointerId: number; start: Point; handle: Handle | null; origin: Rect | null } | null = null
+  /** A pointer gesture: a box drag, or a tap on a field zone (toggled on release if it did not move). */
+  let drag: { pointerId: number; start: Point; handle: Handle | null; origin: Rect | null; zone: ZoneId | null } | null = null
   const boxes = $derived(edit.boxes.present[side])
+  const sameSet = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((x) => b.includes(x))
+  const sideName = (s: Side): string => t(lang, s === 'front' ? 'tabFront' : 'tabBack')
+  const today = $derived(new Date().toLocaleDateString(lang, { day: '2-digit', month: '2-digit', year: 'numeric' }))
 
   function setBoxes (list: readonly Rect[]): void {
     edit.boxes = commit(edit.boxes, { ...edit.boxes.present, [side]: list })
@@ -66,6 +82,15 @@
     return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }
   }
 
+  /** The field whose printed zone on this side contains the point, if any. */
+  function zoneAt (p: Point): ZoneId | null {
+    for (const z of DNI_4_0.zones) {
+      if (z.side !== side) continue
+      if (z.rects.some((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h)) return z.id
+    }
+    return null
+  }
+
   function onPointerDown (e: PointerEvent): void {
     if (drag || !e.isPrimary || finalPreview) return
     const canvas = e.currentTarget as HTMLCanvasElement
@@ -75,13 +100,15 @@
     const hit = hitTest(boxes, selected, p, tolPx / r.width, tolPx / r.height)
     if (hit) {
       selected = hit.index
-      drag = { pointerId: e.pointerId, start: p, handle: hit.handle, origin: boxes[hit.index] ?? null }
+      drag = { pointerId: e.pointerId, start: p, handle: hit.handle, origin: boxes[hit.index] ?? null, zone: null }
     } else if (drawMode) {
       selected = null
-      drag = { pointerId: e.pointerId, start: p, handle: null, origin: null }
+      drag = { pointerId: e.pointerId, start: p, handle: null, origin: null, zone: null }
     } else {
       selected = null
-      return
+      const zone = zoneAt(p)
+      if (!zone) return
+      drag = { pointerId: e.pointerId, start: p, handle: null, origin: null, zone }
     }
     e.preventDefault()
     // preventDefault() also stops the click from moving focus; focus the canvas so the keys work next.
@@ -90,7 +117,7 @@
   }
 
   function onPointerMove (e: PointerEvent): void {
-    if (!drag || e.pointerId !== drag.pointerId) return
+    if (!drag || e.pointerId !== drag.pointerId || drag.zone) return
     e.preventDefault()
     const p = toCard(e)
     const o = drag.origin
@@ -102,8 +129,16 @@
   function onPointerUp (e: PointerEvent): void {
     if (!drag || e.pointerId !== drag.pointerId) return
     const d = draft
+    const zone = drag.zone
+    const start = drag.start
     drag = null
     draft = null
+    if (zone) {
+      // A tap toggles the field; a slide that left the zone does nothing.
+      const p = toCard(e)
+      if (e.type === 'pointerup' && Math.hypot(p.x - start.x, p.y - start.y) < 0.03) toggle(zone, !hidden.has(zone))
+      return
+    }
     if (!d) return
     if (d.index === null) {
       if (!isUsable(d.rect)) return
@@ -146,6 +181,16 @@
     edit.hidden = on ? [...new Set([...edit.hidden, id])] : edit.hidden.filter((x) => x !== id)
   }
 
+  function pickTool (id: Tool): void {
+    tool = id
+    drawMode = false
+  }
+
+  function setPhase (p: Phase): void {
+    phase = p
+    onPhase()
+  }
+
   // Re-render both sides whenever a choice changes.
   $effect(() => {
     const opts = { greyscale: edit.greyscale, watermark: edit.watermark }
@@ -157,7 +202,7 @@
   })
 
   // Display copy of the current side. Outside the final preview, fields left visible get a dashed
-  // outline (a pattern, not only a colour). The outlines never reach the sanitised raster.
+  // orange outline (a pattern, not only a colour). The outlines never reach the sanitised raster.
   $effect(() => {
     if (version === 0) return // nothing rendered yet; also subscribes to re-renders
     const src = secure[side]
@@ -174,9 +219,11 @@
       if (z.side !== side || hidden.has(z.id)) continue
       for (const r of z.rects) {
         const p = toPixels(r, src.width, src.height)
-        ctx.strokeStyle = '#ffffff'
+        ctx.fillStyle = 'rgba(243, 103, 22, 0.1)'
+        ctx.fillRect(p.x, p.y, p.w, p.h)
+        ctx.strokeStyle = '#1f1a14'
         ctx.strokeRect(p.x, p.y, p.w, p.h)
-        ctx.strokeStyle = '#c62828'
+        ctx.strokeStyle = '#f36716'
         ctx.lineDashOffset = 14
         ctx.strokeRect(p.x, p.y, p.w, p.h)
         ctx.lineDashOffset = 0
@@ -187,7 +234,7 @@
     const h = src.height
     const outline = (r: Rect, handles: boolean): void => {
       ctx.setLineDash([])
-      for (const [lw, c] of [[7, '#ffffff'], [3, '#0b57d0']] as const) {
+      for (const [lw, c] of [[7, '#fbf9f4'], [3, '#f36716']] as const) {
         ctx.lineWidth = lw
         ctx.strokeStyle = c
         ctx.strokeRect(r.x * w, r.y * h, r.w * w, r.h * h)
@@ -195,8 +242,9 @@
       if (!handles) return
       for (const hd of HANDLES) {
         const p = handlePoint(r, hd)
-        ctx.fillStyle = '#ffffff'
+        ctx.fillStyle = '#fbf9f4'
         ctx.fillRect(p.x * w - 12, p.y * h - 12, 24, 24)
+        ctx.strokeStyle = '#1f1a14'
         ctx.strokeRect(p.x * w - 12, p.y * h - 12, 24, 24)
       }
     }
@@ -219,87 +267,124 @@
       secure[s].height = 0
     }
   })
-
-  async function openReview (): Promise<void> {
-    reviewing = true
-    await Promise.resolve()
-    const h = document.getElementById('review-title')
-    h?.focus()
-    h?.scrollIntoView({ block: 'start' })
-  }
 </script>
 
-<section class="step">
-  <h2 tabindex="-1">{t(lang, 'stepEdit')}</h2>
-  {#if !reviewing}
+{#if phase === 'edit'}
+  <section class="step">
+    <div class="heading-row">
+      <h2>{t(lang, 'hideTitle')}</h2>
+      <span class="count" id="hidden-count">{tf(lang, 'hiddenCount', { hidden: hidden.size, total: fields.length })}</span>
+    </div>
+    <div class="segmented" role="group" aria-label={t(lang, 'sides')}>
+      {#each SIDES as s (s)}
+        <button type="button" id="tab-{s}" aria-pressed={side === s} onclick={() => { side = s; selected = null }}>{sideName(s)}</button>
+      {/each}
+    </div>
+
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="editor" onkeydown={onEditorKey}>
-      <div class="editor-preview">
-        <div class="tabs">
-          {#each SIDES as s (s)}
-            <button type="button" class="tab" id="tab-{s}" aria-pressed={side === s} onclick={() => { side = s; selected = null }}>{t(lang, s === 'front' ? 'tabFront' : 'tabBack')}</button>
-          {/each}
-        </div>
-        <!-- role=application: the canvas is a keyboard-operable box editor (keys described in #box-hint). -->
+    <div class="win" onkeydown={onEditorKey}>
+      <div class="winbar">
+        <i></i><i></i><i></i><span class="title">{sideName(side).toLowerCase()}.jpg</span>
+        <label class="chip"><input type="checkbox" id="final-preview" class="visually-hidden" bind:checked={finalPreview} />{finalPreview ? '◉' : '○'} {t(lang, 'finalPreview')}</label>
+        <button type="button" class="chip" id="adjust-{side}" onclick={() => { onAdjust(side) }}>{t(lang, 'adjust')}</button>
+      </div>
+      <div class="winbody">
+        <!-- role=application: the canvas is a pointer- and keyboard-operable editor (keys described in #box-hint). -->
         <!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
         <canvas id="preview" class="card-result box-editor" class:is-drawing={drawMode} bind:this={display} tabindex="0" role="application"
-          aria-label={tf(lang, 'previewLabel', { side: t(lang, side === 'front' ? 'tabFront' : 'tabBack') })}
+          aria-label={tf(lang, 'previewLabel', { side: sideName(side) })}
           aria-describedby="box-hint"
           onpointerdown={onPointerDown} onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp}
           onkeydown={onKeyDown}></canvas>
-        <div class="actions" role="group" aria-label={t(lang, 'boxesLabel')}>
-          <button type="button" class="button secondary" id="draw-box" aria-pressed={drawMode} disabled={finalPreview} onclick={() => { drawMode = !drawMode }}>{t(lang, 'drawBox')}</button>
-          <button type="button" class="button secondary" id="add-box" disabled={finalPreview} onclick={addBox}>{t(lang, 'addBox')}</button>
-          <button type="button" class="button secondary" id="delete-box" disabled={selected === null || finalPreview} onclick={deleteBox}>{t(lang, 'deleteBox')}</button>
-          <button type="button" class="button secondary" id="undo" disabled={!canUndo(edit.boxes)} onclick={() => { history('undo') }}>{t(lang, 'undo')}</button>
-          <button type="button" class="button secondary" id="redo" disabled={!canRedo(edit.boxes)} onclick={() => { history('redo') }}>{t(lang, 'redo')}</button>
-        </div>
-        <p class="hint" id="box-hint">{t(lang, 'boxHint')}</p>
-        <div class="actions">
-          <label class="check"><input type="checkbox" id="final-preview" bind:checked={finalPreview} /> {t(lang, 'finalPreview')}</label>
-          <button type="button" class="button secondary" id="adjust-{side}" onclick={() => { onAdjust(side) }}>{t(lang, 'adjust')}</button>
-        </div>
-      </div>
-
-      <div class="editor-form">
-        <fieldset class="fields">
-          <legend>
-            {t(lang, 'fieldsToHide')}
-            <span class="count" id="hidden-count">{tf(lang, 'hiddenCount', { hidden: hidden.size, total: fields.length })}</span>
-          </legend>
-          <p class="hint">{t(lang, 'fieldsHint')}</p>
-          {#each fields as f (f.id)}
-            <label class="check">
-              <input type="checkbox" id="field-{f.id}" checked={hidden.has(f.id)}
-                onchange={(e) => { toggle(f.id, e.currentTarget.checked) }} />
-              {t(lang, fieldKey(f.id))}
-            </label>
-          {/each}
-          <div class="actions">
-            <button type="button" class="button secondary" id="hide-all" onclick={() => { edit.hidden = fields.map((f) => f.id) }}>{t(lang, 'hideAll')}</button>
-            <button type="button" class="button secondary" id="restore-all" onclick={() => { edit.hidden = [] }}>{t(lang, 'restoreAll')}</button>
-          </div>
-          <div aria-live="polite">
-            {#if !hidden.has('can')}<p class="warning" id="can-warning">{t(lang, 'canWarning')}</p>{/if}
-            {#if mrzLeaks(hidden)}<p class="warning" id="mrz-warning">{t(lang, 'mrzWarning')}</p>{/if}
-          </div>
-          <p class="hint">{t(lang, 'positionsHint')}</p>
-        </fieldset>
-
-        <label class="field" for="watermark">{t(lang, 'watermarkLabel')}</label>
-        <input type="text" id="watermark" class="text" bind:value={edit.watermark} maxlength="200" autocomplete="off" spellcheck="false" aria-describedby="watermark-hint" />
-        <p class="hint" id="watermark-hint">{t(lang, 'watermarkHint')}</p>
-
-        <label class="check"><input type="checkbox" id="greyscale" bind:checked={edit.greyscale} /> {t(lang, 'greyscale')}</label>
-
-        <div class="actions">
-          <button type="button" class="button" id="review" onclick={openReview}>{t(lang, 'review')}</button>
-          <button type="button" class="button secondary" id="reset" onclick={onReset}>{t(lang, 'reset')}</button>
-        </div>
       </div>
     </div>
-  {:else}
-    <Review {lang} {secure} hiddenCount={hidden.size} boxCount={edit.boxes.present.front.length + edit.boxes.present.back.length} watermark={edit.watermark} greyscale={edit.greyscale}
-      onBack={() => { reviewing = false }} {onReset} />
-  {/if}
-</section>
+    <p class="legend"><span class="legend-swatch" aria-hidden="true"></span>{t(lang, 'legendVisible')}</p>
+
+    <div class="tools" role="tablist" aria-label={t(lang, 'tools')}>
+      {#each TOOLS as tl (tl.id)}
+        <button type="button" role="tab" id="tool-{tl.id}" aria-selected={tool === tl.id} aria-controls="panel-{tl.id}" onclick={() => { pickTool(tl.id) }}>{t(lang, tl.key)}</button>
+      {/each}
+    </div>
+
+    <div class="panel" id="panel-fields" role="tabpanel" aria-labelledby="tool-fields" hidden={tool !== 'fields'}>
+      <div class="chips scroll" role="group" aria-label={t(lang, 'presets')}>
+        <button type="button" class="chip" id="preset-recommended" aria-pressed={sameSet(edit.hidden, recommended)} onclick={() => { edit.hidden = [...recommended] }}>{t(lang, 'presetRecommended')}</button>
+        <button type="button" class="chip" id="hide-all" aria-pressed={hidden.size === fields.length} onclick={() => { edit.hidden = fields.map((f) => f.id) }}>{t(lang, 'hideAll')}</button>
+        <button type="button" class="chip" id="restore-all" aria-pressed={hidden.size === 0} onclick={() => { edit.hidden = [] }}>{t(lang, 'restoreAll')}</button>
+      </div>
+      <ul class="fields" aria-label={t(lang, 'fieldsToHide')}>
+        {#each sideFields as f (f.id)}
+          <li>
+            <label class="toggle">
+              <span class="toggle-text">
+                <span class="toggle-label">{t(lang, fieldKey(f.id))}</span>
+                {#if f.sides.length > 1}<span class="toggle-note">{t(lang, 'bothSides')}</span>{/if}
+              </span>
+              <span class="toggle-state" class:is-on={hidden.has(f.id)} aria-hidden="true">{t(lang, hidden.has(f.id) ? 'stateHidden' : 'stateVisible')}</span>
+              <input type="checkbox" role="switch" class="switch" id="field-{f.id}" checked={hidden.has(f.id)}
+                onchange={(e) => { toggle(f.id, e.currentTarget.checked) }} />
+            </label>
+          </li>
+        {/each}
+      </ul>
+      <div aria-live="polite" class="panel">
+        {#if !hidden.has('can')}<p class="warning" id="can-warning">{t(lang, 'canWarning')}</p>{/if}
+        {#if mrzLeaks(hidden)}<p class="warning" id="mrz-warning">{t(lang, 'mrzWarning')}</p>{/if}
+      </div>
+      <p class="hint">{t(lang, 'positionsHint')}</p>
+    </div>
+
+    <div class="panel" id="panel-boxes" role="tabpanel" aria-labelledby="tool-boxes" hidden={tool !== 'boxes'}>
+      <div class="box">
+        <p class="hint" id="box-hint">{t(lang, 'boxHint')}</p>
+        <div class="box-actions" role="group" aria-label={t(lang, 'boxesLabel')}>
+          <button type="button" class="button small" id="draw-box" aria-pressed={drawMode} disabled={finalPreview} onclick={() => { drawMode = !drawMode }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="1" /><path d="M12 9v6M9 12h6" /></svg>
+            {t(lang, 'drawBox')}
+          </button>
+          <button type="button" class="button small" id="add-box" disabled={finalPreview} onclick={addBox}>{t(lang, 'addBox')}</button>
+          <span class="spacer"></span>
+          <button type="button" class="icon-btn" id="delete-box" aria-label={t(lang, 'deleteBox')} disabled={selected === null || finalPreview} onclick={deleteBox}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
+          </button>
+          <button type="button" class="icon-btn" id="undo" aria-label={t(lang, 'undo')} disabled={!canUndo(edit.boxes)} onclick={() => { history('undo') }}>
+            <svg class="flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 010 12h-3" /></svg>
+          </button>
+          <button type="button" class="icon-btn" id="redo" aria-label={t(lang, 'redo')} disabled={!canRedo(edit.boxes)} onclick={() => { history('redo') }}>
+            <svg class="flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5" /><path d="M20 9H10a6 6 0 000 12h3" /></svg>
+          </button>
+        </div>
+        <p class="count">{tf(lang, 'boxCount', { n: boxes.length })}</p>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-mark" role="tabpanel" aria-labelledby="tool-mark" hidden={tool !== 'mark'}>
+      <div class="box">
+        <label class="field" for="watermark">{t(lang, 'watermarkLabel')}</label>
+        <input type="text" id="watermark" class="text" bind:value={edit.watermark} maxlength="200" autocomplete="off" spellcheck="false" aria-describedby="watermark-hint" />
+        <div class="chips scroll" role="group" aria-label={t(lang, 'suggestions')}>
+          {#each [t(lang, 'wmRental'), t(lang, 'wmBank'), tf(lang, 'wmDated', { date: today })] as s (s)}
+            <button type="button" class="chip" onclick={() => { edit.watermark = s }}>{s}</button>
+          {/each}
+        </div>
+        <p class="hint" id="watermark-hint">{t(lang, 'watermarkHint')}</p>
+        <label class="toggle">
+          <span class="toggle-text">
+            <span class="toggle-label">{t(lang, 'greyscale')}</span>
+            <span class="toggle-note">{t(lang, 'greyscaleHint')}</span>
+          </span>
+          <input type="checkbox" role="switch" class="switch" id="greyscale" bind:checked={edit.greyscale} />
+        </label>
+      </div>
+    </div>
+
+    <button type="button" class="link-button" id="reset" onclick={onReset}>{t(lang, 'reset')}</button>
+
+    <div class="actionbar">
+      <button type="button" class="button primary" id="review" onclick={() => { setPhase('review') }}>{t(lang, 'review')} <span class="flip" aria-hidden="true">→</span></button>
+    </div>
+  </section>
+{:else}
+  <Review {lang} {secure} {phase} hiddenCount={hidden.size} boxCount={edit.boxes.present.front.length + edit.boxes.present.back.length} watermark={edit.watermark} greyscale={edit.greyscale}
+    onDone={() => { setPhase('done') }} {onReset} />
+{/if}
