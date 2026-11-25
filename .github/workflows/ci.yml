@@ -6,7 +6,8 @@
 #
 #   changes ─ install ─┬─ build ──────┬─ e2e (2 shards) ─┐
 #                      ├─ typecheck   ├─ bundle-size     │
-#                      ├─ lint        └─ lighthouse      │
+#                      ├─ lint        ├─ reproducible    │
+#                      │              └─ lighthouse      │
 #                      └─ unit                           ├─ ci-ok
 #   reuse · audit · dependency-review · workflow-lint ───┘
 #
@@ -14,8 +15,8 @@
 # that branch protection requires to be up to date), so it is not validated again. Build, deploy, and
 # check the live site:
 #
-#   changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke
-#                                               └─ lighthouse-live
+#   changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke ─ lighthouse-live
+#                                               └─ attest (build provenance)
 #
 # ci-ok is the one status check that branch protection requires. CodeQL runs in codeql.yml.
 # Never re-run the legacy "pages build and deployment" workflow: it publishes unbuilt source.
@@ -104,7 +105,18 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+      # Reproducible: the build time is the commit's time, not the clock (vite.config.ts), so any
+      # rebuild of this commit gives the same bytes (checked by the `reproducible` job).
+      - name: Fix the build time to the commit time
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
       - run: pnpm build
+      # Software bill of materials of the runtime dependencies (CycloneDX), kept with the run.
+      - run: pnpm sbom --sbom-format cyclonedx --sbom-type application --prod --out sbom.cdx.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom
+          path: sbom.cdx.json
+          if-no-files-found: error
       # The one build every later job tests, measures and deploys.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -215,6 +227,28 @@ jobs:
       # Warns when over budget. Add --strict to make it block.
       - run: node scripts/bundle-size.ts
 
+  # Builds the same commit again on a fresh runner and compares every file with the `dist` artifact.
+  # They must be identical: the deployed site can be rebuilt from source and checked (ADR 0013).
+  reproducible:
+    needs: [changes, build]
+    if: needs.changes.outputs.validate == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Fix the build time to the commit time
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+      - run: pnpm build
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist-ci/
+      - name: Compare with the build that is tested and deployed
+        run: diff -u <(node scripts/build-manifest.ts dist-ci) <(node scripts/build-manifest.ts dist)
+
   # ── Stage 4: code analysis and supply chain ─────────────────────────────────────────────────────
   # These need no build, so they start right after `changes` and run alongside everything else.
   reuse:
@@ -299,7 +333,7 @@ jobs:
   # The single required status check. Passes when every job passed or was skipped on purpose.
   ci-ok:
     if: always()
-    needs: [changes, install, build, typecheck, lint, unit, e2e, bundle-size, reuse, audit, dependency-review, workflow-lint, lighthouse]
+    needs: [changes, install, build, typecheck, lint, unit, e2e, bundle-size, reproducible, reuse, audit, dependency-review, workflow-lint, lighthouse]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -335,6 +369,26 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  # Signed build provenance (SLSA, via GitHub's attestation service) for every deployed file: anyone can
+  # check that a file came from this repository, this workflow and this commit, with
+  # `gh attestation verify <file> --repo aasanchez/dnilimpio.es`.
+  attest:
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
+    needs: [build, deploy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: 'dist/**'
 
   # ── Stage 8: post-deploy ────────────────────────────────────────────────────────────────────────
   # The live site must serve exactly this run's build: exact CSP, SRI, every file of the service
