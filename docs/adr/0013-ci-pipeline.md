@@ -35,6 +35,11 @@ sit in fixed stages: build, test, code analysis, package, deploy, acceptance.
   actionlint and zizmor, bundle-size budgets (`scripts/bundle-size.ts`), Lighthouse, CodeQL
   (separate workflow, also weekly), and a post-deploy smoke test (`scripts/smoke.ts`) that checks
   the live site serves this commit's build with a matching SRI hash.
+- Supply chain (added after the security audit of 2026-11-25): the build sets `SOURCE_DATE_EPOCH`
+  to the commit time, and the `reproducible` job builds the commit a second time and compares every
+  file with the tested artifact. The build uploads a CycloneDX SBOM (`pnpm sbom`). On `master`, the
+  `attest` job signs build provenance for every deployed file with GitHub artifact attestations
+  (the only job besides `deploy` with `id-token: write`).
 - Bundle size and Lighthouse start as warnings until there is a baseline from real runs. Unit
   coverage is reported with no threshold.
 - No second secret scanner: GitGuardian already scans pull requests.
