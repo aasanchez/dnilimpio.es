@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { expect, test } from '@playwright/test'
+import { devices, expect, test } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
 
 const fixture = (name: string): string => fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url))
@@ -17,6 +17,30 @@ test('loads front and back through the file inputs', async ({ page }) => {
   // `capture` would force the camera on mobile and block picking from the gallery.
   await expect(input).not.toHaveAttribute('capture')
   await expect(page.locator('#file-back')).not.toHaveAttribute('capture')
+})
+
+test('desktop shows only the choose-image button', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByText('Elegir imagen')).toHaveCount(2)
+  await expect(page.getByText('Hacer foto')).toHaveCount(0)
+  await expect(page.locator('#camera-front')).toHaveCount(0)
+})
+
+test.describe('on a touch device', () => {
+  const { defaultBrowserType: _, ...pixel } = devices['Pixel 7']
+  test.use({ ...pixel, locale: 'es-ES' })
+
+  test('shows take-photo and choose-image buttons for each side', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('Hacer foto')).toHaveCount(2)
+    await expect(page.getByText('Elegir imagen')).toHaveCount(2)
+    await expect(page.locator('#camera-front')).toHaveAttribute('capture', 'environment')
+    await expect(page.locator('#camera-back')).toHaveAttribute('capture', 'environment')
+    await expect(page.locator('#file-front')).not.toHaveAttribute('capture')
+    // A photo from the camera input loads the same way as one from the gallery.
+    await page.locator('#camera-back').setInputFiles(fixture('synthetic-back.png'))
+    await expect(page.locator('#status-back')).toHaveText('Imagen cargada.')
+  })
 })
 
 test('shows a clear error for a non-image file', async ({ page }) => {
