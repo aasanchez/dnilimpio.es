@@ -3,7 +3,7 @@
      and download (Review.svelte). The editor owns the sanitised rasters that both screens show. -->
 <script lang="ts">
   import { untrack } from 'svelte'
-  import { defaultHidden, fieldsOf, hasField, masksFor, mrzLeaks } from '../engine/fields.ts'
+  import { defaultHidden, fieldsOf, hasField, masksFor, mrzLeaks, placeZones, sideRects } from '../engine/fields.ts'
   import { renderSecure } from '../engine/render.ts'
   import { canRedo, canUndo, commit, redo, undo } from '../engine/history.ts'
   import { HANDLES, centredBox, fromPoints, grow, handlePoint, hitTest, isUsable, move, resize, type Handle, type Point } from '../engine/masks.ts'
@@ -56,9 +56,28 @@
   let selected = $state<number | null>(null)
   /** Box being drawn, moved or resized; shown as an outline until the pointer is released. */
   let draft = $state<{ index: number | null; rect: Rect } | null>(null)
-  /** A pointer gesture: a box drag, or a tap on a field zone (toggled on release if it did not move). */
-  let drag: { pointerId: number; start: Point; handle: Handle | null; origin: Rect | null; zone: ZoneId | null } | null = null
+  /**
+   * A pointer gesture: a box drag, a field box drag while adjusting (`key`), or a tap on a field zone
+   * (toggled on release if it did not move).
+   */
+  let drag: { pointerId: number; start: Point; handle: Handle | null; origin: Rect | null; zone: ZoneId | null; key?: string } | null = null
   const boxes = $derived(edit.boxes.present[side])
+  /** Template zones with the user's moves and resizes applied: what the copy hides. */
+  const placed = $derived(placeZones(model, edit.placement))
+  /** Adjusting: the field boxes of this side can be selected, moved and resized on the card. */
+  let adjusting = $state(false)
+  /** Placement key of the selected field box, while adjusting. */
+  let selectedZone = $state<string | null>(null)
+  /** Field box being moved or resized; shown until the pointer is released. */
+  let zoneDraft = $state<{ key: string; rect: Rect } | null>(null)
+  const zoneList = $derived(sideRects(placed, side))
+  const zoneIndex = $derived.by(() => {
+    const i = zoneList.findIndex((z) => z.key === selectedZone)
+    return i < 0 ? null : i
+  })
+  const selectedPlaced = $derived(zoneIndex === null ? undefined : zoneList[zoneIndex])
+  const moved = $derived(Object.keys(edit.placement).length > 0)
+  const share = $derived(new Intl.NumberFormat(lang, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }))
   const sameSet = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((x) => b.includes(x))
   const sideName = (s: Side): string => t(lang, s === 'front' ? 'tabFront' : 'tabBack')
   const percent = $derived(new Intl.NumberFormat(lang, { style: 'percent', maximumFractionDigits: 0 }))
@@ -88,6 +107,22 @@
   }
   const cards = $derived(SIDES.flatMap((s) => (align.warped[s] ? [[s, align.warped[s]] as const] : [])))
 
+  function place (key: string, rect: Rect): void {
+    edit.placement = { ...edit.placement, [key]: rect }
+  }
+
+  function resetPlacement (): void {
+    edit.placement = {}
+    zoneDraft = null
+  }
+
+  function setAdjusting (on: boolean): void {
+    adjusting = on
+    selectedZone = null
+    zoneDraft = null
+    if (on) display?.focus()
+  }
+
   function history (op: 'undo' | 'redo'): void {
     edit.boxes = op === 'undo' ? undo(edit.boxes) : redo(edit.boxes)
     selected = null
@@ -113,7 +148,7 @@
 
   /** The field whose printed zone on this side contains the point, if any. */
   function zoneAt (p: Point): ZoneId | null {
-    for (const z of model.zones) {
+    for (const z of placed.zones) {
       if (z.side !== side) continue
       if (z.rects.some((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h)) return z.id
     }
@@ -126,6 +161,17 @@
     const p = toCard(e)
     const r = canvas.getBoundingClientRect()
     const tolPx = e.pointerType === 'touch' ? 24 : 12
+    if (adjusting) {
+      const zh = hitTest(zoneList.map((z) => z.rect), zoneIndex, p, tolPx / r.width, tolPx / r.height)
+      const z = zh ? zoneList[zh.index] : undefined
+      selectedZone = z?.key ?? null
+      if (!zh || !z) return
+      drag = { pointerId: e.pointerId, start: p, handle: zh.handle, origin: z.rect, zone: null, key: z.key }
+      e.preventDefault()
+      canvas.focus()
+      try { canvas.setPointerCapture(e.pointerId) } catch { /* synthetic events cannot be captured */ }
+      return
+    }
     const hit = hitTest(boxes, selected, p, tolPx / r.width, tolPx / r.height)
     if (hit) {
       selected = hit.index
@@ -150,6 +196,10 @@
     e.preventDefault()
     const p = toCard(e)
     const o = drag.origin
+    if (drag.key && o) {
+      zoneDraft = { key: drag.key, rect: drag.handle ? resize(o, drag.handle, p) : move(o, p.x - drag.start.x, p.y - drag.start.y) }
+      return
+    }
     if (!o) draft = { index: null, rect: fromPoints(drag.start, p) }
     else if (drag.handle) draft = { index: selected, rect: resize(o, drag.handle, p) }
     else draft = { index: selected, rect: move(o, p.x - drag.start.x, p.y - drag.start.y) }
@@ -160,8 +210,14 @@
     const d = draft
     const zone = drag.zone
     const start = drag.start
+    const zd = drag.key ? zoneDraft : null
     drag = null
     draft = null
+    zoneDraft = null
+    if (zd) {
+      if (e.type === 'pointerup') place(zd.key, zd.rect)
+      return
+    }
     if (zone) {
       // A tap toggles the field; a slide that left the zone does nothing.
       const p = toCard(e)
@@ -182,6 +238,20 @@
     const step = e.shiftKey ? 0.02 : 0.005
     const dirs: Partial<Record<string, [number, number]>> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
     const d = dirs[e.key]
+    if (adjusting) {
+      const z = selectedPlaced
+      if (d && z) {
+        e.preventDefault()
+        place(z.key, e.shiftKey ? grow(z.rect, d[0] * step, d[1] * step) : move(z.rect, d[0] * step, d[1] * step))
+      } else if ((e.key === 'n' || e.key === 'N') && zoneList.length > 0) {
+        e.preventDefault()
+        selectedZone = zoneList[zoneIndex === null ? 0 : (zoneIndex + 1) % zoneList.length]?.key ?? null
+      } else if (e.key === 'Escape' && z) {
+        e.preventDefault()
+        selectedZone = null
+      }
+      return
+    }
     const r = selected === null ? undefined : boxes[selected]
     if (d && r) {
       e.preventDefault()
@@ -213,6 +283,7 @@
   function pickTool (id: Tool): void {
     tool = id
     drawMode = false
+    if (adjusting) setAdjusting(false)
   }
 
   function setPhase (p: Phase): void {
@@ -229,7 +300,7 @@
     }
     for (const s of SIDES) {
       const card = align.warped[s]
-      if (card) renderSecure(card, { ...opts, masks: [...masksFor(model, s, hidden), ...edit.boxes.present[s]] }, secure[s])
+      if (card) renderSecure(card, { ...opts, masks: [...masksFor(placed, s, hidden), ...edit.boxes.present[s]] }, secure[s])
     }
     version = untrack(() => version) + 1
   })
@@ -244,27 +315,33 @@
     display.height = src.height
     const ctx = display.getContext('2d')
     if (!ctx) return
-    ctx.drawImage(src, 0, 0)
+    // While adjusting, show the straightened photo without the fills, so the person can see what each
+    // box has to cover; hidden fields and manual boxes are drawn see-through instead. This copy is
+    // only on screen: the review and the PDF always use the sanitised raster.
+    const raw = adjusting && !finalPreview ? align.warped[side] : undefined
+    ctx.drawImage(raw ?? src, 0, 0, src.width, src.height)
     if (finalPreview) return
-    ctx.setLineDash([18, 10])
-    ctx.lineWidth = 5
-    for (const z of model.zones) {
-      if (z.side !== side || hidden.has(z.id)) continue
-      for (const r of z.rects) {
-        const p = toPixels(r, src.width, src.height)
-        ctx.fillStyle = 'rgba(243, 103, 22, 0.1)'
-        ctx.fillRect(p.x, p.y, p.w, p.h)
-        ctx.strokeStyle = '#1f1a14'
-        ctx.strokeRect(p.x, p.y, p.w, p.h)
-        ctx.strokeStyle = '#f36716'
-        ctx.lineDashOffset = 14
-        ctx.strokeRect(p.x, p.y, p.w, p.h)
-        ctx.lineDashOffset = 0
-      }
-    }
-    // Selected box and the box being drawn: solid outline with corner handles.
     const w = src.width
     const h = src.height
+    if (raw) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
+      for (const b of boxes) ctx.fillRect(b.x * w, b.y * h, b.w * w, b.h * h)
+    }
+    ctx.setLineDash([18, 10])
+    ctx.lineWidth = 5
+    for (const z of adjusting ? zoneList : zoneList.filter((x) => !hidden.has(x.id))) {
+      const isHidden = hidden.has(z.id)
+      const p = toPixels(zoneDraft?.key === z.key ? zoneDraft.rect : z.rect, w, h)
+      ctx.fillStyle = isHidden ? 'rgba(0, 0, 0, 0.55)' : 'rgba(243, 103, 22, 0.1)'
+      ctx.fillRect(p.x, p.y, p.w, p.h)
+      ctx.strokeStyle = '#1f1a14'
+      ctx.strokeRect(p.x, p.y, p.w, p.h)
+      ctx.strokeStyle = isHidden ? '#fbf9f4' : '#f36716'
+      ctx.lineDashOffset = 14
+      ctx.strokeRect(p.x, p.y, p.w, p.h)
+      ctx.lineDashOffset = 0
+    }
+    // Selected box and the box being drawn: solid outline with corner handles.
     const outline = (r: Rect, handles: boolean): void => {
       ctx.setLineDash([])
       for (const [lw, c] of [[7, '#fbf9f4'], [3, '#f36716']] as const) {
@@ -280,6 +357,11 @@
         ctx.strokeStyle = '#1f1a14'
         ctx.strokeRect(p.x * w - 12, p.y * h - 12, 24, 24)
       }
+    }
+    if (adjusting) {
+      const z = selectedPlaced
+      if (z) outline(zoneDraft?.key === z.key ? zoneDraft.rect : z.rect, true)
+      return
     }
     const sel = selected === null ? undefined : boxes[selected]
     if (draft) {
@@ -310,7 +392,7 @@
     </div>
     <div class="segmented" role="group" aria-label={t(lang, 'sides')}>
       {#each SIDES as s (s)}
-        <button type="button" id="tab-{s}" aria-pressed={side === s} onclick={() => { side = s; selected = null }}>{sideName(s)}</button>
+        <button type="button" id="tab-{s}" aria-pressed={side === s} onclick={() => { side = s; selected = null; selectedZone = null }}>{sideName(s)}</button>
       {/each}
     </div>
 
@@ -326,12 +408,12 @@
         <!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
         <canvas id="preview" class="card-result box-editor" class:is-drawing={drawMode} bind:this={display} tabindex="0" role="application"
           aria-label={tf(lang, 'previewLabel', { side: sideName(side) })}
-          aria-describedby="box-hint"
+          aria-describedby={adjusting ? 'adjust-hint' : 'box-hint'}
           onpointerdown={onPointerDown} onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp}
           onkeydown={onKeyDown}></canvas>
       </div>
     </div>
-    <p class="legend"><span class="legend-swatch" aria-hidden="true"></span>{t(lang, 'legendVisible')}</p>
+    <p class="legend"><span class="legend-swatch" aria-hidden="true"></span>{t(lang, adjusting ? 'legendAdjust' : 'legendVisible')}</p>
 
     <div class="tools" role="tablist" aria-label={t(lang, 'tools')}>
       {#each TOOLS as tl (tl.id)}
@@ -365,6 +447,25 @@
         {#if mrzLeaks(model, hidden)}<p class="warning" id="mrz-warning">{t(lang, 'mrzWarning')}</p>{/if}
       </div>
       <p class="hint">{tf(lang, 'positionsHint', { doc: docName })}</p>
+      <!-- Adjust: move or resize the field boxes by hand when the template sits a little off the card. -->
+      <div class="box">
+        <div class="box-actions">
+          <button type="button" class="button small" id="adjust-zones" aria-pressed={adjusting} disabled={finalPreview} onclick={() => { setAdjusting(!adjusting) }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" /></svg>
+            {t(lang, 'adjustZones')}
+          </button>
+          <button type="button" class="button small" id="reset-zones" disabled={!moved} onclick={resetPlacement}>{t(lang, 'resetZones')}</button>
+        </div>
+        {#if adjusting}
+          <p class="hint" id="adjust-hint">{t(lang, 'adjustHint')}</p>
+          <p class="count" id="zone-position" aria-live="polite">
+            {#if selectedPlaced}
+              {@const r = zoneDraft?.key === selectedPlaced.key ? zoneDraft.rect : selectedPlaced.rect}
+              {tf(lang, 'zonePosition', { field: t(lang, fieldKey(selectedPlaced.id)), x: share.format(r.x), y: share.format(r.y), w: share.format(r.w), h: share.format(r.h) })}
+            {/if}
+          </p>
+        {/if}
+      </div>
       <SmartFind {lang} {cards} onFound={addFound} />
     </div>
 

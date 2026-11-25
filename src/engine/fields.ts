@@ -32,6 +32,30 @@ export function masksFor (model: ModelZones, side: Side, hidden: ReadonlySet<Zon
   return model.zones.filter((z) => z.side === side && hidden.has(z.id)).flatMap((z) => z.rects)
 }
 
+/**
+ * Template rectangles the user moved or resized, in normalised card coordinates. The key is
+ * zoneKey(): the zone's index in `model.zones` and the rectangle's index in that zone. Memory only.
+ */
+export type Placement = Readonly<Record<string, Rect>>
+
+export const zoneKey = (zone: number, rect: number): string => `${String(zone)}:${String(rect)}`
+
+/** The document's zones with the user's placement applied. Returns `model` itself when nothing moved. */
+export function placeZones (model: ModelZones, placement: Placement): ModelZones {
+  if (Object.keys(placement).length === 0) return model
+  return {
+    ...model,
+    zones: model.zones.map((z, zi) => ({ ...z, rects: z.rects.map((r, ri) => placement[zoneKey(zi, ri)] ?? r) })),
+  }
+}
+
+export interface PlacedRect { readonly key: string; readonly id: ZoneId; readonly rect: Rect }
+
+/** Every template rectangle on one side, in zone order, with its placement key. */
+export function sideRects (model: ModelZones, side: Side): PlacedRect[] {
+  return model.zones.flatMap((z, zi) => (z.side === side ? z.rects.map((rect, ri) => ({ key: zoneKey(zi, ri), id: z.id, rect })) : []))
+}
+
 /** Data the MRZ repeats (docs/ZONES.md). Name and DNI number are also there but are not fields yet. */
 export const MRZ_REPEATS: readonly ZoneId[] = ['supportNumber', 'dateOfBirth', 'expiryDate']
 
