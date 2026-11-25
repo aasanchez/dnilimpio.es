@@ -26,7 +26,7 @@ Target specification since 2026-11-25: the identity-privacy master prompt (Svelt
 - TS strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`.
 - Vite: `minify: true` (since 2026-11-25, Alexis), `sourcemap: true` (maps published), `base: './'`, no module-preload polyfill (it is an inline script).
 - Build plugin injects the §5.1 CSP and `referrer=no-referrer` right after `<meta charset>`; CSP lives in one file (`scripts/csp.ts`) shared with the e2e test.
-- Build plugin adds `integrity="sha384-…"` to every local script and stylesheet.
+- Build plugin adds `integrity="sha384-…"` to every local script and stylesheet, and an inline import map with the integrity of chunks loaded on demand (the PDF code); the CSP allows that one inline script by SHA-256 hash.
 - ESLint bans `eval`, `new Function`, `innerHTML`/`outerHTML`/`insertAdjacentHTML`/`document.write`, and `localStorage`/`sessionStorage`/`indexedDB`.
 - Playwright runs against `vite preview` (production build) and checks: exact CSP, referrer, SRI on all assets, no inline script/style, no CSP/TT violations, no non-self requests.
 - `.npmrc`: `ignore-scripts=true`, `save-exact=true`.

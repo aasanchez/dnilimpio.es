@@ -63,8 +63,10 @@ Whether a recipient accepts a redacted copy is up to them.
   no EXIF, GPS, camera model, thumbnail or comments. The PDF has no metadata, no text, no
   annotations, no scripts and no attachments. Tests check this object by object.
 - **Verifiable code.** The production build is minified but ships source maps (`.map` files) that
-  map every line back to the source in this repository, and every script and
-  stylesheet has a Subresource Integrity hash.
+  map every line back to the source in this repository. Every script and stylesheet has a
+  Subresource Integrity hash, including the PDF code that loads in the background after the page
+  appears (its hash is in an import map, allowed by the CSP through its own SHA-256 hash). A changed
+  file is refused by the browser.
 
 ### What it cannot guarantee
 
@@ -192,7 +194,8 @@ Rules the code follows:
   warnings, review, a real PDF download (decoded in the browser to check that hidden areas are black
   and that the file has no metadata, no source file name and no watermark text), reset, and
   security checks on the built page: exact CSP, referrer policy, SRI on every asset, no inline code, no CSP violations and no
-  request outside the page's origin.
+  request outside the page's origin, every on-demand chunk listed in the import map with the right
+  hash, and a tampered PDF chunk refused by the browser.
 
 ## Deployment
 

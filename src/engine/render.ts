@@ -4,11 +4,11 @@
 //   straightened card → sanitise() (greyscale, opaque masks, self-check) → watermark → new canvas
 //   → JPEG → stripJpeg() → PDF.
 // The card canvas is only read; the result is always a new canvas.
+// The PDF step lives in export.ts, which is loaded on demand (it carries the PDF library).
 
 import type { Rect } from '../zones/dni.ts'
 import { sanitise } from './raster.ts'
 import { drawWatermark } from './watermark.ts'
-import { buildPdf } from './pdf.ts'
 
 export interface RenderOptions {
   readonly masks: readonly Rect[]
@@ -37,26 +37,6 @@ export function renderSecure (card: HTMLCanvasElement, opts: RenderOptions, out:
   ctx.putImageData(img, 0, 0)
   img.data.fill(0)
   drawWatermark(ctx, opts.watermark, width, height)
-}
-
-/** JPEG quality for the export: high enough to keep small print readable. */
-export const JPEG_QUALITY = 0.92
-
-async function toJpeg (canvas: HTMLCanvasElement): Promise<Uint8Array> {
-  const blob = await new Promise<Blob | null>((resolve) => { canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY) })
-  if (!blob) throw new Error('JPEG encoding failed')
-  return new Uint8Array(await blob.arrayBuffer())
-}
-
-/** Builds the PDF from already sanitised canvases (one page each, in order). */
-export async function exportPdf (sanitised: readonly HTMLCanvasElement[]): Promise<Blob> {
-  const jpegs: Uint8Array[] = []
-  for (const c of sanitised) jpegs.push(await toJpeg(c))
-  const pdf = await buildPdf(jpegs)
-  for (const j of jpegs) j.fill(0)
-  const blob = new Blob([new Uint8Array(pdf)], { type: 'application/pdf' })
-  pdf.fill(0)
-  return blob
 }
 
 /** Saves a Blob as a file through a temporary object URL, which is revoked right after. */
