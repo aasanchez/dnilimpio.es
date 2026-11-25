@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# pnpm settings for this single-package project (no workspace packages).
+# Dependency versions are pinned exactly; no dependency may run install scripts.
+savePrefix: ""
+strictDepBuilds: true
+onlyBuiltDependencies: []

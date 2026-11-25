@@ -8,3 +8,4 @@ project specification on purpose).
 |---|----------|--------|
 | [0001](0001-pdf-library.md) | PDF export with `@cantoo/pdf-lib` | accepted |
 | [0002](0002-no-standalone-release.md) | No standalone offline release | accepted, deviates from spec §25 |
+| [0003](0003-svelte-vite-pnpm.md) | Svelte 5 + Vite; Node.js and pnpm pinned to latest stable | accepted |

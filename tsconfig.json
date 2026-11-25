@@ -16,9 +16,11 @@
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true
   },
-  "include": ["src", "tests", "scripts", "vite.config.ts", "playwright.config.ts", "vitest.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.svelte", "tests", "scripts", "vite.config.ts", "playwright.config.ts", "vitest.config.ts", "svelte.config.js"]
 }

@@ -3,13 +3,22 @@
 // On top: typescript-eslint strict type-checked rules and project-specific security bans (§2, §5.1).
 import neostandard from 'neostandard'
 import tseslint from 'typescript-eslint'
+import svelte from 'eslint-plugin-svelte'
+import svelteConfig from './svelte.config.js'
 
 export default tseslint.config(
   { ignores: ['dist/', 'test-results/', 'playwright-report/'] },
-  ...neostandard({ ts: true, noJsx: true }),
+  ...neostandard({ ts: true, noJsx: true, filesTs: ['**/*.ts', '**/*.svelte'] }),
   ...tseslint.configs.strictTypeChecked,
+  ...svelte.configs.recommended,
   {
-    languageOptions: { parserOptions: { projectService: { allowDefaultProject: ['eslint.config.js'] }, tsconfigRootDir: import.meta.dirname } },
+    languageOptions: {
+      parserOptions: {
+        projectService: { allowDefaultProject: ['eslint.config.js', 'svelte.config.js'] },
+        tsconfigRootDir: import.meta.dirname,
+        extraFileExtensions: ['.svelte'],
+      },
+    },
     rules: {
       // §5.1: no eval / new Function / string-to-HTML sinks.
       'no-eval': 'error',
@@ -34,5 +43,13 @@ export default tseslint.config(
     files: ['src/geometry/**/*.ts', 'src/engine/**/*.ts', 'tests/**/*.ts'],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
-  { files: ['eslint.config.js'], ...tseslint.configs.disableTypeChecked }
+  {
+    files: ['**/*.svelte', '**/*.svelte.ts'],
+    languageOptions: { parserOptions: { parser: tseslint.parser, svelteConfig } },
+    rules: {
+      // {@html} would bypass the no-HTML-strings rule (Trusted Types).
+      'svelte/no-at-html-tags': 'error',
+    },
+  },
+  { files: ['eslint.config.js', 'svelte.config.js'], ...tseslint.configs.disableTypeChecked }
 )

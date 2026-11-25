@@ -3,6 +3,6 @@
 version = 1
 
 [[annotations]]
-path = ["src/i18n/locales/*.json", "tests/fixtures/**", "package.json", "package-lock.json"]
+path = ["src/i18n/locales/*.json", "tests/fixtures/**", "package.json", "pnpm-lock.yaml"]
 SPDX-FileCopyrightText = "dnilimpio.es contributors"
 SPDX-License-Identifier = "AGPL-3.0-or-later"

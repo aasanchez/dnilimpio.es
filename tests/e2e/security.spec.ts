@@ -36,3 +36,17 @@ test('app renders with no CSP violations and no requests outside its origin', as
   expect(foreign).toEqual([])
   expect(violations).toEqual([])
 })
+
+test('Trusted Types: HTML strings are rejected and no policy can be created', async ({ page }) => {
+  await page.goto('/')
+  const result = await page.evaluate(() => {
+    const tryIt = (f: () => void): string => { try { f(); return 'allowed' } catch { return 'blocked' } }
+    const tt = (window as unknown as { trustedTypes?: { createPolicy: (n: string, o: object) => unknown } }).trustedTypes
+    return {
+      // eslint-disable-next-line no-restricted-properties -- this test checks that the browser blocks it
+      innerHTML: tryIt(() => { document.createElement('div').innerHTML = '<b>x</b>' }),
+      policy: tt ? tryIt(() => tt.createPolicy('probe', {})) : 'unsupported',
+    }
+  })
+  expect(result).toEqual({ innerHTML: 'blocked', policy: 'blocked' })
+})

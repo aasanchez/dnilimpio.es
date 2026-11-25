@@ -75,10 +75,13 @@ test('switching language keeps loaded images and updates text', async ({ page })
   await page.goto('/')
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
+  // Mark the selector node: a language change must update text in place, not rebuild the page
+  // (a rebuilt selector would drop keyboard focus).
+  await page.locator('#lang').evaluate((n) => { n.dataset['probe'] = '1' })
   await page.locator('#lang').selectOption('eu')
   await expect(page.locator('html')).toHaveAttribute('lang', 'eu')
   await expect(page.locator('#status-front')).toHaveText('Irudia kargatu da.')
-  await expect(page.locator('#lang')).toBeFocused()
+  await expect(page.locator('#lang')).toHaveAttribute('data-probe', '1')
 })
 
 test('Arabic switches the page to right-to-left', async ({ page }) => {
