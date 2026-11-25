@@ -4,6 +4,7 @@
   import { t, type Lang } from '../i18n/index.ts'
   import BuildVersion from './BuildVersion.svelte'
   import PrivacyNotice from './PrivacyNotice.svelte'
+  import AuditPrompt from './AuditPrompt.svelte'
 
   const { lang, onStart, notice, onNoticeDismiss }: { lang: Lang; onStart: () => void; notice: boolean; onNoticeDismiss: () => void } = $props()
 </script>
@@ -36,6 +37,7 @@
 
   <footer>
     <a href={__REPO_URL__} rel="noopener noreferrer">{t(lang, 'sourceCode')}</a>
+    <AuditPrompt {lang} id="audit-footer" />
     <BuildVersion {lang} />
   </footer>
 
