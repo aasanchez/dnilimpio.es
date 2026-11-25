@@ -4,16 +4,17 @@
 //   one against the SHA-384 hash recorded at build time. One bad file and the install fails: the
 //   cache only ever holds the exact bytes of one build. Optional parts already saved by the previous
 //   build (OCR) are carried over when their bytes still match the new hash.
-// - Fetch: answers GET requests inside its scope from that cache; page loads get the cached index.html.
-//   On-demand files (ocr/) are downloaded with their integrity on first use (or when the page asks
-//   with a 'prepare' message) and then kept.
-//   Anything else not in the cache goes to the network as usual (there should be nothing).
+// - Fetch: deny by default. It answers only the files listed in its manifest, from the cache, and page
+//   loads inside its scope, with the cached index.html. On-demand files (ocr/, assets/ml/) are
+//   downloaded with their integrity on first use (or when the page asks with a 'prepare' message) and
+//   then kept. Every other request from the page or its workers (OCR) is refused and never reaches the
+//   network: another origin, another path, a query string, a method other than GET (route()).
 // - Activate: deletes the caches of older builds. A new build activates only once no tab runs the
 //   old one, so no open page loses files it still needs.
 // It never stores user data: images and PDFs live in memory and blob: URLs, which never reach it.
 // The build (scripts/vite-plugins.ts) replaces the manifest placeholder below with the file list.
 
-import { CACHE_PREFIX, cacheName, isAppRequest, parseManifest } from './offline/precache.ts'
+import { CACHE_PREFIX, cacheName, parseManifest, route } from './offline/precache.ts'
 
 const sw = self as unknown as ServiceWorkerGlobalScope
 
@@ -22,6 +23,8 @@ const CACHE = cacheName(manifest.version)
 const INDEX = new URL('index.html', sw.location.href).href
 const urlOf = (path: string): string => new URL(path, sw.location.href).href
 const ON_DEMAND = new Map(manifest.onDemand.map((f) => [urlOf(f.path), f.integrity]))
+const FILES = new Map(manifest.files.map((f) => [urlOf(f.path), f.integrity]))
+const KNOWN = { files: new Set(FILES.keys()), onDemand: new Set(ON_DEMAND.keys()) }
 
 /** SHA-384 of a response body, as an SRI string. */
 async function sri (res: Response): Promise<string> {
@@ -108,13 +111,23 @@ sw.addEventListener('message', (event) => {
 
 sw.addEventListener('fetch', (event) => {
   const req = event.request
-  if (!isAppRequest(req.method, req.url, sw.registration.scope)) return
+  const to = route(req.method, req.url, req.mode, sw.registration.scope, KNOWN)
   event.respondWith((async () => {
-    const cache = await caches.open(CACHE)
-    const key = req.mode === 'navigate' ? INDEX : req.url.split('#')[0] ?? req.url
-    const hit = await cache.match(key, { ignoreSearch: req.mode === 'navigate' })
-    if (hit) return hit
-    if (!ON_DEMAND.has(key)) return await fetch(req)
-    return await ensureOnDemand(key)
+    switch (to.kind) {
+      case 'deny':
+        // A network error, as if the request had been blocked: nothing is sent.
+        return Response.error()
+      case 'on-demand':
+        return await ensureOnDemand(to.url)
+      case 'index':
+      case 'file': {
+        const url = to.kind === 'index' ? INDEX : to.url
+        const hit = await (await caches.open(CACHE)).match(url)
+        if (hit) return hit
+        // Not expected (install saved every file), but if the cache was cleared under us: the same
+        // file again, checked against its hash.
+        return await fetch(url, { integrity: FILES.get(url) ?? '', credentials: 'omit' })
+      }
+    }
   })())
 })

@@ -42,6 +42,8 @@
   "positionsHint": "Les cadres noirs sont placés d'après la mise en page de : {doc}. Vérifiez que chacun couvre son champ.",
   "watermarkLabel": "Texte du filigrane (facultatif)",
   "watermarkHint": "Par exemple : COPIE UNIQUEMENT POUR UNE DEMANDE DE LOCATION. Un filigrane décourage la réutilisation, mais ne peut pas empêcher une fraude.",
+  "watermarkSize": "Taille du texte",
+  "watermarkOpacity": "Opacité",
   "greyscale": "Convertir en noir et blanc",
   "finalPreview": "Aperçu final",
   "previewLabel": "Aperçu : {side}",

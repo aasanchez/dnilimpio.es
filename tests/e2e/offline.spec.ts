@@ -42,6 +42,35 @@ test('works offline after one visit, through to the PDF download', async ({ page
   expect(violations).toEqual([])
 })
 
+test('the worker refuses every request that is not a file of this build (deny by default)', async ({ page, context }) => {
+  // Only requests that reach the network show up here: the worker's own fetches included.
+  const leaked: string[] = []
+  await context.route(/leak|secret|evil/, async (route) => { leaked.push(route.request().url()); await route.fulfill({ status: 200, body: '' }) })
+  await page.goto('/')
+  await offlineReady(page)
+  // Same-origin requests the CSP allows (img-src 'self', script-src 'self'), with data in the path
+  // or the query string: what a compromised dependency could try.
+  const results = await page.evaluate(async () => {
+    const load = async (url: string): Promise<string> => await new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => { resolve('loaded') }
+      img.onerror = () => { resolve('blocked') }
+      img.src = url
+    })
+    return [
+      await load('leak.png?dni=12345678Z'),
+      await load('assets/secret-12345678Z.png'),
+      await load('../evil.png'),
+      await load(`${document.querySelector<HTMLScriptElement>('script[type=module][src]')?.src ?? ''}?dni=12345678Z`),
+    ]
+  })
+  expect(results).toEqual(['blocked', 'blocked', 'blocked', 'blocked'])
+  expect(leaked).toEqual([])
+  // The app itself still works: page loads with a query string get index.html.
+  await page.goto('/?utm=1')
+  await expect(page.locator('h1')).toBeVisible()
+})
+
 test('a tampered file stops the install and leaves no cache behind', async ({ page, context }) => {
   // context.route also sees the worker's own requests.
   let fromWorker = 0

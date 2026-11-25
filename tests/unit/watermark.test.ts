@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { WATERMARK_MAX_CHARS, WATERMARK_SIZE_RATIO, breakWord, graphemes, layoutWatermark, normaliseWatermark, textDirection, tileWatermark, wrap } from '../../src/engine/watermark.ts'
+import { DEFAULT_WATERMARK_STYLE, WATERMARK_MAX_CHARS, WATERMARK_OPACITY, WATERMARK_SCALE, WATERMARK_SIZE_RATIO, breakWord, clampStyle, graphemes, layoutWatermark, normaliseWatermark, textDirection, tileWatermark, watermarkInk, wrap } from '../../src/engine/watermark.ts'
 
 // Monospace stand-in for canvas measureText at font size 1: 0.6 units per character.
 const mono = (s: string): number => graphemes(s).length * 0.6
@@ -76,6 +76,34 @@ describe('layoutWatermark', () => {
   })
   it('keeps a readable minimum size on tiny images', () => {
     expect(layoutWatermark('COPY', 64, 40, mono)?.size).toBe(10)
+  })
+  it('scales the font size and the spacing with the user scale', () => {
+    const base = layoutWatermark('COPIA', W, H, mono)
+    const big = layoutWatermark('COPIA', W, H, mono, 2)
+    if (!base || !big) throw new Error('expected layouts')
+    expect(big.size).toBeCloseTo(base.size * 2, 9)
+    expect(big.stepY).toBeGreaterThan(base.stepY)
+  })
+  it('clamps the scale to the slider limits', () => {
+    const at = (scale: number): number => layoutWatermark('COPIA', W, H, mono, scale)?.size ?? 0
+    expect(at(100)).toBeCloseTo(DIAGONAL * WATERMARK_SIZE_RATIO * WATERMARK_SCALE.max, 9)
+    expect(at(0)).toBeCloseTo(DIAGONAL * WATERMARK_SIZE_RATIO * WATERMARK_SCALE.min, 9)
+    expect(at(Number.NaN)).toBeCloseTo(DIAGONAL * WATERMARK_SIZE_RATIO, 9)
+  })
+})
+
+describe('watermark style', () => {
+  it('defaults to the original look: normal size, 16% opacity', () => {
+    expect(DEFAULT_WATERMARK_STYLE).toEqual({ scale: 1, opacity: 0.16 })
+    expect(watermarkInk(DEFAULT_WATERMARK_STYLE.opacity)).toEqual({ fill: 'rgba(20, 20, 20, 0.16)', halo: 'rgba(255, 255, 255, 0.16)' })
+  })
+  it('draws solid black at 100% opacity, with the halo kept faint', () => {
+    expect(watermarkInk(1)).toEqual({ fill: 'rgb(0, 0, 0)', halo: 'rgba(255, 255, 255, 0.16)' })
+  })
+  it('keeps values inside the slider limits', () => {
+    expect(clampStyle({ scale: 9, opacity: 2 })).toEqual({ scale: WATERMARK_SCALE.max, opacity: WATERMARK_OPACITY.max })
+    expect(clampStyle({ scale: -1, opacity: 0 })).toEqual({ scale: WATERMARK_SCALE.min, opacity: WATERMARK_OPACITY.min })
+    expect(clampStyle({ scale: Number.NaN, opacity: Number.NaN })).toEqual(DEFAULT_WATERMARK_STYLE)
   })
 })
 

@@ -42,6 +42,8 @@
   "positionsHint": "Os recadros negros colócanse segundo o deseño de: {doc}. Comproba que cada un cobre o seu campo.",
   "watermarkLabel": "Texto da marca de auga (opcional)",
   "watermarkHint": "Por exemplo: COPIA SÓ PARA SOLICITUDE DE ALUGUER. Unha marca de auga dificulta a reutilización, pero non pode impedir unha fraude.",
+  "watermarkSize": "Tamaño do texto",
+  "watermarkOpacity": "Opacidade",
   "greyscale": "Converter a branco e negro",
   "finalPreview": "Vista final",
   "previewLabel": "Vista previa: {side}",
