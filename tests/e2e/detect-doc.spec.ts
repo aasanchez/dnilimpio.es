@@ -18,8 +18,8 @@ function mrz (code: string, birth: string, expiry: string): string[] {
 }
 
 /** A 1600 × 1200 photo of a card back on a dark table, with the MRZ printed at the bottom. */
-async function back (page: Page, lines: string[]): Promise<{ name: string; mimeType: string; buffer: Buffer }> {
-  const url = await page.evaluate((text) => {
+async function back (page: Page, lines: string[], sideways = false): Promise<{ name: string; mimeType: string; buffer: Buffer }> {
+  const url = await page.evaluate(([text, turn]) => {
     const c = document.createElement('canvas')
     c.width = 1600
     c.height = 1200
@@ -32,8 +32,18 @@ async function back (page: Page, lines: string[]): Promise<{ name: string; mimeT
     ctx.fillStyle = '#000'
     ctx.font = '48px monospace'
     text.forEach((l, i) => { ctx.fillText(l, 260, 770 + i * 64) })
-    return c.toDataURL('image/png')
-  }, lines)
+    if (!turn) return c.toDataURL('image/png')
+    // The same photo taken with the phone upright: the card is sideways.
+    const r = document.createElement('canvas')
+    r.width = 1200
+    r.height = 1600
+    const rctx = r.getContext('2d')
+    if (!rctx) throw new Error('no 2d')
+    rctx.translate(1200, 0)
+    rctx.rotate(Math.PI / 2)
+    rctx.drawImage(c, 0, 0)
+    return r.toDataURL('image/png')
+  }, [lines, sideways] as const)
   return { name: 'back.png', mimeType: 'image/png', buffer: Buffer.from(url.split(',')[1] ?? '', 'base64') }
 }
 
@@ -67,6 +77,17 @@ test('reads the back, preselects TIE, then DNI 4.0 for a new photo', async ({ pa
   await expect(page.locator('[id="doc-dni-4.0"]')).toBeChecked()
 })
 
+test('a sideways photo is detected too', async ({ page }) => {
+  test.setTimeout(180_000)
+  await controlled(page)
+  await openCapture(page)
+  await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
+  await page.locator('#file-back').setInputFiles(await back(page, mrz('IR', '900101', '290101'), true))
+  await page.locator('#capture-continue').click()
+  await page.locator('#doc-detect').click()
+  await expect(page.locator('#detect-status')).toHaveText('Documento detectado: TIE (tarjeta de extranjero). Compruébalo antes de continuar.', { timeout: 90_000 })
+})
+
 test('a choice made by hand is never overridden', async ({ page }) => {
   test.setTimeout(180_000)
   await controlled(page)
@@ -74,10 +95,11 @@ test('a choice made by hand is never overridden', async ({ page }) => {
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
   await page.locator('#file-back').setInputFiles(await back(page, mrz('IR', '900101', '290101')))
   await page.locator('#capture-continue').click()
-  await page.locator('[id="doc-dni-3.0"]').check()
+  // Clicking the radio that is already selected counts as a choice too.
+  await page.locator('[id="doc-dni-4.0"]').click()
   await page.locator('#doc-detect').click()
   await expect(page.locator('#detect-status')).toContainText('TIE', { timeout: 90_000 })
-  await expect(page.locator('[id="doc-dni-3.0"]')).toBeChecked()
+  await expect(page.locator('[id="doc-dni-4.0"]')).toBeChecked()
 })
 
 test('offline without the OCR files: a note, and the manual choice', async ({ page, context }) => {

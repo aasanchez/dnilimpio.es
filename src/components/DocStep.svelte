@@ -29,7 +29,7 @@
     | { s: 'none' }
 
   let auto = $state<Auto>({ s: 'checking' })
-  /** Set when the person picks a radio themselves: detection then never overrides it. */
+  /** Set when the person picks a radio themselves, even the one already selected: detection then never overrides it. */
   let touched = $state(!untrack(() => preselect))
   // The screen can close while OCR runs (Continue or Back): late results are then ignored.
   let closed = false
@@ -97,7 +97,7 @@
             <span class="toggle-label">{t(lang, `doc_${d.model}`)}</span>
             <span class="toggle-note">{t(lang, `docHint_${d.model}`)}</span>
           </span>
-          <input type="radio" class="radio" name="doc" id="doc-{d.model}" value={d.model} bind:group={doc} onchange={() => { touched = true }} />
+          <input type="radio" class="radio" name="doc" id="doc-{d.model}" value={d.model} bind:group={doc} onclick={() => { touched = true }} onchange={() => { touched = true }} />
         </label>
       </li>
     {/each}

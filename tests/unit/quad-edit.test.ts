@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
 import { isConvex, type Quad } from '../../src/geometry/homography.ts'
-import { defaultQuad, fitPixels, moveCorner, nearestCorner, rotateQuad, scaleQuad } from '../../src/geometry/quad-edit.ts'
+import { defaultQuad, fitPixels, moveCorner, nearestCorner, landscape, rotateQuad, scaleQuad } from '../../src/geometry/quad-edit.ts'
 import { CARD_PX } from '../../src/geometry/warp.ts'
 
 const q: Quad = [{ x: 10, y: 10 }, { x: 110, y: 10 }, { x: 110, y: 70 }, { x: 10, y: 70 }]
@@ -69,5 +69,17 @@ describe('scaleQuad / fitPixels', () => {
     const s = fitPixels(8000, 6000)
     expect(Math.round(8000 * s) * Math.round(6000 * s)).toBeLessThanOrEqual(16_000_000 + 8000)
     expect(s).toBeCloseTo(Math.sqrt(16_000_000 / 48_000_000), 9)
+  })
+})
+
+describe('landscape', () => {
+  it('keeps a quad whose first edge is the long one', () => {
+    const q: Quad = [{ x: 0, y: 0 }, { x: 856, y: 0 }, { x: 856, y: 540 }, { x: 0, y: 540 }]
+    expect(landscape(q)).toBe(q)
+  })
+  it('relabels a sideways (portrait) card so its long edge comes first', () => {
+    const q: Quad = [{ x: 0, y: 0 }, { x: 540, y: 0 }, { x: 540, y: 856 }, { x: 0, y: 856 }]
+    const r = landscape(q)
+    expect(Math.hypot(r[1].x - r[0].x, r[1].y - r[0].y)).toBe(856)
   })
 })

@@ -50,6 +50,17 @@ export function rotateQuad (q: Quad): Quad {
   return [q[3], q[0], q[1], q[2]]
 }
 
+/**
+ * Relabels the corners so the first edge is a long one: a card photographed sideways (portrait)
+ * then straightens to landscape. The text may still be upside down; callers try both ways up.
+ */
+export function landscape (q: Quad): Quad {
+  const len = (a: Quad[number], b: Quad[number]): number => Math.hypot(a.x - b.x, a.y - b.y)
+  const across = len(q[0], q[1]) + len(q[2], q[3])
+  const down = len(q[1], q[2]) + len(q[3], q[0])
+  return across >= down ? q : rotateQuad(q)
+}
+
 /** Maps a quad between two image sizes (e.g. full-resolution source and a downscaled copy). */
 export function scaleQuad (q: Quad, sx: number, sy: number): Quad {
   return [

@@ -10,6 +10,7 @@ import type { Mrz } from '../ocr/mrz.ts'
 import type { OcrStatus } from '../ocr/ocr.ts'
 import { CARD_PX } from '../geometry/warp.ts'
 import type { Quad } from '../geometry/homography.ts'
+import { landscape } from '../geometry/quad-edit.ts'
 import { warpBitmap } from '../ui/warp-bitmap.ts'
 import { detectCard, ID1_ASPECT } from './edges.ts'
 import { classify, type DocGuess } from './doc-type.ts'
@@ -58,7 +59,8 @@ function findCard (bitmap: ImageBitmap): Quad | null {
   img.data.fill(0)
   if (!found) return null
   const k = bitmap.width / img.width
-  return found.quad.map((p) => ({ x: p.x * k, y: p.y * k })) as unknown as Quad
+  // A sideways card is found short edge first: relabel it so it straightens to landscape.
+  return landscape(found.quad.map((p) => ({ x: p.x * k, y: p.y * k })) as unknown as Quad)
 }
 
 /** A strip of `src` (rows y0–y1), optionally turned 180°, on its own canvas. */
