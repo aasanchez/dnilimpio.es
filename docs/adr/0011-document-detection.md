@@ -1,4 +1,4 @@
-# 0010. Document type detected from the MRZ, after the photos
+# 0011. Document type detected from the MRZ, after the photos
 
 - Status: accepted
 - Date: 2026-11-25

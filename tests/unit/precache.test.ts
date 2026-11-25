@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { cacheName, isAppRequest, isPrecached, parseManifest } from '../../src/offline/precache.ts'
+import { cacheName, isAppRequest, isOnDemand, isPrecached, parseManifest } from '../../src/offline/precache.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
 const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }], onDemand: [{ path: 'ocr/spa.traineddata', integrity: HASH }] }
@@ -21,6 +21,8 @@ describe('parseManifest', () => {
   })
   it('keeps OCR files on demand and nothing else', () => {
     expect(() => parseManifest(JSON.stringify({ ...ok, files: [...ok.files, { path: 'ocr/x.js', integrity: HASH }] }))).toThrow(/path/)
+    expect(() => parseManifest(JSON.stringify({ ...ok, files: [...ok.files, { path: 'assets/ml/model-x.js', integrity: HASH }] }))).toThrow(/path/)
+    expect(parseManifest(JSON.stringify({ ...ok, onDemand: [{ path: 'assets/ml/model-x.js', integrity: HASH }] })).onDemand).toHaveLength(1)
     expect(() => parseManifest(JSON.stringify({ ...ok, onDemand: [{ path: 'assets/x.js', integrity: HASH }] }))).toThrow(/path/)
     expect(parseManifest(JSON.stringify({ version: ok.version, files: ok.files })).onDemand).toEqual([])
   })
@@ -47,4 +49,13 @@ describe('isAppRequest', () => {
 
 it('names caches by build version', () => {
   expect(cacheName('0123456789abcdef')).toBe('dnilimpio-0123456789abcdef')
+})
+
+describe('isOnDemand', () => {
+  it('covers the OCR files and the corner model, not the app', () => {
+    expect(isOnDemand('ocr/spa.traineddata')).toBe(true)
+    expect(isOnDemand('assets/ml/model-x.js')).toBe(true)
+    expect(isOnDemand('assets/ml/ort-wasm-simd-threaded-x.mjs')).toBe(true)
+    expect(isOnDemand('assets/index-x.js')).toBe(false)
+  })
 })

@@ -1,6 +1,6 @@
 # 0006. Several document types, chosen by the user
 
-- Status: accepted. The Document screen moved after the photos and gained detection: see [0010](0010-document-detection.md).
+- Status: accepted. The Document screen moved after the photos and gained detection: see [0011](0011-document-detection.md).
 - Date: 2026-11-25
 
 ## Context

@@ -6,7 +6,7 @@ export interface PrecacheManifest {
   readonly version: string
   /** Saved at install: the app itself. */
   readonly files: readonly PrecacheFile[]
-  /** Saved on first use only (large optional parts such as OCR), still checked against their hash. */
+  /** Saved on first use only (large optional parts: OCR, corner model), still checked against their hash. */
   readonly onDemand: readonly PrecacheFile[]
 }
 
@@ -18,6 +18,8 @@ export const SW_FILE = 'sw.js'
 
 /** Folder of the OCR engine and language data (large, downloaded on first use). */
 export const ON_DEMAND_DIR = 'ocr/'
+/** Folder of the corner model and its runtime (about 2.6 MB, downloaded on first use; ADR 0007). */
+export const MODEL_DIR = 'assets/ml/'
 
 /** Files that belong in the offline cache: everything the build wrote except source maps and the worker. */
 export function isPrecached (path: string): boolean {
@@ -25,7 +27,7 @@ export function isPrecached (path: string): boolean {
 }
 
 /** Cached on first use instead of at install. */
-export const isOnDemand = (path: string): boolean => path.startsWith(ON_DEMAND_DIR)
+export const isOnDemand = (path: string): boolean => path.startsWith(ON_DEMAND_DIR) || path.startsWith(MODEL_DIR)
 
 /** Parses and checks the manifest the build inlines into the worker. Throws on anything unexpected. */
 export function parseManifest (json: string): PrecacheManifest {

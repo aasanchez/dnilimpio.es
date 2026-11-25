@@ -9,6 +9,7 @@
   import { resetSide } from '../ui/align-state.ts'
   import { cornerEditor, type CornerEditor } from '../ui/corner-editor.ts'
   import { warpBitmap } from '../ui/warp-bitmap.ts'
+  import { findCorners } from '../detect/corners.ts'
   import type { Side } from '../zones/types.ts'
 
   const { lang, side, size, bitmap, align, aligned, onSide, onDone }: {
@@ -25,8 +26,17 @@
   } = $props()
 
   const SIDES = ['front', 'back'] as const
+  // Corners are looked for only the first time a photo reaches this step; after that the user's own
+  // corners are kept.
+  const fresh = untrack(() => align.quads[side] === null)
   let quad = $state.raw<Quad>(untrack(() => align.quads[side] ?? defaultQuad(bitmap.width, bitmap.height, size.w / size.h)))
   untrack(() => { align.quads[side] = quad })
+  /** searching: the detector runs; found: its corners are shown; idle: manual (nothing to say). */
+  let auto = $state<'idle' | 'searching' | 'found'>('idle')
+  /** True once the user moved, rotated or reset the corners: a late detection then never overrides them. */
+  let touched = false
+  /** Which detector placed the corners, for the e2e tests ('' when none did). */
+  let source = $state('')
   const valid = $derived(isConvex(quad))
   const sideName = (s: Side): string => t(lang, s === 'front' ? 'tabFront' : 'tabBack')
   const label = $derived(`${t(lang, 'editorLabel')}: ${sideName(side)}`)
@@ -39,10 +49,35 @@
     align.quads[side] = q
   }
 
+  function userQuad (q: Quad): void {
+    touched = true
+    auto = 'idle'
+    setQuad(q)
+  }
+
+  // Suggest corners. Any failure leaves the manual start position, with no message.
+  $effect(() => {
+    if (!fresh) return
+    let live = true
+    auto = 'searching'
+    void findCorners(bitmap, size.w / size.h).then((found) => {
+      if (!live || touched) return
+      if (found) {
+        setQuad(found.quad)
+        editor?.setQuad(found.quad)
+        auto = 'found'
+        source = found.source
+      } else {
+        auto = 'idle'
+      }
+    })
+    return () => { live = false }
+  })
+
   /** The editor is an imperative canvas widget; Svelte only mounts it and keeps its label current. */
   function mountEditor (node: HTMLElement): () => void {
     const ac = new AbortController()
-    const e = untrack(() => cornerEditor({ bitmap, quad, label, onChange: setQuad, signal: ac.signal }))
+    const e = untrack(() => cornerEditor({ bitmap, quad, label, onChange: userQuad, signal: ac.signal }))
     editor = e
     node.append(e.element)
     return () => {
@@ -55,12 +90,12 @@
   $effect(() => { editor?.setLabel(label) })
 
   function rotate (): void {
-    setQuad(rotateQuad(quad))
+    userQuad(rotateQuad(quad))
     editor?.setQuad(quad)
   }
 
   function restart (): void {
-    setQuad(defaultQuad(bitmap.width, bitmap.height, size.w / size.h))
+    userQuad(defaultQuad(bitmap.width, bitmap.height, size.w / size.h))
     editor?.setQuad(quad)
   }
 
@@ -88,8 +123,10 @@
   </div>
   <div class="win">
     <div class="winbar"><i></i><i></i><i></i><span class="title">{sideName(side).toLowerCase()}.jpg</span></div>
-    <div {@attach mountEditor}></div>
+    <!-- data-corners / data-source: current corners in photo pixels and who placed them, for e2e tests. -->
+    <div {@attach mountEditor} data-source={source} data-corners={quad.map((p) => `${String(Math.round(p.x))},${String(Math.round(p.y))}`).join(' ')}></div>
   </div>
+  <p class="status" id="align-auto" role="status">{auto === 'searching' ? t(lang, 'cornersSearching') : auto === 'found' ? t(lang, 'cornersFound') : ''}</p>
   <p class="hint">{t(lang, 'alignHint')}</p>
   <p class="warning" id="align-status" role={valid ? 'status' : 'alert'} hidden={valid}>{valid ? '' : t(lang, 'cornersInvalid')}</p>
 

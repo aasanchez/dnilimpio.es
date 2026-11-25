@@ -105,6 +105,8 @@
   "alignFront": "Lijn de voorkant uit",
   "alignBack": "Lijn de achterkant uit",
   "alignLead": "Sleep elk punt naar een hoek. Het vergrootglas helpt je precies te werken.",
+  "cornersSearching": "Het document in de foto zoeken…",
+  "cornersFound": "We hebben de hoeken op het document gezet. Controleer ze en pas ze zo nodig aan.",
   "restartCorners": "Opnieuw",
   "cornersDone": "Klaar",
   "cornersDoneNextBack": "Klaar, nu de achterkant",
