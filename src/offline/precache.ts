@@ -49,7 +49,36 @@ function checkFiles (list: unknown[]): PrecacheFile[] {
   })
 }
 
-/** True for requests the worker answers: GET, same origin, inside its scope. */
-export function isAppRequest (method: string, url: string, scope: string): boolean {
-  return method === 'GET' && url.startsWith(scope)
+/** What the service worker does with one request (see route()). */
+export type Route =
+  /** A page load inside the scope: answer with the cached index.html. */
+  | { readonly kind: 'index' }
+  /** A file of this build, saved at install. */
+  | { readonly kind: 'file'; readonly url: string }
+  /** A file of this build that is saved on first use (OCR, corner model). */
+  | { readonly kind: 'on-demand'; readonly url: string }
+  /** Anything else: refused, it never reaches the network. */
+  | { readonly kind: 'deny' }
+
+export interface KnownFiles {
+  /** Absolute URLs of the files saved at install. */
+  readonly files: ReadonlySet<string>
+  /** Absolute URLs of the files saved on first use. */
+  readonly onDemand: ReadonlySet<string>
+}
+
+/**
+ * Deny by default: the worker answers only the files of this build, listed in its manifest, and page
+ * loads inside its scope. Every other request from the page or its workers (another origin, another
+ * path, a query string, a method other than GET) is refused without touching the network, so no code
+ * can send data out by encoding it in a request, even a same-origin one.
+ */
+export function route (method: string, url: string, mode: string, scope: string, known: KnownFiles): Route {
+  if (method !== 'GET' || !url.startsWith(scope)) return { kind: 'deny' }
+  const key = url.split('#')[0] ?? url
+  // A page load may carry a query string or a path of its own: it always gets index.html.
+  if (mode === 'navigate') return { kind: 'index' }
+  if (known.files.has(key)) return { kind: 'file', url: key }
+  if (known.onDemand.has(key)) return { kind: 'on-demand', url: key }
+  return { kind: 'deny' }
 }

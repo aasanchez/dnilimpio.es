@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { cacheName, isAppRequest, isOnDemand, isPrecached, parseManifest } from '../../src/offline/precache.ts'
+import { cacheName, isOnDemand, isPrecached, parseManifest, route } from '../../src/offline/precache.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
 const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }], onDemand: [{ path: 'ocr/spa.traineddata', integrity: HASH }] }
@@ -37,13 +37,31 @@ describe('parseManifest', () => {
   })
 })
 
-describe('isAppRequest', () => {
+describe('route (deny by default)', () => {
   const scope = 'https://example.org/app/'
-  it('handles GET requests inside the scope only', () => {
-    expect(isAppRequest('GET', 'https://example.org/app/assets/a.js', scope)).toBe(true)
-    expect(isAppRequest('POST', 'https://example.org/app/', scope)).toBe(false)
-    expect(isAppRequest('GET', 'https://example.org/other/', scope)).toBe(false)
-    expect(isAppRequest('GET', 'https://evil.example/app/', scope)).toBe(false)
+  const known = {
+    files: new Set([`${scope}index.html`, `${scope}assets/a.js`]),
+    onDemand: new Set([`${scope}ocr/spa.traineddata`]),
+  }
+  const get = (url: string, mode = 'no-cors'): string => route('GET', url, mode, scope, known).kind
+
+  it('answers the files of the build, from the cache or on first use', () => {
+    expect(route('GET', `${scope}assets/a.js`, 'cors', scope, known)).toEqual({ kind: 'file', url: `${scope}assets/a.js` })
+    expect(route('GET', `${scope}ocr/spa.traineddata`, 'same-origin', scope, known)).toEqual({ kind: 'on-demand', url: `${scope}ocr/spa.traineddata` })
+    expect(get(`${scope}assets/a.js#x`)).toBe('file')
+  })
+  it('answers every page load inside the scope with index.html', () => {
+    for (const url of [scope, `${scope}?lang=es`, `${scope}anything`]) expect(get(url, 'navigate')).toBe('index')
+  })
+  it('refuses everything else', () => {
+    expect(get(`${scope}assets/b.js`)).toBe('deny') // not in the manifest
+    expect(get(`${scope}assets/a.js?d=12345678Z`)).toBe('deny') // data in a query string
+    expect(get(`${scope}x.png?d=secret`)).toBe('deny')
+    expect(get(`${scope}sw.js.map`)).toBe('deny')
+    expect(get('https://example.org/other/a.js')).toBe('deny') // same origin, outside the scope
+    expect(get('https://evil.example/app/assets/a.js')).toBe('deny') // another origin
+    expect(get('https://evil.example/', 'navigate')).toBe('deny')
+    for (const method of ['POST', 'PUT', 'HEAD', 'DELETE']) expect(route(method, `${scope}assets/a.js`, 'cors', scope, known).kind).toBe('deny')
   })
 })
 

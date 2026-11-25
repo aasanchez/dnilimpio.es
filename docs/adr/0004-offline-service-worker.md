@@ -19,6 +19,13 @@ register one under Trusted Types?
   every file against its hash. If one file fails, the install fails and the partial cache is deleted.
 - The worker answers GET requests in its scope from that cache, and page loads from the cached
   `index.html`.
+- Deny by default (added after the security audit of 2026-11-25, finding SEC-001): the worker
+  answers only the exact URLs listed in its manifest and page loads inside its scope. Every other
+  request from the page or its workers is answered with a network error and never reaches the
+  network: another origin, another path, a query string, a method other than GET. Before, unknown
+  requests went to the network, so code that the CSP lets load same-origin images or scripts could
+  have encoded data in a URL. The rule is a pure function (`route()` in `src/offline/precache.ts`)
+  with unit tests; an e2e test checks that such requests never leave the browser.
 - The cache name comes from the hashes of all files and of the worker's own code, so every new
   worker fills a new cache. A failed install deletes only its own cache, never the active one.
 - No `skipWaiting()`: a new build activates only when no tab runs the old one. Open tabs keep their
