@@ -24,7 +24,8 @@ test('the start screen leads to the photo step, front first, then to the documen
   await expect(page.locator('#detect-status')).toHaveText('La detección automática no está disponible en este navegador. Elige el documento.')
   await expect(page.locator('#doc-detect')).toHaveCount(0)
   await page.locator('#doc-continue').click()
-  await expect(page.locator('h2')).toHaveText('Encuadra el anverso')
+  // Both photos are straightened by themselves: straight to the editor.
+  await expect(page.locator('h2')).toHaveText('Elige qué tapar')
 })
 
 test('loads front and back through the file inputs, moving to the back by itself', async ({ page }) => {

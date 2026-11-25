@@ -13,6 +13,8 @@ import { box, ID1_MM, type ModelZones } from './types.ts'
 export const DNI_3_0: ModelZones = {
   model: 'dni-3.0',
   size: ID1_MM,
+  // Holder's photo, front left (inner part, for orientation only; see types.ts).
+  portrait: box(0.06, 0.32, 0.28, 0.78),
   source: {
     url: 'https://www.consilium.europa.eu/prado/images/ESP-BO-05001/226226.jpg',
     page: 'https://www.consilium.europa.eu/prado/en/ESP-BO-05001/index.html',

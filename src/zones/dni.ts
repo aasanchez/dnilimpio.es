@@ -19,6 +19,8 @@ export type { DocModel, ModelZones, Rect, Side, Zone, ZoneDefault, ZoneId } from
 export const DNI_4_0: ModelZones = {
   model: 'dni-4.0',
   size: ID1_MM,
+  // Holder's photo, front left (inner part, for orientation only; see types.ts).
+  portrait: box(0.06, 0.32, 0.28, 0.78),
   source: {
     url: 'https://www.dnielectronico.es/img/Imagen_DNI_4.0.JPG',
     page: 'https://www.dnielectronico.es/PortalDNIe/PRF1_Cons02.action?pag=REF_110',

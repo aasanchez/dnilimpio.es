@@ -1,5 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- App shell: top bar, progress, one screen at a time. Flow: start → photos → document → corners → hide → download. -->
+<!-- App shell: top bar, progress, one screen at a time.
+     Flow: start → photos → document → straighten (automatic) → hide → download. The corner screen opens
+     only when a card is not found, when the person asks for it, or from "Adjust corners". -->
 <script lang="ts">
   import { tick } from 'svelte'
   import { dir, pickLang, t, type Key, type Lang } from './i18n/index.ts'
@@ -12,11 +14,12 @@
   import CaptureStep from './components/CaptureStep.svelte'
   import type { CaptureState } from './ui/capture-state.ts'
   import AlignStep from './components/AlignStep.svelte'
+  import StraightenStep from './components/StraightenStep.svelte'
   import { prefetchCornerModel } from './detect/corners.ts'
   import Editor from './components/Editor.svelte'
   import { emptyEditState, type Phase } from './ui/edit-state.ts'
 
-  type Step = 'home' | 'doc' | 'capture' | 'align' | 'edit'
+  type Step = 'home' | 'doc' | 'capture' | 'auto' | 'align' | 'edit'
 
   // The language choice lives in memory only: it resets to the browser's language on reload.
   let lang = $state<Lang>(pickLang(navigator.languages))
@@ -37,6 +40,8 @@
   // Large canvases: kept out of reactivity on purpose. `aligned` mirrors which sides are done.
   const align = emptyAlignState()
   const aligned = $state<Record<Side, boolean>>({ front: false, back: false })
+  /** Sides whose card automatic straightening did not find: their corner screen says so. */
+  let missed = $state<Side[]>([])
   // Field choices, watermark and greyscale survive going back to adjust corners; Reset clears them.
   let edit = $state(emptyEditState(documentOf(DEFAULT_DOC)))
   let root: HTMLElement | undefined = $state()
@@ -49,7 +54,7 @@
     { key: 'stepDownload', at: 'review' },
   ]
   // The document choice belongs to the Photos step.
-  const current = $derived(step === 'edit' && phase !== 'edit' ? 3 : step === 'doc' ? 0 : ['capture', 'align', 'edit'].indexOf(step))
+  const current = $derived(step === 'edit' && phase !== 'edit' ? 3 : step === 'doc' ? 0 : step === 'auto' ? 1 : ['capture', 'align', 'edit'].indexOf(step))
 
   $effect(() => {
     document.documentElement.lang = lang
@@ -79,7 +84,7 @@
   function back (): void {
     if (step === 'edit' && phase === 'done') phase = 'review'
     else if (step === 'edit' && phase === 'review') phase = 'edit'
-    else if (step === 'edit') { go('align', 'back'); return } else if (step === 'align' && alignSide === 'back') { go('align', 'front'); return } else if (step === 'align') { go('doc'); return } else if (step === 'doc') { go('capture'); return } else { go('home'); return }
+    else if (step === 'edit' || step === 'auto') { go('doc'); return } else if (step === 'align') { go(aligned.front && aligned.back ? 'edit' : 'doc'); return } else if (step === 'doc') { go('capture'); return } else { go('home'); return }
     void focusHeading()
   }
 
@@ -101,6 +106,12 @@
    * straightened images and choices start over; the photos are kept.
    */
   function chooseDoc (): void {
+    // Same document and both sides already straightened (e.g. back from the editor): keep them.
+    if (docPick === docModel && aligned.front && aligned.back) {
+      docConfirmed = true
+      go('edit')
+      return
+    }
     if (docPick !== docModel) {
       docModel = docPick
       for (const s of ['front', 'back'] as const) {
@@ -110,7 +121,17 @@
       edit = emptyEditState(documentOf(docPick))
     }
     docConfirmed = true
-    go('align', 'front')
+    missed = []
+    go('auto')
+  }
+
+  /** Automatic straightening finished: on to the editor, or to the corners of a card it missed. */
+  function onStraightened (notFound: Side[]): void {
+    missed = notFound
+    for (const s of ['front', 'back'] as const) aligned[s] = !notFound.includes(s)
+    const first = notFound[0]
+    if (first) go('align', first)
+    else go('edit')
   }
 
   /** A new photo for a side invalidates that side's corners and straightened card. */
@@ -155,13 +176,15 @@
     {#if step === 'align' && alignBitmap}
       {@const bitmap = alignBitmap}
       {#key alignSide}
-        <AlignStep {lang} side={alignSide} {size} {bitmap} {align} {aligned}
+        <AlignStep {lang} side={alignSide} {size} {bitmap} {align} {aligned} missed={missed.includes(alignSide)}
           onSide={(s: Side) => { go('align', s) }} onDone={() => { onAligned(alignSide) }} />
       {/key}
     {:else if step === 'edit' && align.warped.front && align.warped.back}
       {#key docModel}
         <Editor {lang} {doc} {align} {edit} bind:phase onAdjust={(side: Side) => { go('align', side) }} onReset={reset} onPhase={focusHeading} />
       {/key}
+    {:else if step === 'auto'}
+      <StraightenStep {lang} {doc} {size} photos={capture} {align} onDone={onStraightened} onManual={() => { missed = []; go('align', 'front') }} />
     {:else if step === 'doc'}
       <DocStep {lang} bind:doc={docPick} photos={capture} preselect={!docConfirmed} onContinue={chooseDoc} />
     {:else if step === 'capture'}

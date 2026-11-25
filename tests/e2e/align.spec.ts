@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, test } from '@playwright/test'
-import { START, pixel, snapCorners, toAlign } from './helpers.ts'
+import { CARD, pixel, snapCorners, toAlign } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
-test('continue from capture, mark corners on both sides, get straightened 1712 × 1080 cards', async ({ page }) => {
+test('Adjust corners from the editor: mark them by hand, Continue straightens again and returns', async ({ page }) => {
   await toAlign(page)
   await expect(page.locator('h2')).toHaveText('Encuadra el anverso')
   await expect(page.locator('h2')).toBeFocused()
-  await expect(page.locator('#align-continue')).toContainText('ahora el reverso')
-  await snapCorners(page)
-  await page.locator('#align-continue').click()
-  await expect(page.locator('h2')).toHaveText('Encuadra el reverso')
-  await expect(page.locator('#align-tab-front')).toContainText('✓')
+  // Both sides are already straightened, so Continue finishes.
+  await expect(page.locator('#align-tab-back')).toContainText('✓')
+  await expect(page.locator('#align-continue')).toContainText('Listo')
   await snapCorners(page)
   await page.locator('#align-continue').click()
 
@@ -31,19 +29,22 @@ test('continue from capture, mark corners on both sides, get straightened 1712 �
   expect(b).toBeGreaterThan(100)
 })
 
-test('crossed corners disable Continue; Back goes through the document to the photos', async ({ page }) => {
+test('crossed corners disable Continue; Back returns to the editor, then the document and the photos', async ({ page }) => {
   await toAlign(page)
   const canvas = page.locator('canvas.corner-editor')
   const box = await canvas.boundingBox()
   if (!box) throw new Error('no canvas box')
   const k = box.width / 1600
   // Drag the top-left corner past the bottom-right one.
-  await page.mouse.move(box.x + START[0]!.x * k, box.y + START[0]!.y * k)
+  // The corners start where the card was found.
+  await page.mouse.move(box.x + CARD[0]!.x * k, box.y + CARD[0]!.y * k)
   await page.mouse.down()
   await page.mouse.move(box.x + 1500 * k, box.y + 1100 * k, { steps: 5 })
   await page.mouse.up()
   await expect(page.locator('#align-continue')).toBeDisabled()
   await expect(page.locator('#align-status')).toHaveAttribute('role', 'alert')
+  await page.locator('#back').click()
+  await expect(page.locator('h2')).toHaveText('Elige qué tapar')
   await page.locator('#back').click()
   await expect(page.locator('h2')).toHaveText('¿Qué documento vas a copiar?')
   await page.locator('#back').click()
@@ -77,7 +78,7 @@ test.describe('touch', () => {
     // Synthetic touch pointer events, as a finger would produce, landing a bit off the handle.
     const at = (p: { x: number; y: number }): { clientX: number; clientY: number } => ({ clientX: box.x + p.x * k, clientY: box.y + p.y * k })
     const base = { pointerId: 7, pointerType: 'touch', isPrimary: true, bubbles: true }
-    await canvas.dispatchEvent('pointerdown', { ...base, ...at({ x: START[0]!.x + 40, y: START[0]!.y + 40 }) })
+    await canvas.dispatchEvent('pointerdown', { ...base, ...at({ x: CARD[0]!.x + 40, y: CARD[0]!.y + 40 }) })
     await canvas.dispatchEvent('pointermove', { ...base, ...at({ x: 1500 + 40, y: 1100 + 40 }) })
     await canvas.dispatchEvent('pointerup', { ...base, ...at({ x: 1500 + 40, y: 1100 + 40 }) })
     await expect(page.locator('#align-continue')).toBeDisabled()

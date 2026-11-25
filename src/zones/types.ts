@@ -35,6 +35,12 @@ export interface ModelZones {
   readonly size: SizeMm
   readonly source: { readonly url: string, readonly page: string, readonly pageVersion: string, readonly retrieved: string }
   readonly zones: readonly Zone[]
+  /**
+   * Inner part of the holder's photo on the front: the largest dark block on the card. Used only to
+   * tell an upside-down photo from an upright one (src/detect/upright.ts), never to hide anything.
+   * Deliberately smaller than the photo, so small measurement errors keep it inside.
+   */
+  readonly portrait: Rect
 }
 
 /** ID-1 card (ISO/IEC 7810): DNI and TIE. */

@@ -12,7 +12,7 @@
   import { findCorners } from '../detect/corners.ts'
   import type { Side } from '../zones/types.ts'
 
-  const { lang, side, size, bitmap, align, aligned, onSide, onDone }: {
+  const { lang, side, size, bitmap, align, aligned, missed = false, onSide, onDone }: {
     lang: Lang
     side: Side
     /** Size of the straightened document in pixels; also sets the starting frame's shape. */
@@ -21,6 +21,8 @@
     align: AlignState
     /** Which sides already have confirmed corners. */
     aligned: Readonly<Record<Side, boolean>>
+    /** True when automatic straightening did not find the card in this photo. */
+    missed?: boolean
     onSide: (side: Side) => void
     onDone: () => void
   } = $props()
@@ -32,11 +34,12 @@
   let quad = $state.raw<Quad>(untrack(() => align.quads[side] ?? defaultQuad(bitmap.width, bitmap.height, size.w / size.h)))
   untrack(() => { align.quads[side] = quad })
   /** searching: the detector runs; found: its corners are shown; idle: manual (nothing to say). */
-  let auto = $state<'idle' | 'searching' | 'found'>('idle')
+  // Corners placed by the automatic straightening show as found, like the screen's own search.
+  let auto = $state<'idle' | 'searching' | 'found'>(untrack(() => (align.found[side] ? 'found' : 'idle')))
   /** True once the user moved, rotated or reset the corners: a late detection then never overrides them. */
   let touched = false
   /** Which detector placed the corners, for the e2e tests ('' when none did). */
-  let source = $state('')
+  let source = $state<string>(untrack(() => align.found[side] ?? ''))
   const valid = $derived(isConvex(quad))
   const sideName = (s: Side): string => t(lang, s === 'front' ? 'tabFront' : 'tabBack')
   const label = $derived(`${t(lang, 'editorLabel')}: ${sideName(side)}`)
@@ -126,7 +129,7 @@
     <!-- data-corners / data-source: current corners in photo pixels and who placed them, for e2e tests. -->
     <div {@attach mountEditor} data-source={source} data-corners={quad.map((p) => `${String(Math.round(p.x))},${String(Math.round(p.y))}`).join(' ')}></div>
   </div>
-  <p class="status" id="align-auto" role="status">{auto === 'searching' ? t(lang, 'cornersSearching') : auto === 'found' ? t(lang, 'cornersFound') : ''}</p>
+  <p class="status" id="align-auto" role="status">{auto === 'searching' ? t(lang, 'cornersSearching') : auto === 'found' ? t(lang, 'cornersFound') : missed ? t(lang, 'cornersMissed') : ''}</p>
   <p class="hint">{t(lang, 'alignHint')}</p>
   <p class="warning" id="align-status" role={valid ? 'status' : 'alert'} hidden={valid}>{valid ? '' : t(lang, 'cornersInvalid')}</p>
 

@@ -16,4 +16,5 @@ project specification on purpose).
 | [0008](0008-capture-coach.md) | Capture coach: live tips and automatic shot from classical image metrics, no model | accepted |
 | [0009](0009-on-device-ocr.md) | On-device OCR with Tesseract.js, self-hosted, on demand; Trusted Types policy `default` | accepted |
 | [0010](0010-smart-field-finding.md) | Smart field finding: OCR text patterns and checks; results become ordinary undoable boxes | accepted |
-| [0011](0011-document-detection.md) | Document type detected from the MRZ after the photos; it only preselects the picker | accepted |
+| [0011](0011-document-detection.md) | Document type detected from the MRZ after the photos; it only preselects the picker | accepted; screen order changed by 0012 |
+| [0012](0012-automatic-straightening.md) | Automatic straightening: find, turn (sideways, upside down) and straighten both photos; corner screen only on request | accepted |
