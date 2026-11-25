@@ -33,7 +33,8 @@ When a landlord, employer or company asks for a copy of your DNI or TIE, they us
 need only some of the data. This tool makes a copy that shows only what you choose:
 
 1. **Choose the document**: DNI 4.0, DNI 3.0 or TIE.
-2. **Select** a photo of the front and the back (JPEG, PNG, WebP; camera on mobile).
+2. **Select** a photo of the front and the back (JPEG, PNG, WebP; camera on mobile). On a phone,
+   the **capture coach** gives live tips and takes the photo by itself when the card is sharp.
 3. **Straighten** each side by marking its four corners.
 4. **Choose the fields to hide** (signature, dates, support number, CAN, MRZ and others), and draw
    extra black boxes over anything else.
@@ -61,6 +62,9 @@ Whether a recipient accepts a redacted copy is up to them.
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
+- **Camera stays on the device.** The live camera (capture coach) is analysed frame by frame in
+  memory. No frame is stored or sent, and the camera turns off when you close the view, finish both
+  sides or leave the tab.
 - **No tracking.** No analytics, telemetry, cookies, fonts or scripts from third parties.
 - **Real redaction.** Hidden areas are painted as opaque black pixels on a new image, with a margin
   around each field. Blur and pixelation are not offered, because they can be reversed.
@@ -122,6 +126,7 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
 | Offline mode with service worker and integrity checks | Done |
 | Redesign of the workflow and interface: guided phone-first flow, new visual style | Done |
+| Capture coach: live camera tips (framing, tilt, light, glare, blur, movement) and automatic shot | Done |
 | DNI 3.0 and TIE, with a document picker | Done |
 | Automatic card edge detection (engine, classic image processing) | Done, not yet in the interface |
 | Document type detection, OCR, smart field finding | Planned |
@@ -141,9 +146,21 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    own field positions. To change it later, go back from
    the photo screen: your photos are kept, the corners and choices start again.
 4. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself. On a
-   phone, **Take photo** opens the camera and **Gallery** opens your pictures; on a computer,
-   **Choose image**, drag and drop, or paste (<kbd>Ctrl</kbd>+<kbd>V</kbd>) also work. Tap a side's
-   tile to replace its photo.
+   phone, **Take photo** opens the capture coach (see below) and **Gallery** opens your pictures; on
+   a computer, **Choose image**, drag and drop, or paste (<kbd>Ctrl</kbd>+<kbd>V</kbd>) also work.
+   Tap a side's tile to replace its photo.
+
+   **Capture coach.** A live camera view with a card-shaped frame. Below it, one tip at a time:
+   *Fit the card inside the frame*, *Move a little closer*, *Hold the card straight*, *Too dark*,
+   *Glare: tilt the card slightly*, *Hold the phone still*, *Blurry: wait for it to focus*. When
+   every check passes for about half a second, the photo is taken by itself, and the view moves to
+   the back: turn the card over and it takes that one too. The round button takes the photo at any
+   moment, **Automatic shot** turns the automatic photo off, and ✕ closes the camera.
+
+   The coach uses no model and no network, so it works the same online and offline. It needs a
+   browser that gives web pages a live camera, and your permission. If either is missing (permission
+   refused, no camera, an old browser, the page opened from a file), the coach does not open: a
+   short note appears, and **Take photo** opens the phone's own camera app instead, as before.
 5. **Corners.** Drag the four circles onto the corners of the card; a magnifier shows the area under
    your finger. On a keyboard, arrow keys move the selected corner and <kbd>N</kbd> selects the next
    one. **Rotate** turns the frame if the photo is sideways, **Reset** puts the circles back. The
@@ -256,7 +273,7 @@ src/
   offline/           service worker registration and precache helpers
   App.svelte         screen flow
   components/        Svelte components, one per screen or control
-  capture/           file input, drag and drop, paste, decoding
+  capture/           file input, drag and drop, paste, decoding, live camera and capture coach
   geometry/          homography, perspective warp, corner editing (pure TypeScript)
   zones/             field positions and size per document, from official specimens; documents.ts lists them
   redact/            normalised zones to pixels, opaque fills
@@ -279,6 +296,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0004](docs/adr/0004-offline-service-worker.md): offline mode with a verified service worker.
 - [0005](docs/adr/0005-guided-flow-and-visual-style.md): guided phone-first flow and visual style.
 - [0006](docs/adr/0006-document-types.md): several document types, chosen by the user.
+- [0008](docs/adr/0008-capture-coach.md): capture coach with classical image metrics, no model.
 
 ## Contributing
 

@@ -126,5 +126,21 @@
   "doneHint": "Quan l’hages enviat, prem Esborra-ho tot. Tancar la pestanya també ho esborra.",
   "share": "Compartix",
   "errShare": "No s’ha pogut compartir. El PDF continua en la carpeta de baixades.",
-  "clearAll": "Esborra-ho tot"
+  "clearAll": "Esborra-ho tot",
+  "liveAuto": "Foto automàtica",
+  "liveClose": "Tanca la càmera",
+  "liveShutter": "Fes la foto",
+  "liveStarting": "Obrint la càmera…",
+  "liveFlip": "Fet. Ara gira la targeta.",
+  "liveDenied": "No hi ha permís per a usar la càmera. Usa «Fes una foto» o «Galeria».",
+  "liveUnavailable": "La càmera en directe no està disponible. Usa «Fes una foto» o «Galeria».",
+  "tipFrame": "Encaixa la targeta al marc",
+  "tipCloser": "Acosta-t’hi un poc",
+  "tipTilt": "Posa la targeta recta",
+  "tipDark": "Falta llum",
+  "tipGlare": "Hi ha reflexos: inclina un poc la targeta",
+  "tipSteady": "Mantín el mòbil quiet",
+  "tipBlur": "Està borrosa: espera que enfoque",
+  "tipReady": "No et menegis…",
+  "tipReadyManual": "Tot bé: fes la foto"
 }

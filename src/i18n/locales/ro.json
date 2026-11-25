@@ -126,5 +126,21 @@
   "doneHint": "După ce l-ai trimis, apasă Șterge tot. Închiderea filei șterge și ea totul.",
   "share": "Distribuie",
   "errShare": "Nu s-a putut distribui. PDF-ul este în continuare în dosarul de descărcări.",
-  "clearAll": "Șterge tot"
+  "clearAll": "Șterge tot",
+  "liveAuto": "Fotografiere automată",
+  "liveClose": "Închide camera",
+  "liveShutter": "Fă fotografia",
+  "liveStarting": "Se deschide camera…",
+  "liveFlip": "Gata. Acum întoarce cardul.",
+  "liveDenied": "Nu există permisiune pentru cameră. Folosește „Fă o fotografie” sau „Galerie”.",
+  "liveUnavailable": "Camera în timp real nu este disponibilă. Folosește „Fă o fotografie” sau „Galerie”.",
+  "tipFrame": "Încadrează cardul în chenar",
+  "tipCloser": "Apropie-te puțin",
+  "tipTilt": "Ține cardul drept",
+  "tipDark": "Prea întuneric",
+  "tipGlare": "Reflexii: înclină puțin cardul",
+  "tipSteady": "Ține telefonul nemișcat",
+  "tipBlur": "Imagine neclară: așteaptă să focalizeze",
+  "tipReady": "Nu te mișca…",
+  "tipReadyManual": "Totul e bine: fă fotografia"
 }

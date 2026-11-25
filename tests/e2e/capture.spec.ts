@@ -41,6 +41,8 @@ test('desktop shows only the choose-image button', async ({ page }) => {
   await expect(page.getByText('Elegir imagen').filter({ visible: true })).toHaveCount(1)
   await expect(page.getByText('Hacer foto')).toHaveCount(0)
   await expect(page.locator('#camera-front')).toHaveCount(0)
+  // The live camera coach is for phones and tablets only.
+  await expect(page.locator('#live-front')).toHaveCount(0)
 })
 
 test.describe('on a touch device', () => {

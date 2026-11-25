@@ -126,5 +126,21 @@
   "doneHint": "Tryck på Rensa allt när du har skickat den. Att stänga fliken rensar också allt.",
   "share": "Dela",
   "errShare": "Det gick inte att dela. Pdf:en finns kvar i mappen Hämtade filer.",
-  "clearAll": "Rensa allt"
+  "clearAll": "Rensa allt",
+  "liveAuto": "Automatisk bild",
+  "liveClose": "Stäng kameran",
+  "liveShutter": "Ta bilden",
+  "liveStarting": "Öppnar kameran…",
+  "liveFlip": "Klart. Vänd nu på kortet.",
+  "liveDenied": "Ingen behörighet att använda kameran. Använd ”Ta ett foto” eller ”Galleri”.",
+  "liveUnavailable": "Livekameran är inte tillgänglig. Använd ”Ta ett foto” eller ”Galleri”.",
+  "tipFrame": "Placera kortet inom ramen",
+  "tipCloser": "Gå lite närmare",
+  "tipTilt": "Håll kortet rakt",
+  "tipDark": "För mörkt",
+  "tipGlare": "Reflexer: luta kortet lite",
+  "tipSteady": "Håll telefonen stilla",
+  "tipBlur": "Suddigt: vänta tills den fokuserar",
+  "tipReady": "Håll still…",
+  "tipReadyManual": "Allt ser bra ut: ta bilden"
 }

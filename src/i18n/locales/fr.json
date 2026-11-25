@@ -126,5 +126,21 @@
   "doneHint": "Une fois envoyé, appuyez sur Tout effacer. Fermer l’onglet efface aussi tout.",
   "share": "Partager",
   "errShare": "Le partage a échoué. Le PDF est toujours dans vos téléchargements.",
-  "clearAll": "Tout effacer"
+  "clearAll": "Tout effacer",
+  "liveAuto": "Prise automatique",
+  "liveClose": "Fermer la caméra",
+  "liveShutter": "Prendre la photo",
+  "liveStarting": "Ouverture de la caméra…",
+  "liveFlip": "C’est fait. Retournez maintenant la carte.",
+  "liveDenied": "Pas d’autorisation pour la caméra. Utilisez « Prendre une photo » ou « Galerie ».",
+  "liveUnavailable": "La caméra en direct n’est pas disponible. Utilisez « Prendre une photo » ou « Galerie ».",
+  "tipFrame": "Placez la carte dans le cadre",
+  "tipCloser": "Rapprochez-vous un peu",
+  "tipTilt": "Tenez la carte droite",
+  "tipDark": "Pas assez de lumière",
+  "tipGlare": "Reflets : inclinez un peu la carte",
+  "tipSteady": "Ne bougez pas le téléphone",
+  "tipBlur": "Image floue : attendez la mise au point",
+  "tipReady": "Ne bougez plus…",
+  "tipReadyManual": "Tout est bon : prenez la photo"
 }

@@ -126,5 +126,21 @@
   "doneHint": "Druk na het versturen op Alles wissen. Het tabblad sluiten wist ook alles.",
   "share": "Delen",
   "errShare": "Delen is mislukt. De pdf staat nog in je downloadmap.",
-  "clearAll": "Alles wissen"
+  "clearAll": "Alles wissen",
+  "liveAuto": "Automatisch vastleggen",
+  "liveClose": "Camera sluiten",
+  "liveShutter": "Foto maken",
+  "liveStarting": "Camera wordt geopend…",
+  "liveFlip": "Klaar. Draai de kaart nu om.",
+  "liveDenied": "Geen toestemming voor de camera. Gebruik ‘Maak een foto’ of ‘Galerij’.",
+  "liveUnavailable": "De livecamera is niet beschikbaar. Gebruik ‘Maak een foto’ of ‘Galerij’.",
+  "tipFrame": "Plaats de kaart binnen het kader",
+  "tipCloser": "Kom iets dichterbij",
+  "tipTilt": "Houd de kaart recht",
+  "tipDark": "Te donker",
+  "tipGlare": "Schittering: kantel de kaart een beetje",
+  "tipSteady": "Houd de telefoon stil",
+  "tipBlur": "Onscherp: wacht tot hij scherpstelt",
+  "tipReady": "Niet bewegen…",
+  "tipReadyManual": "Alles goed: maak de foto"
 }

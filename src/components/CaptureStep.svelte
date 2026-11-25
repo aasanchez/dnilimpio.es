@@ -4,10 +4,12 @@
   import { untrack } from 'svelte'
   import type { DecodeError, DecodeResult } from '../capture/decode.ts'
   import { prefersCameraButton, wireCapture, wirePaste, type CaptureTarget } from '../capture/input.ts'
+  import { canUseLiveCamera, type CameraFailure } from '../capture/live.ts'
   import { t, type Key, type Lang } from '../i18n/index.ts'
   import type { CaptureState } from '../ui/capture-state.ts'
   import type { Side } from '../zones/dni.ts'
   import CaptureSide from './CaptureSide.svelte'
+  import LiveCamera from './LiveCamera.svelte'
 
   const { lang, state: photos, onLoaded, onContinue }: {
     lang: Lang
@@ -25,6 +27,13 @@
   }
 
   const withCamera = prefersCameraButton((q) => window.matchMedia(q))
+  // Capture coach (live camera) on phones and tablets that allow it. If it cannot start, the plain
+  // camera button takes its place for the rest of the visit, with a short note why.
+  const liveSupported = withCamera && canUseLiveCamera({ isSecureContext: window.isSecureContext, mediaDevices: navigator.mediaDevices })
+  let liveFailed = $state(false)
+  let liveOpen = $state(false)
+  let liveNote = $state<Key | null>(null)
+  const useLive = $derived(liveSupported && !liveFailed)
   const targets: Partial<Record<Side, CaptureTarget>> = {}
   const ready = $derived(photos.front !== null && photos.back !== null)
   let current = $state<Side>(untrack(() => (photos.front === null || photos.back !== null ? 'front' : 'back')))
@@ -49,6 +58,19 @@
     // Move on to the other side while it is still empty.
     const other: Side = side === 'front' ? 'back' : 'front'
     current = photos[other] === null ? other : side
+  }
+
+  function onShot (bitmap: ImageBitmap): void {
+    const side = current
+    onResult(side, { ok: true, bitmap })
+    // Stay open for the other side while it is still empty; otherwise we are done.
+    if (current === side) liveOpen = false
+  }
+
+  function onLiveFail (reason: CameraFailure): void {
+    liveOpen = false
+    liveFailed = true
+    liveNote = reason === 'denied' ? 'liveDenied' : 'liveUnavailable'
   }
 
   for (const side of SIDES) {
@@ -115,6 +137,11 @@
     {#if errors[side]}<p class="error" id="error-{side}">{sideName(side)}: {t(lang, errors[side])}</p>{/if}
   {/each}
   {#if !withCamera}<p class="hint">{t(lang, 'dropHint')}</p>{/if}
+  {#if liveNote}<p class="hint" id="live-note" role="status">{t(lang, liveNote)}</p>{/if}
+
+  {#if liveOpen}
+    <LiveCamera {lang} side={current} {onShot} onClose={() => { liveOpen = false }} onFail={onLiveFail} />
+  {/if}
 
   <div class="actionbar">
     {#if ready}
@@ -123,8 +150,15 @@
     <!-- One pair of buttons per side; only the side on screen shows. The inputs sit inside their labels. -->
     {#each SIDES as side (side)}
       <div class="row" hidden={side !== current}>
+        {#if useLive}
+          <button type="button" class="button" class:primary={!ready} id="live-{side}" onclick={() => { liveNote = null; liveOpen = true }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+            {t(lang, 'takePhoto')}
+          </button>
+        {/if}
         {#if withCamera}
-          <label class="button" class:primary={!ready}>
+          <!-- The system camera: shown when the live camera is not available; kept in the page either way. -->
+          <label class="button" class:primary={!ready} hidden={useLive}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
             {t(lang, 'takePhoto')}
             <input bind:this={cameras[side]} id="camera-{side}" class="visually-hidden" aria-describedby="status-{side}" />

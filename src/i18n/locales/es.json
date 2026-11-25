@@ -126,5 +126,21 @@
   "doneHint": "Cuando lo hayas enviado, pulsa Borrar todo. Cerrar la pestaña también lo borra.",
   "share": "Compartir",
   "errShare": "No se ha podido compartir. El PDF sigue en tu carpeta de descargas.",
-  "clearAll": "Borrar todo"
+  "clearAll": "Borrar todo",
+  "liveAuto": "Disparo automático",
+  "liveClose": "Cerrar la cámara",
+  "liveShutter": "Hacer la foto",
+  "liveStarting": "Abriendo la cámara…",
+  "liveFlip": "Hecho. Ahora da la vuelta a la tarjeta.",
+  "liveDenied": "No hay permiso para usar la cámara. Usa «Hacer foto» o «Galería».",
+  "liveUnavailable": "La cámara en directo no está disponible. Usa «Hacer foto» o «Galería».",
+  "tipFrame": "Encaja la tarjeta en el marco",
+  "tipCloser": "Acércate un poco",
+  "tipTilt": "Pon la tarjeta recta",
+  "tipDark": "Falta luz",
+  "tipGlare": "Hay reflejos: inclina un poco la tarjeta",
+  "tipSteady": "Mantén el móvil quieto",
+  "tipBlur": "Está borrosa: espera a que enfoque",
+  "tipReady": "No te muevas…",
+  "tipReadyManual": "Todo bien: haz la foto"
 }

@@ -126,5 +126,21 @@
   "doneHint": "Once you have sent it, press Clear everything. Closing the tab clears it too.",
   "share": "Share",
   "errShare": "Could not share. The PDF is still in your downloads folder.",
-  "clearAll": "Clear everything"
+  "clearAll": "Clear everything",
+  "liveAuto": "Automatic shot",
+  "liveClose": "Close the camera",
+  "liveShutter": "Take the photo",
+  "liveStarting": "Opening the camera…",
+  "liveFlip": "Done. Now turn the card over.",
+  "liveDenied": "No permission to use the camera. Use “Take a photo” or “Gallery”.",
+  "liveUnavailable": "The live camera is not available. Use “Take a photo” or “Gallery”.",
+  "tipFrame": "Fit the card inside the frame",
+  "tipCloser": "Move a little closer",
+  "tipTilt": "Hold the card straight",
+  "tipDark": "Too dark",
+  "tipGlare": "Glare: tilt the card slightly",
+  "tipSteady": "Hold the phone still",
+  "tipBlur": "Blurry: wait for it to focus",
+  "tipReady": "Hold still…",
+  "tipReadyManual": "All good: take the photo"
 }
