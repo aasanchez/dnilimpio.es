@@ -10,6 +10,8 @@
   import type { Side } from '../zones/dni.ts'
   import CaptureSide from './CaptureSide.svelte'
   import LiveCamera from './LiveCamera.svelte'
+  import SideBadge from './SideBadge.svelte'
+  import GhostCard from './GhostCard.svelte'
 
   const { lang, state: photos, onLoaded, onContinue }: {
     lang: Lang
@@ -108,6 +110,8 @@
 
 <section class="step">
   <div>
+    <!-- The side to capture now, impossible to miss; it pops in again when the step moves on. -->
+    {#key current}<SideBadge {lang} side={current} id="side-badge" />{/key}
     <h2>{t(lang, current === 'front' ? 'captureFront' : 'captureBack')}</h2>
     <p class="lead">{t(lang, 'captureHint')}</p>
   </div>
@@ -119,7 +123,7 @@
         <canvas bind:this={viewer} width="0" height="0" aria-hidden="true"></canvas>
       {:else}
         <div class="frame-guide">
-          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#f36716" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+          <svg class="frame-ghost" viewBox="0 0 100 63.1" aria-hidden="true"><GhostCard side={current} rect={{ x: 0, y: 0, w: 100, h: 63.1 }} dim={false} /></svg>
           {t(lang, 'frameHint')}
         </div>
       {/if}

@@ -3,6 +3,7 @@
 <script lang="ts">
   import { t, type Lang } from '../i18n/index.ts'
   import type { Side } from '../zones/dni.ts'
+  import GhostCard from './GhostCard.svelte'
 
   let { lang, side, loaded, isCurrent, message, isError, onSelect, zone = $bindable() }: {
     lang: Lang
@@ -19,13 +20,17 @@
   const progress = $derived(loaded ? t(lang, 'statusReady') : isCurrent ? t(lang, 'statusNow') : t(lang, 'statusPending'))
 </script>
 
-<div class="dropzone" class:is-current={isCurrent} bind:this={zone}>
+<div class="dropzone" class:is-current={isCurrent} class:is-done={loaded} bind:this={zone}>
   <button type="button" class="side-pick" id="pick-{side}" aria-pressed={isCurrent} aria-describedby="status-{side}" onclick={onSelect}>
     <span class="thumb" class:done={loaded} aria-hidden="true">
-      {#if loaded}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10" /></svg>{/if}
+      {#if loaded}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10" /></svg>
+      {:else}
+        <svg class="thumb-ghost" viewBox="0 0 100 63.1"><GhostCard {side} rect={{ x: 0, y: 0, w: 100, h: 63.1 }} dim={false} /></svg>
+      {/if}
     </span>
     <span>
-      <span class="side-name">{t(lang, side === 'front' ? 'tabFront' : 'tabBack')}</span>
+      <span class="side-name">{t(lang, side === 'front' ? 'tabFront' : 'tabBack')} <span class="side-count" dir="ltr">{side === 'front' ? '1/2' : '2/2'}</span></span>
       <span class="status">{progress}</span>
     </span>
   </button>

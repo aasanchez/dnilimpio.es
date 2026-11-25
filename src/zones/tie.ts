@@ -46,7 +46,8 @@ export const TIE: ModelZones = {
       id: 'permitType',
       side: 'front',
       default: 'visible',
-      rects: [box(0.405, 0.485, 0.75, 0.555), box(0.405, 0.555, 0.92, 0.645)],
+      rects: [box(0.405, 0.505, 0.75, 0.575), box(0.405, 0.575, 0.92, 0.665)],
+      // Moved down 0.02 (about 10 px on a phone screen) after a check on a real card, 2026-11-25.
       note: '"TIPO DE PERMISO": three lines (e.g. RESIDENCIA LARGA DURACION, AUTORIZA A TRABAJAR)',
     },
     // Back

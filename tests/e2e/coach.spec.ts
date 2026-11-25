@@ -60,6 +60,9 @@ test.describe('with a working camera', () => {
     await expect(page.locator('#status-front')).toHaveText('Imagen cargada.', { timeout: 10_000 })
     await expect(page.locator('#live-title')).toHaveText('Foto del reverso')
     await expect(page.locator('.live-guide .ghost')).toHaveAttribute('data-side', 'back')
+    // The side badge and a big banner make the switch to the back obvious.
+    await expect(page.locator('#live-side')).toHaveAttribute('data-side', 'back')
+    await expect(page.locator('.live-flip')).toContainText('Reverso')
     await expect(page.locator('#live-tip')).toHaveText('Hecho. Ahora da la vuelta a la tarjeta.')
     // The same card is still in view: no second automatic shot for the back.
     await page.waitForTimeout(1500)

@@ -271,7 +271,18 @@ span.chip { cursor: default; color: var(--muted); }
 }
 .live::backdrop { background: #1f1a14; }
 .live-bar { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.5rem 0.5rem 1rem; border-bottom: 2px solid #f8f5ed; }
-.live-title { flex: 1; min-width: 0; font-size: 1.05rem; letter-spacing: -0.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-title { flex: 1; min-width: 0; overflow: hidden; }
+.live-title .side-badge { margin: 0; box-shadow: none; border-color: #f8f5ed; }
+.live-title .side-badge-name { font-size: 1.1rem; }
+.live-flip {
+  position: absolute; inset: 0; display: grid; place-items: center; margin: 0; pointer-events: none;
+  animation: live-flip 2.2s ease-out forwards;
+}
+.live-flip span {
+  padding: 0.5rem 1.25rem; border: 3px solid #1f1a14; border-radius: 8px; background: #f36716; color: #1f1a14;
+  font-size: 2.25rem; font-weight: 800; text-transform: uppercase; box-shadow: 6px 6px 0 #1f1a14;
+}
+@keyframes live-flip { 0% { opacity: 0; transform: scale(0.8); } 12% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; } }
 .live .chip { border-color: #f8f5ed; color: #f8f5ed; }
 .live .chip[aria-pressed='true'] { background: #f8f5ed; color: #1f1a14; }
 .live .icon-btn { color: #f8f5ed; }
@@ -294,7 +305,12 @@ span.chip { cursor: default; color: var(--muted); }
   font-family: var(--mono); font-size: 0.875rem; text-align: center;
 }
 .live-tip.ok { border-color: #7fc8a9; color: #7fc8a9; }
-.live-actions { display: flex; justify-content: center; padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom)); }
+.live-actions {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.75rem;
+  padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+}
+.live-actions .shutter { grid-column: 2; grid-row: 1; }
+.live-actions .live-auto { grid-column: 1; grid-row: 1; justify-self: start; white-space: normal; text-align: center; min-height: 44px; }
 .shutter {
   width: 72px; height: 72px; border-radius: 50%; border: 4px solid #f8f5ed; background: #f36716; cursor: pointer;
   box-shadow: inset 0 0 0 3px #1f1a14;
@@ -304,7 +320,31 @@ span.chip { cursor: default; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .live-view.flash::after { display: none; } }
 .sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
 .dropzone { position: relative; border-radius: 8px; border: 1px dashed var(--dash); background: var(--surface); }
-.dropzone.is-current { border: 2px solid var(--ink); }
+.dropzone.is-current { border: 2px solid var(--ink); background: var(--accent); box-shadow: 4px 4px 0 var(--ink); }
+.dropzone.is-current .side-pick, .dropzone.is-current .status { color: #1f1a14; }
+.dropzone:not(.is-current):not(.is-done) { opacity: 0.55; }
+.side-count { font-family: var(--mono); font-size: 0.75rem; font-weight: 400; }
+.thumb-ghost { width: 100%; height: 100%; }
+.thumb-ghost .ghost-block, .thumb-ghost .ghost-line { stroke: currentColor; fill: none; }
+.thumb-ghost .ghost-text { fill: currentColor; opacity: 0.55; }
+.thumb-ghost .ghost-mrz { stroke: currentColor; opacity: 0.7; stroke-width: 4; }
+/* Which side is being captured: card drawing, big name, 1/2 or 2/2. */
+.side-badge {
+  display: inline-flex; align-items: center; gap: 0.6rem; margin: 0 0 0.6rem; padding: 0.35rem 0.75rem 0.35rem 0.45rem;
+  border: 2px solid var(--ink); border-radius: 6px; background: var(--accent); color: #1f1a14; box-shadow: 4px 4px 0 var(--ink);
+  animation: side-pop 0.35s ease-out;
+}
+.side-badge-card { width: 52px; height: auto; flex: none; }
+.side-badge-outline { fill: #f8f5ed; stroke: #1f1a14; stroke-width: 3; }
+.side-badge .ghost { opacity: 1; }
+.side-badge .ghost-block, .side-badge .ghost-line { stroke: #1f1a14; fill: none; stroke-width: 1.5px; }
+.side-badge .ghost-text { fill: #1f1a14; opacity: 0.6; }
+.side-badge .ghost-mrz { stroke: #1f1a14; opacity: 0.75; stroke-width: 4; }
+.side-badge-name { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.4px; text-transform: uppercase; }
+.side-badge-count { font-family: var(--mono); font-size: 0.875rem; padding: 0.1rem 0.4rem; border: 1.5px solid #1f1a14; border-radius: 4px; }
+@keyframes side-pop { from { transform: scale(0.85); opacity: 0; } to { transform: none; opacity: 1; } }
+.frame-ghost { width: 70%; height: auto; }
+
 .dropzone.is-dragover { border: 2px solid var(--accent); background: var(--sunk); }
 .side-pick {
   display: flex; align-items: center; gap: 0.6rem; width: 100%; min-height: 64px; padding: 0.6rem 0.75rem;
@@ -406,3 +446,6 @@ footer a { color: var(--muted); }
 .smart-find .chip.is-on { background: var(--ink); color: var(--paper); border-style: solid; border-color: var(--ink); }
 .smart-find .chip:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .smart-find #find-run { justify-self: start; }
+
+/* Last, so it wins over the animations declared above. */
+@media (prefers-reduced-motion: reduce) { .side-badge, .live-flip { animation: none; } }
