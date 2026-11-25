@@ -97,6 +97,8 @@
   "alignFront": "Încadrează fața",
   "alignBack": "Încadrează versoul",
   "alignLead": "Trage fiecare punct într-un colț. Lupa te ajută să fii precis.",
+  "cornersSearching": "Se caută documentul în fotografie…",
+  "cornersFound": "Am plasat colțurile pe document. Verifică-le și ajustează-le dacă e nevoie.",
   "restartCorners": "Resetează",
   "cornersDone": "Gata",
   "cornersDoneNextBack": "Gata, acum versoul",

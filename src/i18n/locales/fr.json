@@ -97,6 +97,8 @@
   "alignFront": "Cadrez le recto",
   "alignBack": "Cadrez le verso",
   "alignLead": "Faites glisser chaque point vers un coin. La loupe vous aide à être précis.",
+  "cornersSearching": "Recherche du document sur la photo…",
+  "cornersFound": "Nous avons placé les coins sur le document. Vérifiez-les et ajustez-les si nécessaire.",
   "restartCorners": "Réinitialiser",
   "cornersDone": "Terminé",
   "cornersDoneNextBack": "Terminé, au tour du verso",

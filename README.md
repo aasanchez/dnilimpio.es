@@ -56,6 +56,10 @@ Whether a recipient accepts a redacted copy is up to them.
 - **No network access from the page.** The Content Security Policy sets `connect-src 'none'`: the page
   cannot send requests with `fetch`, `XMLHttpRequest`, WebSocket or beacons. It loads scripts, styles
   and images only from its own origin.
+- **On-device AI only.** The corner finder is a small model that runs in the page with WebAssembly.
+  The photo goes to it in memory, scaled to 224 × 224 pixels, and nowhere else. The CSP allows
+  WebAssembly (`'wasm-unsafe-eval'`) but still no `eval()` and no connections
+  ([ADR 0007](docs/adr/0007-corner-model.md)).
 - **No storage of your data.** Photos, fields, watermark text and PDFs are kept in memory only. The
   code is not allowed to use `localStorage`, `sessionStorage` or `indexedDB` (enforced by the linter).
   The only thing the browser stores is the app itself (its HTML, scripts and styles), for offline use.
@@ -67,6 +71,8 @@ Whether a recipient accepts a redacted copy is up to them.
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
+  The corner model (about 2.6 MB) is not part of that first copy: it is stored the first time you use
+  it online. Offline before that, classic edge detection places the corners, or you place them by hand.
 - **Camera stays on the device.** The live camera (capture coach) is analysed frame by frame in
   memory. No frame is stored or sent, and the camera turns off when you close the view, finish both
   sides or leave the tab.
@@ -95,8 +101,9 @@ Whether a recipient accepts a redacted copy is up to them.
 ### Check it yourself
 
 1. Open the browser's developer tools, **Network** tab, before you select a photo.
-2. Use the tool to the end. The only requests are the page's own files, all from the same origin,
-   and none of them is sent after you select a photo.
+2. Use the tool to the end. The only requests are the page's own files, all from the same origin.
+   The first time you select a photo, the page also downloads the corner model (`assets/ml/`) from
+   the same origin; these are plain downloads of the app's files and carry nothing from you.
 3. For the strongest check, load the page, then disconnect from the Internet (airplane mode) before you
    select a photo. The tool keeps working, including after a reload.
 4. Read the policy in the page source: `<meta http-equiv="Content-Security-Policy">`.
@@ -133,7 +140,7 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Redesign of the workflow and interface: guided phone-first flow, new visual style | Done |
 | Capture coach: live camera tips (framing, tilt, light, glare, blur, movement) and automatic shot | Done |
 | DNI 3.0 and TIE, with a document picker | Done |
-| Automatic card edge detection (engine, classic image processing) | Done, not yet in the interface |
+| Find the card's corners automatically: on-device model, then classic edge detection, then manual | Done |
 | On-device OCR engine and MRZ reader (Tesseract.js, self-hosted, loaded on first use) | Done |
 | Smart field finding: OCR covers names, DNI/NIE number, dates, support number, CAN and MRZ | Done |
 | Document type detection | Planned |
@@ -168,7 +175,10 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    browser that gives web pages a live camera, and your permission. If either is missing (permission
    refused, no camera, an old browser, the page opened from a file), the coach does not open: a
    short note appears, and **Take photo** opens the phone's own camera app instead, as before.
-5. **Corners.** Drag the four circles onto the corners of the card; a magnifier shows the area under
+5. **Corners.** When it can, the app finds the card (with the on-device model, or classic edge
+   detection) and places the four circles on its corners for you ("We placed the corners on the
+   document"). Check them. Otherwise, or to correct them, drag the four circles onto the corners of
+   the card; a magnifier shows the area under
    your finger. On a keyboard, arrow keys move the selected corner and <kbd>N</kbd> selects the next
    one. **Rotate** turns the frame if the photo is sideways, **Reset** puts the circles back. The
    button takes you from the front to the back, then on to the next step.
@@ -247,7 +257,8 @@ Rules the code follows:
 - No HTML strings: no `innerHTML` and no `{@html}`. Svelte builds DOM nodes directly
   (`fragments: 'tree'`). The CSP allows one Trusted Types policy, `default`, which only accepts
   two script URLs: the service worker and the OCR worker ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
-- No `eval`, `new Function`, inline scripts or inline styles.
+- No `eval`, `new Function`, inline scripts or inline styles. WebAssembly is allowed only for the
+  corner model's runtime ([ADR 0007](docs/adr/0007-corner-model.md)).
 - No runtime requests and no persistent storage.
 - Test images are synthetic or official specimens. Never commit a photo of a real person's document.
 
@@ -256,10 +267,13 @@ Rules the code follows:
 - **Unit** (`tests/unit/`): homography and warp, corner editing, zone data for every document (inside
   the card, sources, defaults, sizes), file decoding, i18n keys,
   redaction raster (every masked pixel is opaque black, input untouched), JPEG filter (metadata
-  segments dropped, image data unchanged) and PDF structure (pages, images, no metadata, no text,
+  segments dropped, image data unchanged), corner model answer checks, and PDF structure (pages, images, no metadata, no text,
   deterministic output).
 - **End to end** (`tests/e2e/`): document picker (each document's size, fields and warnings; changing
-  it keeps the photos), photo selection, corner alignment, the field checklist and its
+  it keeps the photos), photo selection, corner alignment, the corner model (real model under the
+  real CSP on generated cluttered photos, edge detection when the model is unavailable, silent manual
+  start when nothing is found, never overriding the user, cached after first use and working
+  offline, a tampered model refused), the field checklist and its
   warnings, review, a real PDF download (decoded in the browser to check that hidden areas are black
   and that the file has no metadata, no source file name and no watermark text), reset, and
   security checks on the built page: exact CSP, referrer policy, SRI on every asset, no inline code, no CSP violations and no
@@ -294,7 +308,8 @@ src/
   zones/             field positions and size per document, from official specimens; documents.ts lists them
   redact/            normalised zones to pixels, opaque fills
   engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
-  detect/            automatic card edge detection (Sobel + Hough, no model)
+  detect/            corner finding: on-device model (loaded on demand), classic edge detection
+                     (Sobel + Hough), answer checks, fallback order
   ocr/               on-device OCR (Tesseract.js, loaded on demand), MRZ reader, smart field finding
   security/          Trusted Types policy
   i18n/              dictionaries, one JSON file per language
@@ -314,6 +329,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0004](docs/adr/0004-offline-service-worker.md): offline mode with a verified service worker.
 - [0005](docs/adr/0005-guided-flow-and-visual-style.md): guided phone-first flow and visual style.
 - [0006](docs/adr/0006-document-types.md): several document types, chosen by the user.
+- [0007](docs/adr/0007-corner-model.md): corner finding with a small on-device model, and the CSP change it needs.
 - [0008](docs/adr/0008-capture-coach.md): capture coach with classical image metrics, no model.
 - [0009](docs/adr/0009-on-device-ocr.md): on-device OCR with Tesseract.js, self-hosted and loaded on demand.
 - [0010](docs/adr/0010-smart-field-finding.md): smart field finding from OCR text; results become ordinary boxes.
@@ -334,8 +350,9 @@ not in a public issue.
 ## Licence
 
 [AGPL-3.0-or-later](LICENSE). If you run a modified version as a website, you must offer its source code
-to its users. Third-party libraries keep their own licences (`@cantoo/pdf-lib`: MIT; Tesseract.js and its core
-and language data: Apache-2.0; `wasm-feature-detect`: Apache-2.0). The bundled
+to its users. Third-party libraries keep their own licences (`@cantoo/pdf-lib`, `onnxruntime-web` and
+the `scanic-ml` model and runtime: MIT; Tesseract.js and its core and language data: Apache-2.0;
+`wasm-feature-detect`: Apache-2.0). The bundled
 fonts (Bricolage Grotesque, JetBrains Mono, Caveat) are under the [SIL Open Font Licence
 1.1](LICENSES/OFL-1.1.txt). File-level
 licence data follows [REUSE](REUSE.toml).

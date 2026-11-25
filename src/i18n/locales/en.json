@@ -97,6 +97,8 @@
   "alignFront": "Line up the front",
   "alignBack": "Line up the back",
   "alignLead": "Drag each point to a corner. The magnifier helps you get it right.",
+  "cornersSearching": "Looking for the document in the photo…",
+  "cornersFound": "We placed the corners on the document. Check them and adjust them if needed.",
   "restartCorners": "Reset",
   "cornersDone": "Done",
   "cornersDoneNextBack": "Done, now the back",
