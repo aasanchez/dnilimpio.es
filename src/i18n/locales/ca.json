@@ -202,5 +202,7 @@
   "findOffline": "La cerca automàtica necessita una baixada única i no tens connexió. Tapa les dades a mà.",
   "findUnsupported": "La cerca automàtica no està disponible en aquest navegador. Tapa les dades a mà.",
   "findFailed": "La cerca automàtica no ha funcionat aquesta vegada. Tapa les dades a mà.",
-  "framed": "Per seguretat, aquesta eina només funciona en la seva pròpia pestanya. Obre-la aquí."
+  "framed": "Per seguretat, aquesta eina només funciona en la seva pròpia pestanya. Obre-la aquí.",
+  "guideOpen": "Què hi ha a la meva targeta?",
+  "guideAbout": "Què és: {field}"
 }

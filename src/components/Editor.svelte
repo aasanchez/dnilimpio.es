@@ -17,7 +17,7 @@
   import Review from './Review.svelte'
   import SmartFind from './SmartFind.svelte'
 
-  let { lang, doc, align, edit, phase = $bindable(), onAdjust, onReset, onPhase }: {
+  let { lang, doc, align, edit, phase = $bindable(), onAdjust, onReset, onPhase, onGuide }: {
     lang: Lang
     /** The document's zone data. The editor is re-created when the document changes. */
     doc: ModelZones
@@ -28,6 +28,8 @@
     onReset: () => void
     /** Called after the phase changes, so the shell can move focus to the new heading. */
     onPhase: () => void
+    /** Opens the card guide on this field's entry. */
+    onGuide: (field: ZoneId) => void
   } = $props()
 
   type Tool = 'fields' | 'boxes' | 'mark'
@@ -439,6 +441,10 @@
               <input type="checkbox" role="switch" class="switch" id="field-{f.id}" checked={hidden.has(f.id)}
                 onchange={(e) => { toggle(f.id, e.currentTarget.checked) }} />
             </label>
+            <!-- Outside the label, so it never toggles the field. -->
+            <button type="button" class="icon-btn guide-info" id="about-{f.id}" aria-label={tf(lang, 'guideAbout', { field: t(lang, fieldKey(f.id)) })} onclick={() => { onGuide(f.id) }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.5" /></svg>
+            </button>
           </li>
         {/each}
       </ul>

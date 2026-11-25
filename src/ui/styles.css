@@ -293,6 +293,35 @@ footer .link-btn { display: flex; margin: 0 auto; min-height: 32px; font-size: 0
   background: var(--term-bg); color: var(--term-fg); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.75rem; line-height: 1.5;
 }
 .audit-status:empty { display: none; }
+
+/* Card guide (CardGuide.svelte): the audit window, taller, with a scrolling body. */
+.guide { width: min(44rem, calc(100% - 2rem)); }
+.guide[open] { display: flex; flex-direction: column; overflow: hidden; }
+.guide-body {
+  display: flex; flex-direction: column; gap: 0.6rem; min-height: 0; overflow-y: auto; padding: 1rem;
+  font-family: var(--sans); font-size: 1rem; text-align: start; line-height: 1.5;
+}
+.guide-body > * { flex-shrink: 0; }
+.guide-body h3 { margin: 0.75rem 0 0; font-size: 1.05rem; }
+.guide-body h4 { margin: 0.6rem 0 0.15rem; font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.guide-body p { margin: 0; }
+.guide-tabs { flex-wrap: wrap; }
+.guide-general { padding: 0.75rem; border: 1px dashed var(--dash); border-radius: 6px; background: var(--sunk); }
+.guide-list { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.guide-list li + li { border-top: 1px solid var(--hair); }
+.guide-entry { padding: 0 0.9rem; }
+.guide-entry summary { min-height: 48px; display: flex; align-items: center; font-weight: 600; cursor: pointer; }
+.guide-entry[open] { padding-bottom: 0.75rem; }
+.guide-cites { display: flex; flex-wrap: wrap; gap: 0 0.5rem; margin-top: 0.2rem; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+.guide-none { color: var(--muted); font-style: italic; }
+.guide-app { margin-top: 0.5rem; font-size: 0.875rem; color: var(--accent-text); }
+.guide-sources { margin: 0; padding-inline-start: 1.5rem; font-size: 0.8125rem; overflow-wrap: anywhere; }
+.guide-sources li + li { margin-top: 0.4rem; }
+.guide-sources a { color: var(--accent-text); }
+.fields li { display: flex; align-items: center; }
+.fields li .toggle { flex: 1; min-width: 0; }
+.guide-info { flex: none; margin-inline-end: 0.4rem; color: var(--muted); }
+.home > .link-btn { justify-self: start; align-self: flex-start; margin-top: -0.5rem; }
 .plain { list-style: none; margin: 0; padding: 0; }
 
 /* Capture. */

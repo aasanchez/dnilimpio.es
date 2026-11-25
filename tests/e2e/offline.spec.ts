@@ -42,6 +42,22 @@ test('works offline after one visit, through to the PDF download', async ({ page
   expect(violations).toEqual([])
 })
 
+test('the card guide opens offline, in another language too', async ({ page, context }) => {
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  await page.goto('/')
+  await offlineReady(page)
+  await context.setOffline(true)
+  await page.reload()
+  await page.locator('#guide-open').click()
+  await expect(page.locator('#guide-title')).toHaveText('¿Qué hay en tu tarjeta?')
+  await page.locator('#guide-close').click()
+  await page.locator('#lang').selectOption('uk')
+  await page.locator('#guide-open').click()
+  await expect(page.locator('#guide-title')).not.toHaveText('¿Qué hay en tu tarjeta?')
+  expect(errors).toEqual([])
+})
+
 test('the worker refuses every request that is not a file of this build (deny by default)', async ({ page, context }) => {
   // Only requests that reach the network show up here: the worker's own fetches included.
   const leaked: string[] = []

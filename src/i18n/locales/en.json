@@ -202,5 +202,7 @@
   "findOffline": "Automatic finding needs a one-time download, and you are offline. Hide the data by hand.",
   "findUnsupported": "Automatic finding is not available in this browser. Hide the data by hand.",
   "findFailed": "Automatic finding did not work this time. Hide the data by hand.",
-  "framed": "For your security, this tool only works in its own tab. Open it here."
+  "framed": "For your security, this tool only works in its own tab. Open it here.",
+  "guideOpen": "What is on my card?",
+  "guideAbout": "About: {field}"
 }
