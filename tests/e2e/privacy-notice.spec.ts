@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The no-cookies notice on the start screen: it informs, needs no consent, and its dismissal is kept
-// in memory only, so it stores nothing in the browser and comes back after a reload.
+// The no-cookies notice on the start screen: it informs and needs no consent. Closing it stores only
+// the date, so it shows at most once every 4 days.
 import { expect, test } from '@playwright/test'
 
 test.use({ locale: 'es-ES' })
@@ -18,11 +18,13 @@ test('informs that there are no cookies, with no accept step', async ({ page }) 
   await expect(page.locator('#start')).toBeInViewport()
 })
 
-test('dismissal lasts for the visit, stores nothing and resets on reload', async ({ page }) => {
+test('once closed, it stays away for 4 days; only the closing date is stored', async ({ page }) => {
+  const t0 = Date.parse('2026-11-25T12:00:00Z')
+  await page.clock.install({ time: t0 })
   await page.goto('/')
   await page.locator('#privacy-ok').click()
   await expect(page.locator('#privacy-notice')).toHaveCount(0)
-  // Back to the start screen in the same visit: still dismissed.
+  // Back to the start screen in the same visit: still closed.
   await page.locator('#start').click()
   await page.locator('#back').click()
   await expect(page.locator('#start')).toBeVisible()
@@ -30,12 +32,30 @@ test('dismissal lasts for the visit, stores nothing and resets on reload', async
 
   const stored = await page.evaluate(async () => ({
     cookies: document.cookie, // eslint-disable-line no-restricted-properties
-    local: localStorage.length, // eslint-disable-line no-restricted-properties
+    local: Object.entries(localStorage),
     session: sessionStorage.length, // eslint-disable-line no-restricted-properties
     databases: (await indexedDB.databases()).length, // eslint-disable-line no-restricted-properties
   }))
-  expect(stored).toEqual({ cookies: '', local: 0, session: 0, databases: 0 })
+  expect(stored).toEqual({ cookies: '', local: [['dnilimpio.noticeDismissedAt', expect.stringMatching(/^2026-11-25T12:00:00\.\d{3}Z$/)]], session: 0, databases: 0 })
 
+  // Three days and 23 hours later: still closed.
+  await page.clock.setSystemTime(t0 + (4 * 24 - 1) * 3600_000)
+  await page.reload()
+  await expect(page.locator('#start')).toBeVisible()
+  await expect(page.locator('#privacy-notice')).toHaveCount(0)
+  // Four days (and a minute) later: it shows again.
+  await page.clock.setSystemTime(t0 + 4 * 24 * 3600_000 + 60_000)
+  await page.reload()
+  await expect(page.locator('#privacy-notice')).toBeVisible()
+})
+
+test('still works when the browser blocks storage: it shows on every visit', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', { get () { throw new DOMException('blocked', 'SecurityError') } })
+  })
+  await page.goto('/')
+  await page.locator('#privacy-ok').click()
+  await expect(page.locator('#privacy-notice')).toHaveCount(0)
   await page.reload()
   await expect(page.locator('#privacy-notice')).toBeVisible()
 })
