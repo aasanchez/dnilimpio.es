@@ -315,6 +315,14 @@ span.chip { cursor: default; color: var(--muted); }
 .toggle-note { font-size: 0.8125rem; color: var(--muted); }
 .toggle-state { font-family: var(--mono); font-size: 0.6875rem; font-weight: 700; color: var(--accent-text); min-width: 4.5em; text-align: end; }
 .toggle-state.is-on { color: var(--ink); }
+/* Document picker: a real radio button drawn as a ring. */
+.doc-shape { width: 42px; height: 27px; flex: none; border: 1.5px solid var(--ink); border-radius: 4px; background: var(--sunk); }
+.doc-shape.paper { background: #cfe7dc; border-radius: 1px; }
+.radio {
+  appearance: none; flex: none; width: 26px; height: 26px; margin: 0; border: 2px solid var(--ink); border-radius: 50%;
+  background: var(--surface); cursor: pointer;
+}
+.radio:checked { background: radial-gradient(circle, var(--accent) 0 6px, var(--surface) 7px); }
 /* A real checkbox drawn as a switch. */
 .switch {
   appearance: none; position: relative; flex: none; width: 52px; height: 30px; margin: 0; border: 2px solid var(--ink);

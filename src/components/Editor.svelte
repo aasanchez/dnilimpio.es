@@ -3,7 +3,7 @@
      and download (Review.svelte). The editor owns the sanitised rasters that both screens show. -->
 <script lang="ts">
   import { untrack } from 'svelte'
-  import { defaultHidden, fieldsOf, masksFor, mrzLeaks } from '../engine/fields.ts'
+  import { defaultHidden, fieldsOf, hasField, masksFor, mrzLeaks } from '../engine/fields.ts'
   import { renderSecure } from '../engine/render.ts'
   import { canRedo, canUndo, commit, redo, undo } from '../engine/history.ts'
   import { HANDLES, centredBox, fromPoints, grow, handlePoint, hitTest, isUsable, move, resize, type Handle, type Point } from '../engine/masks.ts'
@@ -11,11 +11,13 @@
   import { t, tf, type Key, type Lang } from '../i18n/index.ts'
   import type { AlignState } from '../ui/align-state.ts'
   import type { EditState, Phase } from '../ui/edit-state.ts'
-  import { DNI_4_0, type Rect, type Side, type ZoneId } from '../zones/dni.ts'
+  import type { ModelZones, Rect, Side, ZoneId } from '../zones/types.ts'
   import Review from './Review.svelte'
 
-  let { lang, align, edit, phase = $bindable(), onAdjust, onReset, onPhase }: {
+  let { lang, doc, align, edit, phase = $bindable(), onAdjust, onReset, onPhase }: {
     lang: Lang
+    /** The document's zone data. The editor is re-created when the document changes. */
+    doc: ModelZones
     align: AlignState
     edit: EditState
     phase: Phase
@@ -32,8 +34,11 @@
     { id: 'boxes', key: 'toolBoxes' },
     { id: 'mark', key: 'toolMark' },
   ]
-  const fields = fieldsOf(DNI_4_0)
-  const recommended = [...defaultHidden(DNI_4_0)]
+  // The shell re-creates the editor for another document, so these never change while it is mounted.
+  const model = untrack(() => doc)
+  const fields = fieldsOf(model)
+  const recommended = [...defaultHidden(model)]
+  const docName = $derived(t(lang, `doc_${model.model}`))
   const hidden = $derived(new Set<ZoneId>(edit.hidden))
   let side = $state<Side>('front')
   let tool = $state<Tool>('fields')
@@ -84,7 +89,7 @@
 
   /** The field whose printed zone on this side contains the point, if any. */
   function zoneAt (p: Point): ZoneId | null {
-    for (const z of DNI_4_0.zones) {
+    for (const z of model.zones) {
       if (z.side !== side) continue
       if (z.rects.some((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h)) return z.id
     }
@@ -196,7 +201,7 @@
     const opts = { greyscale: edit.greyscale, watermark: edit.watermark }
     for (const s of SIDES) {
       const card = align.warped[s]
-      if (card) renderSecure(card, { ...opts, masks: [...masksFor(DNI_4_0, s, hidden), ...edit.boxes.present[s]] }, secure[s])
+      if (card) renderSecure(card, { ...opts, masks: [...masksFor(model, s, hidden), ...edit.boxes.present[s]] }, secure[s])
     }
     version = untrack(() => version) + 1
   })
@@ -215,7 +220,7 @@
     if (finalPreview) return
     ctx.setLineDash([18, 10])
     ctx.lineWidth = 5
-    for (const z of DNI_4_0.zones) {
+    for (const z of model.zones) {
       if (z.side !== side || hidden.has(z.id)) continue
       for (const r of z.rects) {
         const p = toPixels(r, src.width, src.height)
@@ -328,10 +333,10 @@
         {/each}
       </ul>
       <div aria-live="polite" class="panel">
-        {#if !hidden.has('can')}<p class="warning" id="can-warning">{t(lang, 'canWarning')}</p>{/if}
-        {#if mrzLeaks(hidden)}<p class="warning" id="mrz-warning">{t(lang, 'mrzWarning')}</p>{/if}
+        {#if hasField(model, 'can') && !hidden.has('can')}<p class="warning" id="can-warning">{t(lang, 'canWarning')}</p>{/if}
+        {#if mrzLeaks(model, hidden)}<p class="warning" id="mrz-warning">{t(lang, 'mrzWarning')}</p>{/if}
       </div>
-      <p class="hint">{t(lang, 'positionsHint')}</p>
+      <p class="hint">{tf(lang, 'positionsHint', { doc: docName })}</p>
     </div>
 
     <div class="panel" id="panel-boxes" role="tabpanel" aria-labelledby="tool-boxes" hidden={tool !== 'boxes'}>

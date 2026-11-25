@@ -6,8 +6,9 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 **Use it:** <https://aasanchez.github.io/dnilimpio.es/> (planned move to `dnilimpio.es`).
 
 > [!IMPORTANT]
-> **Work in progress.** The full flow works for the DNI 4.0: select both sides, straighten them,
-> choose the fields to hide, draw extra black boxes, add a watermark, review and download the PDF.
+> **Work in progress.** The full flow works for the DNI 4.0, DNI 3.0, TIE and the EU citizen
+> registration certificate: choose the document, select both sides, straighten them, choose the
+> fields to hide, draw extra black boxes, add a watermark, review and download the PDF.
 > Automatic detection is still being built (see [Status](#status)).
 > Always check the result before you share it.
 
@@ -29,16 +30,17 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 
 ## What it does
 
-When a landlord, employer or company asks for a copy of your DNI, they usually need only some of the data.
-This tool makes a copy that shows only what you choose:
+When a landlord, employer or company asks for a copy of your DNI, TIE or NIE certificate, they usually
+need only some of the data. This tool makes a copy that shows only what you choose:
 
-1. **Select** a photo of the front and the back (JPEG, PNG, WebP; camera on mobile).
-2. **Straighten** each side by marking its four corners.
-3. **Choose the fields to hide** (signature, dates, support number, CAN, MRZ and others), and draw
+1. **Choose the document**: DNI 4.0, DNI 3.0, TIE or EU registration certificate.
+2. **Select** a photo of the front and the back (JPEG, PNG, WebP; camera on mobile).
+3. **Straighten** each side by marking its four corners.
+4. **Choose the fields to hide** (signature, dates, support number, CAN, MRZ and others), and draw
    extra black boxes over anything else.
-4. **Add a watermark** (optional), for example `COPY ONLY FOR RENTAL APPLICATION`.
-5. **Convert to black and white** (optional).
-6. **Review** both sides and **download a PDF**: `protected-document.pdf`.
+5. **Add a watermark** (optional), for example `COPY ONLY FOR RENTAL APPLICATION`.
+6. **Convert to black and white** (optional).
+7. **Review** both sides and **download a PDF**: `protected-document.pdf`.
 
 The PDF holds new images in which the hidden pixels are replaced with solid black. It is not the
 original photo with boxes on top: the hidden data is gone from the file.
@@ -93,14 +95,21 @@ Whether a recipient accepts a redacted copy is up to them.
 
 ## Supported documents
 
-| Document | Status |
-|---|---|
-| DNI 4.0 (2021 onwards), front and back | Field positions measured on the official specimen ([method](docs/ZONES.md)) |
-| DNI 3.0 | Planned |
-| TIE (foreigner identity card) | Planned |
-| Certificate with NIE (EU citizen registration) | Planned |
+| Document | Shape | Source of the field positions | Hidden by default | Optional |
+|---|---|---|---|---|
+| DNI 4.0 (August 2021 onwards) | card, 85.6 × 54 mm | Policía Nacional specimen | CAN, signature, issue and expiry dates, support number (3 places), MRZ | date and place of birth, address, parents |
+| DNI 3.0 (2015 to 2021) | card, 85.6 × 54 mm | PRADO ESP-BO-05001 | CAN, signature, issue date (laser text by the small photo), expiry date, support number (3 places), MRZ | date and place of birth, address, parents |
+| TIE, foreigner identity card (2020 model) | card, 85.6 × 54 mm | PRADO ESP-HO-03001 | CAN, signature, issue and expiry dates, card number (2 places), MRZ | date and place of birth, address, permit type |
+| EU citizen registration certificate (green card with the NIE) | paper card, 83 × 53 mm | PRADO ESP-HP-01002 | place and date of issue, card serial number | date and place of birth, address, parents |
 
-Any other photo can be redacted by hand once manual boxes are available.
+Positions were measured on official specimens ([method and findings](docs/ZONES.md)). The name, the
+photo and the DNI or NIE number stay visible by design; cover them with a black box if needed. On the
+EU certificate the data is printed by an office printer, so its lines can be a millimetre off: check
+the outlines and add a black box where needed. For an uncut A4 certificate, mark the corners of the
+card part. Any other photo can be redacted by hand with black boxes.
+
+The document is chosen by hand. Automatic detection is planned: it will only preselect the choice
+([ADR 0006](docs/adr/0006-document-types.md)).
 
 ## Status
 
@@ -117,6 +126,7 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
 | Offline mode with service worker and integrity checks | Done |
 | Redesign of the workflow and interface: guided phone-first flow, new visual style | Done |
+| DNI 3.0, TIE and EU registration certificate, with a document picker | Done |
 | Automatic detection (edges, document type, OCR) | Planned |
 | 31 languages | 13 today |
 
@@ -130,19 +140,23 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 1. Optional: disconnect from the Internet after the page has loaded. After the first visit, the
    tool also opens with no connection.
 2. **Start.** The first screen explains what the tool does. Press **Start**.
-3. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself. On a
+3. **Document.** Choose DNI 4.0 (preselected), DNI 3.0, TIE or EU registration certificate, then
+   **Continue**. Each one has its own field positions and shape. To change it later, go back from
+   the photo screen: your photos are kept, the corners and choices start again.
+4. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself. On a
    phone, **Take photo** opens the camera and **Gallery** opens your pictures; on a computer,
    **Choose image**, drag and drop, or paste (<kbd>Ctrl</kbd>+<kbd>V</kbd>) also work. Tap a side's
    tile to replace its photo.
-4. **Corners.** Drag the four circles onto the corners of the card; a magnifier shows the area under
+5. **Corners.** Drag the four circles onto the corners of the card; a magnifier shows the area under
    your finger. On a keyboard, arrow keys move the selected corner and <kbd>N</kbd> selects the next
    one. **Rotate** turns the frame if the photo is sideways, **Reset** puts the circles back. The
    button takes you from the front to the back, then on to the next step.
-5. **Hide.** The card stays on screen. Choose **Front** or **Back**; the list below shows that
+6. **Hide.** The card stays on screen. Choose **Front** or **Back**; the list below shows that
    side's fields as switches. You can also tap a field on the card itself to cover or uncover it.
    The recommended fields start covered: signature, issue and expiry dates, support number, CAN and
-   the machine-readable lines (MRZ). Fields left visible get a dashed orange outline; **Final
-   preview** hides the outlines. **Adjust corners** goes back to step 4 and keeps your choices.
+   the machine-readable lines (MRZ), as far as the document has them (see
+   [Supported documents](#supported-documents)). Fields left visible get a dashed orange outline; **Final
+   preview** hides the outlines. **Adjust corners** goes back to step 5 and keeps your choices.
    Three tabs:
    - **Data:** the field switches and quick choices (**Recommended**, **Hide all**, **Show all**).
    - **Boxes:** extra black boxes for anything the list does not cover. Turn on **Draw black box**
@@ -152,9 +166,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
      <kbd>N</kbd> selects the next box and <kbd>Delete</kbd> removes it.
    - **Watermark:** type what the copy is for, or pick a suggestion (rental, bank, dated copy), and
      turn on **Convert to black and white** if you like. The card updates as you type.
-6. **Download.** Check both final images and the summary, tick **I have checked both sides**, then
+7. **Download.** Check both final images and the summary, tick **I have checked both sides**, then
    **Download PDF**. The file is called `protected-document.pdf`.
-7. **Done.** On phones that support it, **Share** sends the PDF through the system share sheet.
+8. **Done.** On phones that support it, **Share** sends the PDF through the system share sheet.
    **Clear everything** removes the photos and all your choices from the page; closing the tab does
    the same.
 
@@ -209,11 +223,13 @@ Rules the code follows:
 
 ## Tests
 
-- **Unit** (`tests/unit/`): homography and warp, corner editing, zone data, file decoding, i18n keys,
+- **Unit** (`tests/unit/`): homography and warp, corner editing, zone data for every document (inside
+  the card, sources, defaults, sizes), file decoding, i18n keys,
   redaction raster (every masked pixel is opaque black, input untouched), JPEG filter (metadata
   segments dropped, image data unchanged) and PDF structure (pages, images, no metadata, no text,
   deterministic output).
-- **End to end** (`tests/e2e/`): photo selection, corner alignment, the field checklist and its
+- **End to end** (`tests/e2e/`): document picker (each document's size, fields and warnings; changing
+  it keeps the photos), photo selection, corner alignment, the field checklist and its
   warnings, review, a real PDF download (decoded in the browser to check that hidden areas are black
   and that the file has no metadata, no source file name and no watermark text), reset, and
   security checks on the built page: exact CSP, referrer policy, SRI on every asset, no inline code, no CSP violations and no
@@ -245,7 +261,7 @@ src/
   components/        Svelte components, one per screen or control
   capture/           file input, drag and drop, paste, decoding
   geometry/          homography, perspective warp, corner editing (pure TypeScript)
-  zones/             field positions per document, from official specimens
+  zones/             field positions and size per document, from official specimens; documents.ts lists them
   redact/            normalised zones to pixels, opaque fills
   engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
   i18n/              dictionaries, one JSON file per language
@@ -264,6 +280,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0003](docs/adr/0003-svelte-vite-pnpm.md): Svelte 5, Vite, pinned Node.js and pnpm.
 - [0004](docs/adr/0004-offline-service-worker.md): offline mode with a verified service worker.
 - [0005](docs/adr/0005-guided-flow-and-visual-style.md): guided phone-first flow and visual style.
+- [0006](docs/adr/0006-document-types.md): several document types, chosen by the user.
 
 ## Contributing
 

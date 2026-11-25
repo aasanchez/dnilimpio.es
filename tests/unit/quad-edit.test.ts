@@ -23,6 +23,10 @@ describe('defaultQuad', () => {
     expect((d[0].y + d[2].y) / 2).toBeCloseTo(h / 2, 6)
     expect(Math.max(dw / w, dh / h)).toBeCloseTo(0.7, 6)
   })
+  it('takes the document\'s aspect ratio (EU certificate card, 83 × 53 mm)', () => {
+    const d = defaultQuad(1600, 1200, 83 / 53)
+    expect((d[1].x - d[0].x) / (d[3].y - d[0].y)).toBeCloseTo(83 / 53, 6)
+  })
 })
 
 describe('nearestCorner', () => {
