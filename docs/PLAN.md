@@ -1,6 +1,6 @@
 # dni-redactor v1: implementation plan
 
-Status: scaffold, capture, homography, i18n and DNI 4.0 zone data done. Next: corner editor (step 2 UI), then redaction.
+Status: scaffold, capture, homography, i18n and DNI 4.0 zone data done. CI (`npm run check`) and GitHub Pages deploy from `master` done (`.github/workflows/ci.yml`, first part of step 11). Next: corner editor (step 2 UI), then redaction.
 
 ## Order (spec §12)
 
