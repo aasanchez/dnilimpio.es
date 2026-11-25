@@ -3,7 +3,7 @@
 <script lang="ts">
   import { untrack } from 'svelte'
   import type { DecodeError, DecodeResult } from '../capture/decode.ts'
-  import { prefersCameraButton, wireCapture, wirePaste, type CaptureTarget } from '../capture/input.ts'
+  import { prefersCameraButton, wireCapture, wirePageDrop, wirePaste, type CaptureTarget } from '../capture/input.ts'
   import { canUseLiveCamera, type CameraFailure } from '../capture/live.ts'
   import { t, type Key, type Lang } from '../i18n/index.ts'
   import type { CaptureState } from '../ui/capture-state.ts'
@@ -46,6 +46,8 @@
   // Message keys, not text, so a language change re-translates them.
   const errors = $state<Record<Side, Key | null>>({ front: null, back: null })
   let viewer: HTMLCanvasElement | undefined = $state()
+  // Files are being dragged over the page: the viewer shows where they will go.
+  let dragging = $state(false)
   const bitmap = $derived(photos[current])
   const sideName = (s: Side): string => t(lang, s === 'front' ? 'tabFront' : 'tabBack')
 
@@ -98,6 +100,13 @@
     return () => { ac.abort() }
   })
 
+  // Drag and drop anywhere on the page loads the side on screen (a side's tile takes its own side).
+  $effect(() => {
+    const ac = new AbortController()
+    wirePageDrop(() => targets[current] ?? null, (d) => { dragging = d }, ac.signal)
+    return () => { ac.abort() }
+  })
+
   // Large preview of the side on screen.
   $effect(() => {
     if (!bitmap || !viewer) return
@@ -118,17 +127,30 @@
 
   <div class="win">
     <div class="winbar"><i></i><i></i><i></i><span class="title">{sideName(current).toLowerCase()}.jpg</span></div>
-    <div class="viewer">
+    <div class="viewer" id="viewer" class:is-dragover={dragging}>
       {#if bitmap}
         <canvas bind:this={viewer} width="0" height="0" aria-hidden="true"></canvas>
       {:else}
         <div class="frame-guide">
           <svg class="frame-ghost" viewBox="0 0 100 63.1" aria-hidden="true"><GhostCard side={current} rect={{ x: 0, y: 0, w: 100, h: 63.1 }} dim={false} /></svg>
-          {t(lang, 'frameHint')}
+          {#if withCamera}
+            {t(lang, 'frameHint')}
+          {:else}
+            <!-- Desktop: a classic upload area. Drag a file here, or open the file chooser. -->
+            <span class="drop-title">{t(lang, 'dropHere')}</span>
+            <button type="button" class="button small drop-choose" id="drop-choose" onclick={() => inputs[current]?.click()}>{t(lang, 'chooseFile')}</button>
+          {/if}
         </div>
+      {/if}
+      {#if dragging}
+        <div class="drop-overlay" aria-hidden="true"><span>{t(lang, 'dropHere')}</span></div>
       {/if}
     </div>
   </div>
+  <p class="local-note" id="local-note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+    {t(lang, 'localOnly')}
+  </p>
 
   <div class="sides">
     {#each SIDES as side (side)}
@@ -140,7 +162,7 @@
   {#each SIDES as side (side)}
     {#if errors[side]}<p class="error" id="error-{side}">{sideName(side)}: {t(lang, errors[side])}</p>{/if}
   {/each}
-  {#if !withCamera}<p class="hint">{t(lang, 'dropHint')}</p>{/if}
+  {#if !withCamera}<p class="hint">{t(lang, 'pasteHint')}</p>{/if}
   {#if liveNote}<p class="hint" id="live-note" role="status">{t(lang, liveNote)}</p>{/if}
 
   {#if liveOpen}
