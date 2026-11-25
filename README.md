@@ -36,7 +36,8 @@ need only some of the data. This tool makes a copy that shows only what you choo
    the **capture coach** gives live tips and takes the photo by itself when the card is sharp.
 2. **Confirm the document**: DNI 4.0, DNI 3.0 or TIE. When possible, the app reads the code on the
    back (MRZ) on your device and preselects it.
-3. **Straighten** each side by marking its four corners.
+3. **Straighten**: the app finds the card in each photo, turns it the right way up (sideways or
+   upside down) and straightens it by itself. You can adjust the corners by hand if needed.
 4. **Choose the fields to hide** (signature, dates, support number, CAN, MRZ and others), and draw
    extra black boxes over anything else.
 5. **Add a watermark** (optional), for example `COPY ONLY FOR RENTAL APPLICATION`. The text is
@@ -156,6 +157,7 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Capture coach: live camera tips (framing, tilt, light, glare, blur, movement) and automatic shot | Done |
 | DNI 3.0 and TIE, with a document picker | Done |
 | Find the card's corners automatically: on-device model, then classic edge detection, then manual | Done |
+| Automatic straightening: find, turn (sideways, upside down) and straighten both sides; corners only on request | Done |
 | On-device OCR engine and MRZ reader (Tesseract.js, self-hosted, loaded on first use) | Done |
 | Smart field finding: OCR covers names, DNI/NIE number, dates, support number, CAN and MRZ | Done |
 | Document type detection from the MRZ (preselects the picker) | Done |
@@ -192,14 +194,21 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    *Document detected: TIE. Check it before you continue.* The first time, **Detect automatically**
    downloads the OCR files (about 8 MB) once; you can also skip it and choose by hand. Detection runs
    only in your browser and the photos never leave the device. To change the document later, go
-   back from the corners: your photos are kept, the corners and choices start again.
-5. **Corners.** When it can, the app finds the card (with the on-device model, or classic edge
-   detection) and places the four circles on its corners for you ("We placed the corners on the
-   document"). Check them. Otherwise, or to correct them, drag the four circles onto the corners of
-   the card; a magnifier shows the area under
+   back from the editor: your photos are kept, the corners and choices start again.
+5. **Straighten (automatic).** After **Continue**, the app looks for the card in each photo (with the
+   on-device model, or classic edge detection), turns it the right way up, whether the photo was
+   taken sideways or upside down, and straightens it. It then opens step 6 with both sides already
+   corrected. You only see the corner screen when:
+   - the card was not found in a photo ("We could not find the document in this photo. Place the
+     corners by hand."),
+   - you tap **Place the corners myself** while it works, or
+   - you tap **Adjust corners** in step 6.
+
+   **Corner screen.** The four circles sit on the corners that were found. To correct them, drag
+   them onto the corners of the card; a magnifier shows the area under
    your finger. On a keyboard, arrow keys move the selected corner and <kbd>N</kbd> selects the next
-   one. **Rotate** turns the frame if the photo is sideways, **Reset** puts the circles back. The
-   button takes you from the front to the back, then on to the next step.
+   one. **Rotate** turns the frame a quarter turn (use it if a card still shows sideways or upside
+   down), **Reset** puts the circles back. The button straightens the card again and takes you on.
 6. **Hide.** The card stays on screen. Choose **Front** or **Back**; the list below shows that
    side's fields as switches. You can also tap a field on the card itself to cover or uncover it.
    The recommended fields start covered: signature, issue and expiry dates, support number, CAN and
@@ -285,7 +294,7 @@ Rules the code follows:
 
 ## Tests
 
-- **Unit** (`tests/unit/`): document type from the MRZ (code, issue date from birth and expiry dates), homography and warp, corner editing, zone data for every document (inside
+- **Unit** (`tests/unit/`): upright check (anchor boxes, upright and upside-down cards for every document), document type from the MRZ (code, issue date from birth and expiry dates), homography and warp, corner editing, zone data for every document (inside
   the card, sources, defaults, sizes), file decoding, i18n keys, build version (commit SHA checks,
   commit link, relative time in several languages),
   redaction raster (every masked pixel is opaque black, input untouched), JPEG filter (metadata
@@ -294,9 +303,10 @@ Rules the code follows:
 - **End to end** (`tests/e2e/`): document picker (each document's size, fields and warnings; changing
   it keeps the photos), document detection (synthetic MRZ backs: TIE and DNI 4.0 preselected, a sideways
   photo, a manual choice never overridden, a note and the manual picker when offline or without a service
-  worker), photo selection, corner alignment, the corner model (real model under the
-  real CSP on generated cluttered photos, edge detection when the model is unavailable, silent manual
-  start when nothing is found, never overriding the user, cached after first use and working
+  worker), photo selection, automatic straightening (photos turned 0°, 90°, 180° and 270° come out
+upright, front and back), corner alignment from **Adjust corners**, the corner model (real model under the
+  real CSP on generated cluttered photos, edge detection when the model is unavailable, the manual
+  corner screen with a note when nothing is found, never overriding the user, cached after first use and working
   offline, a tampered model refused), the field checklist and its
   warnings, review, a real PDF download (decoded in the browser to check that hidden areas are black
   and that the file has no metadata, no source file name and no watermark text), reset,
@@ -380,6 +390,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0009](docs/adr/0009-on-device-ocr.md): on-device OCR with Tesseract.js, self-hosted and loaded on demand.
 - [0010](docs/adr/0010-smart-field-finding.md): smart field finding from OCR text; results become ordinary boxes.
 - [0011](docs/adr/0011-document-detection.md): document type detected from the MRZ, after the photos; it only preselects.
+- [0012](docs/adr/0012-automatic-straightening.md): automatic straightening (find, turn, straighten); the corner screen only on request.
 
 ## Contributing
 

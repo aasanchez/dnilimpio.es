@@ -3,7 +3,7 @@
 // the user picks. When OCR cannot run, the button is disabled with a reason and nothing fails.
 import { expect, test, type Page } from '@playwright/test'
 import { checkDigit } from '../../src/ocr/mrz.ts'
-import { CARD, openCapture, pixel, snapCorners } from './helpers.ts'
+import { CARD, blockModel, openCapture, pixel } from './helpers.ts'
 
 /** A valid TD1 MRZ for a fictional DNI. */
 function mrz (): string[] {
@@ -58,16 +58,14 @@ async function toEditorWithText (page: Page): Promise<void> {
     ['CALLE MAYOR 1', 500, 370, SANS],
     ...mrz().map((l, i) => [l, 230, 800 + i * 60, MONO] as const),
   ])
+  await blockModel(page)
   await openCapture(page)
   await page.locator('#file-front').setInputFiles({ name: 'front.png', mimeType: 'image/png', buffer: front })
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
   await page.locator('#file-back').setInputFiles({ name: 'back.png', mimeType: 'image/png', buffer: back })
   await page.locator('#capture-continue').click()
   await page.locator('#doc-continue').click()
-  await snapCorners(page)
-  await page.locator('#align-continue').click()
-  await snapCorners(page)
-  await page.locator('#align-continue').click()
+  // Found and straightened by themselves (edge detection; the model is not needed here).
   await expect(page.locator('#preview')).toHaveJSProperty('width', 1712)
 }
 

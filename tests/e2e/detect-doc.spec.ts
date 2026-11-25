@@ -113,5 +113,5 @@ test('offline without the OCR files: a note, and the manual choice', async ({ pa
   await expect(page.locator('#doc-detect')).toHaveCount(0)
   await page.locator('#doc-tie').check()
   await page.locator('#doc-continue').click()
-  await expect(page.locator('h2')).toHaveText('Encuadra el anverso')
+  await expect(page.locator('h2')).toHaveText('Elige qué tapar')
 })

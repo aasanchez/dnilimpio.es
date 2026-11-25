@@ -1,58 +1,59 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The corner model ("better edges"): suggests the corners when it can, stays silent when it cannot.
+// The corner model ("better edges") behind automatic straightening: finds the card when it can, falls
+// back to edge detection, and hands over to manual corners when neither finds it.
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { fixture, loadBoth, openCapture, pixel } from './helpers.ts'
+import { blockModel, chooseDoc, fixture, loadBoth, openCapture, pixel, toAlign } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
-test('the model places the corners on the card; Continue straightens it without dragging', async ({ page }) => {
+test('the model finds both cards; the editor opens straightened with no dragging', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
   await loadBoth(page, { model: true })
-  await page.locator('#capture-continue').click()
-  await page.locator('#doc-continue').click()
-  await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/, { timeout: 30_000 })
-  await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'model')
-  await page.locator('#align-continue').click()
-  await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/, { timeout: 30_000 })
-  await page.locator('#align-continue').click()
-  await expect(page.locator('#preview')).toHaveJSProperty('width', 1712)
+  await chooseDoc(page)
+  await expect(page.locator('#preview')).toHaveJSProperty('width', 1712, { timeout: 30_000 })
   // Corners on the card: just inside the straightened image's edges is card background (light),
   // not the dark table around it.
   for (const [x, y] of [[40, 40], [1671, 40], [1671, 1039], [40, 1039]] as const) {
     const [r = 0] = await pixel(page, '#preview', x, y)
     expect(r).toBeGreaterThan(180)
   }
+  // "Adjust corners" shows the corners the model placed.
+  await page.locator('#adjust-front').click()
+  await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/)
+  await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'model')
   expect(errors).toEqual([])
 })
 
 test('without the model, classic edge detection places the corners', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
-  await loadBoth(page)
-  await page.locator('#capture-continue').click()
-  await page.locator('#doc-continue').click()
+  await toAlign(page)
   await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/)
   await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'edges')
   expect(errors).toEqual([])
 })
 
-test('with no card in the photo the corners stay where they start, with no message and no error', async ({ page }) => {
+test('with no card in the photo, that side opens the corner screen and says so, with no error', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   const blank = await plainPhoto(page)
+  await blockModel(page)
   await openCapture(page)
   await page.locator('#file-front').setInputFiles({ name: 'plain.png', mimeType: 'image/png', buffer: blank })
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
-  await page.locator('#capture-continue').click()
-  await page.locator('#doc-continue').click()
+  await chooseDoc(page)
+  await expect(page.locator('h2')).toHaveText('Encuadra el anverso')
   await expect(page.locator('canvas.corner-editor')).toBeVisible()
-  await page.waitForTimeout(1500)
-  await expect(page.locator('#align-auto')).toHaveText('')
+  await expect(page.locator('#align-auto')).toHaveText(/No hemos encontrado el documento/)
   await expect(page.locator('[data-source]')).toHaveAttribute('data-source', '')
+  // The back was found: its tab is already done, so Continue finishes.
+  await expect(page.locator('#align-tab-back')).toContainText('✓')
   await expect(page.locator('#align-continue')).toBeEnabled()
+  await page.locator('#align-continue').click()
+  await expect(page.locator('#preview')).toHaveJSProperty('width', 1712)
   expect(errors).toEqual([])
 })
 
@@ -75,13 +76,13 @@ async function plainPhoto (page: import('@playwright/test').Page): Promise<Buffe
 }
 
 test('a corner moved by the user is never overridden by a late detection', async ({ page }) => {
-  // Hold the model back until the user has dragged a corner.
+  // Hold the model back while the person chooses to place the corners themselves and drags one.
   let release: () => void = () => undefined
   const held = new Promise<void>((resolve) => { release = resolve })
   await page.route('**/assets/ml/**', async (route) => { await held; await route.continue() })
   await loadBoth(page, { model: true })
-  await page.locator('#capture-continue').click()
-  await page.locator('#doc-continue').click()
+  await chooseDoc(page)
+  await page.locator('#straighten-manual').click()
   const canvas = page.locator('canvas.corner-editor')
   await canvas.focus()
   await page.keyboard.press('ArrowRight')
@@ -162,9 +163,11 @@ for (const v of VARIANTS) {
     await openCapture(page)
     await page.locator('#file-front').setInputFiles({ name: 'messy.png', mimeType: 'image/png', buffer: photo })
     await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
-    await page.locator('#capture-continue').click()
-    await page.locator('#doc-continue').click()
-    await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/, { timeout: 30_000 })
+    await chooseDoc(page)
+    await expect(page.locator('#preview')).toHaveJSProperty('width', 1712, { timeout: 30_000 })
+    // The corners as found, in reading order: a card turned the wrong way would put them out of order.
+    await page.locator('#adjust-front').click()
+    await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/)
     await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'model')
     // Where messyPhoto() drew the card: 900 × 567, centred on (cx, cy), rotated by `angle`.
     const [c, s] = [Math.cos(v.angle), Math.sin(v.angle)]

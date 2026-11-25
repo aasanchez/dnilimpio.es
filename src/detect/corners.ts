@@ -26,9 +26,23 @@ export function modelSupported (): boolean {
   return typeof WebAssembly === 'object' && typeof WebAssembly.instantiate === 'function'
 }
 
+/**
+ * How long the model may take (download of about 2.6 MB the first time, runtime start-up and the
+ * detection itself) before edge detection answers instead. The download goes on in the background,
+ * so the next photo can use it.
+ */
+export const MODEL_WAIT_MS = 10_000
+
 const byModel: Detector = async (bitmap) => {
   if (!modelSupported()) return null
-  return await (await loadModel()).detect(bitmap)
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<null>((resolve) => { timer = setTimeout(() => { resolve(null) }, MODEL_WAIT_MS) })
+  try {
+    // The whole operation races the deadline: a stalled runtime start-up must also fall back.
+    return await Promise.race([loadModel().then(async (m) => await m.detect(bitmap)), late])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /** Long side of the copy the edge detector reads; it works at 400 px internally (edges.ts). */
