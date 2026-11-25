@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, test } from '@playwright/test'
-import { START, loadBoth, pixel, snapCorners } from './helpers.ts'
+import { START, pixel, snapCorners, toAlign } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
 test('continue from capture, mark corners on both sides, get straightened 1712 × 1080 cards', async ({ page }) => {
-  await loadBoth(page)
-  await page.locator('#capture-continue').click()
+  await toAlign(page)
   await expect(page.locator('h2')).toHaveText('Encuadra el anverso')
   await expect(page.locator('h2')).toBeFocused()
   await expect(page.locator('#align-continue')).toContainText('ahora el reverso')
@@ -32,9 +31,8 @@ test('continue from capture, mark corners on both sides, get straightened 1712 �
   expect(b).toBeGreaterThan(100)
 })
 
-test('crossed corners disable Continue; Back keeps the photos', async ({ page }) => {
-  await loadBoth(page)
-  await page.locator('#capture-continue').click()
+test('crossed corners disable Continue; Back goes through the document to the photos', async ({ page }) => {
+  await toAlign(page)
   const canvas = page.locator('canvas.corner-editor')
   const box = await canvas.boundingBox()
   if (!box) throw new Error('no canvas box')
@@ -47,13 +45,14 @@ test('crossed corners disable Continue; Back keeps the photos', async ({ page })
   await expect(page.locator('#align-continue')).toBeDisabled()
   await expect(page.locator('#align-status')).toHaveAttribute('role', 'alert')
   await page.locator('#back').click()
+  await expect(page.locator('h2')).toHaveText('¿Qué documento vas a copiar?')
+  await page.locator('#back').click()
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
   await expect(page.locator('#capture-continue')).toBeEnabled()
 })
 
 test('keyboard moves the selected corner', async ({ page }) => {
-  await loadBoth(page)
-  await page.locator('#capture-continue').click()
+  await toAlign(page)
   const canvas = page.locator('canvas.corner-editor')
   await canvas.focus()
   // Push the top-left corner far right and down with Shift+arrows until the quad is invalid.
@@ -69,8 +68,7 @@ test.describe('touch', () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } })
 
   test('a touch drag moves a corner and does not scroll the page', async ({ page }) => {
-    await loadBoth(page)
-    await page.locator('#capture-continue').tap()
+    await toAlign(page)
     const canvas = page.locator('canvas.corner-editor')
     await expect(canvas).toHaveCSS('touch-action', 'none')
     const box = await canvas.boundingBox()

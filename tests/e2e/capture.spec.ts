@@ -4,20 +4,27 @@ import { fixture, openCapture } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
-test('the start screen leads to the document picker, then to the photo step, front first', async ({ page }) => {
+test('the start screen leads to the photo step, front first, then to the document picker', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('h1')).toBeVisible()
   await page.locator('#start').click()
+  await expect(page.locator('h2')).toHaveText('Foto del anverso')
+  await expect(page.locator('h2')).toBeFocused()
+  await expect(page.locator('.progress [aria-current="step"]')).toContainText('Fotos')
+  await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
+  await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
+  await page.locator('#capture-continue').click()
   await expect(page.locator('h2')).toHaveText('¿Qué documento vas a copiar?')
   await expect(page.locator('h2')).toBeFocused()
   await expect(page.locator('.progress [aria-current="step"]')).toContainText('Fotos')
   // Three documents; DNI 4.0 is preselected.
   await expect(page.locator('input[name="doc"]')).toHaveCount(3)
   await expect(page.locator('[id="doc-dni-4.0"]')).toBeChecked()
+  // No service worker here, so no OCR: detection says so and the manual choice works as before.
+  await expect(page.locator('#detect-status')).toHaveText('La detección automática no está disponible en este navegador. Elige el documento.')
+  await expect(page.locator('#doc-detect')).toHaveCount(0)
   await page.locator('#doc-continue').click()
-  await expect(page.locator('h2')).toHaveText('Foto del anverso')
-  await expect(page.locator('h2')).toBeFocused()
-  await expect(page.locator('.progress [aria-current="step"]')).toContainText('Fotos')
+  await expect(page.locator('h2')).toHaveText('Encuadra el anverso')
 })
 
 test('loads front and back through the file inputs, moving to the back by itself', async ({ page }) => {

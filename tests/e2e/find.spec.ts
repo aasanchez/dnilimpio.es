@@ -63,6 +63,7 @@ async function toEditorWithText (page: Page): Promise<void> {
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
   await page.locator('#file-back').setInputFiles({ name: 'back.png', mimeType: 'image/png', buffer: back })
   await page.locator('#capture-continue').click()
+  await page.locator('#doc-continue').click()
   await snapCorners(page)
   await page.locator('#align-continue').click()
   await snapCorners(page)

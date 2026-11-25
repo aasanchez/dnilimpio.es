@@ -19,12 +19,10 @@ export function startQuad (doc: Doc = 'dni-4.0'): Array<{ x: number; y: number }
 }
 export const START = startQuad()
 
-/** From the start screen through the document picker to the photo step. */
-export async function openCapture (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
+/** From the start screen to the photo step. */
+export async function openCapture (page: Page): Promise<void> {
   await page.goto('/')
   await page.locator('#start').click()
-  await page.locator(`[id="doc-${doc}"]`).check()
-  await page.locator('#doc-continue').click()
 }
 
 /** Makes the corner model unavailable, as when offline before its first use. */
@@ -36,9 +34,9 @@ export async function blockModel (page: Page): Promise<void> {
  * Opens the app and loads both fixtures. The corner model is blocked unless `model` is true: most
  * tests check the manual flow, and the model's 2.5 MB would only slow them down.
  */
-export async function loadBoth (page: Page, doc: Doc = 'dni-4.0', { model = false } = {}): Promise<void> {
+export async function loadBoth (page: Page, { model = false } = {}): Promise<void> {
   if (!model) await blockModel(page)
-  await openCapture(page, doc)
+  await openCapture(page)
   // Continue appears once both sides are loaded.
   await expect(page.locator('#capture-continue')).toHaveCount(0)
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
@@ -46,6 +44,20 @@ export async function loadBoth (page: Page, doc: Doc = 'dni-4.0', { model = fals
   await expect(page.locator('#capture-continue')).toHaveCount(0)
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await expect(page.locator('#capture-continue')).toBeEnabled()
+}
+
+/** From the photo step through the document picker to the corners of the front. */
+export async function chooseDoc (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
+  await page.locator('#capture-continue').click()
+  await expect(page.locator('h2')).toHaveText(/documento|document/)
+  await page.locator(`[id="doc-${doc}"]`).check()
+  await page.locator('#doc-continue').click()
+}
+
+/** Loads both fixtures and confirms the document, ending on the corners of the front. */
+export async function toAlign (page: Page, doc: Doc = 'dni-4.0', opts: { model?: boolean } = {}): Promise<void> {
+  await loadBoth(page, opts)
+  await chooseDoc(page, doc)
 }
 
 /**
@@ -80,8 +92,7 @@ export async function pixel (page: Page, id: string, x: number, y: number): Prom
 
 /** Loads both fixtures and aligns both sides, ending in the editor. */
 export async function toEditor (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
-  await loadBoth(page, doc)
-  await page.locator('#capture-continue').click()
+  await toAlign(page, doc)
   await snapCorners(page, doc)
   await page.locator('#align-continue').click()
   await snapCorners(page, doc)
