@@ -347,7 +347,6 @@ span.chip { cursor: default; color: var(--muted); }
 .toggle-state.is-on { color: var(--ink); }
 /* Document picker: a real radio button drawn as a ring. */
 .doc-shape { width: 42px; height: 27px; flex: none; border: 1.5px solid var(--ink); border-radius: 4px; background: var(--sunk); }
-.detect { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
 #detect-status:empty { display: none; }
 #detect-status.busy::before { content: '◌ '; }
 .radio {
@@ -391,6 +390,7 @@ span.chip { cursor: default; color: var(--muted); }
 
 footer { padding: 1rem; text-align: center; font-family: var(--mono); font-size: 0.75rem; }
 footer a { color: var(--muted); }
+.build-version { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.6875rem; }
 
 /* Smart field finding (SmartFind.svelte) */
 .smart-find { display: grid; gap: 0.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--dash); }

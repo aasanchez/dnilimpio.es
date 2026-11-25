@@ -26,8 +26,11 @@
   let step = $state<Step>('home')
   /** Chosen document; the one whose zones, shape and straightened size are in use. */
   let docModel = $state<DocModel>(DEFAULT_DOC)
-  /** Picker value: becomes `docModel` on Continue, so going back without continuing changes nothing. */
-  let docPick = $state<DocModel>(DEFAULT_DOC)
+  /**
+   * Picker value: becomes `docModel` on Continue, so going back without continuing changes nothing.
+   * Null until detection or the person picks one: a silent default put DNI boxes on a TIE.
+   */
+  let docPick = $state<DocModel | null>(null)
   /** True once the person confirmed a document for the current photos; automatic detection then stops preselecting. */
   let docConfirmed = $state(false)
   const doc = $derived(documentOf(docModel))
@@ -77,7 +80,7 @@
     step = s
     alignSide = side
     if (s === 'edit') phase = 'edit'
-    if (s === 'doc') docPick = docModel
+    if (s === 'doc') docPick = docConfirmed ? docModel : null
     void focusHeading()
   }
 
@@ -106,19 +109,21 @@
    * straightened images and choices start over; the photos are kept.
    */
   function chooseDoc (): void {
+    const pick = docPick
+    if (pick === null) return
     // Same document and both sides already straightened (e.g. back from the editor): keep them.
-    if (docPick === docModel && aligned.front && aligned.back) {
+    if (pick === docModel && aligned.front && aligned.back) {
       docConfirmed = true
       go('edit')
       return
     }
-    if (docPick !== docModel) {
-      docModel = docPick
+    if (pick !== docModel) {
+      docModel = pick
       for (const s of ['front', 'back'] as const) {
         resetSide(align, s)
         aligned[s] = false
       }
-      edit = emptyEditState(documentOf(docPick))
+      edit = emptyEditState(documentOf(pick))
     }
     docConfirmed = true
     missed = []

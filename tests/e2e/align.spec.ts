@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, test } from '@playwright/test'
-import { CARD, editorBox, fixture, pixel, snapCorners, toAlign } from './helpers.ts'
+import { CARD, dragCorner, fixture, pixel, snapCorners, toAlign } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
@@ -31,14 +31,9 @@ test('Adjust corners from the editor: mark them by hand, Continue straightens ag
 
 test('crossed corners disable Continue; Back returns to the editor, then the document and the photos', async ({ page }) => {
   await toAlign(page)
-  const box = await editorBox(page)
-  const k = box.width / 1600
   // Drag the top-left corner past the bottom-right one.
   // The corners start where the card was found.
-  await page.mouse.move(box.x + CARD[0]!.x * k, box.y + CARD[0]!.y * k)
-  await page.mouse.down()
-  await page.mouse.move(box.x + 1500 * k, box.y + 1100 * k, { steps: 5 })
-  await page.mouse.up()
+  await dragCorner(page, CARD[0]!, { x: 1500, y: 1100 })
   await expect(page.locator('#align-continue')).toBeDisabled()
   await expect(page.locator('#align-status')).toHaveAttribute('role', 'alert')
   await page.locator('#back').click()
@@ -70,7 +65,8 @@ test.describe('touch', () => {
     await toAlign(page)
     const canvas = page.locator('canvas.corner-editor')
     await expect(canvas).toHaveCSS('touch-action', 'none')
-    const box = await editorBox(page)
+    const box = await canvas.boundingBox()
+    if (!box) throw new Error('no canvas box')
     const k = box.width / 1600
     // Synthetic touch pointer events, as a finger would produce, landing a bit off the handle.
     const at = (p: { x: number; y: number }): { clientX: number; clientY: number } => ({ clientX: box.x + p.x * k, clientY: box.y + p.y * k })
@@ -84,19 +80,8 @@ test.describe('touch', () => {
 
 test('corners confirmed by hand survive replacing only the other photo', async ({ page }) => {
   await toAlign(page)
-  // Move the top-left corner (selected first) out onto the dark table with the keyboard: the
-  // straightened front then starts dark there.
-  await page.locator('canvas.corner-editor').focus()
-  const topLeft = async (): Promise<number[]> => ((await page.locator('[data-corners]').getAttribute('data-corners')) ?? '').split(' ')[0]!.split(',').map(Number)
-  for (let i = 0; i < 40; i++) {
-    const [x = 0, y = 0] = await topLeft()
-    if (x < CARD[0]!.x - 80 && y < CARD[0]!.y - 80) break
-    await page.keyboard.press('Shift+ArrowLeft')
-    await page.keyboard.press('Shift+ArrowUp')
-  }
-  const [x = 0, y = 0] = await topLeft()
-  expect(x).toBeLessThan(CARD[0]!.x - 80)
-  expect(y).toBeLessThan(CARD[0]!.y - 80)
+  // Move the top-left corner out onto the dark table: the straightened front then starts dark there.
+  await dragCorner(page, CARD[0]!, { x: 60, y: 60 })
   await page.locator('#align-continue').click()
   await expect(page.locator('#preview')).toHaveJSProperty('width', 1712)
   const dark = async (): Promise<number> => (await pixel(page, '#preview', 8, 8))[0] ?? 255
@@ -106,6 +91,7 @@ test('corners confirmed by hand survive replacing only the other photo', async (
   await page.locator('#back').click()
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await page.locator('#capture-continue').click()
+  await page.locator('[id="doc-dni-4.0"]').check()
   await page.locator('#doc-continue').click()
   await expect(page.locator('h2')).toHaveText('Elige qué tapar')
   await page.locator('#tab-front').click()

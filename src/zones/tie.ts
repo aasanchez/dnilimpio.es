@@ -11,6 +11,10 @@
 // PRADO lists the format as 88 × 54 mm, but the card is ID-1 like the DNI (the measured ratio is 1.58).
 // Fields were read against a 5 % grid; one source pixel ≈ 0.17 % of the card width. Method: docs/ZONES.md.
 // The NIE stays visible by design, like the DNI number.
+// Checked 2026-11-25 against a real card of the same model (permanent residence card of a family
+// member of an EU citizen, "REGIM COMUNITARIO"; reference only, not stored). Same layout as the
+// specimen; the dates and the second card number sat up to ~2 % outside the specimen boxes, so those
+// boxes were widened.
 
 import { box, ID1_MM, type ModelZones } from './types.ts'
 
@@ -29,15 +33,15 @@ export const TIE: ModelZones = {
     // Front
     { id: 'can', side: 'front', default: 'mandatory', rects: [box(0.785, 0.8, 0.985, 0.9)], note: 'CAN, 6 digits, bottom right ("123456")' },
     { id: 'signature', side: 'front', default: 'hidden', rects: [box(0.39, 0.76, 0.725, 0.905)], note: 'Holder signature, below the NIE' },
-    { id: 'expiryDate', side: 'front', default: 'hidden', rects: [box(0.765, 0.485, 0.985, 0.555)], note: '"VALIDEZ TARJETA 01 01 2020"' },
+    { id: 'expiryDate', side: 'front', default: 'hidden', rects: [box(0.735, 0.49, 0.99, 0.585)], note: '"VALIDEZ TARJETA 01 01 2020"' },
     {
       id: 'supportNumber',
       side: 'front',
       default: 'hidden',
-      rects: [box(0.685, 0.01, 0.99, 0.105), box(0.03, 0.135, 0.215, 0.21)],
+      rects: [box(0.68, 0.01, 0.99, 0.115), box(0.02, 0.135, 0.225, 0.24)],
       note: 'Card number "E00000000", top right and again below the coat of arms',
     },
-    { id: 'dateOfBirth', side: 'front', default: 'visible', rects: [box(0.765, 0.4, 0.985, 0.47)], note: '"FECHA NAC. 01 01 1980"' },
+    { id: 'dateOfBirth', side: 'front', default: 'visible', rects: [box(0.735, 0.405, 0.99, 0.49)], note: '"FECHA NAC. 01 01 1980"' },
     {
       id: 'permitType',
       side: 'front',

@@ -28,13 +28,16 @@ Detection needs the photos, but the picker came before them.
      the issue day or the next birthday, so the issue date is a one-year range). Range entirely from
      2 August 2021 → DNI 4.0; entirely from 2015 to before that day → DNI 3.0. Otherwise, or when a
      date check digit fails, or for a permanent DNI: "it is a DNI, choose the version".
+- **No default.** Until detection answers or the person picks, no document is selected and
+  **Continue** is off. (A DNI 4.0 default made a real TIE get DNI boxes, 2026-11-25.)
 - **It only preselects.** The person confirms with **Continue**. A radio the person picked is never
   changed, and once a document is confirmed for these photos, returning to the screen does not
   change it. A new photo allows a new preselect.
 - **Online and offline** follow `ocrStatus()`:
   - `ready` (OCR files cached): detection runs by itself.
-  - `download`: a **Detect automatically** button states the size (8 MB, once). Nothing downloads
-    without the tap.
+  - `download` (online, not cached): the files download by themselves (8 MB, once) and the status
+    line says so. Changed on 2026-11-25: a tap-to-download button let a real TIE go through with the
+    DNI 4.0 default.
   - `unavailable` (offline before the first download, no service worker, old browser): a note says
     so, and the picker works as before.
   - Any failure while reading ends in "could not recognise the document, choose it". No error
@@ -53,7 +56,7 @@ Detection needs the photos, but the picker came before them.
 
 ## Consequences
 
-- The first detection costs an 8 MB download, by choice. Later ones take a few seconds on a phone.
+- The first detection costs an 8 MB download (shared with smart field finding). Later ones take a few seconds on a phone.
 - Synthetic tests prove the pipeline (straighten, crop, read, classify). Accuracy on real photos of
   real cards depends on the OCR, which is not trained on the MRZ font (OCR-B). The confirmation step
   and the fallbacks cover misreads.

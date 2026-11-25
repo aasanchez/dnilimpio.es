@@ -111,6 +111,8 @@ Whether a recipient accepts a redacted copy is up to them.
 3. For the strongest check, load the page, then disconnect from the Internet (airplane mode) before you
    select a photo. The tool keeps working, including after a reload.
 4. Read the policy in the page source: `<meta http-equiv="Content-Security-Policy">`.
+5. Check which code you run: the start screen's footer shows the short commit SHA of the build, linked
+   to that commit on GitHub (see [Deployment](#deployment)).
 
 ## Supported documents
 
@@ -132,8 +134,10 @@ it ([ADR 0011](docs/adr/0011-document-detection.md)):
   from the dates of birth and expiry (a DNI is valid 2 years under age 5, 5 years under 30 and
   10 years under 70; the DNI 4.0 is issued from 2 August 2021). When the dates fit both versions, or
   for a permanent DNI (holder 70 or over), the app says it is a DNI and asks you to choose the version.
-- Detection needs OCR. The first time, it asks before it downloads the OCR files (about 8 MB); after
-  that it runs by itself, also offline. When OCR cannot run (offline before the first download, no
+- Nothing is preselected until detection answers or you choose: **Continue** waits for a document,
+  so a TIE is never handled with DNI positions by mistake.
+- Detection needs OCR. Online, the first time, it downloads the OCR files by itself (about 8 MB, the
+  status line says so); after that it also runs offline. When OCR cannot run (offline before the first download, no
   service worker, an old browser), a note says so and you choose by hand. A choice you make yourself
   is never changed.
 
@@ -189,8 +193,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    short note appears, and **Take photo** opens the phone's own camera app instead, as before.
 4. **Document.** Confirm DNI 4.0, DNI 3.0 or TIE, then **Continue**. Each one has its own field
    positions. The app reads the code on the back (MRZ) on your device and preselects the document:
-   *Document detected: TIE. Check it before you continue.* The first time, **Detect automatically**
-   downloads the OCR files (about 8 MB) once; you can also skip it and choose by hand. Detection runs
+   *Document detected: TIE. Check it before you continue.* The first time, it downloads the OCR files
+   (about 8 MB) once; you can choose by hand at any moment. Until a document is chosen, **Continue**
+   stays off. Detection runs
    only in your browser and the photos never leave the device. To change the document later, go
    back from the editor: your photos are kept, the corners and choices start again.
 5. **Straighten (automatic).** After **Continue**, the app looks for the card in each photo (with the
@@ -293,12 +298,13 @@ Rules the code follows:
 ## Tests
 
 - **Unit** (`tests/unit/`): edge snapping (sides 7 % outside or inside a card on woven fabric come back onto it, past a printed band; a weak border on a light table is kept even when a band inside is much stronger), upright check (anchor boxes, upright and upside-down cards for every document), document type from the MRZ (code, issue date from birth and expiry dates), homography and warp, corner editing, zone data for every document (inside
-  the card, sources, defaults, sizes), file decoding, i18n keys,
+  the card, sources, defaults, sizes), file decoding, i18n keys, build version (commit SHA checks,
+  commit link, relative time in several languages),
   redaction raster (every masked pixel is opaque black, input untouched), JPEG filter (metadata
   segments dropped, image data unchanged), corner model answer checks, and PDF structure (pages, images, no metadata, no text,
   deterministic output).
 - **End to end** (`tests/e2e/`): document picker (each document's size, fields and warnings; changing
-  it keeps the photos), document detection (synthetic MRZ backs: TIE and DNI 4.0 preselected, a sideways
+  it keeps the photos), document detection (synthetic MRZ backs: TIE and DNI 4.0 preselected, nothing preselected without a result, a sideways
   photo, a manual choice never overridden, a note and the manual picker when offline or without a service
   worker), photo selection, automatic straightening (photos turned 0°, 90°, 180° and 270° come out
 upright, front and back), corner alignment from **Adjust corners**, the corner model (real model under the
@@ -306,7 +312,9 @@ upright, front and back), corner alignment from **Adjust corners**, the corner m
   corner screen with a note when nothing is found, never overriding the user, cached after first use and working
   offline, a tampered model refused), the field checklist and its
   warnings, review, a real PDF download (decoded in the browser to check that hidden areas are black
-  and that the file has no metadata, no source file name and no watermark text), reset, and
+  and that the file has no metadata, no source file name and no watermark text), reset,
+  the footer version (short SHA linked to the commit, relative deploy time that updates and follows
+  the language, same version after an offline reload), and
   security checks on the built page: exact CSP, referrer policy, SRI on every asset, no inline code, no CSP violations and no
   request outside the page's origin, every on-demand chunk listed in the import map with the right
   hash, a tampered PDF chunk refused by the browser, and offline mode (reload and full flow to the
@@ -322,6 +330,25 @@ The build uses relative paths, so `dist/` works at a domain root, under a subpat
 server (Nginx, Caddy, Cloudflare Pages). Moving to the `dnilimpio.es` domain needs no code change:
 set the custom domain in the repository's Pages settings and point DNS at GitHub Pages. To redeploy without a new commit, run the **CI** workflow on
 `master` from the Actions tab.
+
+### Version shown in the app
+
+The start screen's footer shows the running build: `Versión 2a07023 · desplegado hace 5 minutos`.
+
+- The SHA is the commit the build comes from, shortened to 7 characters and linked to
+  `<REPO_URL>/commit/<full SHA>`. CI takes it from `GITHUB_SHA`; a local build takes it from
+  `git rev-parse HEAD`. Without either, the footer says `desarrollo` and shows no link.
+- The time is when `dist/` was built. On `master` the deploy job publishes that build right after the
+  check job, so it is the deploy time to within minutes. It is shown as relative time in the page's
+  language (`Intl.RelativeTimeFormat`), updates every 30 seconds, and shows the exact date on hover.
+  Set `SOURCE_DATE_EPOCH` (seconds) to fix it, for example for a reproducible build.
+- Both values are written into the JavaScript bundle at build time (Vite `define`, see
+  [`vite.config.ts`](vite.config.ts) and [`src/version/build-info.ts`](src/version/build-info.ts)).
+  The page fetches nothing, so the footer works offline. A tab always shows the build it runs: after a
+  service worker update, the new build brings its own values.
+- Consequence: every deploy changes the bundle, so every deploy is a new offline build, even when only
+  documentation changed. The service worker then downloads the app files once more (on-demand files
+  already saved, OCR data and the corner model, are kept when their bytes match).
 
 There is no downloadable offline package ([ADR 0002](docs/adr/0002-no-standalone-release.md)).
 
@@ -343,6 +370,7 @@ src/
                      (Sobel + Hough), answer checks, fallback order; document type from the MRZ
   ocr/               on-device OCR (Tesseract.js, loaded on demand), MRZ reader, smart field finding
   security/          Trusted Types policy
+  version/           commit SHA and build time shown in the footer, relative time
   i18n/              dictionaries, one JSON file per language
   ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state
 scripts/             CSP, build plugins (CSP, SRI, offline file list), test fixture generator

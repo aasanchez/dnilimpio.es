@@ -64,6 +64,7 @@ async function toEditorWithText (page: Page): Promise<void> {
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
   await page.locator('#file-back').setInputFiles({ name: 'back.png', mimeType: 'image/png', buffer: back })
   await page.locator('#capture-continue').click()
+  await page.locator('[id="doc-dni-4.0"]').check()
   await page.locator('#doc-continue').click()
   // Found and straightened by themselves (edge detection; the model is not needed here).
   await expect(page.locator('#preview')).toHaveJSProperty('width', 1712)
@@ -95,7 +96,9 @@ test.describe('with the service worker', () => {
     test.setTimeout(180_000)
     await controlled(page)
     await toEditorWithText(page)
-    await expect(page.locator('#find-status')).toContainText('MB')
+    // Document detection on the document screen already fetched the OCR files: no download left.
+    await expect(page.locator('#find-status')).not.toContainText('MB')
+    await expect(page.locator('#find-run')).toBeEnabled()
     // Default kinds: dates, support number, CAN and MRZ. Add the DNI number; leave the name visible.
     await expect(page.locator('#find-kind-name')).not.toBeChecked()
     await expect(page.locator('#find-kind-date')).toBeChecked()

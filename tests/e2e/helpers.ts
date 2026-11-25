@@ -79,24 +79,39 @@ export async function toAlign (page: Page, doc: Doc = 'dni-4.0', opts: { model?:
 }
 
 /**
- * The corner editor's box once it has stopped moving. The page can still scroll or settle right
- * after the corner screen opens (focus moves to its heading), and a box read too early sends the
- * mouse next to the handles.
+ * The corner editor's box once its layout has settled: the same box on two reads one animation
+ * frame apart. A box read during a late layout change (scroll, resize) makes a drag miss its handle.
  */
-export async function editorBox (page: Page): Promise<{ x: number; y: number; width: number; height: number }> {
+export async function editorBox (page: Page): Promise<{ x: number; y: number; k: number }> {
   const canvas = page.locator('canvas.corner-editor')
   await expect(canvas).toBeVisible()
-  await canvas.scrollIntoViewIfNeeded()
   let last = ''
-  for (let i = 0; i < 50; i++) {
-    const box = await canvas.boundingBox()
-    if (!box) throw new Error('no canvas box')
-    const key = JSON.stringify(box)
-    if (key === last) return box
-    last = key
-    await page.waitForTimeout(100)
-  }
-  throw new Error('the corner editor kept moving')
+  await expect.poll(async () => {
+    const box = await canvas.evaluate(async (c) => {
+      await new Promise(requestAnimationFrame)
+      const r = c.getBoundingClientRect()
+      return `${String(r.x)},${String(r.y)},${String(r.width)}`
+    })
+    const stable = box === last
+    last = box
+    return stable
+  }).toBe(true)
+  const box = await canvas.boundingBox()
+  if (!box) throw new Error('no canvas box')
+  return { x: box.x, y: box.y, k: box.width / 1600 }
+}
+
+/**
+ * Drags a corner handle with the mouse, in 1600 × 1200 photo coordinates. Waits until the pointer is
+ * over a handle before pressing, so a drag that would miss fails here, with a clear message.
+ */
+export async function dragCorner (page: Page, from: { x: number; y: number }, to: { x: number; y: number }): Promise<void> {
+  const { x, y, k } = await editorBox(page)
+  await page.mouse.move(x + from.x * k, y + from.y * k)
+  await expect(page.locator('canvas.corner-editor'), 'pointer over a corner handle').toHaveClass(/is-over-handle/)
+  await page.mouse.down()
+  await page.mouse.move(x + to.x * k, y + to.y * k, { steps: 5 })
+  await page.mouse.up()
 }
 
 /**
@@ -105,17 +120,10 @@ export async function editorBox (page: Page): Promise<{ x: number; y: number; wi
  */
 export async function snapCorners (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
   const start = startQuad(doc)
+  const canvas = page.locator('canvas.corner-editor')
+  await expect(canvas).toBeVisible()
   await page.locator('#align-restart').click()
-  const box = await editorBox(page)
-  const k = box.width / 1600
-  for (let i = 0; i < 4; i++) {
-    const from = start[i]!
-    const to = CARD[i]!
-    await page.mouse.move(box.x + from.x * k, box.y + from.y * k)
-    await page.mouse.down()
-    await page.mouse.move(box.x + to.x * k, box.y + to.y * k, { steps: 5 })
-    await page.mouse.up()
-  }
+  for (let i = 0; i < 4; i++) await dragCorner(page, start[i]!, CARD[i]!)
 }
 
 /** RGB of one pixel of a canvas. */
