@@ -334,32 +334,55 @@ purpose, grouped in logical stages (the layout follows the
 GitHub Actions has no stages: a job starts as soon as the jobs it `needs` have passed, so
 independent checks run in parallel and a failure shows exactly which check failed.
 
+The work is split by where the code is:
+
+- **Pull request: validate.** Every check runs. Nothing is deployed.
+- **`master`: release.** The code was already validated on its pull request, so the checks do not
+  run again. `master` builds, deploys and then checks the live site.
+
+This is safe because pull requests are squash-merged and branch protection requires the branch to be
+up to date with `master` before merging: the tree that lands on `master` is the tree that passed.
+
 ```text
+Pull request
 changes ─ install ─┬─ build ──────┬─ e2e (2 shards) ─┐
                    ├─ typecheck   ├─ bundle-size     │
                    ├─ lint        └─ lighthouse      │
-                   └─ unit                           ├─ ci-ok ─ deploy ─ smoke
-reuse · audit · dependency-review · workflow-lint ───┘   (master only)
+                   └─ unit                           ├─ ci-ok
+reuse · audit · dependency-review · workflow-lint ───┘
+
+master (push, or a manual run of CI)
+changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke
+                                            └─ lighthouse-live (after smoke)
 ```
 
-| Stage | Job | What it checks | Fails the pipeline |
-|---|---|---|---|
-| changes | `changes` | Whether a pull request touches code. A change to only Markdown, `docs/` or `LICENSES/` skips the code jobs | No |
-| setup | `install` | `pnpm install --frozen-lockfile`; saves the pnpm store cache that every later job restores | Yes |
-| build | `build` | `pnpm build`. Uploads `dist/` once; every later job tests and deploys that same build | Yes |
-| build | `typecheck` | `pnpm typecheck` (svelte-check, strict TypeScript) | Yes |
-| build | `lint` | `pnpm lint` (ESLint) | Yes |
-| build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. No threshold yet | Yes |
-| test | `e2e (1/2)`, `e2e (2/2)` | `pnpm test:e2e`, split in two shards, against the built `dist/`. The Playwright browser is cached | Yes |
-| test | `bundle-size` | `pnpm size`: gzip size of the start page, PDF chunk, corner model and OCR files against budgets in [`scripts/bundle-size.ts`](scripts/bundle-size.ts) | No, warns (`--strict` makes it fail) |
-| code analysis | `reuse` | Every file has copyright and licence information ([REUSE](https://reuse.software)) | Yes |
-| code analysis | `audit` | `pnpm audit --prod`: known high or critical vulnerabilities in the code that ships | Yes |
-| code analysis | `dependency-review` | Pull requests only: a new or updated dependency with a known moderate or worse vulnerability | Yes |
-| code analysis | `workflow-lint` | [actionlint](https://github.com/rhysd/actionlint) and [zizmor](https://docs.zizmor.sh) on the workflows (syntax, script injection, permissions, pinning). Rules turned off are explained in [`.github/zizmor.yml`](.github/zizmor.yml) | Yes |
-| acceptance | `lighthouse` | Lighthouse on the built site (performance, accessibility, best practices, SEO), thresholds in [`lighthouserc.json`](lighthouserc.json). Reports are a workflow artifact; nothing is uploaded elsewhere | No, warns |
-| gate | `ci-ok` | Passes when every job above passed or was skipped on purpose | Yes |
-| deploy | `deploy` | `master` only: publishes the tested `dist/` to GitHub Pages. A running deploy is never cancelled | Yes |
-| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves this commit's build and its entry script matches its SRI hash. Retries for up to 5 minutes while Pages updates | Yes |
+| Stage | Job | What it does | Runs on | Fails the pipeline |
+|---|---|---|---|---|
+| changes | `changes` | Decides what the run does: release on `master`; on a pull request, whether it touches code. A change to only Markdown, `docs/` or `LICENSES/` skips the code jobs | Both | No |
+| setup | `install` | `pnpm install --frozen-lockfile`. Saves the `node_modules` and pnpm store caches that every later job restores | Both | Yes |
+| build | `build` | `pnpm build`. Uploads `dist/` once; every later job tests or deploys that same build | Both | Yes |
+| build | `typecheck` | `pnpm typecheck` (svelte-check, strict TypeScript) | PR | Yes |
+| build | `lint` | `pnpm lint` (ESLint) | PR | Yes |
+| build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. No threshold yet | PR | Yes |
+| test | `e2e (1/2)`, `e2e (2/2)` | `pnpm test:e2e`, split in two shards, against the built `dist/` | PR | Yes |
+| test | `bundle-size` | `pnpm size`: gzip size of the start page, PDF chunk, corner model and OCR files against budgets in [`scripts/bundle-size.ts`](scripts/bundle-size.ts) | PR | No, warns (`--strict` makes it fail) |
+| code analysis | `reuse` | Every file has copyright and licence information ([REUSE](https://reuse.software)) | PR | Yes |
+| code analysis | `audit` | `pnpm audit --prod`: known high or critical vulnerabilities in the code that ships | PR | Yes |
+| code analysis | `dependency-review` | A new or updated dependency with a known moderate or worse vulnerability | PR | Yes |
+| code analysis | `workflow-lint` | [actionlint](https://github.com/rhysd/actionlint) and [zizmor](https://docs.zizmor.sh) on the workflows (syntax, script injection, permissions, pinning). Rules turned off are explained in [`.github/zizmor.yml`](.github/zizmor.yml) | PR | Yes |
+| acceptance | `lighthouse` | Lighthouse on the built site (performance, accessibility, best practices, SEO), thresholds in [`lighthouserc.json`](lighthouserc.json). Reports are a workflow artifact; nothing is uploaded elsewhere | PR | No, warns |
+| gate | `ci-ok` | Passes when every job above passed or was skipped on purpose | Both | Yes |
+| deploy | `deploy` | Publishes the built `dist/` to GitHub Pages. Only a push or manual run on `master`, never a pull request or another branch. A running deploy is never cancelled | `master` | Yes |
+| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves this commit's build and its entry script matches its SRI hash. Retries for up to 5 minutes while Pages updates | `master` | Yes |
+| post-deploy | `lighthouse-live` | Lighthouse on the live site, with real hosting (compression, cache headers). Thresholds in [`lighthouserc.live.json`](lighthouserc.live.json) | `master` | No, warns |
+
+**Caching.** Each job starts from caches instead of downloading again:
+
+- `node_modules`, keyed on `.nvmrc`, `package.json`, `pnpm-lock.yaml` and `pnpm-workspace.yaml`. A
+  hit skips `pnpm install` entirely. Pull requests also read the caches that `master` saved.
+- The pnpm store, used only when `node_modules` misses (a dependency changed).
+- Playwright's Chromium headless shell (smaller than full Chromium), keyed on the Playwright version.
+- `dist/` is built once per run and passed to the jobs that need it as an artifact.
 
 The **CodeQL** workflow ([`.github/workflows/codeql.yml`](.github/workflows/codeql.yml)) runs static
 security analysis of the TypeScript and Svelte code and of the workflows, on pull requests, on
@@ -375,8 +398,13 @@ Rules the workflows follow:
   by one shared action ([`.github/actions/setup`](.github/actions/setup/action.yml)).
 - A new push to a pull request cancels its previous run. On `master` runs queue instead.
 
-**Branch protection.** Require only the `ci-ok` status check. It covers every other job, so adding or
-renaming a job does not need a settings change.
+**Branch protection** for `master`:
+
+- Require a pull request before merging, so every change is validated.
+- Require status checks: only `ci-ok`. It covers every other job, so adding or renaming a job does
+  not need a settings change.
+- Require branches to be up to date before merging, so the merged tree is the tested tree.
+- Environment `github-pages`: deployment branches limited to `master`.
 
 To run the same checks locally: `pnpm verify`, then `pnpm size` and `pnpm test:coverage`. The CI
 tools that are not npm packages (REUSE, actionlint, zizmor) can be run with `pipx run reuse lint`,
@@ -384,8 +412,9 @@ tools that are not npm packages (REUSE, actionlint, zizmor) can be run with `pip
 
 ## Deployment
 
-On `master`, the `deploy` job publishes the `dist/` that passed every check to GitHub Pages, and
-`smoke` then checks the live site. To redeploy without a new commit, run the **CI** workflow on
+On `master`, the `deploy` job publishes the freshly built `dist/` to GitHub Pages (the same code
+that passed every check on its pull request). `smoke` then checks that the live site serves it, and
+`lighthouse-live` measures it. To redeploy without a new commit, run the **CI** workflow on
 `master` from the Actions tab.
 
 Do not re-run the old **pages build and deployment** workflow if it appears in the Actions tab. It

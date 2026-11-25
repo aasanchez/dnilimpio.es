@@ -41,6 +41,18 @@ sit in fixed stages: build, test, code analysis, package, deploy, acceptance.
 - Not adopted from to-be-continuous: SonarQube (CodeQL and the linters cover it without an external
   service and token) and review environments per branch (GitHub Pages has one site per repository).
 
+### Amendment (2026-11-25): validate on pull requests, release on master
+
+- Pull requests run every check and never deploy. `master` (push or manual run) does not run the
+  checks again: it builds, deploys, runs `smoke` and Lighthouse on the live site. Pull requests are
+  squash-merged from a branch that must be up to date with `master`, so the merged tree is the tested
+  tree. Branch protection must require a pull request, the `ci-ok` check and an up-to-date branch.
+- `deploy` and `smoke` check the results of their direct `needs`. An `if:` without a status function
+  means `success()` of every upstream job, and a job skipped on purpose (for example
+  `dependency-review` on a push) then skipped the deploy.
+- Faster setup: `node_modules` is cached as a whole (a hit skips `pnpm install`); the pnpm store is
+  the fallback. Playwright installs only Chromium's headless shell.
+
 ## Consequences
 
 - A failure names the exact check. Independent checks run in parallel.
