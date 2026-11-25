@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { cacheName, isAppRequest, isPrecached, parseManifest } from '../../src/offline/precache.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
-const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }] }
+const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }], onDemand: [{ path: 'ocr/spa.traineddata', integrity: HASH }] }
 
 describe('isPrecached', () => {
   it('keeps app files and leaves out source maps, the worker and dotfiles', () => {
@@ -18,6 +18,11 @@ describe('isPrecached', () => {
 describe('parseManifest', () => {
   it('accepts a well-formed manifest', () => {
     expect(parseManifest(JSON.stringify(ok))).toEqual(ok)
+  })
+  it('keeps OCR files on demand and nothing else', () => {
+    expect(() => parseManifest(JSON.stringify({ ...ok, files: [...ok.files, { path: 'ocr/x.js', integrity: HASH }] }))).toThrow(/path/)
+    expect(() => parseManifest(JSON.stringify({ ...ok, onDemand: [{ path: 'assets/x.js', integrity: HASH }] }))).toThrow(/path/)
+    expect(parseManifest(JSON.stringify({ version: ok.version, files: ok.files })).onDemand).toEqual([])
   })
   it('rejects the unreplaced placeholder, empty lists, bad paths and bad hashes', () => {
     expect(() => parseManifest('__DNI_PRECACHE_MANIFEST__')).toThrow()

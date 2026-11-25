@@ -56,11 +56,14 @@ test('Trusted Types: HTML strings are rejected and no other policy can be create
       // eslint-disable-next-line no-restricted-properties -- this test checks that the browser blocks it
       innerHTML: tryIt(() => { document.createElement('div').innerHTML = '<b>x</b>' }),
       policy: tt ? tryIt(() => tt.createPolicy('probe', {})) : 'unsupported',
-      // The app already created the only allowed policy (service worker URL); a second copy is refused.
-      swPolicy: tt ? tryIt(() => tt.createPolicy('dnilimpio-sw', {})) : 'unsupported',
+      // The app already created the only allowed policy; a second copy is refused.
+      defaultPolicy: tt ? tryIt(() => tt.createPolicy('default', {})) : 'unsupported',
+      // The default policy refuses any script URL other than the two the app needs.
+      foreignWorker: tryIt(() => { new Worker('https://example.org/evil.js').terminate() }),
+      ownWorkerUrl: tryIt(() => { new Worker('ocr/worker.min.js').terminate() }),
     }
   })
-  expect(result).toEqual({ innerHTML: 'blocked', policy: 'blocked', swPolicy: 'blocked' })
+  expect(result).toEqual({ innerHTML: 'blocked', policy: 'blocked', defaultPolicy: 'blocked', foreignWorker: 'blocked', ownWorkerUrl: 'allowed' })
 })
 
 test('chunks loaded on demand are listed in the import map with a matching hash', async ({ page, request }) => {

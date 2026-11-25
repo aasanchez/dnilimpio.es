@@ -4,3 +4,6 @@
 savePrefix: ""
 strictDepBuilds: true
 onlyBuiltDependencies: []
+# tesseract.js only runs `opencollective-postinstall` (a funding message); it is not needed.
+allowBuilds:
+  tesseract.js: false

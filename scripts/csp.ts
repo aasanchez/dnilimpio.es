@@ -15,9 +15,10 @@ export const CSP_DIRECTIVES: readonly string[] = [
   "base-uri 'none'",
   "object-src 'none'",
   "require-trusted-types-for 'script'",
-  // One Trusted Types policy only, for the service worker URL (src/offline/register.ts). The app
-  // never turns strings into HTML (Svelte uses fragments: 'tree'), so no other policy may exist.
-  'trusted-types dnilimpio-sw',
+  // One Trusted Types policy only, 'default' (src/security/trusted-types.ts): it accepts the service
+  // worker and OCR worker URLs and nothing else. The app never turns strings into HTML (Svelte uses
+  // fragments: 'tree'), so no other policy may exist.
+  'trusted-types default',
 ]
 
 export const CSP = CSP_DIRECTIVES.join('; ')
