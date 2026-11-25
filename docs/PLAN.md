@@ -1,6 +1,8 @@
 # dni-redactor v1: implementation plan
 
-Status: scaffold, capture, homography, corner editor (step 2), i18n and DNI 4.0 zone data done. CI (`npm run check`) and GitHub Pages deploy from `master` done (`.github/workflows/ci.yml`, first part of step 11). Next: redaction (step 3).
+Status: scaffold, capture, homography, corner editor (step 2), i18n and DNI 4.0 zone data done. CI (`npm run check`) and GitHub Pages deploy from `master` done (`.github/workflows/ci.yml`, first part of step 11). Secure raster and PDF engines done (`src/engine/`, not wired to the UI yet). Next: Svelte 5 + pnpm migration, then the one-page tool.
+
+Target specification since 2026-11-25: the identity-privacy master prompt (Svelte 5, pnpm, 31 locales, offline, OCR, PDF only). Where it differs from this plan, the specification wins, except where an ADR in `docs/adr/` records a deviation.
 
 ## Order (spec §12)
 
@@ -32,8 +34,8 @@ Status: scaffold, capture, homography, corner editor (step 2), i18n and DNI 4.0 
 ## Decisions
 
 1. **Zone-coordinate source** (blocks step 3): official DNI 4.0 specimen on dnielectronico.es, read in Alexis's browser.
-2. **Run-from-disk zip**: dropped (2026-11-24, Alexis). One build, with SRI. Offline use = load once, then disable the network.
-3. **PDF library**: third-party library allowed. Measured (minified, tree-shaken, PNG embed only): pdf-lib 1.17.1 = 629 kB (last release 2021); jsPDF 4.2.1 = 551 kB plus lazy html2canvas / DOMPurify chunks that would have to be aliased out. Choice made at step 6.
+2. **Run-from-disk zip**: dropped (2026-11-24, confirmed 2026-11-25, Alexis). One build, with SRI. Offline use = load once, then disable the network. See [ADR 0002](adr/0002-no-standalone-release.md).
+3. **PDF library**: `@cantoo/pdf-lib` (2026-11-25), see [ADR 0001](adr/0001-pdf-library.md).
 4. **Service worker vs `connect-src 'none'`**: to be tested at step 9. Will report before changing the CSP.
 5. **Repository**: github.com/aasanchez/dnilimpio.es (from the local git origin). Default branch stays `master`; branch protection goes on `master`.
 6. **Languages**: es (source), ca, ca-ES-valencia, gl, eu, en, fr, nl, sv, fi, uk, ro, ar. Arabic is Modern Standard Arabic (Darija has no standard written form); `dir="rtl"` is set from the language. JSON per language in `src/i18n/locales/`, managed with Crowdin through its GitHub integration (`crowdin.yml`). All languages are bundled; the app makes no request to Crowdin and the CSP is unchanged. All non-Spanish strings except English are drafts for native review in Crowdin.
