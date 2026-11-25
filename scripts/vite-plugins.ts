@@ -7,7 +7,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, cspWithScriptHashes } from './csp.ts'
-import { SW_FILE, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
+import { SW_FILE, isLazy, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 
 export function securityHeaders (): Plugin {
   return {
@@ -60,14 +60,14 @@ export function subresourceIntegrity (): Plugin {
       })
 
       // Chunks not referenced from the HTML are loaded with import(): list them in the import map.
-      const assets = join(outDir, 'assets')
-      const lazy = readdirSync(assets).filter((f) => f.endsWith('.js') && !out.includes(`assets/${f}"`)).sort()
+      // That includes the corner model's files under assets/ml/ (the runtime's .mjs loader too).
+      const lazy = listFiles(join(outDir, 'assets')).filter((f) => /\.m?js$/.test(f) && !out.includes(`assets/${f}"`))
       if (lazy.length === 0) {
         writeFileSync(htmlPath, out)
         writePrecacheManifest(outDir)
         return
       }
-      const integrity = Object.fromEntries(lazy.map((f) => [`./assets/${f}`, sri(readFileSync(join(assets, f)))]))
+      const integrity = Object.fromEntries(lazy.map((f) => [`./assets/${f}`, sri(readFileSync(join(outDir, 'assets', f)))]))
       const importMap = JSON.stringify({ imports: {}, integrity })
       const hash = `sha256-${createHash('sha256').update(importMap).digest('base64')}`
       const firstModule = out.indexOf('<script type="module"')
@@ -101,14 +101,42 @@ function writePrecacheManifest (outDir: string): void {
   const sw = readFileSync(swPath, 'utf8')
   if (!PLACEHOLDER.test(sw)) throw new Error('dist/sw.js has no precache manifest placeholder')
   if (/^\s*import\b|\bimport\s*\(/m.test(sw)) throw new Error('dist/sw.js must not import other chunks')
-  const files: PrecacheFile[] = listFiles(outDir).filter(isPrecached).map((path) => ({ path, integrity: sri(readFileSync(join(outDir, path))) }))
+  const entry = (path: string): PrecacheFile => ({ path, integrity: sri(readFileSync(join(outDir, path))) })
+  const all = listFiles(outDir)
+  const files = all.filter(isPrecached).map(entry)
+  const lazy = all.filter(isLazy).map(entry)
   // The worker's own code is part of the version: a worker-only change still gets a new cache name,
   // so a failed install can never delete the cache the active worker is using.
   const version = createHash('sha256')
-    .update(files.map((f) => `${f.path} ${f.integrity}`).join('\n'))
+    .update([...files, ...lazy].map((f) => `${f.path} ${f.integrity}`).join('\n'))
     .update(`\nsw.js ${sri(sw)}`)
     .digest('hex').slice(0, 16)
-  const json = JSON.stringify({ version, files })
+  const json = JSON.stringify({ version, files, lazy })
   parseManifest(json) // same checks as the worker runs
   writeFileSync(swPath, sw.replace(PLACEHOLDER, () => JSON.stringify(json)))
+}
+
+/**
+ * `import data from './file.bin?base64'` gives the file's bytes as a base64 string inside a
+ * JavaScript module. The corner model and its WebAssembly runtime are loaded this way because the
+ * CSP has `connect-src 'none'`: the page cannot fetch() anything, but it can import() a script from
+ * its own origin, and the import map checks that script's integrity.
+ */
+export function base64Import (): Plugin {
+  const SUFFIX = '?base64'
+  return {
+    name: 'dni-redactor:base64-import',
+    enforce: 'pre',
+    async resolveId (source, importer) {
+      if (!source.endsWith(SUFFIX)) return null
+      const resolved = await this.resolve(source.slice(0, -SUFFIX.length), importer, { skipSelf: true })
+      return resolved ? `${resolved.id}${SUFFIX}` : null
+    },
+    load (id) {
+      if (!id.endsWith(SUFFIX)) return null
+      const file = id.slice(0, -SUFFIX.length)
+      this.addWatchFile(file)
+      return { code: `export default ${JSON.stringify(readFileSync(file).toString('base64'))}`, map: { mappings: '' } }
+    },
+  }
 }

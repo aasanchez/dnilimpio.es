@@ -88,6 +88,8 @@
   "alignFront": "Justera framsidan",
   "alignBack": "Justera baksidan",
   "alignLead": "Dra varje punkt till ett hörn. Förstoringsglaset hjälper dig att träffa rätt.",
+  "cornersSearching": "Letar efter dokumentet i fotot…",
+  "cornersFound": "Vi har placerat hörnen på dokumentet. Kontrollera dem och justera vid behov.",
   "restartCorners": "Börja om",
   "cornersDone": "Klar",
   "cornersDoneNextBack": "Klar, nu baksidan",

@@ -12,7 +12,17 @@ const W = 1120
 const H = W / (1712 / 1080)
 export const START = [{ x: 240, y: 600 - H / 2 }, { x: 1360, y: 600 - H / 2 }, { x: 1360, y: 600 + H / 2 }, { x: 240, y: 600 + H / 2 }]
 
-export async function loadBoth (page: Page): Promise<void> {
+/** Makes the corner model unavailable, as when offline before its first use. */
+export async function blockModel (page: Page): Promise<void> {
+  await page.route('**/assets/ml/**', (route) => route.abort('internetdisconnected'))
+}
+
+/**
+ * Opens the app and loads both fixtures. The corner model is blocked unless `model` is true: most
+ * tests check the manual flow, and the model's 2.5 MB would only slow them down.
+ */
+export async function loadBoth (page: Page, { model = false } = {}): Promise<void> {
+  if (!model) await blockModel(page)
   await page.goto('/')
   await page.locator('#start').click()
   // Continue appears once both sides are loaded.
@@ -24,10 +34,14 @@ export async function loadBoth (page: Page): Promise<void> {
   await expect(page.locator('#capture-continue')).toBeEnabled()
 }
 
-/** Drags each corner handle from the start quad onto the card corners with the mouse. */
+/**
+ * Drags each corner handle from the start quad onto the card corners with the mouse. Reset first
+ * puts the corners at the start quad even if a detector already moved them.
+ */
 export async function snapCorners (page: Page): Promise<void> {
   const canvas = page.locator('canvas.corner-editor')
   await expect(canvas).toBeVisible()
+  await page.locator('#align-restart').click()
   const box = await canvas.boundingBox()
   if (!box) throw new Error('no canvas box')
   const k = box.width / 1600

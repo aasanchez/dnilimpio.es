@@ -88,6 +88,8 @@
   "alignFront": "Enkoadratu aurrealdea",
   "alignBack": "Enkoadratu atzealdea",
   "alignLead": "Eraman puntu bakoitza izkina batera. Luparekin zehatzago egingo duzu.",
+  "cornersSearching": "Dokumentua argazkian bilatzen…",
+  "cornersFound": "Izkinak dokumentuaren gainean jarri ditugu. Berrikusi eta doitu behar izanez gero.",
   "restartCorners": "Berrabiarazi",
   "cornersDone": "Eginda",
   "cornersDoneNextBack": "Eginda, orain atzealdea",

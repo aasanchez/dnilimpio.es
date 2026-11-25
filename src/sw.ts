@@ -5,6 +5,9 @@
 //   cache only ever holds the exact bytes of one build.
 // - Fetch: answers GET requests inside its scope from that cache; page loads get the cached index.html.
 //   Anything not in the cache goes to the network as usual (there should be nothing).
+// - Lazy files (the optional corner model, assets/ml/): not downloaded at install. The first time the
+//   page loads one, the worker fetches it with its recorded hash and keeps it. A new build copies the
+//   ones already kept (same file name means same bytes: names carry a content hash).
 // - Activate: deletes the caches of older builds. A new build activates only once no tab runs the
 //   old one, so no open page loses files it still needs.
 // It never stores user data: images and PDFs live in memory and blob: URLs, which never reach it.
@@ -17,6 +20,7 @@ const sw = self as unknown as ServiceWorkerGlobalScope
 const manifest = parseManifest('__DNI_PRECACHE_MANIFEST__')
 const CACHE = cacheName(manifest.version)
 const INDEX = new URL('index.html', sw.location.href).href
+const LAZY = new Map(manifest.lazy.map((f) => [new URL(f.path, sw.location.href).href, f.integrity]))
 
 sw.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -27,6 +31,12 @@ sw.addEventListener('install', (event) => {
         const res = await fetch(url, { integrity: file.integrity, cache: 'reload', credentials: 'omit' })
         if (!res.ok) throw new Error(`Precache failed: ${file.path} (${String(res.status)})`)
         await cache.put(url, res)
+      }
+      // Keep the optional files a previous build already cached, so an update does not make them
+      // unavailable offline. Only exact names of this build are copied; nothing is downloaded.
+      for (const url of LAZY.keys()) {
+        const old = await caches.match(url)
+        if (old?.ok) await cache.put(url, old)
       }
     } catch (e) {
       // Never leave a partial cache behind: the install fails and the app keeps working online.
@@ -55,6 +65,13 @@ sw.addEventListener('fetch', (event) => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE)
     const key = req.mode === 'navigate' ? INDEX : req.url
-    return (await cache.match(key, { ignoreSearch: req.mode === 'navigate' })) ?? await fetch(req)
+    const hit = await cache.match(key, { ignoreSearch: req.mode === 'navigate' })
+    if (hit) return hit
+    const integrity = LAZY.get(req.url)
+    if (integrity === undefined) return await fetch(req)
+    // First use of an optional file: download it checked against its hash, then keep it.
+    const res = await fetch(req.url, { integrity, credentials: 'omit' })
+    if (res.ok) await cache.put(req.url, res.clone())
+    return res
   })())
 })

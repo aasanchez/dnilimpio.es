@@ -10,6 +10,7 @@
   import CaptureStep from './components/CaptureStep.svelte'
   import type { CaptureState } from './ui/capture-state.ts'
   import AlignStep from './components/AlignStep.svelte'
+  import { prefetchCornerModel } from './detect/corners.ts'
   import Editor from './components/Editor.svelte'
   import { emptyEditState, type Phase } from './ui/edit-state.ts'
 
@@ -88,6 +89,8 @@
     capture[side] = bitmap
     resetSide(align, side)
     aligned[side] = false
+    // Online: start loading the corner model now, so it is ready on the corners step.
+    prefetchCornerModel()
   }
 
   function onAligned (side: Side): void {

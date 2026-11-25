@@ -4,3 +4,7 @@
 savePrefix: ""
 strictDepBuilds: true
 onlyBuiltDependencies: []
+# protobufjs (pulled in by onnxruntime-web, unused by the browser bundle) has a postinstall that
+# only prints a version notice. It stays off.
+allowBuilds:
+  protobufjs: false

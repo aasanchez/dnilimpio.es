@@ -88,6 +88,8 @@
   "alignFront": "Rajaa etupuoli",
   "alignBack": "Rajaa takapuoli",
   "alignLead": "Vedä jokainen piste kulmaan. Suurennuslasi auttaa osumaan tarkasti.",
+  "cornersSearching": "Etsitään asiakirjaa kuvasta…",
+  "cornersFound": "Asetimme kulmat asiakirjan päälle. Tarkista ne ja säädä tarvittaessa.",
   "restartCorners": "Aloita alusta",
   "cornersDone": "Valmis",
   "cornersDoneNextBack": "Valmis, nyt takapuoli",

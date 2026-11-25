@@ -4,7 +4,10 @@
 
 export const CSP_DIRECTIVES: readonly string[] = [
   "default-src 'none'",
-  "script-src 'self'",
+  // 'wasm-unsafe-eval' lets the page compile WebAssembly (the corner model's runtime, ADR 0007).
+  // It does not allow eval() or new Function(), and the WebAssembly bytes come from a script checked
+  // by its integrity hash.
+  "script-src 'self' 'wasm-unsafe-eval'",
   "style-src 'self'",
   "img-src 'self' blob: data:",
   "font-src 'self'",

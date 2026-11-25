@@ -35,7 +35,9 @@
     "vitest": "5.1.1"
   },
   "dependencies": {
-    "@cantoo/pdf-lib": "2.11.1"
+    "@cantoo/pdf-lib": "2.11.1",
+    "onnxruntime-web": "1.27.0",
+    "scanic-ml": "0.2.0"
   },
   "packageManager": "pnpm@12.23.0"
 }
