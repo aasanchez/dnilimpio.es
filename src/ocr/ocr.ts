@@ -104,17 +104,23 @@ export class OcrStopped extends Error {
   constructor () { super('OCR stopped') }
 }
 
-/** A promise that stopOcr() rejects, so a job waiting on the worker ends at once instead of hanging. */
-function stopSignal (): { readonly promise: Promise<never>; readonly stop: () => void } {
-  let stop = (): void => {}
-  const promise = new Promise<never>((_resolve, reject) => { stop = () => { reject(new OcrStopped()) } })
-  promise.catch(() => undefined) // Nobody may be waiting on it.
-  return { promise, stop }
+/**
+ * Cancel functions of the operations in progress. Each one is removed as soon as its operation
+ * settles, so nothing keeps a reference to a finished result (unlike racing a shared, still-pending
+ * stop promise, whose reactions would hold every result until the next stop).
+ */
+const inFlight = new Set<(e: OcrStopped) => void>()
+
+/** Waits for `p`, or ends with OcrStopped as soon as stopOcr() runs. */
+async function live<T> (p: Promise<T>): Promise<T> {
+  return await new Promise<T>((resolve, reject) => {
+    inFlight.add(reject)
+    p.then(resolve, reject).finally(() => { inFlight.delete(reject) })
+  })
 }
 
 /** Bumped by stopOcr(): a job started before that never returns its result. */
 let generation = 0
-let signal = stopSignal()
 
 /**
  * Jobs run one at a time: each sets its own parameters, then recognises, before the next starts.
@@ -125,8 +131,6 @@ let queue: Promise<void> = Promise.resolve()
 /** Reads text from a canvas. Coordinates are in the canvas's pixels. Throws OcrStopped if stopOcr() runs first. */
 export async function recognise (image: HTMLCanvasElement | OffscreenCanvas, opts: { whitelist?: string; singleBlock?: boolean } = {}): Promise<{ text: string; lines: OcrLine[] }> {
   const mine = generation
-  const { promise: stopped } = signal
-  const live = <T>(p: Promise<T>): Promise<T> => Promise.race([p, stopped])
   const job = queue.then(async () => {
     if (mine !== generation) throw new OcrStopped()
     const w = await live(worker())
@@ -179,8 +183,8 @@ export async function findOnCard<S extends string> (sides: ReadonlyArray<readonl
  */
 export async function stopOcr (): Promise<void> {
   generation++
-  signal.stop()
-  signal = stopSignal()
+  for (const cancel of inFlight) cancel(new OcrStopped())
+  inFlight.clear()
   queue = Promise.resolve()
   const p = pending
   pending = null
