@@ -123,7 +123,8 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Offline mode with service worker and integrity checks | Done |
 | Redesign of the workflow and interface: guided phone-first flow, new visual style | Done |
 | DNI 3.0 and TIE, with a document picker | Done |
-| Automatic detection (edges, document type, OCR) | Planned |
+| Automatic card edge detection (engine, classic image processing) | Done, not yet in the interface |
+| Document type detection, OCR, smart field finding | Planned |
 | 31 languages | 13 today |
 
 ## How to use it
@@ -260,6 +261,7 @@ src/
   zones/             field positions and size per document, from official specimens; documents.ts lists them
   redact/            normalised zones to pixels, opaque fills
   engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
+  detect/            automatic card edge detection (Sobel + Hough, no model)
   i18n/              dictionaries, one JSON file per language
   ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state
 scripts/             CSP, build plugins (CSP, SRI, offline file list), test fixture generator
