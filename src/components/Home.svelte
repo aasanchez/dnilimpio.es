@@ -5,6 +5,7 @@
   import BuildVersion from './BuildVersion.svelte'
   import PrivacyNotice from './PrivacyNotice.svelte'
   import AuditPrompt from './AuditPrompt.svelte'
+  import GitHubMark from './GitHubMark.svelte'
 
   const { lang, onStart, notice, onNoticeDismiss }: { lang: Lang; onStart: () => void; notice: boolean; onNoticeDismiss: () => void } = $props()
 </script>
@@ -36,7 +37,8 @@
   </ul>
 
   <footer>
-    <a href={__REPO_URL__} rel="noopener noreferrer">{t(lang, 'sourceCode')}</a>
+    <!-- New tab: leaving this page clears the photos (pagehide in App.svelte). -->
+    <a class="source-link" id="source-link" href={__REPO_URL__} target="_blank" rel="noopener noreferrer"><GitHubMark />{t(lang, 'sourceCode')}</a>
     <AuditPrompt {lang} id="audit-footer" />
     <BuildVersion {lang} />
   </footer>
