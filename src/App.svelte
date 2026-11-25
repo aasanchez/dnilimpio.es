@@ -1,23 +1,31 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- App shell: top bar, progress, one screen at a time. Flow: start → photos → corners → hide → download. -->
+<!-- App shell: top bar, progress, one screen at a time. Flow: start → document → photos → corners → hide → download. -->
 <script lang="ts">
   import { tick } from 'svelte'
   import { dir, pickLang, t, type Key, type Lang } from './i18n/index.ts'
   import { emptyAlignState, resetSide } from './ui/align-state.ts'
-  import type { Side } from './zones/dni.ts'
+  import type { DocModel, Side } from './zones/types.ts'
+  import { DEFAULT_DOC, documentOf, pixelSize } from './zones/documents.ts'
   import LanguageSelect from './components/LanguageSelect.svelte'
   import Home from './components/Home.svelte'
+  import DocStep from './components/DocStep.svelte'
   import CaptureStep from './components/CaptureStep.svelte'
   import type { CaptureState } from './ui/capture-state.ts'
   import AlignStep from './components/AlignStep.svelte'
   import Editor from './components/Editor.svelte'
   import { emptyEditState, type Phase } from './ui/edit-state.ts'
 
-  type Step = 'home' | 'capture' | 'align' | 'edit'
+  type Step = 'home' | 'doc' | 'capture' | 'align' | 'edit'
 
   // The language choice lives in memory only: it resets to the browser's language on reload.
   let lang = $state<Lang>(pickLang(navigator.languages))
   let step = $state<Step>('home')
+  /** Chosen document; the one whose zones, shape and straightened size are in use. */
+  let docModel = $state<DocModel>(DEFAULT_DOC)
+  /** Picker value: becomes `docModel` on Continue, so going back without continuing changes nothing. */
+  let docPick = $state<DocModel>(DEFAULT_DOC)
+  const doc = $derived(documentOf(docModel))
+  const size = $derived(pixelSize(doc.size))
   let alignSide = $state<Side>('front')
   /** Sub-screen of the editor: choosing, reviewing, or done. */
   let phase = $state<Phase>('edit')
@@ -27,7 +35,7 @@
   const align = emptyAlignState()
   const aligned = $state<Record<Side, boolean>>({ front: false, back: false })
   // Field choices, watermark and greyscale survive going back to adjust corners; Reset clears them.
-  let edit = $state(emptyEditState())
+  let edit = $state(emptyEditState(documentOf(DEFAULT_DOC)))
   let root: HTMLElement | undefined = $state()
   const alignBitmap = $derived(capture[alignSide])
 
@@ -37,7 +45,8 @@
     { key: 'stepHide', at: 'edit' },
     { key: 'stepDownload', at: 'review' },
   ]
-  const current = $derived(step === 'edit' && phase !== 'edit' ? 3 : ['capture', 'align', 'edit'].indexOf(step))
+  // The document choice belongs to the Photos step.
+  const current = $derived(step === 'edit' && phase !== 'edit' ? 3 : step === 'doc' ? 0 : ['capture', 'align', 'edit'].indexOf(step))
 
   $effect(() => {
     document.documentElement.lang = lang
@@ -60,13 +69,14 @@
     step = s
     alignSide = side
     if (s === 'edit') phase = 'edit'
+    if (s === 'doc') docPick = docModel
     void focusHeading()
   }
 
   function back (): void {
     if (step === 'edit' && phase === 'done') phase = 'review'
     else if (step === 'edit' && phase === 'review') phase = 'edit'
-    else if (step === 'edit') { go('align', 'back'); return } else if (step === 'align' && alignSide === 'back') { go('align', 'front'); return } else if (step === 'align') { go('capture'); return } else { go('home'); return }
+    else if (step === 'edit') { go('align', 'back'); return } else if (step === 'align' && alignSide === 'back') { go('align', 'front'); return } else if (step === 'align') { go('capture'); return } else if (step === 'capture') { go('doc'); return } else { go('home'); return }
     void focusHeading()
   }
 
@@ -78,7 +88,23 @@
       resetSide(align, s)
       aligned[s] = false
     }
-    edit = emptyEditState()
+    edit = emptyEditState(doc)
+    go('capture', 'front')
+  }
+
+  /**
+   * Confirms the picker. Another document has other fields and another shape, so its corners,
+   * straightened images and choices start over; the photos are kept.
+   */
+  function chooseDoc (): void {
+    if (docPick !== docModel) {
+      docModel = docPick
+      for (const s of ['front', 'back'] as const) {
+        resetSide(align, s)
+        aligned[s] = false
+      }
+      edit = emptyEditState(documentOf(docPick))
+    }
     go('capture', 'front')
   }
 
@@ -121,15 +147,19 @@
     {#if step === 'align' && alignBitmap}
       {@const bitmap = alignBitmap}
       {#key alignSide}
-        <AlignStep {lang} side={alignSide} {bitmap} {align} {aligned}
+        <AlignStep {lang} side={alignSide} {size} {bitmap} {align} {aligned}
           onSide={(s: Side) => { go('align', s) }} onDone={() => { onAligned(alignSide) }} />
       {/key}
     {:else if step === 'edit' && align.warped.front && align.warped.back}
-      <Editor {lang} {align} {edit} bind:phase onAdjust={(side: Side) => { go('align', side) }} onReset={reset} onPhase={focusHeading} />
+      {#key docModel}
+        <Editor {lang} {doc} {align} {edit} bind:phase onAdjust={(side: Side) => { go('align', side) }} onReset={reset} onPhase={focusHeading} />
+      {/key}
+    {:else if step === 'doc'}
+      <DocStep {lang} bind:doc={docPick} onContinue={chooseDoc} />
     {:else if step === 'capture'}
       <CaptureStep {lang} state={capture} {onLoaded} onContinue={() => { go('align', 'front') }} />
     {:else}
-      <Home {lang} onStart={() => { go('capture') }} />
+      <Home {lang} onStart={() => { go('doc') }} />
     {/if}
   </div>
 </div>

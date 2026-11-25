@@ -35,7 +35,11 @@ export function masksFor (model: ModelZones, side: Side, hidden: ReadonlySet<Zon
 /** Data the MRZ repeats (docs/ZONES.md). Name and DNI number are also there but are not fields yet. */
 export const MRZ_REPEATS: readonly ZoneId[] = ['supportNumber', 'dateOfBirth', 'expiryDate']
 
-/** True when the user hides data that the still-visible MRZ repeats. */
-export function mrzLeaks (hidden: ReadonlySet<ZoneId>): boolean {
-  return !hidden.has('mrz') && MRZ_REPEATS.some((id) => hidden.has(id))
+/** True when the document has an MRZ, it stays visible, and the user hides data that it repeats. */
+export function mrzLeaks (model: ModelZones, hidden: ReadonlySet<ZoneId>): boolean {
+  return hasField(model, 'mrz') && !hidden.has('mrz') && MRZ_REPEATS.some((id) => hidden.has(id))
+}
+
+export function hasField (model: ModelZones, id: ZoneId): boolean {
+  return model.zones.some((z) => z.id === id)
 }

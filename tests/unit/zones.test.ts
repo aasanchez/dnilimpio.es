@@ -2,6 +2,9 @@
 import { describe, expect, it } from 'vitest'
 import { DNI_4_0, type ZoneId } from '../../src/zones/dni.ts'
 import { activeRects, fillRects, toPixels } from '../../src/redact/zones.ts'
+import { DEFAULT_DOC, DOCUMENTS, documentOf, pixelSize } from '../../src/zones/documents.ts'
+import type { ModelZones, Rect, Side } from '../../src/zones/types.ts'
+import en from '../../src/i18n/locales/en.json'
 
 describe('DNI 4.0 zone data', () => {
   it('keeps every rectangle inside the card', () => {
@@ -25,6 +28,72 @@ describe('DNI 4.0 zone data', () => {
   })
   it('cites its source', () => {
     expect(DNI_4_0.source.url).toMatch(/^https:\/\/www\.dnielectronico\.es\//)
+  })
+})
+
+const defaultsOf = (d: ModelZones, id: ZoneId): string[] => d.zones.filter((z) => z.id === id).map((z) => z.default)
+const overlap = (a: Rect, b: Rect): boolean => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+
+describe.each(DOCUMENTS.map((d) => [d.model, d] as const))('%s zone data', (_, d) => {
+  it('keeps every rectangle inside the document', () => {
+    for (const z of d.zones) {
+      for (const r of z.rects) {
+        expect(r.w).toBeGreaterThan(0)
+        expect(r.h).toBeGreaterThan(0)
+        expect(r.x).toBeGreaterThanOrEqual(0)
+        expect(r.y).toBeGreaterThanOrEqual(0)
+        expect(r.x + r.w).toBeLessThanOrEqual(1)
+        expect(r.y + r.h).toBeLessThanOrEqual(1)
+      }
+    }
+  })
+  it('cites an official source and has a size', () => {
+    expect(d.source.url).toMatch(/^https:\/\/www\.(dnielectronico\.es|consilium\.europa\.eu)\//)
+    expect(d.source.page).toMatch(/^https:\/\//)
+    expect(d.size.w).toBeGreaterThan(d.size.h)
+  })
+  it('defines each field on a side at most once and describes every zone', () => {
+    for (const side of ['front', 'back'] as const satisfies readonly Side[]) {
+      const ids = d.zones.filter((z) => z.side === side).map((z) => z.id)
+      expect(new Set(ids).size).toBe(ids.length)
+    }
+    for (const z of d.zones) expect(z.note.length).toBeGreaterThan(5)
+  })
+  it('hides signature, dates, numbers, CAN and MRZ by default where the document has them', () => {
+    for (const id of ['signature', 'issueDate', 'expiryDate', 'supportNumber', 'mrz'] as const) {
+      for (const def of defaultsOf(d, id)) expect(def).toBe('hidden')
+    }
+    for (const def of defaultsOf(d, 'can')) expect(def).toBe('mandatory')
+    for (const id of ['address', 'placeOfBirth', 'parents', 'dateOfBirth', 'permitType'] as const) {
+      for (const def of defaultsOf(d, id)) expect(def).toBe('visible')
+    }
+  })
+  it('keeps the CAN zone clear of the other default-hidden zones', () => {
+    // Overlaps would be harmless for privacy, but a tap on the card must toggle the field the user sees.
+    const can = d.zones.filter((z) => z.id === 'can').flatMap((z) => z.rects)
+    const rest = d.zones.filter((z) => z.id !== 'can' && z.side === 'front').flatMap((z) => z.rects)
+    for (const c of can) for (const r of rest) expect(overlap(c, r)).toBe(false)
+  })
+  it('has a name and a hint in the source dictionary', () => {
+    expect(en).toHaveProperty(`doc_${d.model}`)
+    expect(en).toHaveProperty(`docHint_${d.model}`)
+  })
+})
+
+describe('documents', () => {
+  it('lists DNI 4.0, DNI 3.0 and TIE, DNI 4.0 first and by default', () => {
+    expect(DOCUMENTS.map((d) => d.model)).toEqual(['dni-4.0', 'dni-3.0', 'tie'])
+    expect(DEFAULT_DOC).toBe('dni-4.0')
+    expect(documentOf('tie').model).toBe('tie')
+  })
+  it('straightens every card (ID-1) to 1712 × 1080', () => {
+    expect(pixelSize(documentOf('dni-4.0').size)).toEqual({ w: 1712, h: 1080 })
+    expect(pixelSize(documentOf('dni-3.0').size)).toEqual({ w: 1712, h: 1080 })
+    expect(pixelSize(documentOf('tie').size)).toEqual({ w: 1712, h: 1080 })
+  })
+  it('gives every card a CAN and an MRZ', () => {
+    const ids = (m: Parameters<typeof documentOf>[0]): string[] => documentOf(m).zones.map((z) => z.id)
+    for (const m of ['dni-4.0', 'dni-3.0', 'tie'] as const) expect(ids(m)).toEqual(expect.arrayContaining(['can', 'mrz']))
   })
 })
 

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Capture coach (live camera). Chromium's fake camera plays a Y4M file we write here: a light
 // card with "text" lines on a dark background, placed exactly in the coach's guide frame.
-import { devices, expect, test, type Page } from '@playwright/test'
+import { devices, expect, test } from '@playwright/test'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { guideRect } from '../../src/capture/coach.ts'
+import { openCapture } from './helpers.ts'
 
 const VW = 640
 const VH = 360
@@ -42,11 +43,6 @@ test.use({
   locale: 'es-ES',
   launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', `--use-file-for-fake-video-capture=${cardVideo()}`] },
 })
-
-async function openCapture (page: Page): Promise<void> {
-  await page.goto('/')
-  await page.locator('#start').click()
-}
 
 test.describe('with a working camera', () => {
   test('shoots the front by itself, then waits for the back', async ({ page }) => {

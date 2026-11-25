@@ -23,6 +23,10 @@ describe('defaultQuad', () => {
     expect((d[0].y + d[2].y) / 2).toBeCloseTo(h / 2, 6)
     expect(Math.max(dw / w, dh / h)).toBeCloseTo(0.7, 6)
   })
+  it('takes another aspect ratio when given one', () => {
+    const d = defaultQuad(1600, 1200, 1.5)
+    expect((d[1].x - d[0].x) / (d[3].y - d[0].y)).toBeCloseTo(1.5, 6)
+  })
 })
 
 describe('nearestCorner', () => {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Redaction zones in normalised card coordinates (0–1, origin top-left of the straightened card), per
+// DNI 4.0 (issued since 2021) redaction zones in normalised card coordinates (0–1, origin top-left of the straightened card), per
 // model and side (spec §4.3). Data only: this file is meant to be reviewed by auditors.
 //
 // Source: official DNI 4.0 specimen ("Carmen Española Española") published by the Policía Nacional:
@@ -12,40 +12,13 @@
 // margin around the printed text. Users can adjust zones in the manual editor.
 // To re-measure: docs/ZONES.md.
 
-export type Side = 'front' | 'back'
-export type DniModel = 'dni-4.0'
+import { box, ID1_MM, type ModelZones } from './types.ts'
 
-export type ZoneId =
-  | 'signature' | 'issueDate' | 'expiryDate' | 'supportNumber' | 'can' // front, hidden by default
-  | 'mrz' // back, hidden by default
-  | 'address' | 'placeOfBirth' | 'parents' | 'dateOfBirth' // optional, visible by default
-
-/** `mandatory` zones cannot be turned off (CAN gives NFC access to the chip). */
-export type ZoneDefault = 'mandatory' | 'hidden' | 'visible'
-
-export interface Rect { readonly x: number, readonly y: number, readonly w: number, readonly h: number }
-
-export interface Zone {
-  readonly id: ZoneId
-  readonly side: Side
-  readonly default: ZoneDefault
-  /** One field can be printed in more than one place (e.g. the issue date also appears in the CLI). */
-  readonly rects: readonly Rect[]
-  /** What the rectangles cover on the specimen, for reviewers. */
-  readonly note: string
-}
-
-export interface ModelZones {
-  readonly model: DniModel
-  readonly source: { readonly url: string, readonly page: string, readonly pageVersion: string, readonly retrieved: string }
-  readonly zones: readonly Zone[]
-}
-
-/** Builds a rect from its edges, which is how the values were read off the grid. */
-const box = (x0: number, y0: number, x1: number, y1: number): Rect => ({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 })
+export type { DocModel, ModelZones, Rect, Side, Zone, ZoneDefault, ZoneId } from './types.ts'
 
 export const DNI_4_0: ModelZones = {
   model: 'dni-4.0',
+  size: ID1_MM,
   source: {
     url: 'https://www.dnielectronico.es/img/Imagen_DNI_4.0.JPG',
     page: 'https://www.dnielectronico.es/PortalDNIe/PRF1_Cons02.action?pag=REF_110',
@@ -86,5 +59,3 @@ export const DNI_4_0: ModelZones = {
     { id: 'parents', side: 'back', default: 'visible', rects: [box(0.27, 0.49, 0.54, 0.6)], note: '"HIJO/A DE" and parents\' names' },
   ],
 }
-
-export const DNI_ZONES: Readonly<Record<DniModel, ModelZones>> = { 'dni-4.0': DNI_4_0 }
