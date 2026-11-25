@@ -6,9 +6,9 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 **Use it:** <https://aasanchez.github.io/dnilimpio.es/> (planned move to `dnilimpio.es`).
 
 > [!IMPORTANT]
-> **Work in progress.** The full flow works for the DNI 4.0, DNI 3.0 and TIE: choose the document, select both sides, straighten them, choose the
-> fields to hide, draw extra black boxes, add a watermark, review and download the PDF.
-> Automatic detection is still being built (see [Status](#status)).
+> **Work in progress.** The full flow works for the DNI 4.0, DNI 3.0 and TIE: select both sides, confirm the document
+> (detected automatically when possible), straighten them, choose the fields to hide, draw extra black boxes, add a
+> watermark, review and download the PDF. Smart field finding is still being built (see [Status](#status)).
 > Always check the result before you share it.
 
 ## Contents
@@ -32,9 +32,10 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 When a landlord, employer or company asks for a copy of your DNI or TIE, they usually
 need only some of the data. This tool makes a copy that shows only what you choose:
 
-1. **Choose the document**: DNI 4.0, DNI 3.0 or TIE.
-2. **Select** a photo of the front and the back (JPEG, PNG, WebP; camera on mobile). On a phone,
+1. **Select** a photo of the front and the back (JPEG, PNG, WebP; camera on mobile). On a phone,
    the **capture coach** gives live tips and takes the photo by itself when the card is sharp.
+2. **Confirm the document**: DNI 4.0, DNI 3.0 or TIE. When possible, the app reads the code on the
+   back (MRZ) on your device and preselects it.
 3. **Straighten** each side by marking its four corners.
 4. **Choose the fields to hide** (signature, dates, support number, CAN, MRZ and others), and draw
    extra black boxes over anything else.
@@ -63,7 +64,7 @@ Whether a recipient accepts a redacted copy is up to them.
   your browser. The OCR engine and Spanish language data (about 8 MB) come from this site, never from
   a third party, are downloaded only the first time OCR is used, and are checked against their hash
   before use. If OCR cannot run (offline before the first download, or no service worker), it is
-  switched off and you place the fields by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
+  switched off and you choose the document by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
@@ -113,8 +114,18 @@ Positions were measured on official specimens ([method and findings](docs/ZONES.
 photo and the DNI or NIE number stay visible by design; cover them with a black box if needed. Any
 other document can be redacted by hand with black boxes.
 
-The document is chosen by hand. Automatic detection is planned: it will only preselect the choice
-([ADR 0006](docs/adr/0006-document-types.md)).
+The document is detected from the machine-readable lines (MRZ) on the back, and you always confirm
+it ([ADR 0010](docs/adr/0010-document-detection.md)):
+
+- Code `IR` → TIE. Code `ID` → DNI.
+- DNI 3.0 or 4.0: both have the same MRZ, so the version comes from the issue date. It is worked out
+  from the dates of birth and expiry (a DNI is valid 2 years under age 5, 5 years under 30 and
+  10 years under 70; the DNI 4.0 is issued from 2 August 2021). When the dates fit both versions, or
+  for a permanent DNI (holder 70 or over), the app says it is a DNI and asks you to choose the version.
+- Detection needs OCR. The first time, it asks before it downloads the OCR files (about 8 MB); after
+  that it runs by itself, also offline. When OCR cannot run (offline before the first download, no
+  service worker, an old browser), a note says so and you choose by hand. A choice you make yourself
+  is never changed.
 
 ## Status
 
@@ -133,9 +144,10 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Redesign of the workflow and interface: guided phone-first flow, new visual style | Done |
 | Capture coach: live camera tips (framing, tilt, light, glare, blur, movement) and automatic shot | Done |
 | DNI 3.0 and TIE, with a document picker | Done |
-| Automatic card edge detection (engine, classic image processing) | Done, not yet in the interface |
-| On-device OCR engine and MRZ reader (Tesseract.js, self-hosted, loaded on first use) | Done, not yet in the interface |
-| Document type detection, smart field finding | Planned |
+| Automatic card edge detection (engine, classic image processing) | Done; used by document detection, not yet for the corners |
+| On-device OCR engine and MRZ reader (Tesseract.js, self-hosted, loaded on first use) | Done |
+| Document type detection from the MRZ (preselects the picker) | Done |
+| Smart field finding | Planned |
 | 31 languages | 13 today |
 
 ## How to use it
@@ -148,10 +160,7 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 1. Optional: disconnect from the Internet after the page has loaded. After the first visit, the
    tool also opens with no connection.
 2. **Start.** The first screen explains what the tool does. Press **Start**.
-3. **Document.** Choose DNI 4.0 (preselected), DNI 3.0 or TIE, then **Continue**. Each one has its
-   own field positions. To change it later, go back from
-   the photo screen: your photos are kept, the corners and choices start again.
-4. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself. On a
+3. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself. On a
    phone, **Take photo** opens the capture coach (see below) and **Gallery** opens your pictures; on
    a computer, **Choose image**, drag and drop, or paste (<kbd>Ctrl</kbd>+<kbd>V</kbd>) also work.
    Tap a side's tile to replace its photo.
@@ -167,6 +176,12 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    browser that gives web pages a live camera, and your permission. If either is missing (permission
    refused, no camera, an old browser, the page opened from a file), the coach does not open: a
    short note appears, and **Take photo** opens the phone's own camera app instead, as before.
+4. **Document.** Confirm DNI 4.0, DNI 3.0 or TIE, then **Continue**. Each one has its own field
+   positions. The app reads the code on the back (MRZ) on your device and preselects the document:
+   *Document detected: TIE. Check it before you continue.* The first time, **Detect automatically**
+   downloads the OCR files (about 8 MB) once; you can also skip it and choose by hand. Detection runs
+   only in your browser and the photos never leave the device. To change the document later, go
+   back from the corners: your photos are kept, the corners and choices start again.
 5. **Corners.** Drag the four circles onto the corners of the card; a magnifier shows the area under
    your finger. On a keyboard, arrow keys move the selected corner and <kbd>N</kbd> selects the next
    one. **Rotate** turns the frame if the photo is sideways, **Reset** puts the circles back. The
@@ -243,13 +258,14 @@ Rules the code follows:
 
 ## Tests
 
-- **Unit** (`tests/unit/`): homography and warp, corner editing, zone data for every document (inside
+- **Unit** (`tests/unit/`): document type from the MRZ (code, issue date from birth and expiry dates), homography and warp, corner editing, zone data for every document (inside
   the card, sources, defaults, sizes), file decoding, i18n keys,
   redaction raster (every masked pixel is opaque black, input untouched), JPEG filter (metadata
   segments dropped, image data unchanged) and PDF structure (pages, images, no metadata, no text,
   deterministic output).
 - **End to end** (`tests/e2e/`): document picker (each document's size, fields and warnings; changing
-  it keeps the photos), photo selection, corner alignment, the field checklist and its
+  it keeps the photos), document detection (synthetic MRZ backs: TIE and DNI 4.0 preselected, a manual
+  choice never overridden, a note and the manual picker when offline or without a service worker), photo selection, corner alignment, the field checklist and its
   warnings, review, a real PDF download (decoded in the browser to check that hidden areas are black
   and that the file has no metadata, no source file name and no watermark text), reset, and
   security checks on the built page: exact CSP, referrer policy, SRI on every asset, no inline code, no CSP violations and no
@@ -284,7 +300,7 @@ src/
   zones/             field positions and size per document, from official specimens; documents.ts lists them
   redact/            normalised zones to pixels, opaque fills
   engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
-  detect/            automatic card edge detection (Sobel + Hough, no model)
+  detect/            card edge detection (Sobel + Hough, no model) and document type from the MRZ
   ocr/               on-device OCR (Tesseract.js, loaded on demand) and MRZ reader
   security/          Trusted Types policy
   i18n/              dictionaries, one JSON file per language
@@ -306,6 +322,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0006](docs/adr/0006-document-types.md): several document types, chosen by the user.
 - [0008](docs/adr/0008-capture-coach.md): capture coach with classical image metrics, no model.
 - [0009](docs/adr/0009-on-device-ocr.md): on-device OCR with Tesseract.js, self-hosted and loaded on demand.
+- [0010](docs/adr/0010-document-detection.md): document type detected from the MRZ, after the photos; it only preselects.
 
 ## Contributing
 

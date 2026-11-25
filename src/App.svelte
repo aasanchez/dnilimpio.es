@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- App shell: top bar, progress, one screen at a time. Flow: start → document → photos → corners → hide → download. -->
+<!-- App shell: top bar, progress, one screen at a time. Flow: start → photos → document → corners → hide → download. -->
 <script lang="ts">
   import { tick } from 'svelte'
   import { dir, pickLang, t, type Key, type Lang } from './i18n/index.ts'
@@ -24,6 +24,8 @@
   let docModel = $state<DocModel>(DEFAULT_DOC)
   /** Picker value: becomes `docModel` on Continue, so going back without continuing changes nothing. */
   let docPick = $state<DocModel>(DEFAULT_DOC)
+  /** True once the person confirmed a document for the current photos; automatic detection then stops preselecting. */
+  let docConfirmed = $state(false)
   const doc = $derived(documentOf(docModel))
   const size = $derived(pixelSize(doc.size))
   let alignSide = $state<Side>('front')
@@ -76,7 +78,7 @@
   function back (): void {
     if (step === 'edit' && phase === 'done') phase = 'review'
     else if (step === 'edit' && phase === 'review') phase = 'edit'
-    else if (step === 'edit') { go('align', 'back'); return } else if (step === 'align' && alignSide === 'back') { go('align', 'front'); return } else if (step === 'align') { go('capture'); return } else if (step === 'capture') { go('doc'); return } else { go('home'); return }
+    else if (step === 'edit') { go('align', 'back'); return } else if (step === 'align' && alignSide === 'back') { go('align', 'front'); return } else if (step === 'align') { go('doc'); return } else if (step === 'doc') { go('capture'); return } else { go('home'); return }
     void focusHeading()
   }
 
@@ -89,6 +91,7 @@
       aligned[s] = false
     }
     edit = emptyEditState(doc)
+    docConfirmed = false
     go('capture', 'front')
   }
 
@@ -105,7 +108,8 @@
       }
       edit = emptyEditState(documentOf(docPick))
     }
-    go('capture', 'front')
+    docConfirmed = true
+    go('align', 'front')
   }
 
   /** A new photo for a side invalidates that side's corners and straightened card. */
@@ -114,6 +118,7 @@
     capture[side] = bitmap
     resetSide(align, side)
     aligned[side] = false
+    docConfirmed = false
   }
 
   function onAligned (side: Side): void {
@@ -155,11 +160,11 @@
         <Editor {lang} {doc} {align} {edit} bind:phase onAdjust={(side: Side) => { go('align', side) }} onReset={reset} onPhase={focusHeading} />
       {/key}
     {:else if step === 'doc'}
-      <DocStep {lang} bind:doc={docPick} onContinue={chooseDoc} />
+      <DocStep {lang} bind:doc={docPick} photos={capture} preselect={!docConfirmed} onContinue={chooseDoc} />
     {:else if step === 'capture'}
-      <CaptureStep {lang} state={capture} {onLoaded} onContinue={() => { go('align', 'front') }} />
+      <CaptureStep {lang} state={capture} {onLoaded} onContinue={() => { go('doc') }} />
     {:else}
-      <Home {lang} onStart={() => { go('doc') }} />
+      <Home {lang} onStart={() => { go('capture', 'front') }} />
     {/if}
   </div>
 </div>

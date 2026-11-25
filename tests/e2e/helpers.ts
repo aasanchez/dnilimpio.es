@@ -19,16 +19,14 @@ export function startQuad (doc: Doc = 'dni-4.0'): Array<{ x: number; y: number }
 }
 export const START = startQuad()
 
-/** From the start screen through the document picker to the photo step. */
-export async function openCapture (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
+/** From the start screen to the photo step. */
+export async function openCapture (page: Page): Promise<void> {
   await page.goto('/')
   await page.locator('#start').click()
-  await page.locator(`[id="doc-${doc}"]`).check()
-  await page.locator('#doc-continue').click()
 }
 
-export async function loadBoth (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
-  await openCapture(page, doc)
+export async function loadBoth (page: Page): Promise<void> {
+  await openCapture(page)
   // Continue appears once both sides are loaded.
   await expect(page.locator('#capture-continue')).toHaveCount(0)
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
@@ -36,6 +34,20 @@ export async function loadBoth (page: Page, doc: Doc = 'dni-4.0'): Promise<void>
   await expect(page.locator('#capture-continue')).toHaveCount(0)
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await expect(page.locator('#capture-continue')).toBeEnabled()
+}
+
+/** From the photo step through the document picker to the corners of the front. */
+export async function chooseDoc (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
+  await page.locator('#capture-continue').click()
+  await expect(page.locator('h2')).toHaveText(/documento|document/)
+  await page.locator(`[id="doc-${doc}"]`).check()
+  await page.locator('#doc-continue').click()
+}
+
+/** Loads both fixtures and confirms the document, ending on the corners of the front. */
+export async function toAlign (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
+  await loadBoth(page)
+  await chooseDoc(page, doc)
 }
 
 /** Drags each corner handle from the start quad onto the card corners with the mouse. */
@@ -66,8 +78,7 @@ export async function pixel (page: Page, id: string, x: number, y: number): Prom
 
 /** Loads both fixtures and aligns both sides, ending in the editor. */
 export async function toEditor (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
-  await loadBoth(page, doc)
-  await page.locator('#capture-continue').click()
+  await toAlign(page, doc)
   await snapCorners(page, doc)
   await page.locator('#align-continue').click()
   await snapCorners(page, doc)
