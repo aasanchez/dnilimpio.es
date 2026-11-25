@@ -391,7 +391,8 @@ jobs:
           subject-path: 'dist/**'
 
   # ── Stage 8: post-deploy ────────────────────────────────────────────────────────────────────────
-  # The live site must serve this commit's build, with matching SRI hashes (scripts/smoke.ts).
+  # The live site must serve exactly this run's build: exact CSP, SRI, every file of the service
+  # worker's manifest, and every file of the dist artifact byte for byte (scripts/smoke.ts).
   smoke:
     if: ${{ !cancelled() && needs.deploy.result == 'success' }}
     needs: deploy
@@ -404,7 +405,12 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-      - run: node scripts/smoke.ts "$PAGE_URL" "$GITHUB_SHA"
+      # The artifact this run built and deployed: every live file must match it byte for byte.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - run: node scripts/smoke.ts "$PAGE_URL" "$GITHUB_SHA" dist
         env:
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}
 
