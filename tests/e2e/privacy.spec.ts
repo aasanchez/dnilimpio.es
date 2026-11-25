@@ -11,6 +11,22 @@ test.use({ locale: 'es-ES', serviceWorkers: 'allow' })
 /** Values printed on the synthetic cards: none may ever appear in a request. */
 const CANARIES = ['99999999R', 'CARMEN', 'ESPANOLA', 'BAA000589', 'CAA000000', '987654', 'CALLE MAYOR']
 
+/** Which on-demand files (OCR engine and data, corner model) the service worker has cached. */
+async function cachedOnDemand (page: Page): Promise<Record<'worker' | 'core' | 'lang' | 'model', boolean>> {
+  return await page.evaluate(async () => {
+    const paths: string[] = []
+    for (const k of await caches.keys()) {
+      for (const r of await (await caches.open(k)).keys()) paths.push(new URL(r.url).pathname)
+    }
+    return {
+      worker: paths.includes('/ocr/worker.min.js'),
+      core: paths.some((p) => /^\/ocr\/tesseract-core-.*\.wasm\.js$/.test(p)),
+      lang: paths.includes('/ocr/spa.traineddata'),
+      model: paths.some((p) => p.startsWith('/assets/ml/')),
+    }
+  })
+}
+
 /** Smart find, a watermark, greyscale, review and the PDF download. */
 async function finishDocument (page: Page): Promise<void> {
   await expect(page.locator('#find-run')).toBeEnabled({ timeout: 30_000 })
@@ -31,7 +47,10 @@ test('after the first visit, a whole document workflow sends no request at all',
   // First visit, online: the service worker installs, and one run caches the corner model and OCR.
   await controlled(page)
   await toEditorWithText(page, { model: true })
-  await expect(page.locator('#find-status')).not.toContainText('MB')
+  // Wait until the files used on demand are really in the cache (document detection downloads OCR
+  // in the background): otherwise the measured run below would count a legitimate first download.
+  await expect.poll(async () => await cachedOnDemand(page), { timeout: 60_000 })
+    .toEqual({ worker: true, core: true, lang: true, model: true })
 
   // From here on, every request that would reach the network is recorded and refused. context.route
   // sees the page's requests that bypass the service worker and the service worker's own requests.
