@@ -137,8 +137,10 @@ covered by tests (see [Security reviews](#security-reviews)).
 - **No browser rule can stop a page from navigating to a URL.** The protection there is that only
   this build's verified code runs (CSP, SRI, the locked dependency list) and that the code never
   navigates with your data (enforced by the linter).
-- **Sharing is your choice.** "Share" hands the PDF to the app you pick; what that app does with it is
-  outside the tool.
+- **Sharing is your choice.** **Share via WhatsApp** and **Share via email** hand the PDF to the app you
+  pick through the system share sheet; what that app does with it is outside the tool. Where the
+  browser cannot share files, they are plain `wa.me` and `mailto:` links with a fixed message and no
+  file, and you attach the PDF yourself. No link carries data from your document.
 - **Memory is released, not wiped.** The tool drops its references and clears canvases, but cannot
   force the browser to erase memory.
 - **A watermark discourages reuse but cannot prevent identity fraud.**
@@ -299,7 +301,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
      characters).
 7. **Download.** Check both final images and the summary, tick **I have checked both sides**, then
    **Download PDF**. The file is called `protected-document.pdf`.
-8. **Done.** On phones that support it, **Share** sends the PDF through the system share sheet.
+8. **Done.** Under **Send it yourself**, **Share via WhatsApp** and **Share via email** open the system
+   share sheet with the PDF on devices that support it. On other devices they open WhatsApp or your
+   email app with a short message, and you attach `protected-document.pdf` from your downloads folder.
    **Clear everything** removes the photos and all your choices from the page; closing the tab does
    the same.
 

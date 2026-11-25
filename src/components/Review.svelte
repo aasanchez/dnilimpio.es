@@ -1,6 +1,8 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Review before download (spec §17): final sanitised images, summary, warning, explicit confirmation.
-     After the download: share (where the browser can share files) and clear everything. -->
+     After the download: send it yourself (WhatsApp, email) and clear everything.
+     The app never sends the PDF: the system share sheet or a wa.me or mailto: link does, and only when
+     the user acts. -->
 <script lang="ts">
   import { saveFile } from '../engine/render.ts'
   import { loadExport } from '../engine/load-export.ts'
@@ -65,11 +67,17 @@
     }
   }
 
+  /** Text for the manual links (no file can travel in a wa.me or mailto: link). */
+  const message = $derived(t(lang, 'shareMessage'))
+  const whatsappHref = $derived(`https://wa.me/?text=${encodeURIComponent(message)}`)
+  const mailHref = $derived(`mailto:?subject=${encodeURIComponent(t(lang, 'shareSubject'))}&body=${encodeURIComponent(message)}`)
+
+  /** Opens the system share sheet with the PDF; the user picks WhatsApp, Mail or another app there. */
   async function share (): Promise<void> {
     if (!pdf) return
     shareStatus = 'idle'
     try {
-      await navigator.share({ files: [pdf] })
+      await navigator.share({ files: [pdf], title: t(lang, 'shareSubject') })
     } catch (e) {
       // Closing the share sheet is not an error.
       if (!(e instanceof DOMException && e.name === 'AbortError')) shareStatus = 'error'
@@ -119,22 +127,36 @@
       <p class="term" aria-hidden="true"><span class="p">$</span> dni-limpio export<br />→ protected-document.pdf · 2 pp · ok<br />→ {t(lang, 'logSent')}<br /><span class="p">_</span></p>
     </div>
     <p class="lead" id="download-status" role="status">{status === 'done' ? t(lang, 'downloaded') : ''}</p>
+
+    <section class="send" aria-labelledby="send-title">
+      <h3 id="send-title">{t(lang, 'sendTitle')}</h3>
+      <p class="hint" id="send-lead">{t(lang, shareable ? 'sendLeadShare' : 'sendLeadManual')}</p>
+      <div class="send-actions">
+        {#if shareable}
+          <button type="button" class="button" id="share-whatsapp" onclick={share}>{@render whatsappIcon()}{t(lang, 'shareWhatsApp')}</button>
+          <button type="button" class="button" id="share-email" onclick={share}>{@render mailIcon()}{t(lang, 'shareEmail')}</button>
+        {:else}
+          <a class="button" id="share-whatsapp" href={whatsappHref} target="_blank" rel="noopener noreferrer">{@render whatsappIcon()}{t(lang, 'shareWhatsApp')}</a>
+          <a class="button" id="share-email" href={mailHref}>{@render mailIcon()}{t(lang, 'shareEmail')}</a>
+        {/if}
+      </div>
+      {#if shareStatus === 'error'}<p class="error" role="alert">{t(lang, 'errShare')}</p>{/if}
+    </section>
     <p class="hint">{t(lang, 'doneHint')}</p>
-    {#if shareStatus === 'error'}<p class="error" role="alert">{t(lang, 'errShare')}</p>{/if}
 
     <div class="actionbar">
-      <div class="row">
-        {#if shareable}
-          <button type="button" class="button primary" id="share" onclick={share}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" /><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4" /></svg>
-            {t(lang, 'share')}
-          </button>
-        {/if}
-        <button type="button" class="button" class:primary={!shareable} id="reset-done" onclick={onReset}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
-          {t(lang, 'clearAll')}
-        </button>
-      </div>
+      <button type="button" class="button primary" id="reset-done" onclick={onReset}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
+        {t(lang, 'clearAll')}
+      </button>
     </div>
   </section>
 {/if}
+
+{#snippet whatsappIcon ()}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.3-4A8 8 0 1 1 8.4 19z" /><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-1 .8a4 4 0 0 1-1.8-1.8l.8-1-1-2z" /></svg>
+{/snippet}
+
+{#snippet mailIcon ()}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3.5 6.5l8.5 6.5 8.5-6.5" /></svg>
+{/snippet}
