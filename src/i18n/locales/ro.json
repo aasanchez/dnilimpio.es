@@ -1,0 +1,16 @@
+{
+  "appTitle": "DNI curat",
+  "tagline": "Ascunde datele sensibile de pe DNI-ul tău înainte de a trimite o copie. Totul se întâmplă pe dispozitivul tău: nu se trimite nimic.",
+  "sourceCode": "Cod sursă",
+  "language": "Limbă",
+  "stepCapture": "Pasul 1 din 6: adaugă fotografiile DNI-ului",
+  "front": "Față (partea cu fotografia)",
+  "back": "Verso (partea cu rândurile de text din partea de jos)",
+  "chooseOrTake": "Fă o fotografie sau alege o imagine",
+  "dropHint": "Poți și să tragi imaginea aici sau să o lipești cu Ctrl+V.",
+  "loaded": "Imagine încărcată.",
+  "errNotImage": "Fișierul nu este o imagine. Folosește o fotografie JPEG, PNG sau HEIC.",
+  "errHeic": "Acest browser nu poate deschide fotografii HEIC. Fă o captură de ecran a fotografiei sau convertește-o în JPEG pe dispozitivul tău.",
+  "errTooLarge": "Imaginea este prea mare (maximum 40 MB).",
+  "errDecode": "Imaginea nu a putut fi deschisă. Încearcă altă fotografie."
+}

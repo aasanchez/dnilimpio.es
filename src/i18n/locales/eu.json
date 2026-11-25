@@ -1,0 +1,16 @@
+{
+  "appTitle": "NAN garbia",
+  "tagline": "Ezkutatu zure NANeko datu sentikorrak kopia bat partekatu aurretik. Dena zure gailuan gertatzen da: ez da ezer bidaltzen.",
+  "sourceCode": "Iturburu-kodea",
+  "language": "Hizkuntza",
+  "stepCapture": "1. urratsa (6tik): gehitu NANaren argazkiak",
+  "front": "Aurrealdea (argazkia duen aldea)",
+  "back": "Atzealdea (behealdean testu-lerroak dituen aldea)",
+  "chooseOrTake": "Atera argazki bat edo aukeratu irudi bat",
+  "dropHint": "Irudia hona arrastatu edo Ctrl+V sakatuta itsatsi ere egin dezakezu.",
+  "loaded": "Irudia kargatu da.",
+  "errNotImage": "Fitxategia ez da irudi bat. Erabili JPEG, PNG edo HEIC argazki bat.",
+  "errHeic": "Nabigatzaile honek ezin ditu HEIC argazkiak ireki. Egin argazkiaren pantaila-argazki bat edo bihurtu JPEG formatura zure gailuan.",
+  "errTooLarge": "Irudia handiegia da (gehienez 40 MB).",
+  "errDecode": "Ezin izan da irudia ireki. Saiatu beste argazki batekin."
+}

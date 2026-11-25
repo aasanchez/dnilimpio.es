@@ -1,0 +1,16 @@
+{
+  "appTitle": "Puhdas DNI",
+  "tagline": "Piilota DNI-korttisi arkaluonteiset tiedot ennen kuin jaat kopion. Kaikki tapahtuu laitteellasi: mitään ei lähetetä.",
+  "sourceCode": "Lähdekoodi",
+  "language": "Kieli",
+  "stepCapture": "Vaihe 1/6: lisää kuvat DNI-kortistasi",
+  "front": "Etupuoli (puoli, jossa on valokuva)",
+  "back": "Takapuoli (puoli, jonka alaosassa on tekstirivejä)",
+  "chooseOrTake": "Ota kuva tai valitse kuva",
+  "dropHint": "Voit myös vetää kuvan tähän tai liittää sen näppäinyhdistelmällä Ctrl+V.",
+  "loaded": "Kuva ladattu.",
+  "errNotImage": "Tiedosto ei ole kuva. Käytä JPEG-, PNG- tai HEIC-kuvaa.",
+  "errHeic": "Tämä selain ei voi avata HEIC-kuvia. Ota kuvasta kuvakaappaus tai muunna se JPEG-muotoon laitteellasi.",
+  "errTooLarge": "Kuva on liian suuri (enintään 40 Mt).",
+  "errDecode": "Kuvaa ei voitu avata. Kokeile toista kuvaa."
+}

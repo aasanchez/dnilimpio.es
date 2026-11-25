@@ -1,0 +1,16 @@
+{
+  "appTitle": "Schone DNI",
+  "tagline": "Verberg de gevoelige gegevens op je DNI voordat je een kopie deelt. Alles gebeurt op je apparaat: er wordt niets verzonden.",
+  "sourceCode": "Broncode",
+  "language": "Taal",
+  "stepCapture": "Stap 1 van 6: voeg de foto's van je DNI toe",
+  "front": "Voorkant (kant met de foto)",
+  "back": "Achterkant (kant met de tekstregels onderaan)",
+  "chooseOrTake": "Maak een foto of kies een afbeelding",
+  "dropHint": "Je kunt de afbeelding ook hierheen slepen of plakken met Ctrl+V.",
+  "loaded": "Afbeelding geladen.",
+  "errNotImage": "Het bestand is geen afbeelding. Gebruik een JPEG-, PNG- of HEIC-foto.",
+  "errHeic": "Deze browser kan geen HEIC-foto's openen. Maak een schermafbeelding van de foto of zet hem op je apparaat om naar JPEG.",
+  "errTooLarge": "De afbeelding is te groot (maximaal 40 MB).",
+  "errDecode": "De afbeelding kan niet worden geopend. Probeer een andere foto."
+}
