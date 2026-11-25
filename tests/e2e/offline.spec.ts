@@ -56,4 +56,7 @@ test('a tampered file stops the install and leaves no cache behind', async ({ pa
     return reg?.active ?? reg?.installing ?? reg?.waiting ?? null
   }), { timeout: 10_000 }).toBeNull()
   expect(await page.evaluate(async () => (await caches.keys()).filter((k) => k.startsWith('dnilimpio-')))).toEqual([])
+  // The browser may still be fetching the file (e.g. a retried install) when the test ends; that
+  // request's route.fetch() would then fail after the context closes.
+  await context.unrouteAll({ behavior: 'ignoreErrors' })
 })
