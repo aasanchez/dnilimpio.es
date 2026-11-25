@@ -7,8 +7,8 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 
 > [!IMPORTANT]
 > **Work in progress.** The full flow works for the DNI 4.0: select both sides, straighten them,
-> choose the fields to hide, add a watermark, review and download the PDF. Manual black boxes,
-> offline mode and automatic detection are still being built (see [Status](#status)).
+> choose the fields to hide, draw extra black boxes, add a watermark, review and download the PDF.
+> Offline mode and automatic detection are still being built (see [Status](#status)).
 > Always check the result before you share it.
 
 ## Contents
@@ -110,7 +110,8 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | PDF engine: A4, one side per page, metadata-free | Done |
 | Move the UI to Svelte 5 and pnpm | Done |
 | Fields to hide, live preview, watermark, black and white, review, PDF download, reset | Done |
-| Manual black boxes with undo and redo, zoom, one-page layout | Next |
+| Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
+| Zoom, one-page layout | Next |
 | Offline mode with service worker and integrity checks | Planned |
 | Automatic detection (edges, document type, OCR) | Planned |
 | 31 languages | 13 today |
@@ -130,11 +131,16 @@ no installation.
    machine-readable lines (MRZ). Fields left visible get a dashed outline in the preview; tick
    **Final preview** to see the result without outlines. **Adjust corners** goes back to step 2
    and keeps your choices.
-6. Optional: type a **watermark** and tick **Convert to black and white**. The preview updates as
+6. **Extra black boxes** cover anything the list does not. Turn on **Draw black box** and drag on
+   the image. Select a box to move it, or drag its corners to resize it. **Undo** and **Redo**
+   (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>) work on boxes. With a
+   keyboard: **Add box**, then arrow keys move it, <kbd>Shift</kbd>+arrows resize it, <kbd>N</kbd>
+   selects the next box and <kbd>Delete</kbd> removes it.
+7. Optional: type a **watermark** and tick **Convert to black and white**. The preview updates as
    you type.
-7. **Review and download:** check both final images and the summary, tick **I have checked both
+8. **Review and download:** check both final images and the summary, tick **I have checked both
    sides**, then **Download PDF**. The file is called `protected-document.pdf`.
-8. **Start again** clears the photos and all your choices from the page.
+9. **Start again** clears the photos and all your choices from the page.
 
 ## Languages
 

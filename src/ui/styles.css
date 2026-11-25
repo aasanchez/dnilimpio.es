@@ -66,3 +66,7 @@ button.button { border: 0; font: inherit; }
 .warning { border-inline-start: 4px solid #b26a00; padding-inline-start: 0.75rem; font-weight: 600; }
 .summary { padding-inline-start: 1.25rem; }
 .review h3 { margin-block-start: 0; }
+/* touch-action: none keeps the page still while a box is drawn or moved. */
+.box-editor { touch-action: none; user-select: none; -webkit-user-select: none; }
+.box-editor.is-drawing { cursor: crosshair; }
+.button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }

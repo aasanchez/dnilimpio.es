@@ -7,10 +7,11 @@
   import { t, tf, type Lang } from '../i18n/index.ts'
   import type { Side } from '../zones/dni.ts'
 
-  const { lang, secure, hiddenCount, watermark, greyscale, onBack, onReset }: {
+  const { lang, secure, hiddenCount, boxCount, watermark, greyscale, onBack, onReset }: {
     lang: Lang
     secure: Readonly<Record<Side, HTMLCanvasElement>>
     hiddenCount: number
+    boxCount: number
     watermark: string
     greyscale: boolean
     onBack: () => void
@@ -62,6 +63,7 @@
   {/each}
   <ul class="summary" id="review-summary">
     <li>{tf(lang, 'summaryHidden', { n: hiddenCount })}</li>
+    <li>{tf(lang, 'summaryBoxes', { n: boxCount })}</li>
     <li>{mark === '' ? t(lang, 'summaryNoWatermark') : tf(lang, 'summaryWatermark', { text: mark })}</li>
     <li>{t(lang, greyscale ? 'summaryGreyscale' : 'summaryColour')}</li>
   </ul>

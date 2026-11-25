@@ -62,5 +62,13 @@
   "downloaded": "PDF creat. Verificați dosarul de descărcări.",
   "errExport": "PDF-ul nu a putut fi creat. Încercați din nou.",
   "reset": "Începe din nou",
-  "backToEdit": "Înapoi la editare"
+  "backToEdit": "Înapoi la editare",
+  "drawBox": "Desenează dreptunghi negru",
+  "addBox": "Adaugă dreptunghi",
+  "deleteBox": "Șterge dreptunghiul",
+  "undo": "Anulează",
+  "redo": "Refă",
+  "boxHint": "Folosiți dreptunghiuri negre suplimentare pentru ce nu acoperă lista. Pentru desen, activați Desenează dreptunghi negru și trageți peste imagine. Selectați un dreptunghi pentru a-l muta sau trageți de colțuri pentru a-i schimba dimensiunea. Cu tastatura: Adaugă dreptunghi, apoi săgețile îl mută, Shift+săgeți îi schimbă dimensiunea, N selectează următorul și Delete îl șterge.",
+  "summaryBoxes": "Dreptunghiuri negre suplimentare: {n}",
+  "boxesLabel": "Dreptunghiuri negre suplimentare"
 }

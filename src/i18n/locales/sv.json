@@ -62,5 +62,13 @@
   "downloaded": "PDF:en är skapad. Titta i mappen för nedladdningar.",
   "errExport": "Det gick inte att skapa PDF:en. Försök igen.",
   "reset": "Börja om",
-  "backToEdit": "Tillbaka till redigering"
+  "backToEdit": "Tillbaka till redigering",
+  "drawBox": "Rita svart ruta",
+  "addBox": "Lägg till ruta",
+  "deleteBox": "Ta bort ruta",
+  "undo": "Ångra",
+  "redo": "Gör om",
+  "boxHint": "Använd extra svarta rutor för sådant som listan inte täcker. Rita: slå på Rita svart ruta och dra över bilden. Markera en ruta för att flytta den, eller dra i hörnen för att ändra storleken. Med tangentbordet: Lägg till ruta, sedan flyttar piltangenterna den, Skift+piltangenter ändrar storleken, N markerar nästa ruta och Delete tar bort den.",
+  "summaryBoxes": "Extra svarta rutor: {n}",
+  "boxesLabel": "Extra svarta rutor"
 }

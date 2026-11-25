@@ -62,5 +62,13 @@
   "downloaded": "PDF created. Check your downloads folder.",
   "errExport": "The PDF could not be created. Try again.",
   "reset": "Start again",
-  "backToEdit": "Back to editing"
+  "backToEdit": "Back to editing",
+  "drawBox": "Draw black box",
+  "addBox": "Add box",
+  "deleteBox": "Delete box",
+  "undo": "Undo",
+  "redo": "Redo",
+  "boxHint": "Use extra black boxes for anything the list does not cover. Draw: turn on Draw black box and drag on the image. Select a box to move it, or drag its corners to resize it. With a keyboard: Add box, then the arrow keys move it, Shift+arrow keys resize it, N selects the next box and Delete removes it.",
+  "summaryBoxes": "Extra black boxes: {n}",
+  "boxesLabel": "Extra black boxes"
 }

@@ -62,5 +62,13 @@
   "downloaded": "PDF on luotu. Katso latauskansiosta.",
   "errExport": "PDF:n luominen epäonnistui. Yritä uudelleen.",
   "reset": "Aloita alusta",
-  "backToEdit": "Takaisin muokkaukseen"
+  "backToEdit": "Takaisin muokkaukseen",
+  "drawBox": "Piirrä musta laatikko",
+  "addBox": "Lisää laatikko",
+  "deleteBox": "Poista laatikko",
+  "undo": "Kumoa",
+  "redo": "Tee uudelleen",
+  "boxHint": "Käytä lisälaatikoita kaikkeen, mitä luettelo ei kata. Piirtäminen: ota Piirrä musta laatikko käyttöön ja vedä kuvan päällä. Valitse laatikko siirtääksesi sitä tai vedä sen kulmista muuttaaksesi kokoa. Näppäimistöllä: Lisää laatikko, sitten nuolinäppäimet siirtävät sitä, Vaihto+nuolet muuttavat kokoa, N valitsee seuraavan ja Delete poistaa sen.",
+  "summaryBoxes": "Mustat lisälaatikot: {n}",
+  "boxesLabel": "Mustat lisälaatikot"
 }

@@ -62,5 +62,13 @@
   "downloaded": "PDF creado. Búscalo en tu carpeta de descargas.",
   "errExport": "No se ha podido crear el PDF. Inténtalo de nuevo.",
   "reset": "Empezar de nuevo",
-  "backToEdit": "Volver a editar"
+  "backToEdit": "Volver a editar",
+  "drawBox": "Dibujar recuadro negro",
+  "addBox": "Añadir recuadro",
+  "deleteBox": "Eliminar recuadro",
+  "undo": "Deshacer",
+  "redo": "Rehacer",
+  "boxHint": "Usa recuadros negros extra para lo que la lista no cubre. Para dibujar, activa Dibujar recuadro negro y arrastra sobre la imagen. Selecciona un recuadro para moverlo o arrastra sus esquinas para cambiar su tamaño. Con teclado: Añadir recuadro; luego las flechas lo mueven, Mayús+flechas cambian su tamaño, N selecciona el siguiente y Supr lo elimina.",
+  "summaryBoxes": "Recuadros negros extra: {n}",
+  "boxesLabel": "Recuadros negros extra"
 }
