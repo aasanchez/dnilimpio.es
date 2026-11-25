@@ -42,6 +42,8 @@
   "positionsHint": "Dreptunghiurile negre sunt plasate după modelul: {doc}. Verificați că fiecare își acoperă câmpul.",
   "watermarkLabel": "Text pentru filigran (opțional)",
   "watermarkHint": "De exemplu: COPIE DOAR PENTRU CERERE DE ÎNCHIRIERE. Un filigran descurajează reutilizarea, dar nu poate împiedica frauda.",
+  "watermarkSize": "Dimensiunea textului",
+  "watermarkOpacity": "Opacitate",
   "greyscale": "Convertește în alb-negru",
   "finalPreview": "Previzualizare finală",
   "previewLabel": "Previzualizare: {side}",

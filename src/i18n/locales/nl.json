@@ -42,6 +42,8 @@
   "positionsHint": "De zwarte vlakken staan op de plaatsen van de indeling van: {doc}. Controleer of elk vak zijn veld bedekt.",
   "watermarkLabel": "Watermerktekst (optioneel)",
   "watermarkHint": "Bijvoorbeeld: KOPIE ALLEEN VOOR HUURAANVRAAG. Een watermerk ontmoedigt hergebruik, maar kan fraude niet voorkomen.",
+  "watermarkSize": "Tekstgrootte",
+  "watermarkOpacity": "Dekking",
   "greyscale": "Omzetten naar zwart-wit",
   "finalPreview": "Eindweergave",
   "previewLabel": "Voorbeeld: {side}",

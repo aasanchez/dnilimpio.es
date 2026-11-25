@@ -13,6 +13,7 @@
   import type { EditState, Phase } from '../ui/edit-state.ts'
   import type { ModelZones, Rect, Side, ZoneId } from '../zones/types.ts'
   import { overlap } from '../ocr/find.ts'
+  import { WATERMARK_OPACITY, WATERMARK_SCALE, normaliseWatermark } from '../engine/watermark.ts'
   import Review from './Review.svelte'
   import SmartFind from './SmartFind.svelte'
 
@@ -60,6 +61,8 @@
   const boxes = $derived(edit.boxes.present[side])
   const sameSet = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((x) => b.includes(x))
   const sideName = (s: Side): string => t(lang, s === 'front' ? 'tabFront' : 'tabBack')
+  const percent = $derived(new Intl.NumberFormat(lang, { style: 'percent', maximumFractionDigits: 0 }))
+  const hasMark = $derived(normaliseWatermark(edit.watermark) !== '')
   const today = $derived(new Date().toLocaleDateString(lang, { day: '2-digit', month: '2-digit', year: 'numeric' }))
 
   function setBoxes (list: readonly Rect[]): void {
@@ -219,7 +222,11 @@
 
   // Re-render both sides whenever a choice changes.
   $effect(() => {
-    const opts = { greyscale: edit.greyscale, watermark: edit.watermark }
+    const opts = {
+      greyscale: edit.greyscale,
+      watermark: edit.watermark,
+      watermarkStyle: { scale: edit.watermarkScale, opacity: edit.watermarkOpacity },
+    }
     for (const s of SIDES) {
       const card = align.warped[s]
       if (card) renderSecure(card, { ...opts, masks: [...masksFor(model, s, hidden), ...edit.boxes.present[s]] }, secure[s])
@@ -395,6 +402,21 @@
           {/each}
         </div>
         <p class="hint" id="watermark-hint">{t(lang, 'watermarkHint')}</p>
+        <!-- Size and opacity: applied live to the preview; disabled until there is text to draw. -->
+        <div class="slider">
+          <label class="field" for="watermark-size">{t(lang, 'watermarkSize')}</label>
+          <output for="watermark-size" id="watermark-size-value">{percent.format(edit.watermarkScale)}</output>
+          <input type="range" id="watermark-size" class="range" disabled={!hasMark}
+            min={WATERMARK_SCALE.min} max={WATERMARK_SCALE.max} step={WATERMARK_SCALE.step}
+            bind:value={edit.watermarkScale} aria-valuetext={percent.format(edit.watermarkScale)} />
+        </div>
+        <div class="slider">
+          <label class="field" for="watermark-opacity">{t(lang, 'watermarkOpacity')}</label>
+          <output for="watermark-opacity" id="watermark-opacity-value">{percent.format(edit.watermarkOpacity)}</output>
+          <input type="range" id="watermark-opacity" class="range" disabled={!hasMark}
+            min={WATERMARK_OPACITY.min} max={WATERMARK_OPACITY.max} step={WATERMARK_OPACITY.step}
+            bind:value={edit.watermarkOpacity} aria-valuetext={percent.format(edit.watermarkOpacity)} />
+        </div>
         <label class="toggle">
           <span class="toggle-text">
             <span class="toggle-label">{t(lang, 'greyscale')}</span>

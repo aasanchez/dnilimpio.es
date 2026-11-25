@@ -42,6 +42,8 @@
   "positionsHint": "De svarta rutorna placeras enligt layouten för: {doc}. Kontrollera att varje ruta täcker sitt fält.",
   "watermarkLabel": "Vattenstämpel (valfritt)",
   "watermarkHint": "Till exempel: KOPIA ENDAST FÖR HYRESANSÖKAN. En vattenstämpel försvårar återanvändning men kan inte förhindra bedrägeri.",
+  "watermarkSize": "Textstorlek",
+  "watermarkOpacity": "Opacitet",
   "greyscale": "Gör om till svartvitt",
   "finalPreview": "Slutlig förhandsvisning",
   "previewLabel": "Förhandsvisning: {side}",

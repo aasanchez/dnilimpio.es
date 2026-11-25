@@ -8,12 +8,13 @@
 
 import type { Rect } from '../zones/dni.ts'
 import { sanitise } from './raster.ts'
-import { drawWatermark } from './watermark.ts'
+import { drawWatermark, type WatermarkStyle } from './watermark.ts'
 
 export interface RenderOptions {
   readonly masks: readonly Rect[]
   readonly greyscale: boolean
   readonly watermark: string
+  readonly watermarkStyle?: WatermarkStyle
 }
 
 function context (c: HTMLCanvasElement): CanvasRenderingContext2D {
@@ -36,7 +37,7 @@ export function renderSecure (card: HTMLCanvasElement, opts: RenderOptions, out:
   clean.data.fill(0)
   ctx.putImageData(img, 0, 0)
   img.data.fill(0)
-  drawWatermark(ctx, opts.watermark, width, height)
+  drawWatermark(ctx, opts.watermark, width, height, opts.watermarkStyle)
 }
 
 /** Saves a Blob as a file through a temporary object URL, which is revoked right after. */
