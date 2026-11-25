@@ -142,5 +142,19 @@
   "tipSteady": "Mantén o móbil quieto",
   "tipBlur": "Está borrosa: agarda a que enfoque",
   "tipReady": "Non te movas…",
-  "tipReadyManual": "Todo ben: fai a foto"
+  "tipReadyManual": "Todo ben: fai a foto",
+  "findTitle": "Buscar automaticamente",
+  "findIntro": "Le a tarxeta neste dispositivo e engade recadros negros sobre os datos que escollas. Non se envía nada.",
+  "findKinds": "Datos que buscar",
+  "find_name": "Nome e apelidos",
+  "find_idNumber": "Número de DNI/NIE",
+  "find_date": "Datas",
+  "findRun": "Buscar e tapar",
+  "findDownload": "A primeira vez descarga uns {mb} MB, só unha vez.",
+  "findRunning": "Lendo a tarxeta…",
+  "findDone": "Engadíronse {n} recadros. Revísaos en Recadros: podes movelos ou borralos.",
+  "findNone": "Non se atopou nada. Tapa os datos a man.",
+  "findOffline": "A busca automática necesita unha descarga única e non tes conexión. Tapa os datos a man.",
+  "findUnsupported": "A busca automática non está dispoñible neste navegador. Tapa os datos a man.",
+  "findFailed": "A busca automática non funcionou esta vez. Tapa os datos a man."
 }

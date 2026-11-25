@@ -12,7 +12,9 @@
   import type { AlignState } from '../ui/align-state.ts'
   import type { EditState, Phase } from '../ui/edit-state.ts'
   import type { ModelZones, Rect, Side, ZoneId } from '../zones/types.ts'
+  import { overlap } from '../ocr/find.ts'
   import Review from './Review.svelte'
+  import SmartFind from './SmartFind.svelte'
 
   let { lang, doc, align, edit, phase = $bindable(), onAdjust, onReset, onPhase }: {
     lang: Lang
@@ -63,6 +65,25 @@
   function setBoxes (list: readonly Rect[]): void {
     edit.boxes = commit(edit.boxes, { ...edit.boxes.present, [side]: list })
   }
+
+  /** Smart find results: one undoable step that adds every new rectangle, skipping ones a box already covers. */
+  function addFound (found: ReadonlyArray<{ side: Side; rects: Rect[] }>): number {
+    const next = { front: [...edit.boxes.present.front], back: [...edit.boxes.present.back] }
+    let n = 0
+    for (const { side: s, rects } of found) {
+      for (const r of rects) {
+        if (next[s].some((b) => overlap(b, r) > 0.5)) continue
+        next[s].push(r)
+        n++
+      }
+    }
+    if (n > 0) {
+      edit.boxes = commit(edit.boxes, next)
+      selected = null
+    }
+    return n
+  }
+  const cards = $derived(SIDES.flatMap((s) => (align.warped[s] ? [[s, align.warped[s]] as const] : [])))
 
   function history (op: 'undo' | 'redo'): void {
     edit.boxes = op === 'undo' ? undo(edit.boxes) : redo(edit.boxes)
@@ -337,6 +358,7 @@
         {#if mrzLeaks(model, hidden)}<p class="warning" id="mrz-warning">{t(lang, 'mrzWarning')}</p>{/if}
       </div>
       <p class="hint">{tf(lang, 'positionsHint', { doc: docName })}</p>
+      <SmartFind {lang} {cards} onFound={addFound} />
     </div>
 
     <div class="panel" id="panel-boxes" role="tabpanel" aria-labelledby="tool-boxes" hidden={tool !== 'boxes'}>

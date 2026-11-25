@@ -142,5 +142,19 @@
   "tipSteady": "Mantén el móvil quieto",
   "tipBlur": "Está borrosa: espera a que enfoque",
   "tipReady": "No te muevas…",
-  "tipReadyManual": "Todo bien: haz la foto"
+  "tipReadyManual": "Todo bien: haz la foto",
+  "findTitle": "Buscar automáticamente",
+  "findIntro": "Lee la tarjeta en este dispositivo y añade recuadros negros sobre los datos que elijas. No se envía nada.",
+  "findKinds": "Datos que buscar",
+  "find_name": "Nombre y apellidos",
+  "find_idNumber": "Número de DNI/NIE",
+  "find_date": "Fechas",
+  "findRun": "Buscar y tapar",
+  "findDownload": "La primera vez descarga unos {mb} MB, solo una vez.",
+  "findRunning": "Leyendo la tarjeta…",
+  "findDone": "Se han añadido {n} recuadros. Revísalos en Recuadros: puedes moverlos o borrarlos.",
+  "findNone": "No se ha encontrado nada. Tapa los datos a mano.",
+  "findOffline": "La búsqueda automática necesita una descarga única y no tienes conexión. Tapa los datos a mano.",
+  "findUnsupported": "La búsqueda automática no está disponible en este navegador. Tapa los datos a mano.",
+  "findFailed": "La búsqueda automática no ha funcionado esta vez. Tapa los datos a mano."
 }

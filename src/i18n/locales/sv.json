@@ -142,5 +142,19 @@
   "tipSteady": "Håll telefonen stilla",
   "tipBlur": "Suddigt: vänta tills den fokuserar",
   "tipReady": "Håll still…",
-  "tipReadyManual": "Allt ser bra ut: ta bilden"
+  "tipReadyManual": "Allt ser bra ut: ta bilden",
+  "findTitle": "Sök automatiskt",
+  "findIntro": "Läser kortet på den här enheten och lägger svarta rutor över de uppgifter du väljer. Inget skickas.",
+  "findKinds": "Uppgifter att söka efter",
+  "find_name": "Namn och efternamn",
+  "find_idNumber": "DNI/NIE-nummer",
+  "find_date": "Datum",
+  "findRun": "Sök och täck över",
+  "findDownload": "Första gången laddas cirka {mb} MB ner, en gång.",
+  "findRunning": "Läser kortet…",
+  "findDone": "{n} rutor har lagts till. Kontrollera dem under Rutor: du kan flytta eller ta bort dem.",
+  "findNone": "Inget hittades. Dölj uppgifterna för hand.",
+  "findOffline": "Automatisk sökning behöver en engångsnedladdning och du är offline. Dölj uppgifterna för hand.",
+  "findUnsupported": "Automatisk sökning är inte tillgänglig i den här webbläsaren. Dölj uppgifterna för hand.",
+  "findFailed": "Automatisk sökning fungerade inte den här gången. Dölj uppgifterna för hand."
 }

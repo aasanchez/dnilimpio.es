@@ -134,8 +134,9 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Capture coach: live camera tips (framing, tilt, light, glare, blur, movement) and automatic shot | Done |
 | DNI 3.0 and TIE, with a document picker | Done |
 | Automatic card edge detection (engine, classic image processing) | Done, not yet in the interface |
-| On-device OCR engine and MRZ reader (Tesseract.js, self-hosted, loaded on first use) | Done, not yet in the interface |
-| Document type detection, smart field finding | Planned |
+| On-device OCR engine and MRZ reader (Tesseract.js, self-hosted, loaded on first use) | Done |
+| Smart field finding: OCR covers names, DNI/NIE number, dates, support number, CAN and MRZ | Done |
+| Document type detection | Planned |
 | 31 languages | 13 today |
 
 ## How to use it
@@ -179,6 +180,15 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    preview** hides the outlines. **Adjust corners** goes back to step 5 and keeps your choices.
    Three tabs:
    - **Data:** the field switches and quick choices (**Recommended**, **Hide all**, **Show all**).
+     Below them, **Find automatically** reads both sides with OCR on your device and adds a black
+     box over each piece of data you pick: name and surnames, DNI/NIE number, dates, support number,
+     CAN and MRZ lines. Dates, support number, CAN and MRZ are picked to start with; name and number
+     are not. It works from the text itself, so it also finds data on layouts the app has not
+     measured. A DNI/NIE number or a date counts only when its check letter or calendar date is
+     valid. The boxes it adds are ordinary boxes: check them in **Boxes**, move or delete them, or
+     undo them all in one step. The first use downloads about 8 MB. If finding cannot run (offline
+     before that download, or a browser without a service worker), the button is disabled with a
+     short note and you hide the data by hand.
    - **Boxes:** extra black boxes for anything the list does not cover. Turn on **Draw black box**
      and drag on the card. Select a box to move it, or drag its corners to resize it. **Undo** and
      **Redo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>) work on
@@ -285,7 +295,7 @@ src/
   redact/            normalised zones to pixels, opaque fills
   engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
   detect/            automatic card edge detection (Sobel + Hough, no model)
-  ocr/               on-device OCR (Tesseract.js, loaded on demand) and MRZ reader
+  ocr/               on-device OCR (Tesseract.js, loaded on demand), MRZ reader, smart field finding
   security/          Trusted Types policy
   i18n/              dictionaries, one JSON file per language
   ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state
@@ -306,6 +316,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0006](docs/adr/0006-document-types.md): several document types, chosen by the user.
 - [0008](docs/adr/0008-capture-coach.md): capture coach with classical image metrics, no model.
 - [0009](docs/adr/0009-on-device-ocr.md): on-device OCR with Tesseract.js, self-hosted and loaded on demand.
+- [0010](docs/adr/0010-smart-field-finding.md): smart field finding from OCR text; results become ordinary boxes.
 
 ## Contributing
 
