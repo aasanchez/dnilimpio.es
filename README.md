@@ -292,7 +292,7 @@ Rules the code follows:
 
 ## Tests
 
-- **Unit** (`tests/unit/`): edge snapping (sides 7 % outside or inside a card on woven fabric come back onto it, past a printed band), upright check (anchor boxes, upright and upside-down cards for every document), document type from the MRZ (code, issue date from birth and expiry dates), homography and warp, corner editing, zone data for every document (inside
+- **Unit** (`tests/unit/`): edge snapping (sides 7 % outside or inside a card on woven fabric come back onto it, past a printed band; a weak border on a light table is kept even when a band inside is much stronger), upright check (anchor boxes, upright and upside-down cards for every document), document type from the MRZ (code, issue date from birth and expiry dates), homography and warp, corner editing, zone data for every document (inside
   the card, sources, defaults, sizes), file decoding, i18n keys,
   redaction raster (every masked pixel is opaque black, input untouched), JPEG filter (metadata
   segments dropped, image data unchanged), corner model answer checks, and PDF structure (pages, images, no metadata, no text,

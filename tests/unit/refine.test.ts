@@ -67,4 +67,17 @@ describe('refineQuad', () => {
     const q = off(TRUE, (p) => ({ x: p.x + 20, y: p.y - 30 }))
     expect(refineQuad(flat, q)).toBe(q)
   })
+
+  it('keeps a weak border on a light table when a printed band inside is much stronger', () => {
+    // 800 × 500 card at 215 on a 180 background, full-width band at 120 from 20 to 50 px below its top.
+    const v = new Float32Array(W * H).fill(180)
+    const card: Quad = [{ x: 100, y: 400 }, { x: 900, y: 400 }, { x: 900, y: 900 }, { x: 100, y: 900 }]
+    for (let y = 400; y < 900; y++) {
+      for (let x = 100; x < 900; x++) v[y * W + x] = y >= 420 && y < 450 ? 120 : 215
+    }
+    const light: Grey = { w: W, h: H, v }
+    expect(worst(refineQuad(light, card), card)).toBeLessThan(3)
+    const loose = off(card, (p, i) => ({ x: p.x, y: p.y + (i < 2 ? -35 : 35) }))
+    expect(worst(refineQuad(light, loose), card)).toBeLessThan(3)
+  })
 })

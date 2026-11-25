@@ -7,8 +7,9 @@
 // side, with a steady brightness step across it. So, for each side, this tries every nearby line
 // (each end moved up to SEARCH of the card's size, in or out) and scores the mean step across it.
 // Texture averages out along a line; a print feature inside the card covers only part of the side,
-// so it scores lower than the border. Among lines nearly as strong as the best, the outermost wins
-// (a band printed along the border lies inside it). The corners are where the four kept lines
+// so it scores lower than the border. Among lines with a clear step (at least OUTER_SHARE of the
+// best), the outermost wins: a band printed along the border lies inside it, and on a light table
+// it can be much stronger than the border itself. The corners are where the four kept lines
 // cross. When no line has a clear step, or the answer looks wrong, the quad is kept as found.
 
 import { isConvex, type Point, type Quad } from '../geometry/homography.ts'
@@ -19,31 +20,46 @@ export interface Grey { readonly w: number; readonly h: number; readonly v: Arra
 export const SEARCH = 0.12
 /** Minimum mean brightness step across a line (grey levels) for it to count as an edge. */
 export const MIN_STEP = 12
-/** Lines at least this share of the strongest one compete on position: the outermost wins. */
-export const OUTER_SHARE = 0.75
+/**
+ * Lines at least this share of the strongest one compete on position: the outermost wins. Low on
+ * purpose: on a light table the card's border can be much weaker than a band printed inside it.
+ */
+export const OUTER_SHARE = 0.3
 /** Points sampled along each candidate line (its middle 80 %, away from the rounded corners). */
 const SAMPLES = 64
-/** Distance on each side of the line where brightness is compared, in pixels. */
-const GAP = 2
+/** Brightness is compared at 1 to GAP pixels on each side of the line. */
+const GAP = 4
 
 interface Line { readonly a: Point; readonly b: Point }
 
+/** Brightness at (x, y), bilinear, clamped to the image. */
 function at (g: Grey, x: number, y: number): number {
-  const xi = Math.min(g.w - 1, Math.max(0, Math.round(x)))
-  const yi = Math.min(g.h - 1, Math.max(0, Math.round(y)))
-  return g.v[yi * g.w + xi]!
+  const cx = Math.min(g.w - 1, Math.max(0, x))
+  const cy = Math.min(g.h - 1, Math.max(0, y))
+  const x0 = Math.min(g.w - 2, Math.floor(cx))
+  const y0 = Math.min(g.h - 2, Math.floor(cy))
+  const fx = cx - x0
+  const fy = cy - y0
+  const i = y0 * g.w + x0
+  const top = g.v[i]! * (1 - fx) + g.v[i + 1]! * fx
+  const bottom = g.v[i + g.w]! * (1 - fx) + g.v[i + g.w + 1]! * fx
+  return top * (1 - fy) + bottom * fy
 }
 
-/** Mean brightness step across the segment a–b along the unit normal n (absolute value). */
+/**
+ * Mean brightness step across the segment a–b along the unit normal n (absolute value). Each sample
+ * averages the differences at 1 to GAP pixels on either side, so a sharp edge answers most strongly
+ * exactly on it and less and less on either side: the best line is a peak, not a plateau.
+ */
 export function stepAcross (g: Grey, a: Point, b: Point, n: Point): number {
   let sum = 0
   for (let i = 0; i < SAMPLES; i++) {
     const t = 0.1 + (0.8 * i) / (SAMPLES - 1)
     const x = a.x + (b.x - a.x) * t
     const y = a.y + (b.y - a.y) * t
-    sum += at(g, x + n.x * GAP, y + n.y * GAP) - at(g, x - n.x * GAP, y - n.y * GAP)
+    for (let k = 1; k <= GAP; k++) sum += at(g, x + n.x * k, y + n.y * k) - at(g, x - n.x * k, y - n.y * k)
   }
-  return Math.abs(sum / SAMPLES)
+  return Math.abs(sum / (SAMPLES * GAP))
 }
 
 const dist = (p: Point, q: Point): number => Math.hypot(p.x - q.x, p.y - q.y)
@@ -85,14 +101,18 @@ function snapSide (g: Grey, a: Point, b: Point, across: number): Line {
     if (best.score < OUTER_SHARE * top || f.out > best.out) best = f
   }
   // That line may sit on the shoulder of its edge: climb to the edge's peak with finer steps.
+  // The window moves with the best line until nothing near it is better.
   let { da, db, score } = best
   const fine = step / 4
-  const [da0, db0] = [da, db]
-  for (let ea = da0 - 2 * step; ea <= da0 + 2 * step; ea += fine) {
-    for (let eb = db0 - 2 * step; eb <= db0 + 2 * step; eb += fine) {
-      const s2 = stepAcross(g, shift(a, n, ea), shift(b, n, eb), n)
-      if (s2 > score) { score = s2; da = ea; db = eb }
+  for (let round = 0; round < 12; round++) {
+    const [da0, db0] = [da, db]
+    for (let ea = da0 - 2 * step; ea <= da0 + 2 * step; ea += fine) {
+      for (let eb = db0 - 2 * step; eb <= db0 + 2 * step; eb += fine) {
+        const s2 = stepAcross(g, shift(a, n, ea), shift(b, n, eb), n)
+        if (s2 > score) { score = s2; da = ea; db = eb }
+      }
     }
+    if (da === da0 && db === db0) break
   }
   return { a: shift(a, n, da), b: shift(b, n, db) }
 }
