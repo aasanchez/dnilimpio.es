@@ -1,6 +1,6 @@
 # dni-redactor v1: implementation plan
 
-Status: scaffold, capture, homography, corner editor (step 2), i18n and DNI 4.0 zone data done. CI (`pnpm verify`) and GitHub Pages deploy from `master` done (`.github/workflows/ci.yml`, first part of step 11). Secure raster and PDF engines done (`src/engine/`, not wired to the UI yet). UI on Svelte 5, pnpm 12, Node 26 ([ADR 0003](adr/0003-svelte-vite-pnpm.md)). Next: the one-page tool.
+Status: scaffold, capture, homography, corner editor (step 2), i18n and DNI 4.0 zone data done. CI (`pnpm verify`) and GitHub Pages deploy from `master` done (`.github/workflows/ci.yml`, first part of step 11). Secure raster and PDF engines done (`src/engine/`, not wired to the UI yet). UI on Svelte 5, pnpm 12, Node 26 ([ADR 0003](adr/0003-svelte-vite-pnpm.md)). Editor done: fields to hide (DNI 4.0), live preview through the secure render path, watermark, greyscale, review, PDF download, reset. Next: manual boxes with undo/redo, zoom, one-page layout.
 
 Target specification since 2026-11-25: the identity-privacy master prompt (Svelte 5, pnpm, 31 locales, offline, OCR, PDF only). Where it differs from this plan, the specification wins, except where an ADR in `docs/adr/` records a deviation.
 

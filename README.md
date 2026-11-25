@@ -6,9 +6,10 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 **Use it:** <https://aasanchez.github.io/dnilimpio.es/> (planned move to `dnilimpio.es`).
 
 > [!IMPORTANT]
-> **Work in progress.** Today the tool loads the front and back photos and straightens each card.
-> Hiding fields, the watermark, black and white, and the PDF download are being built now (see
-> [Status](#status)). Do not rely on it to share a document yet.
+> **Work in progress.** The full flow works for the DNI 4.0: select both sides, straighten them,
+> choose the fields to hide, add a watermark, review and download the PDF. Manual black boxes,
+> offline mode and automatic detection are still being built (see [Status](#status)).
+> Always check the result before you share it.
 
 ## Contents
 
@@ -102,10 +103,11 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 |---|---|
 | Select front and back photos (file, drag and drop, paste, camera) | Done |
 | Straighten each side by its corners | Done |
-| Secure raster engine: greyscale, opaque masks with margin, self-check | Done (not in the UI yet) |
-| PDF engine: A4, one side per page, metadata-free | Done (not in the UI yet) |
+| Secure raster engine: greyscale, opaque masks with margin, self-check | Done |
+| PDF engine: A4, one side per page, metadata-free | Done |
 | Move the UI to Svelte 5 and pnpm | Done |
-| One-page tool: fields to hide, manual boxes, undo and redo, watermark, black and white, review, download, reset | Planned |
+| Fields to hide, live preview, watermark, black and white, review, PDF download, reset | Done |
+| Manual black boxes with undo and redo, zoom, one-page layout | Next |
 | Offline mode with service worker and integrity checks | Planned |
 | Automatic detection (edges, document type, OCR) | Planned |
 | 31 languages | 13 today |
@@ -119,9 +121,17 @@ no installation.
 2. Select the front, then the back.
 3. Drag the four circles onto the corners of the card. On a keyboard, arrow keys move the selected
    corner and <kbd>N</kbd> selects the next one. **Rotate** turns the frame if the photo is sideways.
-4. Check the straightened cards, then continue.
-
-The steps for fields, watermark and download will be added here as they land.
+4. Do the same for the back.
+5. **Fields to hide:** a checked box hides that field on every side where it is printed. The
+   recommended fields start checked: signature, issue and expiry dates, support number, CAN and the
+   machine-readable lines (MRZ). Fields left visible get a dashed outline in the preview; tick
+   **Final preview** to see the result without outlines. **Adjust corners** goes back to step 2
+   and keeps your choices.
+6. Optional: type a **watermark** and tick **Convert to black and white**. The preview updates as
+   you type.
+7. **Review and download:** check both final images and the summary, tick **I have checked both
+   sides**, then **Download PDF**. The file is called `protected-document.pdf`.
+8. **Start again** clears the photos and all your choices from the page.
 
 ## Languages
 
@@ -177,8 +187,10 @@ Rules the code follows:
   redaction raster (every masked pixel is opaque black, input untouched), JPEG filter (metadata
   segments dropped, image data unchanged) and PDF structure (pages, images, no metadata, no text,
   deterministic output).
-- **End to end** (`tests/e2e/`): photo selection, corner alignment, and security checks on the built
-  page: exact CSP, referrer policy, SRI on every asset, no inline code, no CSP violations and no
+- **End to end** (`tests/e2e/`): photo selection, corner alignment, the field checklist and its
+  warnings, review, a real PDF download (decoded in the browser to check that hidden areas are black
+  and that the file has no metadata, no source file name and no watermark text), reset, and
+  security checks on the built page: exact CSP, referrer policy, SRI on every asset, no inline code, no CSP violations and no
   request outside the page's origin.
 
 ## Deployment
@@ -205,9 +217,9 @@ src/
   geometry/          homography, perspective warp, corner editing (pure TypeScript)
   zones/             field positions per document, from official specimens
   redact/            normalised zones to pixels, opaque fills
-  engine/            secure raster, JPEG filter, PDF export (pure TypeScript)
+  engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
   i18n/              dictionaries, one JSON file per language
-  ui/                corner editor (canvas widget) and in-memory state types
+  ui/                corner editor (canvas widget) and in-memory state
 scripts/             CSP, build plugins (CSP, SRI), test fixture generator
 tests/               unit, e2e and synthetic fixtures
 docs/                plan, zone measurement method, decision records
