@@ -1,6 +1,6 @@
 # dni-redactor v1: implementation plan
 
-Status: scaffold, capture, homography, corner editor (step 2), i18n and DNI 4.0 zone data done. CI (`npm run check`) and GitHub Pages deploy from `master` done (`.github/workflows/ci.yml`, first part of step 11). Secure raster and PDF engines done (`src/engine/`, not wired to the UI yet). Next: Svelte 5 + pnpm migration, then the one-page tool.
+Status: scaffold, capture, homography, corner editor (step 2), i18n and DNI 4.0 zone data done. CI (`pnpm verify`) and GitHub Pages deploy from `master` done (`.github/workflows/ci.yml`, first part of step 11). Secure raster and PDF engines done (`src/engine/`, not wired to the UI yet). UI on Svelte 5, pnpm 12, Node 26 ([ADR 0003](adr/0003-svelte-vite-pnpm.md)). Next: the one-page tool.
 
 Target specification since 2026-11-25: the identity-privacy master prompt (Svelte 5, pnpm, 31 locales, offline, OCR, PDF only). Where it differs from this plan, the specification wins, except where an ADR in `docs/adr/` records a deviation.
 
@@ -40,7 +40,7 @@ Target specification since 2026-11-25: the identity-privacy master prompt (Svelt
 5. **Repository**: github.com/aasanchez/dnilimpio.es (from the local git origin). Default branch stays `master`; branch protection goes on `master`.
 6. **Languages**: es (source), ca, ca-ES-valencia, gl, eu, en, fr, nl, sv, fi, uk, ro, ar. Arabic is Modern Standard Arabic (Darija has no standard written form); `dir="rtl"` is set from the language. JSON per language in `src/i18n/locales/`, managed with Crowdin through its GitHub integration (`crowdin.yml`). All languages are bundled; the app makes no request to Crowdin and the CSP is unchanged. All non-Spanish strings except English are drafts for native review in Crowdin.
 
-7. **Code style**: neostandard 0.14.1 (the maintained successor of standard / ts-standard: ESLint flat config, typescript-eslint, @stylistic). Layered with typescript-eslint `strictTypeChecked` and the project bans. `npm run lint:fix` formats.
+7. **Code style**: neostandard 0.14.1 (the maintained successor of standard / ts-standard: ESLint flat config, typescript-eslint, @stylistic). Layered with typescript-eslint `strictTypeChecked` and the project bans. `pnpm format` formats.
 
 ## Dev dependencies (all named in the spec, versions pinned exactly)
 

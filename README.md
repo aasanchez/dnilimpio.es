@@ -104,7 +104,7 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Straighten each side by its corners | Done |
 | Secure raster engine: greyscale, opaque masks with margin, self-check | Done (not in the UI yet) |
 | PDF engine: A4, one side per page, metadata-free | Done (not in the UI yet) |
-| Move the UI to Svelte 5 and pnpm | Next |
+| Move the UI to Svelte 5 and pnpm | Done |
 | One-page tool: fields to hide, manual boxes, undo and redo, watermark, black and white, review, download, reset | Planned |
 | Offline mode with service worker and integrity checks | Planned |
 | Automatic detection (edges, document type, OCR) | Planned |
@@ -135,30 +135,38 @@ one file in `src/i18n/locales/` and open a pull request. Spanish (`es.json`) def
 
 ## Development
 
-Requirements: Node.js (version in [`.nvmrc`](.nvmrc), managed with [nvm](https://github.com/nvm-sh/nvm))
-and npm. The project moves to pnpm in the next step; this section will change with it.
+Requirements: [nvm](https://github.com/nvm-sh/nvm) and pnpm. Exact versions are pinned:
+Node.js in [`.nvmrc`](.nvmrc) (latest stable when last updated) and pnpm in the `packageManager` field
+of [`package.json`](package.json). End users need neither: the site is static.
 
 ```bash
-nvm install && nvm use
-npm ci              # install exact versions from the lockfile (install scripts are disabled)
-npx playwright install chromium   # once, for the end-to-end tests
-npm run dev         # development server at http://localhost:5173 (no CSP in dev mode)
+nvm install && nvm use                       # Node.js version from .nvmrc
+npm install --global pnpm@12.23.0            # or any official pnpm install method, same version
+pnpm install --frozen-lockfile               # exact versions from pnpm-lock.yaml; no install scripts run
+pnpm exec playwright install chromium        # once, for the end-to-end tests
+pnpm dev                                     # http://localhost:5173 (no CSP in dev mode)
 ```
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Development server with hot reload |
-| `npm run build` | Production build in `dist/` (CSP and SRI injected) |
-| `npm run preview` | Serve `dist/` at http://localhost:4173 |
-| `npm run typecheck` | TypeScript, strict mode |
-| `npm run lint` / `npm run lint:fix` | ESLint (neostandard + typescript-eslint strict + security bans) |
-| `npm test` | Unit tests (Vitest) |
-| `npm run test:e2e` | End-to-end tests (Playwright, against the production build) |
-| `npm run check` | All of the above, in the order CI runs them |
+| `pnpm dev` | Development server with hot reload |
+| `pnpm build` | Production build in `dist/` (CSP and SRI injected) |
+| `pnpm preview` | Serve `dist/` at http://localhost:4173 |
+| `pnpm typecheck` | `svelte-check`: TypeScript strict mode in `.ts` and `.svelte` files |
+| `pnpm lint` | ESLint: neostandard style, typescript-eslint strict, Svelte rules, security bans |
+| `pnpm format` | Fix style issues automatically (ESLint `--fix`) |
+| `pnpm test` / `pnpm test:unit` | Unit tests (Vitest) |
+| `pnpm test:e2e` | End-to-end tests (Playwright, against the production build) |
+| `pnpm verify` | All of the above, in the order CI runs them |
+
+Stack: [Svelte 5](https://svelte.dev) with runes for the interface, Vite, strict TypeScript, native
+CSS and the Canvas API. Image, geometry, redaction and PDF logic are plain TypeScript modules that do
+not depend on Svelte. See [ADR 0003](docs/adr/0003-svelte-vite-pnpm.md).
 
 Rules the code follows:
 
-- No HTML strings: the DOM is built with `createElement` and `textContent` (Trusted Types is enforced).
+- No HTML strings: no `innerHTML` and no `{@html}`. Svelte builds DOM nodes directly
+  (`fragments: 'tree'`), and the CSP forbids creating any Trusted Types policy.
 - No `eval`, `new Function`, inline scripts or inline styles.
 - No runtime requests and no persistent storage.
 - Test images are synthetic or official specimens. Never commit a photo of a real person's document.
@@ -175,7 +183,7 @@ Rules the code follows:
 
 ## Deployment
 
-GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs `npm run check` on every
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs `pnpm verify` on every
 pull request and on `master`. On `master` it publishes the tested `dist/` to GitHub Pages. Actions are
 pinned to commit SHAs and run with read-only permissions, except the deploy job.
 
@@ -190,14 +198,16 @@ There is no downloadable offline package ([ADR 0002](docs/adr/0002-no-standalone
 
 ```text
 src/
-  main.ts            app entry and screen flow
+  main.ts            mounts the app
+  App.svelte         screen flow
+  components/        Svelte components, one per screen or control
   capture/           file input, drag and drop, paste, decoding
   geometry/          homography, perspective warp, corner editing (pure TypeScript)
   zones/             field positions per document, from official specimens
   redact/            normalised zones to pixels, opaque fills
   engine/            secure raster, JPEG filter, PDF export (pure TypeScript)
   i18n/              dictionaries, one JSON file per language
-  ui/                screens and the corner editor
+  ui/                corner editor (canvas widget) and in-memory state types
 scripts/             CSP, build plugins (CSP, SRI), test fixture generator
 tests/               unit, e2e and synthetic fixtures
 docs/                plan, zone measurement method, decision records
@@ -209,12 +219,13 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 
 - [0001](docs/adr/0001-pdf-library.md): PDF export with `@cantoo/pdf-lib`.
 - [0002](docs/adr/0002-no-standalone-release.md): no standalone offline release.
+- [0003](docs/adr/0003-svelte-vite-pnpm.md): Svelte 5, Vite, pinned Node.js and pnpm.
 
 ## Contributing
 
 Issues and pull requests are welcome. Before you open a pull request:
 
-1. Run `npm run check`; it must pass.
+1. Run `pnpm verify`; it must pass.
 2. Add or update tests for what you change.
 3. Do not add runtime dependencies, network requests or storage without discussing it in an issue first.
 4. Use only synthetic images or official specimens in tests and screenshots.

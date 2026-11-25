@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { defineConfig } from 'vite'
+import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
 
 // Override with REPO_URL for forks.
@@ -17,5 +18,5 @@ export default defineConfig({
     modulePreload: { polyfill: false },
     assetsInlineLimit: 0,
   },
-  plugins: [securityHeaders(), subresourceIntegrity()],
+  plugins: [svelte(), securityHeaders(), subresourceIntegrity()],
 })

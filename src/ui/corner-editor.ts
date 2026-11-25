@@ -26,6 +26,8 @@ export interface CornerEditor {
   readonly element: HTMLElement;
   /** Replaces the quad (e.g. after rotation) and redraws. Does not call onChange. */
   setQuad: (quad: Quad) => void;
+  /** Updates the accessible name, e.g. after a language change. */
+  setLabel: (label: string) => void;
 }
 
 export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
@@ -251,5 +253,6 @@ export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
       quad = q
       draw()
     },
+    setLabel: (l: string) => { canvas.setAttribute('aria-label', l) },
   }
 }
