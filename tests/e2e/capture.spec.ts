@@ -36,6 +36,10 @@ test('loads front and back through the file inputs, moving to the back by itself
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
   await expect(page.locator('h2')).toHaveText('Foto del reverso')
+  // The side being captured is spelled out in a badge with a counter, and its tile is highlighted.
+  await expect(page.locator('#side-badge')).toHaveAttribute('data-side', 'back')
+  await expect(page.locator('#side-badge')).toContainText('2/2')
+  await expect(page.locator('.dropzone.is-current #pick-back')).toHaveCount(1)
   await expect(page.locator('#pick-back')).toHaveAttribute('aria-pressed', 'true')
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await expect(page.locator('#status-back')).toHaveText('Imagen cargada.')

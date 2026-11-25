@@ -12,6 +12,7 @@
   import { t, type Key, type Lang } from '../i18n/index.ts'
   import type { Side } from '../zones/dni.ts'
   import GhostCard from './GhostCard.svelte'
+  import SideBadge from './SideBadge.svelte'
 
   const { lang, side, onShot, onClose, onFail }: {
     lang: Lang
@@ -161,8 +162,8 @@
 <dialog class="live" bind:this={dialog} aria-labelledby="live-title"
   oncancel={(e) => { e.preventDefault(); onClose() }}>
   <div class="live-bar">
-    <h2 id="live-title" class="live-title">{t(lang, side === 'front' ? 'captureFront' : 'captureBack')}</h2>
-    <button type="button" class="chip live-auto" id="live-auto" aria-pressed={auto} onclick={() => { auto = !auto }}>{t(lang, 'liveAuto')}</button>
+    <h2 id="live-title" class="visually-hidden">{t(lang, side === 'front' ? 'captureFront' : 'captureBack')}</h2>
+    <div class="live-title" aria-hidden="true">{#key side}<SideBadge {lang} {side} id="live-side" />{/key}</div>
     <button type="button" class="icon-btn live-close" id="live-close" aria-label={t(lang, 'liveClose')} onclick={onClose}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
     </button>
@@ -178,8 +179,13 @@
       </svg>
     {/if}
   </div>
+  {#if notice === 'liveFlip'}
+    <!-- Big, short-lived banner when the camera moves on to the back. -->
+    <p class="live-flip" aria-hidden="true"><span>{t(lang, side === 'front' ? 'tabFront' : 'tabBack')}</span></p>
+  {/if}
   <p class="live-tip" class:ok={tip === 'ready' && !notice} id="live-tip" role="status">{message}</p>
   <div class="live-actions">
+    <button type="button" class="chip live-auto" id="live-auto" aria-pressed={auto} onclick={() => { auto = !auto }}>{t(lang, 'liveAuto')}</button>
     <button type="button" class="shutter" id="live-shutter" disabled={!size || busy} onclick={() => { void shoot() }}>
       <span class="visually-hidden">{t(lang, 'liveShutter')}</span>
     </button>
