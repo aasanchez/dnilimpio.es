@@ -165,6 +165,34 @@ test('reset clears photos and choices', async ({ page }) => {
   await expect(page.locator('#capture-continue')).toHaveCount(0)
 })
 
+test('adjusting moves a field box by hand, shows the photo uncovered meanwhile, and resets', async ({ page }) => {
+  await toEditor(page)
+  const can = at(CAN)
+  const left: [number, number] = [CAN[0] - 0.3, CAN[1]]
+  expect(await pixel(page, '#preview', ...can)).toEqual([0, 0, 0])
+  await expect(page.locator('#reset-zones')).toBeDisabled()
+
+  await page.locator('#adjust-zones').click()
+  await expect(page.locator('#adjust-zones')).toHaveAttribute('aria-pressed', 'true')
+  // The hidden CAN is drawn see-through so its box can be placed over the printed digits.
+  await expect.poll(async () => (await pixel(page, '#preview', ...can))[0]).toBeGreaterThan(0)
+  await dragOnPreview(page, CAN, left)
+  await expect(page.locator('#zone-position')).toContainText('CAN')
+  await expect(page.locator('#reset-zones')).toBeEnabled()
+
+  // Keyboard: the arrow keys move the selected box.
+  await page.locator('#preview').press('ArrowUp')
+
+  // The copy hides the new position and no longer the old one.
+  await page.locator('#adjust-zones').click()
+  await expect.poll(async () => await pixel(page, '#preview', ...at(left))).toEqual([0, 0, 0])
+  expect((await pixel(page, '#preview', ...can))[0]).toBeGreaterThan(0)
+
+  await page.locator('#reset-zones').click()
+  await expect.poll(async () => await pixel(page, '#preview', ...can)).toEqual([0, 0, 0])
+  await expect(page.locator('#reset-zones')).toBeDisabled()
+})
+
 /** Drags with the mouse between two points given as fractions of the preview canvas. */
 async function dragOnPreview (page: Page, from: [number, number], to: [number, number]): Promise<void> {
   // Centre the card so neither the sticky top bar nor the action bar covers it.

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { defaultHidden, fieldsOf, hasField, masksFor, mrzLeaks } from '../../src/engine/fields.ts'
+import { defaultHidden, fieldsOf, hasField, masksFor, mrzLeaks, placeZones, sideRects, zoneKey } from '../../src/engine/fields.ts'
 import { DOCUMENTS } from '../../src/zones/documents.ts'
 import { TIE } from '../../src/zones/tie.ts'
 import { DNI_4_0, type ZoneId } from '../../src/zones/dni.ts'
@@ -36,5 +36,21 @@ describe('fields', () => {
     expect(hidden.size).toBeGreaterThan(0)
     // Every default-hidden field leaves a black box on at least one side.
     for (const id of hidden) expect([...masksFor(d, 'front', new Set([id])), ...masksFor(d, 'back', new Set([id]))].length).toBeGreaterThan(0)
+  })
+  it('applies moved or resized field boxes, and leaves the template untouched', () => {
+    expect(placeZones(TIE, {})).toBe(TIE)
+    const zi = TIE.zones.findIndex((z) => z.id === 'permitType')
+    const moved = { x: 0.4, y: 0.53, w: 0.35, h: 0.07 }
+    const placed = placeZones(TIE, { [zoneKey(zi, 0)]: moved })
+    const masks = masksFor(placed, 'front', new Set<ZoneId>(['permitType']))
+    expect(masks).toEqual([moved, TIE.zones[zi]?.rects[1]])
+    expect(TIE.zones[zi]?.rects[0]).not.toEqual(moved)
+  })
+  it('lists every field box of one side with a stable key', () => {
+    const front = sideRects(TIE, 'front')
+    expect(front.map((r) => r.id)).toContain('permitType')
+    expect(front.filter((r) => r.id === 'permitType')).toHaveLength(2)
+    expect(new Set(front.map((r) => r.key)).size).toBe(front.length)
+    expect(sideRects(TIE, 'back').every((r) => TIE.zones.some((z) => z.side === 'back' && z.id === r.id))).toBe(true)
   })
 })
