@@ -1,6 +1,6 @@
 # dni-redactor v1: implementation plan
 
-Status: scaffold, capture, homography, corner editor (step 2), i18n and DNI 4.0 zone data done. CI (`pnpm verify`) and GitHub Pages deploy from `master` done (`.github/workflows/ci.yml`, first part of step 11). Secure raster and PDF engines done (`src/engine/`, not wired to the UI yet). UI on Svelte 5, pnpm 12, Node 26 ([ADR 0003](adr/0003-svelte-vite-pnpm.md)). Editor done: fields to hide (DNI 4.0), live preview through the secure render path, watermark, greyscale, review, PDF download, reset. Manual boxes with undo/redo done. Next: zoom, one-page layout, then phase 2 (offline).
+Status: scaffold, capture, homography, corner editor (step 2), i18n and DNI 4.0 zone data done. CI (`pnpm verify`) and GitHub Pages deploy from `master` done (`.github/workflows/ci.yml`, first part of step 11). Secure raster and PDF engines done (`src/engine/`, not wired to the UI yet). UI on Svelte 5, pnpm 12, Node 26 ([ADR 0003](adr/0003-svelte-vite-pnpm.md)). Editor done: fields to hide (DNI 4.0), live preview through the secure render path, watermark, greyscale, review, PDF download, reset. Manual boxes with undo/redo done. Offline mode done: service worker with a verified precache ([ADR 0004](adr/0004-offline-service-worker.md)); web app manifest and icons follow the redesign. Zoom and the one-page layout moved to the redesign (separate thread).
 
 Target specification since 2026-11-25: the identity-privacy master prompt (Svelte 5, pnpm, 31 locales, offline, OCR, PDF only). Where it differs from this plan, the specification wins, except where an ADR in `docs/adr/` records a deviation.
 
@@ -36,7 +36,7 @@ Target specification since 2026-11-25: the identity-privacy master prompt (Svelt
 1. **Zone-coordinate source** (blocks step 3): official DNI 4.0 specimen on dnielectronico.es, read in Alexis's browser.
 2. **Run-from-disk zip**: dropped (2026-11-24, confirmed 2026-11-25, Alexis). One build, with SRI. Offline use = load once, then disable the network. See [ADR 0002](adr/0002-no-standalone-release.md).
 3. **PDF library**: `@cantoo/pdf-lib` (2026-11-25), see [ADR 0001](adr/0001-pdf-library.md).
-4. **Service worker vs `connect-src 'none'`**: to be tested at step 9. Will report before changing the CSP.
+4. **Service worker vs `connect-src 'none'`**: no conflict, `connect-src 'none'` stays. Registration under Trusted Types needs one policy: `trusted-types 'none'` became `trusted-types dnilimpio-sw` (2026-11-25, [ADR 0004](adr/0004-offline-service-worker.md)).
 5. **Repository**: github.com/aasanchez/dnilimpio.es (from the local git origin). Default branch stays `master`; branch protection goes on `master`.
 6. **Languages**: es (source), ca, ca-ES-valencia, gl, eu, en, fr, nl, sv, fi, uk, ro, ar. Arabic is Modern Standard Arabic (Darija has no standard written form); `dir="rtl"` is set from the language. JSON per language in `src/i18n/locales/`, managed with Crowdin through its GitHub integration (`crowdin.yml`). All languages are bundled; the app makes no request to Crowdin and the CSP is unchanged. All non-Spanish strings except English are drafts for native review in Crowdin.
 

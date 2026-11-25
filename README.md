@@ -8,7 +8,7 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 > [!IMPORTANT]
 > **Work in progress.** The full flow works for the DNI 4.0: select both sides, straighten them,
 > choose the fields to hide, draw extra black boxes, add a watermark, review and download the PDF.
-> Offline mode and automatic detection are still being built (see [Status](#status)).
+> Automatic detection is still being built (see [Status](#status)).
 > Always check the result before you share it.
 
 ## Contents
@@ -54,8 +54,12 @@ Whether a recipient accepts a redacted copy is up to them.
 - **No network access from the page.** The Content Security Policy sets `connect-src 'none'`: the page
   cannot send requests with `fetch`, `XMLHttpRequest`, WebSocket or beacons. It loads scripts, styles
   and images only from its own origin.
-- **No storage.** Photos, fields, watermark text and PDFs are kept in memory only. The code is not
-  allowed to use `localStorage`, `sessionStorage` or `indexedDB` (enforced by the linter).
+- **No storage of your data.** Photos, fields, watermark text and PDFs are kept in memory only. The
+  code is not allowed to use `localStorage`, `sessionStorage` or `indexedDB` (enforced by the linter).
+  The only thing the browser stores is the app itself (its HTML, scripts and styles), for offline use.
+- **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
+  works with no network. Each file is checked against the SHA-384 hash recorded at build time before
+  it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
 - **No tracking.** No analytics, telemetry, cookies, fonts or scripts from third parties.
 - **Real redaction.** Hidden areas are painted as opaque black pixels on a new image, with a margin
   around each field. Blur and pixelation are not offered, because they can be reversed.
@@ -66,7 +70,7 @@ Whether a recipient accepts a redacted copy is up to them.
   map every line back to the source in this repository. Every script and stylesheet has a
   Subresource Integrity hash, including the PDF code that loads in the background after the page
   appears (its hash is in an import map, allowed by the CSP through its own SHA-256 hash). A changed
-  file is refused by the browser.
+  file is refused by the browser, both when the page loads it and when it is saved for offline use.
 
 ### What it cannot guarantee
 
@@ -84,7 +88,7 @@ Whether a recipient accepts a redacted copy is up to them.
 2. Use the tool to the end. The only requests are the page's own files, all from the same origin,
    and none of them is sent after you select a photo.
 3. For the strongest check, load the page, then disconnect from the Internet (airplane mode) before you
-   select a photo. The tool keeps working.
+   select a photo. The tool keeps working, including after a reload.
 4. Read the policy in the page source: `<meta http-equiv="Content-Security-Policy">`.
 
 ## Supported documents
@@ -111,8 +115,8 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Move the UI to Svelte 5 and pnpm | Done |
 | Fields to hide, live preview, watermark, black and white, review, PDF download, reset | Done |
 | Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
-| Zoom, one-page layout | Next |
-| Offline mode with service worker and integrity checks | Planned |
+| Offline mode with service worker and integrity checks | Done |
+| Redesign of the workflow and interface (including zoom) | In progress |
 | Automatic detection (edges, document type, OCR) | Planned |
 | 31 languages | 13 today |
 
@@ -121,7 +125,8 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 Open the site in a current browser (Chrome, Edge, Firefox, Safari; desktop or mobile). No account,
 no installation.
 
-1. Optional: disconnect from the Internet after the page has loaded.
+1. Optional: disconnect from the Internet after the page has loaded. After the first visit, the
+   tool also opens with no connection.
 2. Select the front, then the back.
 3. Drag the four circles onto the corners of the card. On a keyboard, arrow keys move the selected
    corner and <kbd>N</kbd> selects the next one. **Rotate** turns the frame if the photo is sideways.
@@ -185,7 +190,8 @@ not depend on Svelte. See [ADR 0003](docs/adr/0003-svelte-vite-pnpm.md).
 Rules the code follows:
 
 - No HTML strings: no `innerHTML` and no `{@html}`. Svelte builds DOM nodes directly
-  (`fragments: 'tree'`), and the CSP forbids creating any Trusted Types policy.
+  (`fragments: 'tree'`). The CSP allows one Trusted Types policy, `dnilimpio-sw`, which only
+  accepts the service worker's URL ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
 - No `eval`, `new Function`, inline scripts or inline styles.
 - No runtime requests and no persistent storage.
 - Test images are synthetic or official specimens. Never commit a photo of a real person's document.
@@ -201,7 +207,8 @@ Rules the code follows:
   and that the file has no metadata, no source file name and no watermark text), reset, and
   security checks on the built page: exact CSP, referrer policy, SRI on every asset, no inline code, no CSP violations and no
   request outside the page's origin, every on-demand chunk listed in the import map with the right
-  hash, and a tampered PDF chunk refused by the browser.
+  hash, a tampered PDF chunk refused by the browser, and offline mode (reload and full flow to the
+  PDF with the network off; a tampered file stops the service worker install).
 
 ## Deployment
 
@@ -220,7 +227,9 @@ There is no downloadable offline package ([ADR 0002](docs/adr/0002-no-standalone
 
 ```text
 src/
-  main.ts            mounts the app
+  main.ts            mounts the app, registers the service worker
+  sw.ts              service worker: verified offline cache of the build
+  offline/           service worker registration and precache helpers
   App.svelte         screen flow
   components/        Svelte components, one per screen or control
   capture/           file input, drag and drop, paste, decoding
@@ -230,7 +239,7 @@ src/
   engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
   i18n/              dictionaries, one JSON file per language
   ui/                corner editor (canvas widget) and in-memory state
-scripts/             CSP, build plugins (CSP, SRI), test fixture generator
+scripts/             CSP, build plugins (CSP, SRI, offline file list), test fixture generator
 tests/               unit, e2e and synthetic fixtures
 docs/                plan, zone measurement method, decision records
 ```
@@ -242,6 +251,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0001](docs/adr/0001-pdf-library.md): PDF export with `@cantoo/pdf-lib`.
 - [0002](docs/adr/0002-no-standalone-release.md): no standalone offline release.
 - [0003](docs/adr/0003-svelte-vite-pnpm.md): Svelte 5, Vite, pinned Node.js and pnpm.
+- [0004](docs/adr/0004-offline-service-worker.md): offline mode with a verified service worker.
 
 ## Contributing
 

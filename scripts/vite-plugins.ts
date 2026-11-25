@@ -7,6 +7,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, cspWithScriptHashes } from './csp.ts'
+import { SW_FILE, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 
 export function securityHeaders (): Plugin {
   return {
@@ -63,6 +64,7 @@ export function subresourceIntegrity (): Plugin {
       const lazy = readdirSync(assets).filter((f) => f.endsWith('.js') && !out.includes(`assets/${f}"`)).sort()
       if (lazy.length === 0) {
         writeFileSync(htmlPath, out)
+        writePrecacheManifest(outDir)
         return
       }
       const integrity = Object.fromEntries(lazy.map((f) => [`./assets/${f}`, sri(readFileSync(join(assets, f)))]))
@@ -74,6 +76,33 @@ export function subresourceIntegrity (): Plugin {
       if (!cspMeta.test(out)) throw new Error('dist/index.html has no CSP meta tag')
       const withMap = out.slice(0, firstModule) + `<script type="importmap">${importMap}</script>\n    ` + out.slice(firstModule)
       writeFileSync(htmlPath, withMap.replace(cspMeta, `$1${cspWithScriptHashes([hash]).replaceAll("'", '&#39;')}$2`))
+      writePrecacheManifest(outDir)
     },
   }
+}
+
+/** Every file under `dir`, as paths relative to it with forward slashes, sorted. */
+function listFiles (dir: string, prefix = ''): string[] {
+  return readdirSync(join(dir, prefix), { withFileTypes: true })
+    .flatMap((e) => (e.isDirectory() ? listFiles(dir, `${prefix}${e.name}/`) : [`${prefix}${e.name}`]))
+    .sort()
+}
+
+const PLACEHOLDER = /(["'`])__DNI_PRECACHE_MANIFEST__\1/
+
+/**
+ * Writes the offline file list into dist/sw.js: every file of the build (final bytes, so this runs
+ * after SRI has rewritten index.html) with its SHA-384, and a version derived from all of them.
+ * Any change to any file gives a new sw.js, which is what makes browsers install the update.
+ */
+function writePrecacheManifest (outDir: string): void {
+  const swPath = join(outDir, SW_FILE)
+  const sw = readFileSync(swPath, 'utf8')
+  if (!PLACEHOLDER.test(sw)) throw new Error('dist/sw.js has no precache manifest placeholder')
+  if (/^\s*import\b|\bimport\s*\(/m.test(sw)) throw new Error('dist/sw.js must not import other chunks')
+  const files: PrecacheFile[] = listFiles(outDir).filter(isPrecached).map((path) => ({ path, integrity: sri(readFileSync(join(outDir, path))) }))
+  const version = createHash('sha256').update(files.map((f) => `${f.path} ${f.integrity}`).join('\n')).digest('hex').slice(0, 16)
+  const json = JSON.stringify({ version, files })
+  parseManifest(json) // same checks as the worker runs
+  writeFileSync(swPath, sw.replace(PLACEHOLDER, () => JSON.stringify(json)))
 }

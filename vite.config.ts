@@ -19,6 +19,12 @@ export default defineConfig({
     // The polyfill injects an inline script, which the CSP forbids.
     modulePreload: { polyfill: false },
     assetsInlineLimit: 0,
+    rolldownOptions: {
+      // Two entries: the page, and the service worker, which must sit next to index.html as sw.js
+      // so its scope covers the whole app.
+      input: { index: 'index.html', sw: 'src/sw.ts' },
+      output: { entryFileNames: (chunk) => (chunk.name === 'sw' ? 'sw.js' : 'assets/[name]-[hash].js') },
+    },
   },
   plugins: [svelte(), securityHeaders(), subresourceIntegrity()],
 })
