@@ -11,7 +11,9 @@ export default defineConfig({
   // Relative base: the same dist/ works on the GitHub Pages subpath and when opened from disk.
   base: './',
   build: {
-    minify: false,
+    // Minified for load time. Source maps are published next to each file, so the shipped code
+    // can still be read and checked against the repository.
+    minify: true,
     sourcemap: true,
     target: 'es2022',
     // The polyfill injects an inline script, which the CSP forbids.
