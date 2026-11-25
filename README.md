@@ -132,8 +132,10 @@ it ([ADR 0011](docs/adr/0011-document-detection.md)):
   from the dates of birth and expiry (a DNI is valid 2 years under age 5, 5 years under 30 and
   10 years under 70; the DNI 4.0 is issued from 2 August 2021). When the dates fit both versions, or
   for a permanent DNI (holder 70 or over), the app says it is a DNI and asks you to choose the version.
-- Detection needs OCR. The first time, it asks before it downloads the OCR files (about 8 MB); after
-  that it runs by itself, also offline. When OCR cannot run (offline before the first download, no
+- Nothing is preselected until detection answers or you choose: **Continue** waits for a document,
+  so a TIE is never handled with DNI positions by mistake.
+- Detection needs OCR. Online, the first time, it downloads the OCR files by itself (about 8 MB, the
+  status line says so); after that it also runs offline. When OCR cannot run (offline before the first download, no
   service worker, an old browser), a note says so and you choose by hand. A choice you make yourself
   is never changed.
 
@@ -189,8 +191,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    short note appears, and **Take photo** opens the phone's own camera app instead, as before.
 4. **Document.** Confirm DNI 4.0, DNI 3.0 or TIE, then **Continue**. Each one has its own field
    positions. The app reads the code on the back (MRZ) on your device and preselects the document:
-   *Document detected: TIE. Check it before you continue.* The first time, **Detect automatically**
-   downloads the OCR files (about 8 MB) once; you can also skip it and choose by hand. Detection runs
+   *Document detected: TIE. Check it before you continue.* The first time, it downloads the OCR files
+   (about 8 MB) once; you can choose by hand at any moment. Until a document is chosen, **Continue**
+   stays off. Detection runs
    only in your browser and the photos never leave the device. To change the document later, go
    back from the editor: your photos are kept, the corners and choices start again.
 5. **Straighten (automatic).** After **Continue**, the app looks for the card in each photo (with the
@@ -298,7 +301,7 @@ Rules the code follows:
   segments dropped, image data unchanged), corner model answer checks, and PDF structure (pages, images, no metadata, no text,
   deterministic output).
 - **End to end** (`tests/e2e/`): document picker (each document's size, fields and warnings; changing
-  it keeps the photos), document detection (synthetic MRZ backs: TIE and DNI 4.0 preselected, a sideways
+  it keeps the photos), document detection (synthetic MRZ backs: TIE and DNI 4.0 preselected, nothing preselected without a result, a sideways
   photo, a manual choice never overridden, a note and the manual picker when offline or without a service
   worker), photo selection, automatic straightening (photos turned 0°, 90°, 180° and 270° come out
 upright, front and back), corner alignment from **Adjust corners**, the corner model (real model under the

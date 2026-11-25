@@ -66,6 +66,13 @@ Findings:
   field, visible by default. Some people may not want to show their immigration status.
 - The **issue date** is on the back ("FECHA DE EMISIÓN"); the place of issue next to it stays visible.
 - The NIE stays visible by design, like the DNI number. It is also in the MRZ.
+- **Checked on a real card (2026-11-25).** A permanent residence card of a family member of an EU
+  citizen ("TARJETA DE RESIDENCIA PERMANENTE", permit type "REGIM COMUNITARIO", "Residence card of a
+  family member of a Union citizen") uses the same 2020 layout; only the title and the permit text
+  differ. The dates of birth and expiry and the second card number reached up to about 2 % beyond the
+  specimen boxes, so those boxes were widened. The card is not stored anywhere.
+- PRADO lists one 2020 model for every TIE title (temporary or long-term residence, EU family member,
+  students, workers); the title and permit lines change. Report a card whose fields sit elsewhere.
 - Earlier TIE models (PRADO ESP-HO-02xxx) are not covered; they were replaced in 2020 and their
   5-year validity has ended.
 

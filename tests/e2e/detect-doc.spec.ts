@@ -61,10 +61,9 @@ test('reads the back, preselects TIE, then DNI 4.0 for a new photo', async ({ pa
   await page.locator('#file-back').setInputFiles(await back(page, mrz('IR', '900101', '290101')))
   await page.locator('#capture-continue').click()
 
-  // First time: OCR needs a download, so it waits for the person's tap.
-  await expect(page.locator('#doc-detect')).toBeVisible()
-  await expect(page.locator('[id="doc-dni-4.0"]')).toBeChecked()
-  await page.locator('#doc-detect').click()
+  // First time: the OCR files download by themselves (online), then the back is read.
+  await expect(page.locator('input[name="doc"]:checked')).toHaveCount(0)
+  await expect(page.locator('#doc-continue')).toBeDisabled()
   await expect(page.locator('#detect-status')).toHaveText('Documento detectado: TIE (tarjeta de extranjero). Compruébalo antes de continuar.', { timeout: 90_000 })
   await expect(page.locator('#doc-tie')).toBeChecked()
 
@@ -72,7 +71,6 @@ test('reads the back, preselects TIE, then DNI 4.0 for a new photo', async ({ pa
   await page.locator('#back').click()
   await page.locator('#file-back').setInputFiles(await back(page, mrz('ID', '800101', '330101')))
   await page.locator('#capture-continue').click()
-  await expect(page.locator('#doc-detect')).toHaveCount(0)
   await expect(page.locator('#detect-status')).toHaveText('Documento detectado: DNI 4.0. Compruébalo antes de continuar.', { timeout: 60_000 })
   await expect(page.locator('[id="doc-dni-4.0"]')).toBeChecked()
 })
@@ -84,7 +82,6 @@ test('a sideways photo is detected too', async ({ page }) => {
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
   await page.locator('#file-back').setInputFiles(await back(page, mrz('IR', '900101', '290101'), true))
   await page.locator('#capture-continue').click()
-  await page.locator('#doc-detect').click()
   await expect(page.locator('#detect-status')).toHaveText('Documento detectado: TIE (tarjeta de extranjero). Compruébalo antes de continuar.', { timeout: 90_000 })
 })
 
@@ -95,11 +92,10 @@ test('a choice made by hand is never overridden', async ({ page }) => {
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
   await page.locator('#file-back').setInputFiles(await back(page, mrz('IR', '900101', '290101')))
   await page.locator('#capture-continue').click()
-  // Clicking the radio that is already selected counts as a choice too.
-  await page.locator('[id="doc-dni-4.0"]').click()
-  await page.locator('#doc-detect').click()
+  // Picked while the back is still being read: the result informs, it does not override.
+  await page.locator('[id="doc-dni-3.0"]').click()
   await expect(page.locator('#detect-status')).toContainText('TIE', { timeout: 90_000 })
-  await expect(page.locator('[id="doc-dni-4.0"]')).toBeChecked()
+  await expect(page.locator('[id="doc-dni-3.0"]')).toBeChecked()
 })
 
 test('offline without the OCR files: a note, and the manual choice', async ({ page, context }) => {
@@ -110,7 +106,7 @@ test('offline without the OCR files: a note, and the manual choice', async ({ pa
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await page.locator('#capture-continue').click()
   await expect(page.locator('#detect-status')).toHaveText('Sin conexión no se puede descargar la detección automática. Elige el documento.')
-  await expect(page.locator('#doc-detect')).toHaveCount(0)
+  await expect(page.locator('#doc-continue')).toBeDisabled()
   await page.locator('#doc-tie').check()
   await page.locator('#doc-continue').click()
   await expect(page.locator('h2')).toHaveText('Elige qué tapar')

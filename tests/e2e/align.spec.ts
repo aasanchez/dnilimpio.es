@@ -105,6 +105,7 @@ test('corners confirmed by hand survive replacing only the other photo', async (
   await page.locator('#back').click()
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await page.locator('#capture-continue').click()
+  await page.locator('[id="doc-dni-4.0"]').check()
   await page.locator('#doc-continue').click()
   await expect(page.locator('h2')).toHaveText('Elige qué tapar')
   await page.locator('#tab-front').click()
