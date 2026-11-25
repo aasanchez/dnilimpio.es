@@ -85,3 +85,19 @@ test('a second open tab of the app holds the update back', async ({ page, contex
   await expect.poll(async () => await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.waiting != null), { timeout: 15_000 }).toBe(true)
   expect(await marked(page)).toBe('1')
 })
+
+test('once the other tab closes, the update is applied when the tab comes back to the foreground', async ({ page, context }) => {
+  await page.goto(URL_)
+  await controlled(page)
+  const other = await context.newPage()
+  await other.goto(URL_)
+  await controlled(other)
+  await page.evaluate(() => { document.documentElement.dataset['oldPage'] = '1' })
+  await deployNextBuild(page)
+  await expect.poll(async () => await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.waiting != null), { timeout: 15_000 }).toBe(true)
+  await other.close()
+  const reloaded = page.waitForEvent('load')
+  await page.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')) })
+  await reloaded
+  expect(await marked(page)).toBeUndefined()
+})

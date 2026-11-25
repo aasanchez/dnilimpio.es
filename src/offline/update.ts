@@ -17,6 +17,8 @@
 let idle = false
 let registration: ServiceWorkerRegistration | undefined
 let reloading = false
+/** This page asked the waiting build to take over. */
+let requested = false
 let lastCheck = 0
 
 /** Minimum time between update checks triggered by the tab becoming visible again. */
@@ -26,6 +28,7 @@ const CHECK_INTERVAL_MS = 15 * 60 * 1000
 function offer (): void {
   const waiting = registration?.waiting
   if (!idle || !waiting || navigator.serviceWorker.controller === null) return
+  requested = true
   waiting.postMessage({ type: 'activate' })
 }
 
@@ -43,12 +46,15 @@ export async function watchForUpdates (): Promise<void> {
   if (registration === undefined) return
   const reg = registration
 
-  // The new build took over: show it, unless the user started working meanwhile. The first worker
-  // taking control of a page that had none (first visit) is the same build: no reload then.
+  // The new build took over: show it. The first worker taking control of a page that had none (first
+  // visit) is the same build: no reload then. When this page asked for the switch, it reloads even if
+  // the user left the start screen in the few milliseconds since: the new build has already deleted
+  // the old build's files, so this page could no longer load its on-demand code. No photo can have
+  // been chosen in that time. A switch this page did not ask for keeps a working page as it is.
   let hadController = sw.controller !== null
   sw.addEventListener('controllerchange', () => {
     if (!hadController) { hadController = true; return }
-    if (reloading || !idle) return
+    if (reloading || (!idle && !requested)) return
     reloading = true
     location.reload()
   })
@@ -60,9 +66,12 @@ export async function watchForUpdates (): Promise<void> {
     })
   })
 
-  // A tab left open for hours: look for a new build when it comes back to the foreground.
+  // A tab left open for hours: look for a new build when it comes back to the foreground. A build
+  // that is already waiting (refused earlier because another tab was open) is offered again.
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible' || Date.now() - lastCheck < CHECK_INTERVAL_MS) return
+    if (document.visibilityState !== 'visible') return
+    offer()
+    if (Date.now() - lastCheck < CHECK_INTERVAL_MS) return
     lastCheck = Date.now()
     void reg.update().catch(() => undefined)
   })
