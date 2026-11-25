@@ -97,6 +97,8 @@
   "alignFront": "Encuadra el anverso",
   "alignBack": "Encuadra el reverso",
   "alignLead": "Arrastra cada punto a una esquina. La lupa te ayuda a afinar.",
+  "cornersSearching": "Buscando el documento en la foto…",
+  "cornersFound": "Hemos colocado las esquinas sobre el documento. Revísalas y ajústalas si hace falta.",
   "restartCorners": "Reiniciar",
   "cornersDone": "Listo",
   "cornersDoneNextBack": "Listo, ahora el reverso",

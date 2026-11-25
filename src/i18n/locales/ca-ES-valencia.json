@@ -97,6 +97,8 @@
   "alignFront": "Enquadra l’anvers",
   "alignBack": "Enquadra el revers",
   "alignLead": "Arrossega cada punt a un cantó. La lupa t’ajuda a afinar.",
+  "cornersSearching": "S'està buscant el document en la foto…",
+  "cornersFound": "Hem col·locat les cantonades sobre el document. Reviseu-les i ajusteu-les si cal.",
   "restartCorners": "Reinicia",
   "cornersDone": "Fet",
   "cornersDoneNextBack": "Fet, ara el revers",
