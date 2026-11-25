@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, test } from '@playwright/test'
-import { CARD, pixel, snapCorners, toAlign } from './helpers.ts'
+import { CARD, fixture, pixel, snapCorners, toAlign } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
@@ -83,4 +83,30 @@ test.describe('touch', () => {
     await canvas.dispatchEvent('pointerup', { ...base, ...at({ x: 1500 + 40, y: 1100 + 40 }) })
     await expect(page.locator('#align-continue')).toBeDisabled()
   })
+})
+
+test('corners confirmed by hand survive replacing only the other photo', async ({ page }) => {
+  await toAlign(page)
+  const canvas = page.locator('canvas.corner-editor')
+  const box = await canvas.boundingBox()
+  if (!box) throw new Error('no canvas box')
+  const k = box.width / 1600
+  // Move the top-left corner out onto the dark table: the straightened front then starts dark there.
+  await page.mouse.move(box.x + CARD[0]!.x * k, box.y + CARD[0]!.y * k)
+  await page.mouse.down()
+  await page.mouse.move(box.x + 60 * k, box.y + 60 * k, { steps: 5 })
+  await page.mouse.up()
+  await page.locator('#align-continue').click()
+  await expect(page.locator('#preview')).toHaveJSProperty('width', 1712)
+  const dark = async (): Promise<number> => (await pixel(page, '#preview', 8, 8))[0] ?? 255
+  await expect.poll(dark).toBeLessThan(100)
+  // Back to the photos, replace the back only, continue with the same document.
+  await page.locator('#back').click()
+  await page.locator('#back').click()
+  await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
+  await page.locator('#capture-continue').click()
+  await page.locator('#doc-continue').click()
+  await expect(page.locator('h2')).toHaveText('Elige qué tapar')
+  await page.locator('#tab-front').click()
+  await expect.poll(dark).toBeLessThan(100)
 })

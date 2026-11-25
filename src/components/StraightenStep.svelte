@@ -33,6 +33,9 @@
     for (const side of ['front', 'back'] as const) {
       const bitmap = photos[side]
       if (!bitmap) { missed.push(side); continue }
+      // Already straightened for this document and photo (e.g. corners the person confirmed, then
+      // only the other photo was replaced): keep it. A new photo or document clears it (App.svelte).
+      if (align.warped[side]) continue
       let found = null
       try {
         found = await autoAlign(bitmap, doc, side, size)

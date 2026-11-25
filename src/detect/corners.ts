@@ -27,8 +27,9 @@ export function modelSupported (): boolean {
 }
 
 /**
- * How long the first use waits for the model to download (about 2.6 MB) before edge detection
- * answers instead. The download goes on in the background, so the next photo can use it.
+ * How long the model may take (download of about 2.6 MB the first time, runtime start-up and the
+ * detection itself) before edge detection answers instead. The download goes on in the background,
+ * so the next photo can use it.
  */
 export const MODEL_WAIT_MS = 10_000
 
@@ -37,8 +38,8 @@ const byModel: Detector = async (bitmap) => {
   let timer: ReturnType<typeof setTimeout> | undefined
   const late = new Promise<null>((resolve) => { timer = setTimeout(() => { resolve(null) }, MODEL_WAIT_MS) })
   try {
-    const m = await Promise.race([loadModel(), late])
-    return m ? await m.detect(bitmap) : null
+    // The whole operation races the deadline: a stalled runtime start-up must also fall back.
+    return await Promise.race([loadModel().then(async (m) => await m.detect(bitmap)), late])
   } finally {
     clearTimeout(timer)
   }
