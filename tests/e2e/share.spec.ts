@@ -36,7 +36,7 @@ test('without file sharing, WhatsApp and email are links with a fixed message an
 
 test('with file sharing, both buttons hand the PDF to the system share sheet', async ({ page }) => {
   await page.addInitScript(() => {
-    const calls: Array<{ names: string[]; types: string[]; title?: string; text?: string; url?: string }> = []
+    const calls: Array<{ names: string[]; types: string[]; title: string | undefined; text: string | undefined; url: string | undefined }> = []
     Object.assign(window, { shareCalls: calls })
     Object.defineProperty(navigator, 'canShare', { value: (d: ShareData) => (d.files?.length ?? 0) > 0 })
     Object.defineProperty(navigator, 'share', {
