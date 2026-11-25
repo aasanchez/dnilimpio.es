@@ -283,7 +283,8 @@ jobs:
   # An `if:` without a status function means success() of every job upstream, including jobs skipped on
   # purpose (dependency-review on a push), which would skip the deploy. So the results are checked here.
   deploy:
-    if: ${{ !cancelled() && github.ref == 'refs/heads/master' && needs.ci-ok.result == 'success' && needs.build.result == 'success' }}
+    # Only master: a push to master or a manual run on master. Never a pull request or another branch.
+    if: ${{ !cancelled() && github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.ci-ok.result == 'success' && needs.build.result == 'success' }}
     needs: [ci-ok, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
