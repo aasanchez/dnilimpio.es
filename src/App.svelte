@@ -49,6 +49,8 @@
   // Field choices, watermark and greyscale survive going back to adjust corners; Reset clears them.
   let edit = $state(emptyEditState(documentOf(DEFAULT_DOC)))
   let root: HTMLElement | undefined = $state()
+  /** The no-cookies notice: shown on the start screen until dismissed. In memory only, so a reload shows it again. */
+  let notice = $state(true)
   const alignBitmap = $derived(capture[alignSide])
 
   const STEPS: ReadonlyArray<{ key: Key; at: Step | Phase }> = [
@@ -212,7 +214,7 @@
         <CaptureStep {lang} state={capture} {onLoaded} onContinue={() => { go('doc') }} />
       {/key}
     {:else}
-      <Home {lang} onStart={() => { go('capture', 'front') }} />
+      <Home {lang} {notice} onNoticeDismiss={() => { notice = false }} onStart={() => { go('capture', 'front') }} />
     {/if}
   </div>
 </div>
