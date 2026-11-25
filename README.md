@@ -180,7 +180,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    a computer, **Choose image**, drag and drop, or paste (<kbd>Ctrl</kbd>+<kbd>V</kbd>) also work.
    Tap a side's tile to replace its photo.
 
-   **Capture coach.** A live camera view with a card-shaped frame. Below it, one tip at a time:
+   **Capture coach.** A live camera view with a card-shaped frame. Inside the frame, a faint
+   drawing shows which side to hold up: a photo and text lines for the front, text lines and the
+   three machine-readable lines for the back. It fades once the card is in place. Below it, one tip at a time:
    *Fit the card inside the frame*, *Move a little closer*, *Hold the card straight*, *Too dark*,
    *Glare: tilt the card slightly*, *Hold the phone still*, *Blurry: wait for it to focus*. When
    every check passes for about half a second, the photo is taken by itself, and the view moves to

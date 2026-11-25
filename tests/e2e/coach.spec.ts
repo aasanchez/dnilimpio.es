@@ -54,9 +54,12 @@ test.describe('with a working camera', () => {
     await page.locator('#live-front').click()
     const dialog = page.locator('dialog.live')
     await expect(dialog).toBeVisible()
+    // A ghost drawing shows which side to hold up: the front first.
+    await expect(page.locator('.live-guide .ghost')).toHaveAttribute('data-side', 'front')
     // Automatic shot: the front loads without touching the shutter, and the view moves to the back.
     await expect(page.locator('#status-front')).toHaveText('Imagen cargada.', { timeout: 10_000 })
     await expect(page.locator('#live-title')).toHaveText('Foto del reverso')
+    await expect(page.locator('.live-guide .ghost')).toHaveAttribute('data-side', 'back')
     await expect(page.locator('#live-tip')).toHaveText('Hecho. Ahora da la vuelta a la tarjeta.')
     // The same card is still in view: no second automatic shot for the back.
     await page.waitForTimeout(1500)
