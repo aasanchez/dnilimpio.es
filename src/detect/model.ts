@@ -65,20 +65,32 @@ function input (bitmap: ImageBitmap, r: Rect): Float32Array<ArrayBuffer> {
     out[j + 1] = (data[i + 1]! / 255 - MEAN[1]) / STD[1]
     out[j + 2] = (data[i + 2]! / 255 - MEAN[2]) / STD[2]
   }
+  // The scaled copy of the photo is not needed any more: clear its pixels and free the canvas.
+  data.fill(0)
+  canvas.width = 0
   return out
 }
 
 /** Runs the model on one region of the photo; corners come back in photo pixels. */
 async function run (s: ort.InferenceSession, bitmap: ImageBitmap, r: Rect): Promise<Detection | null> {
-  const feeds = { [s.inputNames[0]!]: new ort.Tensor('float32', input(bitmap, r), [1, SIZE, SIZE, 3]) }
-  const out = await s.run(feeds)
+  const pixels = input(bitmap, r)
+  const tensor = new ort.Tensor('float32', pixels, [1, SIZE, SIZE, 3])
+  let out: ort.InferenceSession.ReturnType | undefined
   let coords: ArrayLike<number> | null = null
   let logit = Number.NaN
-  for (const t of Object.values(out)) {
-    const d = t.data as Float32Array
-    if (d.length === 8) coords = Array.from(d)
-    else if (d.length === 1) logit = d[0]!
-    t.dispose()
+  try {
+    out = await s.run({ [s.inputNames[0]!]: tensor })
+    // Only the eight corner coordinates and the score are kept.
+    for (const t of Object.values(out)) {
+      const d = t.data as Float32Array
+      if (d.length === 8) coords = Array.from(d)
+      else if (d.length === 1) logit = d[0]!
+    }
+  } finally {
+    // Also on failure: release the model's buffers and clear the photo-derived input.
+    for (const t of Object.values(out ?? {})) t.dispose()
+    tensor.dispose()
+    pixels.fill(0)
   }
   const found = coords ? modelDetection(coords, logit, r.w, r.h) : null
   return found && { ...found, quad: found.quad.map((p) => ({ x: p.x + r.x, y: p.y + r.y })) as unknown as Detection['quad'] }
