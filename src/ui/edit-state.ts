@@ -3,7 +3,7 @@
 
 import { defaultHidden } from '../engine/fields.ts'
 import { start, type History } from '../engine/history.ts'
-import { DNI_4_0, type Rect, type Side, type ZoneId } from '../zones/dni.ts'
+import type { ModelZones, Rect, Side, ZoneId } from '../zones/types.ts'
 
 /** Screen inside step 3: choosing what to hide, reviewing the result, or done after the download. */
 export type Phase = 'edit' | 'review' | 'done'
@@ -20,6 +20,7 @@ export interface EditState {
   boxes: History<Boxes>;
 }
 
-export function emptyEditState (): EditState {
-  return { hidden: [...defaultHidden(DNI_4_0)], watermark: '', greyscale: false, boxes: start<Boxes>({ front: [], back: [] }) }
+/** Fresh choices for one document: its recommended fields hidden, no boxes, no watermark. */
+export function emptyEditState (model: ModelZones): EditState {
+  return { hidden: [...defaultHidden(model)], watermark: '', greyscale: false, boxes: start<Boxes>({ front: [], back: [] }) }
 }

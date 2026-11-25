@@ -9,11 +9,13 @@
   import { resetSide } from '../ui/align-state.ts'
   import { cornerEditor, type CornerEditor } from '../ui/corner-editor.ts'
   import { warpBitmap } from '../ui/warp-bitmap.ts'
-  import type { Side } from '../zones/dni.ts'
+  import type { Side } from '../zones/types.ts'
 
-  const { lang, side, bitmap, align, aligned, onSide, onDone }: {
+  const { lang, side, size, bitmap, align, aligned, onSide, onDone }: {
     lang: Lang
     side: Side
+    /** Size of the straightened document in pixels; also sets the starting frame's shape. */
+    size: { readonly w: number; readonly h: number }
     bitmap: ImageBitmap
     align: AlignState
     /** Which sides already have confirmed corners. */
@@ -23,7 +25,7 @@
   } = $props()
 
   const SIDES = ['front', 'back'] as const
-  let quad = $state.raw<Quad>(untrack(() => align.quads[side] ?? defaultQuad(bitmap.width, bitmap.height)))
+  let quad = $state.raw<Quad>(untrack(() => align.quads[side] ?? defaultQuad(bitmap.width, bitmap.height, size.w / size.h)))
   untrack(() => { align.quads[side] = quad })
   const valid = $derived(isConvex(quad))
   const sideName = (s: Side): string => t(lang, s === 'front' ? 'tabFront' : 'tabBack')
@@ -58,7 +60,7 @@
   }
 
   function restart (): void {
-    setQuad(defaultQuad(bitmap.width, bitmap.height))
+    setQuad(defaultQuad(bitmap.width, bitmap.height, size.w / size.h))
     editor?.setQuad(quad)
   }
 
@@ -67,7 +69,7 @@
     const q = quad
     resetSide(align, side)
     align.quads[side] = q
-    align.warped[side] = warpBitmap(bitmap, q)
+    align.warped[side] = warpBitmap(bitmap, q, size)
     onDone()
   }
 </script>

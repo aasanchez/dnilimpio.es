@@ -1,0 +1,184 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!--
+  Capture coach: live rear-camera view with a card guide, one tip at a time, and an automatic shot
+  when the card is framed, lit, steady and sharp. Frames are analysed in memory and never leave
+  the device. If the camera cannot start, it reports why through onFail and the step falls back
+  to the plain camera and gallery buttons.
+-->
+<script lang="ts">
+  import { onMount } from 'svelte'
+  import { Coach, guideRect, toGray, type Tip } from '../capture/coach.ts'
+  import { openCamera, stopStream, type CameraFailure } from '../capture/live.ts'
+  import { t, type Key, type Lang } from '../i18n/index.ts'
+  import type { Side } from '../zones/dni.ts'
+
+  const { lang, side, onShot, onClose, onFail }: {
+    lang: Lang
+    side: Side
+    onShot: (bitmap: ImageBitmap) => void
+    onClose: () => void
+    onFail: (reason: CameraFailure) => void
+  } = $props()
+
+  /** Analysis frames: about 8 per second, 480 px on the long side. */
+  const ANALYSE_EVERY_MS = 125
+  const ANALYSIS_SIZE = 480
+  /** If the camera gives no picture this long after permission, give up quietly. */
+  const START_TIMEOUT_MS = 6000
+
+  const TIP_KEY: Record<Tip, Key> = {
+    frame: 'tipFrame',
+    closer: 'tipCloser',
+    tilt: 'tipTilt',
+    dark: 'tipDark',
+    glare: 'tipGlare',
+    steady: 'tipSteady',
+    blur: 'tipBlur',
+    ready: 'tipReady',
+  }
+
+  let dialog: HTMLDialogElement | undefined = $state()
+  let video: HTMLVideoElement | undefined = $state()
+  let size = $state<{ w: number; h: number } | null>(null)
+  let tip = $state<Tip | null>(null)
+  let auto = $state(true)
+  let busy = $state(false)
+  let flash = $state(false)
+  /** Short message after a shot, e.g. "now turn the card over". */
+  let notice = $state<Key | null>(null)
+
+  const guide = $derived(size ? guideRect(size.w, size.h) : null)
+  const message = $derived.by(() => {
+    if (notice) return t(lang, notice)
+    if (!size) return t(lang, 'liveStarting')
+    if (tip === 'ready' && !auto) return t(lang, 'tipReadyManual')
+    return t(lang, TIP_KEY[tip ?? 'frame'])
+  })
+
+  let stream: MediaStream | null = null
+  let closed = false
+  const coach = new Coach()
+
+  function fail (reason: CameraFailure): void {
+    if (closed) return
+    closed = true
+    stopStream(stream)
+    onFail(reason)
+  }
+
+  async function shoot (): Promise<void> {
+    if (!video || !size || busy) return
+    busy = true
+    coach.shotTaken(performance.now())
+    try {
+      // Full camera resolution, straight from the current video frame.
+      const bitmap = await createImageBitmap(video)
+      if (closed) { bitmap.close(); return }
+      flash = true
+      setTimeout(() => { flash = false }, 180)
+      onShot(bitmap)
+    } catch {
+      fail('unavailable')
+    } finally {
+      busy = false
+    }
+  }
+
+  // After a shot the parent moves on to the other side: say so for a moment.
+  let lastSide: Side | null = null
+  $effect(() => {
+    if (lastSide !== null && side !== lastSide) {
+      notice = 'liveFlip'
+      const id = setTimeout(() => { notice = null }, 2200)
+      lastSide = side
+      return () => { clearTimeout(id) }
+    }
+    lastSide = side
+    return undefined
+  })
+
+  onMount(() => {
+    dialog?.showModal()
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let shownTip: Tip | null = null
+    let pendingTip: Tip | null = null
+
+    const analyse = (): void => {
+      timer = setTimeout(analyse, ANALYSE_EVERY_MS)
+      if (!video || !ctx || closed || busy || video.readyState < 2 || video.videoWidth === 0) return
+      const vw = video.videoWidth
+      const vh = video.videoHeight
+      if (!size || size.w !== vw || size.h !== vh) size = { w: vw, h: vh }
+      const scale = ANALYSIS_SIZE / Math.max(vw, vh)
+      const w = Math.max(1, Math.round(vw * scale))
+      const h = Math.max(1, Math.round(vh * scale))
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h }
+      ctx.drawImage(video, 0, 0, w, h)
+      const advice = coach.feed(toGray(ctx.getImageData(0, 0, w, h).data, w, h), performance.now())
+      // Change the tip only when it holds for two frames, so it does not flicker; "ready" shows at once.
+      if (advice.tip === 'ready' || advice.tip === pendingTip) {
+        if (advice.tip !== shownTip) { shownTip = advice.tip; tip = advice.tip }
+      }
+      pendingTip = advice.tip
+      if (advice.shoot && auto) void shoot()
+    }
+
+    const onVisibility = (): void => {
+      // Leaving the tab turns the camera off; the user can open it again.
+      if (document.visibilityState === 'hidden') { closed = true; stopStream(stream); onClose() }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    void (async () => {
+      const result = await openCamera({ isSecureContext: window.isSecureContext, mediaDevices: navigator.mediaDevices })
+      if (!result.ok) { fail(result.reason); return }
+      stream = result.stream
+      if (closed || !video) { stopStream(stream); return }
+      for (const track of stream.getVideoTracks()) track.addEventListener('ended', () => { fail('unavailable') })
+      video.srcObject = stream
+      const started = await Promise.race([
+        video.play().then(() => true, () => false),
+        new Promise<false>((resolve) => { setTimeout(() => { resolve(false) }, START_TIMEOUT_MS) }),
+      ])
+      if (!started) { fail('unavailable'); return }
+      analyse()
+    })()
+
+    return () => {
+      closed = true
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisibility)
+      stopStream(stream)
+      if (video) video.srcObject = null
+      if (dialog?.open) dialog.close()
+    }
+  })
+</script>
+
+<dialog class="live" bind:this={dialog} aria-labelledby="live-title"
+  oncancel={(e) => { e.preventDefault(); onClose() }}>
+  <div class="live-bar">
+    <h2 id="live-title" class="live-title">{t(lang, side === 'front' ? 'captureFront' : 'captureBack')}</h2>
+    <button type="button" class="chip live-auto" id="live-auto" aria-pressed={auto} onclick={() => { auto = !auto }}>{t(lang, 'liveAuto')}</button>
+    <button type="button" class="icon-btn live-close" id="live-close" aria-label={t(lang, 'liveClose')} onclick={onClose}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+    </button>
+  </div>
+  <div class="live-view" class:flash>
+    <video bind:this={video} muted playsinline autoplay disablepictureinpicture aria-hidden="true"></video>
+    {#if size && guide}
+      <!-- Same box and fit as the video, so the guide sits exactly where the coach looks. -->
+      <svg class="live-guide" viewBox="0 0 {size.w} {size.h}" aria-hidden="true">
+        <rect x={guide.x} y={guide.y} width={guide.w} height={guide.h} rx={guide.w * 0.04} class:ok={tip === 'ready'} />
+      </svg>
+    {/if}
+  </div>
+  <p class="live-tip" class:ok={tip === 'ready' && !notice} id="live-tip" role="status">{message}</p>
+  <div class="live-actions">
+    <button type="button" class="shutter" id="live-shutter" disabled={!size || busy} onclick={() => { void shoot() }}>
+      <span class="visually-hidden">{t(lang, 'liveShutter')}</span>
+    </button>
+  </div>
+</dialog>

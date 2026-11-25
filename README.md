@@ -6,8 +6,8 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 **Use it:** <https://aasanchez.github.io/dnilimpio.es/> (planned move to `dnilimpio.es`).
 
 > [!IMPORTANT]
-> **Work in progress.** The full flow works for the DNI 4.0: select both sides, straighten them,
-> choose the fields to hide, draw extra black boxes, add a watermark, review and download the PDF.
+> **Work in progress.** The full flow works for the DNI 4.0, DNI 3.0 and TIE: choose the document, select both sides, straighten them, choose the
+> fields to hide, draw extra black boxes, add a watermark, review and download the PDF.
 > Automatic detection is still being built (see [Status](#status)).
 > Always check the result before you share it.
 
@@ -29,16 +29,18 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 
 ## What it does
 
-When a landlord, employer or company asks for a copy of your DNI, they usually need only some of the data.
-This tool makes a copy that shows only what you choose:
+When a landlord, employer or company asks for a copy of your DNI or TIE, they usually
+need only some of the data. This tool makes a copy that shows only what you choose:
 
-1. **Select** a photo of the front and the back (JPEG, PNG, WebP; camera on mobile).
-2. **Straighten** each side by marking its four corners.
-3. **Choose the fields to hide** (signature, dates, support number, CAN, MRZ and others), and draw
+1. **Choose the document**: DNI 4.0, DNI 3.0 or TIE.
+2. **Select** a photo of the front and the back (JPEG, PNG, WebP; camera on mobile). On a phone,
+   the **capture coach** gives live tips and takes the photo by itself when the card is sharp.
+3. **Straighten** each side by marking its four corners.
+4. **Choose the fields to hide** (signature, dates, support number, CAN, MRZ and others), and draw
    extra black boxes over anything else.
-4. **Add a watermark** (optional), for example `COPY ONLY FOR RENTAL APPLICATION`.
-5. **Convert to black and white** (optional).
-6. **Review** both sides and **download a PDF**: `protected-document.pdf`.
+5. **Add a watermark** (optional), for example `COPY ONLY FOR RENTAL APPLICATION`.
+6. **Convert to black and white** (optional).
+7. **Review** both sides and **download a PDF**: `protected-document.pdf`.
 
 The PDF holds new images in which the hidden pixels are replaced with solid black. It is not the
 original photo with boxes on top: the hidden data is gone from the file.
@@ -61,10 +63,13 @@ Whether a recipient accepts a redacted copy is up to them.
   your browser. The OCR engine and Spanish language data (about 8 MB) come from this site, never from
   a third party, are downloaded only the first time OCR is used, and are checked against their hash
   before use. If OCR cannot run (offline before the first download, or no service worker), it is
-  switched off and you place the fields by hand ([ADR 0005](docs/adr/0005-on-device-ocr.md)).
+  switched off and you place the fields by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
+- **Camera stays on the device.** The live camera (capture coach) is analysed frame by frame in
+  memory. No frame is stored or sent, and the camera turns off when you close the view, finish both
+  sides or leave the tab.
 - **No tracking.** No analytics, telemetry, cookies, fonts or scripts from third parties.
 - **Real redaction.** Hidden areas are painted as opaque black pixels on a new image, with a margin
   around each field. Blur and pixelation are not offered, because they can be reversed.
@@ -98,14 +103,18 @@ Whether a recipient accepts a redacted copy is up to them.
 
 ## Supported documents
 
-| Document | Status |
-|---|---|
-| DNI 4.0 (2021 onwards), front and back | Field positions measured on the official specimen ([method](docs/ZONES.md)) |
-| DNI 3.0 | Planned |
-| TIE (foreigner identity card) | Planned |
-| Certificate with NIE (EU citizen registration) | Planned |
+| Document | Shape | Source of the field positions | Hidden by default | Optional |
+|---|---|---|---|---|
+| DNI 4.0 (August 2021 onwards) | card, 85.6 × 54 mm | Policía Nacional specimen | CAN, signature, issue and expiry dates, support number (3 places), MRZ | date and place of birth, address, parents |
+| DNI 3.0 (2015 to 2021) | card, 85.6 × 54 mm | PRADO ESP-BO-05001 | CAN, signature, issue date (laser text by the small photo), expiry date, support number (3 places), MRZ | date and place of birth, address, parents |
+| TIE, foreigner identity card (2020 model) | card, 85.6 × 54 mm | PRADO ESP-HO-03001 | CAN, signature, issue and expiry dates, card number (2 places), MRZ | date and place of birth, address, permit type |
 
-Any other photo can be redacted by hand once manual boxes are available.
+Positions were measured on official specimens ([method and findings](docs/ZONES.md)). The name, the
+photo and the DNI or NIE number stay visible by design; cover them with a black box if needed. Any
+other document can be redacted by hand with black boxes.
+
+The document is chosen by hand. Automatic detection is planned: it will only preselect the choice
+([ADR 0006](docs/adr/0006-document-types.md)).
 
 ## Status
 
@@ -122,6 +131,8 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
 | Offline mode with service worker and integrity checks | Done |
 | Redesign of the workflow and interface: guided phone-first flow, new visual style | Done |
+| Capture coach: live camera tips (framing, tilt, light, glare, blur, movement) and automatic shot | Done |
+| DNI 3.0 and TIE, with a document picker | Done |
 | Automatic card edge detection (engine, classic image processing) | Done, not yet in the interface |
 | On-device OCR engine and MRZ reader (Tesseract.js, self-hosted, loaded on first use) | Done, not yet in the interface |
 | Document type detection, smart field finding | Planned |
@@ -137,19 +148,35 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 1. Optional: disconnect from the Internet after the page has loaded. After the first visit, the
    tool also opens with no connection.
 2. **Start.** The first screen explains what the tool does. Press **Start**.
-3. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself. On a
-   phone, **Take photo** opens the camera and **Gallery** opens your pictures; on a computer,
-   **Choose image**, drag and drop, or paste (<kbd>Ctrl</kbd>+<kbd>V</kbd>) also work. Tap a side's
-   tile to replace its photo.
-4. **Corners.** Drag the four circles onto the corners of the card; a magnifier shows the area under
+3. **Document.** Choose DNI 4.0 (preselected), DNI 3.0 or TIE, then **Continue**. Each one has its
+   own field positions. To change it later, go back from
+   the photo screen: your photos are kept, the corners and choices start again.
+4. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself. On a
+   phone, **Take photo** opens the capture coach (see below) and **Gallery** opens your pictures; on
+   a computer, **Choose image**, drag and drop, or paste (<kbd>Ctrl</kbd>+<kbd>V</kbd>) also work.
+   Tap a side's tile to replace its photo.
+
+   **Capture coach.** A live camera view with a card-shaped frame. Below it, one tip at a time:
+   *Fit the card inside the frame*, *Move a little closer*, *Hold the card straight*, *Too dark*,
+   *Glare: tilt the card slightly*, *Hold the phone still*, *Blurry: wait for it to focus*. When
+   every check passes for about half a second, the photo is taken by itself, and the view moves to
+   the back: turn the card over and it takes that one too. The round button takes the photo at any
+   moment, **Automatic shot** turns the automatic photo off, and ✕ closes the camera.
+
+   The coach uses no model and no network, so it works the same online and offline. It needs a
+   browser that gives web pages a live camera, and your permission. If either is missing (permission
+   refused, no camera, an old browser, the page opened from a file), the coach does not open: a
+   short note appears, and **Take photo** opens the phone's own camera app instead, as before.
+5. **Corners.** Drag the four circles onto the corners of the card; a magnifier shows the area under
    your finger. On a keyboard, arrow keys move the selected corner and <kbd>N</kbd> selects the next
    one. **Rotate** turns the frame if the photo is sideways, **Reset** puts the circles back. The
    button takes you from the front to the back, then on to the next step.
-5. **Hide.** The card stays on screen. Choose **Front** or **Back**; the list below shows that
+6. **Hide.** The card stays on screen. Choose **Front** or **Back**; the list below shows that
    side's fields as switches. You can also tap a field on the card itself to cover or uncover it.
    The recommended fields start covered: signature, issue and expiry dates, support number, CAN and
-   the machine-readable lines (MRZ). Fields left visible get a dashed orange outline; **Final
-   preview** hides the outlines. **Adjust corners** goes back to step 4 and keeps your choices.
+   the machine-readable lines (MRZ), as far as the document has them (see
+   [Supported documents](#supported-documents)). Fields left visible get a dashed orange outline; **Final
+   preview** hides the outlines. **Adjust corners** goes back to step 5 and keeps your choices.
    Three tabs:
    - **Data:** the field switches and quick choices (**Recommended**, **Hide all**, **Show all**).
    - **Boxes:** extra black boxes for anything the list does not cover. Turn on **Draw black box**
@@ -159,9 +186,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
      <kbd>N</kbd> selects the next box and <kbd>Delete</kbd> removes it.
    - **Watermark:** type what the copy is for, or pick a suggestion (rental, bank, dated copy), and
      turn on **Convert to black and white** if you like. The card updates as you type.
-6. **Download.** Check both final images and the summary, tick **I have checked both sides**, then
+7. **Download.** Check both final images and the summary, tick **I have checked both sides**, then
    **Download PDF**. The file is called `protected-document.pdf`.
-7. **Done.** On phones that support it, **Share** sends the PDF through the system share sheet.
+8. **Done.** On phones that support it, **Share** sends the PDF through the system share sheet.
    **Clear everything** removes the photos and all your choices from the page; closing the tab does
    the same.
 
@@ -209,18 +236,20 @@ Rules the code follows:
 
 - No HTML strings: no `innerHTML` and no `{@html}`. Svelte builds DOM nodes directly
   (`fragments: 'tree'`). The CSP allows one Trusted Types policy, `default`, which only accepts
-  two script URLs: the service worker and the OCR worker ([ADR 0005](docs/adr/0005-on-device-ocr.md)).
+  two script URLs: the service worker and the OCR worker ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
 - No `eval`, `new Function`, inline scripts or inline styles.
 - No runtime requests and no persistent storage.
 - Test images are synthetic or official specimens. Never commit a photo of a real person's document.
 
 ## Tests
 
-- **Unit** (`tests/unit/`): homography and warp, corner editing, zone data, file decoding, i18n keys,
+- **Unit** (`tests/unit/`): homography and warp, corner editing, zone data for every document (inside
+  the card, sources, defaults, sizes), file decoding, i18n keys,
   redaction raster (every masked pixel is opaque black, input untouched), JPEG filter (metadata
   segments dropped, image data unchanged) and PDF structure (pages, images, no metadata, no text,
   deterministic output).
-- **End to end** (`tests/e2e/`): photo selection, corner alignment, the field checklist and its
+- **End to end** (`tests/e2e/`): document picker (each document's size, fields and warnings; changing
+  it keeps the photos), photo selection, corner alignment, the field checklist and its
   warnings, review, a real PDF download (decoded in the browser to check that hidden areas are black
   and that the file has no metadata, no source file name and no watermark text), reset, and
   security checks on the built page: exact CSP, referrer policy, SRI on every asset, no inline code, no CSP violations and no
@@ -250,9 +279,9 @@ src/
   offline/           service worker registration and precache helpers
   App.svelte         screen flow
   components/        Svelte components, one per screen or control
-  capture/           file input, drag and drop, paste, decoding
+  capture/           file input, drag and drop, paste, decoding, live camera and capture coach
   geometry/          homography, perspective warp, corner editing (pure TypeScript)
-  zones/             field positions per document, from official specimens
+  zones/             field positions and size per document, from official specimens; documents.ts lists them
   redact/            normalised zones to pixels, opaque fills
   engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
   detect/            automatic card edge detection (Sobel + Hough, no model)
@@ -273,8 +302,10 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0002](docs/adr/0002-no-standalone-release.md): no standalone offline release.
 - [0003](docs/adr/0003-svelte-vite-pnpm.md): Svelte 5, Vite, pinned Node.js and pnpm.
 - [0004](docs/adr/0004-offline-service-worker.md): offline mode with a verified service worker.
-- [0005](docs/adr/0005-on-device-ocr.md): on-device OCR with Tesseract.js, self-hosted and loaded on demand.
 - [0005](docs/adr/0005-guided-flow-and-visual-style.md): guided phone-first flow and visual style.
+- [0006](docs/adr/0006-document-types.md): several document types, chosen by the user.
+- [0008](docs/adr/0008-capture-coach.md): capture coach with classical image metrics, no model.
+- [0009](docs/adr/0009-on-device-ocr.md): on-device OCR with Tesseract.js, self-hosted and loaded on demand.
 
 ## Contributing
 

@@ -1,21 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { devices, expect, test, type Page } from '@playwright/test'
-import { fileURLToPath } from 'node:url'
-
-const fixture = (name: string): string => fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url))
+import { devices, expect, test } from '@playwright/test'
+import { fixture, openCapture } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
-/** Opens the app and goes from the start screen to the photo step. */
-async function openCapture (page: Page): Promise<void> {
-  await page.goto('/')
-  await page.locator('#start').click()
-}
-
-test('the start screen leads to the photo step, front first', async ({ page }) => {
+test('the start screen leads to the document picker, then to the photo step, front first', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('h1')).toBeVisible()
   await page.locator('#start').click()
+  await expect(page.locator('h2')).toHaveText('¿Qué documento vas a copiar?')
+  await expect(page.locator('h2')).toBeFocused()
+  await expect(page.locator('.progress [aria-current="step"]')).toContainText('Fotos')
+  // Three documents; DNI 4.0 is preselected.
+  await expect(page.locator('input[name="doc"]')).toHaveCount(3)
+  await expect(page.locator('[id="doc-dni-4.0"]')).toBeChecked()
+  await page.locator('#doc-continue').click()
   await expect(page.locator('h2')).toHaveText('Foto del anverso')
   await expect(page.locator('h2')).toBeFocused()
   await expect(page.locator('.progress [aria-current="step"]')).toContainText('Fotos')
@@ -42,6 +41,8 @@ test('desktop shows only the choose-image button', async ({ page }) => {
   await expect(page.getByText('Elegir imagen').filter({ visible: true })).toHaveCount(1)
   await expect(page.getByText('Hacer foto')).toHaveCount(0)
   await expect(page.locator('#camera-front')).toHaveCount(0)
+  // The live camera coach is for phones and tablets only.
+  await expect(page.locator('#live-front')).toHaveCount(0)
 })
 
 test.describe('on a touch device', () => {

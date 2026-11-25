@@ -1,4 +1,4 @@
-# 0005. On-device OCR with Tesseract.js
+# 0009. On-device OCR with Tesseract.js
 
 - Status: accepted
 - Date: 2026-11-25
