@@ -175,7 +175,9 @@ describe('tipFor', () => {
   })
 })
 
-describe('Coach', () => {
+// Each test renders and analyses dozens of synthetic frames: about 2 s on a 4-core machine, and over
+// the 5 s default on a 2-core CI runner with coverage. CPU-bound, not waiting on anything.
+describe('Coach', { timeout: 20_000 }, () => {
   it('shoots once after a few ready frames, then waits for the card to change', () => {
     const coach = new Coach()
     const shots: number[] = []
