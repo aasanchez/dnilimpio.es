@@ -28,7 +28,8 @@ register one under Trusted Types?
   with unit tests; an e2e test checks that such requests never leave the browser.
 - The cache name comes from the hashes of all files and of the worker's own code, so every new
   worker fills a new cache. A failed install deletes only its own cache, never the active one.
-- No `skipWaiting()`: a new build activates only when no tab runs the old one. Open tabs keep their
+- No automatic `skipWaiting()`: a new build activates only when no tab runs the old one, or when the
+  only tab is idle and asks for it (see Consequences). Open tabs keep their
   worker and their cache, including the PDF chunk they may still load. The new build then deletes the
   old caches.
 - Change one CSP directive: `trusted-types 'none'` becomes `trusted-types dnilimpio-sw`. The page
@@ -49,9 +50,15 @@ register one under Trusted Types?
 
 - The browser stores the app's files in Cache Storage. It never stores user data: photos, choices,
   the watermark and PDFs stay in memory.
-- A new deploy reaches a user once all their tabs of the tool are closed: the browser checks `sw.js`
-  for changes (bypassing the HTTP cache), installs the new build in the background, and uses it from
-  the next visit. Reloading a single open tab is not enough.
+- A new deploy reaches an open tab without closing it (amended 2026-11-25). The browser checks
+  `sw.js` for changes (bypassing the HTTP cache) and installs the new build in the background. A
+  reload alone does not switch builds, so a tab left open (common on phones) kept the old build
+  indefinitely. Now `src/offline/update.ts` asks the waiting build to take over when the page is
+  idle (start screen, no photos); the worker calls `skipWaiting()` only if this is the only tab of
+  the app, and the page reloads once into the new build. A tab with work in progress, or a second
+  open tab, keeps the old build until it is safe. The page also checks for a new build when it
+  returns to the foreground, at most every 15 minutes. `tests/e2e/update.spec.ts` covers the three
+  cases.
 - e2e tests block service workers by default, so `page.route()` sees every request.
   `tests/e2e/offline.spec.ts` turns them on and checks the offline flow up to the PDF download, and
   that a tampered file stops the install.
