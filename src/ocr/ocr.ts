@@ -99,18 +99,43 @@ export interface OcrBox { readonly x0: number; readonly y0: number; readonly x1:
 export interface OcrWord { readonly text: string; readonly confidence: number; readonly bbox: OcrBox }
 export interface OcrLine { readonly text: string; readonly confidence: number; readonly bbox: OcrBox; readonly words: readonly OcrWord[] }
 
-/** Jobs run one at a time: each sets its own parameters, then recognises, before the next starts. */
-let queue: Promise<unknown> = Promise.resolve()
+/** Thrown by jobs that stopOcr() cancelled: their result, if any, is dropped. */
+export class OcrStopped extends Error {
+  constructor () { super('OCR stopped') }
+}
 
-/** Reads text from a canvas. Coordinates are in the canvas's pixels. */
+/** A promise that stopOcr() rejects, so a job waiting on the worker ends at once instead of hanging. */
+function stopSignal (): { readonly promise: Promise<never>; readonly stop: () => void } {
+  let stop = (): void => {}
+  const promise = new Promise<never>((_resolve, reject) => { stop = () => { reject(new OcrStopped()) } })
+  promise.catch(() => undefined) // Nobody may be waiting on it.
+  return { promise, stop }
+}
+
+/** Bumped by stopOcr(): a job started before that never returns its result. */
+let generation = 0
+let signal = stopSignal()
+
+/**
+ * Jobs run one at a time: each sets its own parameters, then recognises, before the next starts.
+ * The queue only records that the last job settled; it never holds a result (text read from a card).
+ */
+let queue: Promise<void> = Promise.resolve()
+
+/** Reads text from a canvas. Coordinates are in the canvas's pixels. Throws OcrStopped if stopOcr() runs first. */
 export async function recognise (image: HTMLCanvasElement | OffscreenCanvas, opts: { whitelist?: string; singleBlock?: boolean } = {}): Promise<{ text: string; lines: OcrLine[] }> {
+  const mine = generation
+  const { promise: stopped } = signal
+  const live = <T>(p: Promise<T>): Promise<T> => Promise.race([p, stopped])
   const job = queue.then(async () => {
-    const w = await worker()
-    await w.setParameters({
+    if (mine !== generation) throw new OcrStopped()
+    const w = await live(worker())
+    await live(w.setParameters({
       tessedit_char_whitelist: opts.whitelist ?? '',
       tessedit_pageseg_mode: opts.singleBlock === true ? PSM.SINGLE_BLOCK : PSM.AUTO,
-    })
-    const { data } = await w.recognize(image, {}, { text: true, blocks: true })
+    }))
+    const { data } = await live(w.recognize(image, {}, { text: true, blocks: true }))
+    if (mine !== generation) throw new OcrStopped()
     const lines: OcrLine[] = (data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.map((l) => ({
       text: l.text.trim(),
       confidence: l.confidence / 100,
@@ -119,7 +144,7 @@ export async function recognise (image: HTMLCanvasElement | OffscreenCanvas, opt
     }))))
     return { text: data.text, lines }
   })
-  queue = job.catch(() => undefined)
+  queue = job.then(() => undefined, () => undefined)
   return await job
 }
 
@@ -147,9 +172,18 @@ export async function findOnCard<S extends string> (sides: ReadonlyArray<readonl
   return read.map((r) => ({ side: r.side, found: findSensitive(r.lines, r.size, names) }))
 }
 
-/** Stops the OCR worker and frees its memory. */
+/**
+ * Stops the OCR worker and frees its memory (the engine keeps the last image it read). Jobs that are
+ * queued or running end with OcrStopped and their results are dropped. The next recognise() starts
+ * a new worker.
+ */
 export async function stopOcr (): Promise<void> {
+  generation++
+  signal.stop()
+  signal = stopSignal()
+  queue = Promise.resolve()
   const p = pending
   pending = null
-  if (p) await (await p).terminate().catch(() => undefined)
+  const w = await p?.catch(() => null)
+  await w?.terminate().catch(() => undefined)
 }

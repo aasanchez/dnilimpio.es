@@ -124,3 +124,38 @@ test('a tampered OCR file is refused and nothing is cached', async ({ page, cont
   expect(result).toBe('refused')
   expect(await page.evaluate(async () => await caches.match(new URL('ocr/spa.traineddata', document.baseURI).href) !== undefined)).toBe(false)
 })
+
+test('stopOcr() ends the worker at once, drops the running job and keeps no result', async ({ page }) => {
+  test.setTimeout(60_000)
+  await controlled(page)
+  const chunk = await ocrChunk(page)
+  const outcome = await page.evaluate(async (path) => {
+    const ocr = await import(path) as typeof import('../../src/ocr/ocr.ts')
+    const card = (): OffscreenCanvas => {
+      const c = new OffscreenCanvas(1400, 900)
+      const ctx = c.getContext('2d')
+      if (!ctx) throw new Error('no 2d')
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, c.width, c.height)
+      ctx.fillStyle = '#000'
+      ctx.font = '40px sans-serif'
+      for (let i = 0; i < 15; i++) ctx.fillText(`ESPANOLA ESPANOLA CARMEN 12345678Z ${String(i)}`, 30, 60 + i * 55)
+      return c
+    }
+    await ocr.recognise(card()) // worker started and warm
+    const running = ocr.recognise(card()).then(() => 'finished', (e: unknown) => e instanceof ocr.OcrStopped ? 'stopped' : 'failed')
+    const queued = ocr.recognise(card()).then(() => 'finished', (e: unknown) => e instanceof ocr.OcrStopped ? 'stopped' : 'failed')
+    const t0 = performance.now()
+    await ocr.stopOcr()
+    const results = await Promise.all([running, queued])
+    const ms = performance.now() - t0
+    // A new job after the stop starts a fresh worker and works.
+    const again = /CARMEN/.test((await ocr.recognise(card())).text)
+    await ocr.stopOcr()
+    return { results, ms, again }
+  }, chunk)
+  expect(outcome.results).toEqual(['stopped', 'stopped'])
+  expect(outcome.ms).toBeLessThan(2000)
+  expect(outcome.again).toBe(true)
+  await expect.poll(() => page.workers().filter((w) => w.url().endsWith('/ocr/worker.min.js')).length).toBe(0)
+})

@@ -10,3 +10,16 @@ export async function loadOcr (): Promise<typeof import('./ocr.ts')> {
   })
   return await pending
 }
+
+/**
+ * Stops OCR and frees its memory, if the OCR module was ever loaded (it is never loaded just for this).
+ * Called when the user clears everything, so no worker keeps the last card it read.
+ */
+export async function stopOcrIfLoaded (): Promise<void> {
+  if (!pending) return
+  try {
+    await (await pending).stopOcr()
+  } catch {
+    // Not loaded after all: nothing to stop.
+  }
+}

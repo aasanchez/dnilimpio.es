@@ -16,6 +16,7 @@
   import AlignStep from './components/AlignStep.svelte'
   import StraightenStep from './components/StraightenStep.svelte'
   import { prefetchCornerModel } from './detect/corners.ts'
+  import { stopOcrIfLoaded } from './ocr/load-ocr.ts'
   import Editor from './components/Editor.svelte'
   import { emptyEditState, type Phase } from './ui/edit-state.ts'
 
@@ -101,6 +102,8 @@
     }
     edit = emptyEditState(doc)
     docConfirmed = false
+    // The OCR worker keeps the last card it read: stop it (a new one starts if OCR is used again).
+    void stopOcrIfLoaded()
     go('capture', 'front')
   }
 

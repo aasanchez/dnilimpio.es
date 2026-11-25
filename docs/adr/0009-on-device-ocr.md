@@ -31,6 +31,10 @@ falls back to the manual path, never a random error. Images must never leave the
 - `connect-src 'none'` and `script-src 'self'` do not change. The OCR worker is a same-origin script
   file, not a `blob:` URL; its own requests are answered by the service worker. Tesseract's
   IndexedDB cache is off (`cacheMethod: 'none'`).
+- Memory (added after the security audit of 2026-11-25, finding SEC-005): the job queue only records
+  that the last job settled and never holds a result. `stopOcr()` ends the worker, which keeps the
+  last image it read, and makes queued or running jobs end with `OcrStopped`, so a late result is
+  dropped. "Clear everything" calls it (`stopOcrIfLoaded()`, which never loads OCR just to stop it).
 - MRZ reading (`src/ocr/mrz.ts`, ICAO 9303 TD1) is plain TypeScript and fully unit tested: check
   digits, document code (`ID` for DNI, `IR` for TIE), and correction of one common OCR confusion in
   the document number when exactly one fix passes both the number and the composite check digits.
