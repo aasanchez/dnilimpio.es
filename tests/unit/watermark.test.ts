@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { WATERMARK_MAX_CHARS, graphemes, layoutWatermark, normaliseWatermark, textDirection, wrap } from '../../src/engine/watermark.ts'
+import { WATERMARK_MAX_CHARS, breakWord, graphemes, layoutWatermark, normaliseWatermark, textDirection, wrap } from '../../src/engine/watermark.ts'
 
 // Monospace stand-in for canvas measureText at font size 1: 0.6 units per character.
 const mono = (s: string): number => graphemes(s).length * 0.6
@@ -29,6 +29,10 @@ describe('wrap', () => {
     expect(wrap('aa bb cc', 3, mono)).toEqual(['aa bb', 'cc'])
     expect(wrap('averyverylongword x', 1, mono)).toEqual(['averyverylongword', 'x'])
   })
+  it('breaks a word wider than the hard width into grapheme-safe pieces', () => {
+    expect(wrap('abcdefgh x', 1, mono, 0.6 * 3)).toEqual(['abc', 'def', 'gh', 'x'])
+    expect(breakWord('e\u0301e\u0301e\u0301', 0.6 * 2, mono)).toEqual(['e\u0301e\u0301', 'e\u0301'])
+  })
 })
 
 describe('layoutWatermark', () => {
@@ -43,6 +47,16 @@ describe('layoutWatermark', () => {
     const diagonal = Math.hypot(1712, 1080)
     for (const line of l.lines) expect(mono(line) * l.size).toBeLessThanOrEqual(diagonal * 0.8 + 1e-6)
     expect(l.lines.join(' ')).toBe('COPY EXCLUSIVELY FOR RENTAL APPLICATION')
+  })
+  it('keeps a long unbroken token inside the image at the minimum size', () => {
+    const token = 'x'.repeat(WATERMARK_MAX_CHARS)
+    const l = layoutWatermark(token, 1712, 1080, mono)
+    expect(l).not.toBeNull()
+    if (!l) return
+    const diagonal = Math.hypot(1712, 1080)
+    expect(l.lines.join('')).toBe(token)
+    for (const line of l.lines) expect(mono(line) * l.size).toBeLessThanOrEqual(diagonal * 0.8 + 1e-6)
+    expect(l.lines.length * l.size * 1.25).toBeLessThanOrEqual(Math.min(1712, 1080))
   })
   it('keeps short text from growing beyond the maximum size', () => {
     const l = layoutWatermark('X', 1712, 1080, mono)

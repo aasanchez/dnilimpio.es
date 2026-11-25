@@ -40,9 +40,29 @@ export function textDirection (text: string): 'ltr' | 'rtl' {
   return 'ltr'
 }
 
-/** Greedy word wrap at font size 1. A word longer than the width gets a line of its own. */
-export function wrap (text: string, width: number, measure: Measure): string[] {
-  const words = text.split(' ').filter((w) => w !== '')
+/** Splits a word wider than `max` into grapheme-safe pieces that are each at most `max` wide (or one grapheme). */
+export function breakWord (word: string, max: number, measure: Measure): string[] {
+  if (measure(word) <= max) return [word]
+  const pieces: string[] = []
+  let piece = ''
+  for (const g of graphemes(word)) {
+    if (piece !== '' && measure(piece + g) > max) {
+      pieces.push(piece)
+      piece = g
+    } else {
+      piece += g
+    }
+  }
+  if (piece !== '') pieces.push(piece)
+  return pieces
+}
+
+/**
+ * Greedy word wrap at font size 1. A word longer than `width` gets a line of its own; a word longer
+ * than `hardWidth` (a URL, an identifier) is first broken into pieces, so no line can exceed it.
+ */
+export function wrap (text: string, width: number, measure: Measure, hardWidth = Infinity): string[] {
+  const words = text.split(' ').filter((w) => w !== '').flatMap((w) => breakWord(w, hardWidth, measure))
   const lines: string[] = []
   let line = ''
   for (const w of words) {
@@ -71,15 +91,18 @@ export function layoutWatermark (raw: string, width: number, height: number, mea
   const boxW = diagonal * 0.8
   const boxH = Math.min(width, height) * 0.6
   const total = measure(text)
+  const minSize = diagonal * MIN_SIZE_RATIO
+  // At the minimum size, no line may be wider than the box: break long unspaced tokens to keep them inside.
+  const hardWidth = boxW / minSize
   let best: { lines: string[]; size: number } | null = null
   for (let n = 1; n <= 4; n++) {
-    const lines = wrap(text, total / n, measure)
+    const lines = wrap(text, total / n, measure, hardWidth)
     const widest = Math.max(...lines.map(measure))
     const size = Math.min(boxW / widest, boxH / (lines.length * LINE_HEIGHT))
     if (!best || size > best.size) best = { lines, size }
   }
   if (!best) return null
-  const size = Math.max(diagonal * MIN_SIZE_RATIO, Math.min(best.size, diagonal * MAX_SIZE_RATIO))
+  const size = Math.max(minSize, Math.min(best.size, diagonal * MAX_SIZE_RATIO))
   return { lines: best.lines, size, angle, direction: textDirection(text) }
 }
 
