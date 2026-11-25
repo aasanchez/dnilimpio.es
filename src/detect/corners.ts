@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Finds the card's corners in a photo so the corner editor can start on them (spec §4.2).
-// Detectors are tried in order; the first confident answer wins. Every failure is silent: the model
+// Detectors are tried in order; the first confident answer wins, and its sides are then snapped
+// onto the card's real edges nearby (refine.ts). Every failure is silent: the model
 // may be unavailable (offline before first use, an old browser, no WebAssembly) and then the editor
 // simply keeps its manual starting position. Nothing here ever throws to the caller.
 
-import { detectCard } from './edges.ts'
+import { detectCard, toWorkGrey } from './edges.ts'
+import { refineQuad } from './refine.ts'
 import type { Detection } from './result.ts'
 
 export type { Detection } from './result.ts'
@@ -75,12 +77,37 @@ export function prefetchCornerModel (): void {
   void loadModel().then((m) => m.load()).catch(() => undefined)
 }
 
+/** Long side of the copy used to snap the corners onto the card's edges (refine.ts). */
+const REFINE_PX = 1000
+
+/** Moves each side of `found` onto the card's real edge nearby (refine.ts); unchanged if unsure. */
+function refined (bitmap: ImageBitmap, found: Detection): Detection {
+  const k = Math.min(1, REFINE_PX / Math.max(bitmap.width, bitmap.height))
+  const w = Math.max(1, Math.round(bitmap.width * k))
+  const h = Math.max(1, Math.round(bitmap.height * k))
+  const canvas = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h })
+  const ctx = canvas.getContext('2d', { willReadFrequently: true }) as Pick<CanvasRenderingContext2D, 'drawImage' | 'getImageData'> | null
+  if (!ctx) return found
+  ctx.drawImage(bitmap, 0, 0, w, h)
+  const { grey } = toWorkGrey(ctx.getImageData(0, 0, w, h), REFINE_PX)
+  const small = found.quad.map((p) => ({ x: p.x * k, y: p.y * k })) as unknown as Detection['quad']
+  const q = refineQuad(grey, small)
+  if (q === small) return found
+  return { ...found, quad: q.map((p) => ({ x: p.x / k, y: p.y / k })) as unknown as Detection['quad'] }
+}
+
 /** The card's corners in `bitmap`, or null when no detector is available or confident. */
 export async function findCorners (bitmap: ImageBitmap, aspect: number): Promise<Detection | null> {
   for (const detect of DETECTORS) {
     try {
       const found = await detect(bitmap, aspect)
-      if (found) return found
+      if (found) {
+        try {
+          return refined(bitmap, found)
+        } catch {
+          return found
+        }
+      }
     } catch {
       // Unavailable or failed: try the next detector, then fall back to manual corners.
     }

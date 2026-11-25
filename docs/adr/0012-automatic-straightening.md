@@ -25,7 +25,12 @@ upside down came out sideways or upside down unless the person used **Rotate**.
   - from **Adjust corners** in the editor, which shows the corners that were found.
 - **Method** (`src/detect/auto-align.ts`), per side, front then back:
   1. Find the corners: the model when it is available within 10 s, else classic edge detection
-     (`corners.ts`, unchanged order and fallbacks).
+     (`corners.ts`, unchanged order and fallbacks). Then snap each side onto the card's real
+     edge nearby (`refine.ts`, added after a real TIE on dark fabric came out with its top and
+     bottom about 7 % outside the card): every line within 12 % of the card's size is scored by
+     the mean brightness step across it; among lines at least 75 % as strong as the best, the
+     outermost wins (a band printed along the border lies inside it), then a finer search finds
+     its peak. No clear step, or crossing lines in odd places, keep the detector's corners.
   2. **Sideways:** turn the outline so its long edge is horizontal (`landscape`, as before).
   3. **Upside down** (`upright.ts`, pure): straighten a small copy (428 px wide) and compare the
      "ink" (darkness plus fine detail) in the side's **anchor** box with the ink in the same box
