@@ -13,6 +13,7 @@
 
 import { createWorker, OEM, PSM, type Worker } from 'tesseract.js'
 import { relaxedSimd, simd } from 'wasm-feature-detect'
+import { findSensitive, namesFromText, type Found } from './find.ts'
 import { MRZ_CHARS, parseMrz, type Mrz } from './mrz.ts'
 
 /** Approximate first download in MB: worker (0.1), one WebAssembly build (3.9) and the Spanish data (3.4). */
@@ -94,7 +95,9 @@ async function worker (): Promise<Worker> {
   return await pending
 }
 
-export interface OcrLine { readonly text: string; readonly confidence: number; readonly bbox: { readonly x0: number; readonly y0: number; readonly x1: number; readonly y1: number } }
+export interface OcrBox { readonly x0: number; readonly y0: number; readonly x1: number; readonly y1: number }
+export interface OcrWord { readonly text: string; readonly confidence: number; readonly bbox: OcrBox }
+export interface OcrLine { readonly text: string; readonly confidence: number; readonly bbox: OcrBox; readonly words: readonly OcrWord[] }
 
 /** Jobs run one at a time: each sets its own parameters, then recognises, before the next starts. */
 let queue: Promise<unknown> = Promise.resolve()
@@ -108,7 +111,12 @@ export async function recognise (image: HTMLCanvasElement | OffscreenCanvas, opt
       tessedit_pageseg_mode: opts.singleBlock === true ? PSM.SINGLE_BLOCK : PSM.AUTO,
     })
     const { data } = await w.recognize(image, {}, { text: true, blocks: true })
-    const lines: OcrLine[] = (data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.map((l) => ({ text: l.text.trim(), confidence: l.confidence / 100, bbox: l.bbox }))))
+    const lines: OcrLine[] = (data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.map((l) => ({
+      text: l.text.trim(),
+      confidence: l.confidence / 100,
+      bbox: l.bbox,
+      words: l.words.map((w) => ({ text: w.text, confidence: w.confidence / 100, bbox: w.bbox })),
+    }))))
     return { text: data.text, lines }
   })
   queue = job.catch(() => undefined)
@@ -122,6 +130,21 @@ export async function recognise (image: HTMLCanvasElement | OffscreenCanvas, opt
 export async function readMrz (image: HTMLCanvasElement | OffscreenCanvas): Promise<Mrz | null> {
   const { text } = await recognise(image, { whitelist: MRZ_CHARS, singleBlock: true })
   return parseMrz(text)
+}
+
+/**
+ * Smart field finding: reads each straightened side and returns the personal data found on it, in
+ * normalised card coordinates. Names read from the MRZ are also looked for on the other side.
+ */
+export async function findOnCard<S extends string> (sides: ReadonlyArray<readonly [S, HTMLCanvasElement | OffscreenCanvas]>): Promise<Array<{ side: S; found: Found[] }>> {
+  const read = []
+  for (const [side, image] of sides) {
+    // Size taken before reading: the boxes are normalised to the image that was read.
+    const size = { w: image.width, h: image.height }
+    read.push({ side, size, ...(await recognise(image)) })
+  }
+  const names = namesFromText(read.map((r) => r.text).join('\n'))
+  return read.map((r) => ({ side: r.side, found: findSensitive(r.lines, r.size, names) }))
 }
 
 /** Stops the OCR worker and frees its memory. */

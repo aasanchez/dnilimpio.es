@@ -152,5 +152,19 @@
   "tipSteady": "Pidä puhelin paikallaan",
   "tipBlur": "Epätarkka: odota, että kamera tarkentaa",
   "tipReady": "Pysy paikallasi…",
-  "tipReadyManual": "Kaikki kunnossa: ota kuva"
+  "tipReadyManual": "Kaikki kunnossa: ota kuva",
+  "findTitle": "Etsi automaattisesti",
+  "findIntro": "Lukee kortin tällä laitteella ja lisää mustat laatikot valitsemiesi tietojen päälle. Mitään ei lähetetä.",
+  "findKinds": "Etsittävät tiedot",
+  "find_name": "Nimi ja sukunimet",
+  "find_idNumber": "DNI/NIE-numero",
+  "find_date": "Päivämäärät",
+  "findRun": "Etsi ja peitä",
+  "findDownload": "Ensimmäisellä kerralla ladataan noin {mb} Mt, vain kerran.",
+  "findRunning": "Luetaan korttia…",
+  "findDone": "{n} laatikkoa lisätty. Tarkista ne kohdassa Laatikot: voit siirtää tai poistaa niitä.",
+  "findNone": "Mitään ei löytynyt. Piilota tiedot käsin.",
+  "findOffline": "Automaattinen haku tarvitsee kertaluonteisen latauksen, eikä sinulla ole yhteyttä. Piilota tiedot käsin.",
+  "findUnsupported": "Automaattinen haku ei ole käytettävissä tässä selaimessa. Piilota tiedot käsin.",
+  "findFailed": "Automaattinen haku ei toiminut tällä kertaa. Piilota tiedot käsin."
 }
