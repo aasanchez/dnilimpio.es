@@ -69,3 +69,18 @@ sit in fixed stages: build, test, code analysis, package, deploy, acceptance.
 - To make bundle size or Lighthouse blocking, change one line each (`--strict`, `"error"`).
 - The repository is now REUSE compliant: a default annotation in `REUSE.toml` gives every file a
   copyright line, and the AGPL text is also in `LICENSES/`.
+
+### Amendment (2026-11-25): weekly dependency check
+
+- A separate workflow, `deps-check.yml`, runs `pnpm audit` and `pnpm outdated` every Wednesday at
+  16:00 Europe/Madrid (the `timezone` key of `on.schedule`, so the time holds across daylight saving),
+  and on `workflow_dispatch`. It does not block pull requests; the `audit` job in `ci.yml` stays the
+  pull-request gate.
+- Scope. `--prod` does not mean "direct dependencies": it leaves out `devDependencies`. `pnpm
+  outdated` lists direct dependencies only by default. `pnpm audit` always checks the whole tree,
+  because a vulnerable transitive package ships or runs just like a direct one; the report names the
+  direct dependency that brings each advisory in, which is the one to update.
+- Dev dependencies are included in both jobs. They run on developer machines and on the CI runner that
+  builds, signs and deploys the site, so a vulnerable build tool can change what ships.
+- The audit fails at high or critical, so GitHub's failed-run notification is the alert. `outdated`
+  only reports. Neither job installs `node_modules` (both read `pnpm-lock.yaml`), so there is no cache.
