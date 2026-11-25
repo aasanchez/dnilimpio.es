@@ -40,9 +40,44 @@ const LINE_HEIGHT = 1.25
 /** Empty space between copies, in font sizes. */
 const GAP_X = 3
 const GAP_Y = 2.5
-/** Ink: dark text with a light halo, both faint, so it shows on light and dark parts of the card. */
-export const WATERMARK_FILL = 'rgba(20, 20, 20, 0.16)'
-export const WATERMARK_HALO = 'rgba(255, 255, 255, 0.16)'
+
+/**
+ * What the user can adjust: text size (a multiple of the default size) and opacity of the ink.
+ * Both are held in memory only, like the rest of the editing choices.
+ */
+export interface WatermarkStyle {
+  /** Multiple of the default font size. */
+  readonly scale: number
+  /** Opacity of the dark text, 0 to 1. At 1 the text is solid black. */
+  readonly opacity: number
+}
+
+/** Slider limits. The defaults are the look from before the controls existed. */
+export const WATERMARK_SCALE = { min: 0.5, max: 3, step: 0.1, default: 1 } as const
+export const WATERMARK_OPACITY = { min: 0.05, max: 1, step: 0.01, default: 0.16 } as const
+export const DEFAULT_WATERMARK_STYLE: WatermarkStyle = { scale: WATERMARK_SCALE.default, opacity: WATERMARK_OPACITY.default }
+
+/** Halo opacity never exceeds the default, so a solid black watermark stays black, not outlined in white. */
+const HALO_MAX = 0.16
+
+const clamp = (n: number, min: number, max: number, fallback: number): number =>
+  Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback
+
+/** Keeps a style inside the slider limits; a non-number falls back to the default. */
+export function clampStyle (style: WatermarkStyle): WatermarkStyle {
+  return {
+    scale: clamp(style.scale, WATERMARK_SCALE.min, WATERMARK_SCALE.max, WATERMARK_SCALE.default),
+    opacity: clamp(style.opacity, WATERMARK_OPACITY.min, WATERMARK_OPACITY.max, WATERMARK_OPACITY.default)
+  }
+}
+
+/** Ink: dark text with a light halo, so it shows on light and dark parts of the card. */
+export function watermarkInk (opacity: number): { fill: string; halo: string } {
+  const a = clamp(opacity, WATERMARK_OPACITY.min, WATERMARK_OPACITY.max, WATERMARK_OPACITY.default)
+  // At full opacity the text is pure black; below that, the same near-black ink as before.
+  const fill = a >= 1 ? 'rgb(0, 0, 0)' : `rgba(20, 20, 20, ${String(a)})`
+  return { fill, halo: `rgba(255, 255, 255, ${String(Math.min(a, HALO_MAX))})` }
+}
 
 /** User-perceived characters (grapheme clusters), so a cut never splits an accent, emoji or ligature. */
 export function graphemes (text: string): string[] {
@@ -103,14 +138,16 @@ export function wrap (text: string, width: number, measure: Measure, hardWidth =
 
 /**
  * Lays out one copy of the text block and the spacing of the tiled pattern. The font size is fixed
- * by the image size, not by the text, so the pattern looks the same for short and long text.
+ * by the image size and the user's `scale`, not by the text, so the pattern looks the same for short
+ * and long text.
  * Returns null for empty text.
  */
-export function layoutWatermark (raw: string, width: number, height: number, measure: Measure): WatermarkLayout | null {
+export function layoutWatermark (raw: string, width: number, height: number, measure: Measure, scale: number = WATERMARK_SCALE.default): WatermarkLayout | null {
   const text = normaliseWatermark(raw)
   if (text === '') return null
   const diagonal = Math.hypot(width, height)
-  const size = Math.max(MIN_SIZE, diagonal * WATERMARK_SIZE_RATIO)
+  const factor = clamp(scale, WATERMARK_SCALE.min, WATERMARK_SCALE.max, WATERMARK_SCALE.default)
+  const size = Math.max(MIN_SIZE, diagonal * WATERMARK_SIZE_RATIO * factor)
   // Line width limit in font units; unspaced tokens wider than that are broken, so no line exceeds it.
   const maxLine = Math.max((diagonal * MAX_BLOCK_RATIO) / size, measure('M'))
   const lines = wrap(text, maxLine, measure, maxLine)
@@ -159,10 +196,10 @@ export function tileWatermark (layout: WatermarkLayout, width: number, height: n
 export const WATERMARK_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Arabic", sans-serif'
 
 /** Draws the tiled watermark onto a 2D context covering the whole image. Does nothing for empty text. */
-export function drawWatermark (ctx: CanvasRenderingContext2D, text: string, width: number, height: number): void {
+export function drawWatermark (ctx: CanvasRenderingContext2D, text: string, width: number, height: number, style: WatermarkStyle = DEFAULT_WATERMARK_STYLE): void {
   ctx.save()
   ctx.font = `600 100px ${WATERMARK_FONT}`
-  const layout = layoutWatermark(text, width, height, (s) => ctx.measureText(s).width / 100)
+  const layout = layoutWatermark(text, width, height, (s) => ctx.measureText(s).width / 100, style.scale)
   if (!layout) {
     ctx.restore()
     return
@@ -173,8 +210,9 @@ export function drawWatermark (ctx: CanvasRenderingContext2D, text: string, widt
   ctx.textBaseline = 'middle'
   ctx.lineJoin = 'round'
   ctx.lineWidth = Math.max(1, layout.size * 0.1)
-  ctx.strokeStyle = WATERMARK_HALO
-  ctx.fillStyle = WATERMARK_FILL
+  const ink = watermarkInk(style.opacity)
+  ctx.strokeStyle = ink.halo
+  ctx.fillStyle = ink.fill
   const step = layout.size * LINE_HEIGHT
   const top = -((layout.lines.length - 1) * step) / 2
   for (const tile of tileWatermark(layout, width, height)) {

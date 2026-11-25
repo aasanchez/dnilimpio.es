@@ -42,6 +42,8 @@
   "positionsHint": "Els requadres negres es col·loquen segons el disseny de: {doc}. Comprova que cadascun cobreix el seu camp.",
   "watermarkLabel": "Text de marca d'aigua (opcional)",
   "watermarkHint": "Per exemple: CÒPIA NOMÉS PER A SOL·LICITUD DE LLOGUER. Una marca d'aigua dificulta la reutilització, però no pot impedir un frau.",
+  "watermarkSize": "Mida del text",
+  "watermarkOpacity": "Opacitat",
   "greyscale": "Converteix a blanc i negre",
   "finalPreview": "Vista final",
   "previewLabel": "Previsualització: {side}",

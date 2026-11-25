@@ -42,6 +42,8 @@
   "positionsHint": "The black boxes are placed from the layout of: {doc}. Check that each one covers its field.",
   "watermarkLabel": "Watermark text (optional)",
   "watermarkHint": "For example: COPY ONLY FOR A RENTAL APPLICATION. A watermark discourages reuse but cannot prevent fraud.",
+  "watermarkSize": "Text size",
+  "watermarkOpacity": "Opacity",
   "greyscale": "Convert to black and white",
   "finalPreview": "Final preview",
   "previewLabel": "Preview: {side}",
