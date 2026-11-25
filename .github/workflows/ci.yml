@@ -2,14 +2,22 @@
 # CI pipeline, split into small jobs. Stages are logical (GitHub Actions has no stages): a job starts
 # as soon as the jobs in its `needs:` pass, so independent checks run in parallel.
 #
+# Pull request: validate everything, never deploy.
+#
 #   changes ─ install ─┬─ build ──────┬─ e2e (2 shards) ─┐
 #                      ├─ typecheck   ├─ bundle-size     │
 #                      ├─ lint        └─ lighthouse      │
-#                      └─ unit                           ├─ ci-ok ─ deploy ─ smoke
-#   reuse · audit · dependency-review · workflow-lint ───┘   (master only)
+#                      └─ unit                           ├─ ci-ok
+#   reuse · audit · dependency-review · workflow-lint ───┘
+#
+# master (push or manual run): the code was validated on its pull request (squash merge of a branch
+# that branch protection requires to be up to date), so it is not validated again. Build, deploy, and
+# check the live site:
+#
+#   changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke
+#                                               └─ lighthouse-live
 #
 # ci-ok is the one status check that branch protection requires. CodeQL runs in codeql.yml.
-# Deploy: on master (push or manual run), publishes the dist/ that passed every check to GitHub Pages.
 # Never re-run the legacy "pages build and deployment" workflow: it publishes unbuilt source.
 # Actions are pinned to full commit SHAs; the comment gives the release tag.
 name: CI
@@ -32,8 +40,11 @@ env:
 
 jobs:
   # ── Stage 0: changes ────────────────────────────────────────────────────────────────────────────
-  # On a pull request that only touches documentation, the code jobs are skipped (ci-ok still passes).
-  # On master and manual runs everything runs.
+  # Decides what this run does:
+  # - release: master (push or manual run). Build and deploy only.
+  # - build: install and build are needed (release, or a validation run that touches code).
+  # - validate: run the checks. Pull requests and manual runs on other branches. On a pull request that
+  #   only touches documentation, the code checks are skipped (ci-ok still passes).
   changes:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -41,7 +52,10 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      code: ${{ github.event_name != 'pull_request' || steps.filter.outputs.code == 'true' }}
+      release: ${{ steps.mode.outputs.release }}
+      build: ${{ steps.mode.outputs.release == 'true' || steps.mode.outputs.code == 'true' }}
+      validate: ${{ steps.mode.outputs.release != 'true' && steps.mode.outputs.code == 'true' }}
+      checks: ${{ steps.mode.outputs.release != 'true' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -57,11 +71,19 @@ jobs:
               - '!**/*.md'
               - '!docs/**'
               - '!LICENSES/**'
+      - id: mode
+        env:
+          RELEASE: ${{ github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+          CODE: ${{ github.event_name != 'pull_request' || steps.filter.outputs.code == 'true' }}
+        run: |
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "release=$RELEASE code=$CODE"
 
   # ── Stage 1: setup ──────────────────────────────────────────────────────────────────────────────
   install:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.build == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -96,7 +118,8 @@ jobs:
           path: dist/
 
   typecheck:
-    needs: install
+    needs: [changes, install]
+    if: needs.changes.outputs.validate == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -107,7 +130,8 @@ jobs:
       - run: pnpm typecheck
 
   lint:
-    needs: install
+    needs: [changes, install]
+    if: needs.changes.outputs.validate == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -118,7 +142,8 @@ jobs:
       - run: pnpm lint
 
   unit:
-    needs: install
+    needs: [changes, install]
+    if: needs.changes.outputs.validate == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -147,7 +172,8 @@ jobs:
 
   # ── Stage 3: test ───────────────────────────────────────────────────────────────────────────────
   e2e:
-    needs: build
+    needs: [changes, build]
+    if: needs.changes.outputs.validate == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
@@ -171,7 +197,8 @@ jobs:
           SHARD: ${{ matrix.shard }}
 
   bundle-size:
-    needs: build
+    needs: [changes, build]
+    if: needs.changes.outputs.validate == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -189,8 +216,10 @@ jobs:
       - run: node scripts/bundle-size.ts
 
   # ── Stage 4: code analysis and supply chain ─────────────────────────────────────────────────────
-  # These need no build, so they start at once and run alongside everything else.
+  # These need no build, so they start right after `changes` and run alongside everything else.
   reuse:
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -201,7 +230,7 @@ jobs:
 
   audit:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.validate == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -226,6 +255,8 @@ jobs:
           fail-on-severity: moderate
 
   workflow-lint:
+    needs: changes
+    if: needs.changes.outputs.checks == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -244,7 +275,8 @@ jobs:
 
   # ── Stage 5: acceptance ─────────────────────────────────────────────────────────────────────────
   lighthouse:
-    needs: build
+    needs: [changes, build]
+    if: needs.changes.outputs.validate == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -280,9 +312,12 @@ jobs:
           test "$FAILED" = 'false'
 
   # ── Stage 7: deploy (master only) ───────────────────────────────────────────────────────────────
+  # An `if:` without a status function means success() of every job upstream, including jobs skipped on
+  # purpose (dependency-review on a push), which would skip the deploy. So the results are checked here.
   deploy:
-    if: github.ref == 'refs/heads/master'
-    needs: [ci-ok, build]
+    # Only master: a push to master or a manual run on master. Never a pull request or another branch.
+    if: ${{ !cancelled() && github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.changes.outputs.release == 'true' && needs.ci-ok.result == 'success' && needs.build.result == 'success' }}
+    needs: [changes, ci-ok, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -304,6 +339,7 @@ jobs:
   # ── Stage 8: post-deploy ────────────────────────────────────────────────────────────────────────
   # The live site must serve this commit's build, with matching SRI hashes (scripts/smoke.ts).
   smoke:
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
     needs: deploy
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -317,3 +353,21 @@ jobs:
       - run: node scripts/smoke.ts "$PAGE_URL" "$GITHUB_SHA"
         env:
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+
+  # Lighthouse on the live site, once smoke has confirmed it serves this build. Real hosting (GitHub
+  # Pages: compression, cache headers, HTTP/2). Thresholds in lighthouserc.live.json, warnings only.
+  lighthouse-live:
+    if: ${{ !cancelled() && needs.smoke.result == 'success' }}
+    needs: [deploy, smoke]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # 12.6.2
+        with:
+          urls: ${{ needs.deploy.outputs.page_url }}
+          configPath: ./lighthouserc.live.json
+          uploadArtifacts: true
+          temporaryPublicStorage: false
