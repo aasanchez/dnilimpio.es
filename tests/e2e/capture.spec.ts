@@ -14,7 +14,9 @@ test('loads front and back through the file inputs', async ({ page }) => {
   await expect(page.locator('#status-back')).toHaveText('Imagen cargada.')
   const input = page.locator('#file-front')
   await expect(input).toHaveAttribute('accept', 'image/*')
-  await expect(input).toHaveAttribute('capture', 'environment')
+  // `capture` would force the camera on mobile and block picking from the gallery.
+  await expect(input).not.toHaveAttribute('capture')
+  await expect(page.locator('#file-back')).not.toHaveAttribute('capture')
 })
 
 test('shows a clear error for a non-image file', async ({ page }) => {

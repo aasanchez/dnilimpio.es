@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Wires one capture target (front or back): file input with camera hint, drag-and-drop, and paste.
+// Wires one capture target (front or back): file input, drag-and-drop, and paste.
 
 import { decodeImage, firstImageFile, type DecodeResult } from './decode.ts'
 
@@ -11,10 +11,14 @@ export interface CaptureTarget {
   readonly onResult: (result: DecodeResult) => void;
 }
 
+/**
+ * No `capture` attribute: on mobile it opens the camera directly and hides the gallery.
+ * Without it, iOS and Android show a chooser that offers both the camera and the photo library.
+ */
 export function configureFileInput (input: HTMLInputElement): void {
   input.type = 'file'
   input.accept = 'image/*'
-  input.setAttribute('capture', 'environment')
+  input.removeAttribute('capture')
 }
 
 /**
