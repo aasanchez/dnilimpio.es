@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { configureFileInput, prefersCameraButton } from '../../src/capture/input.ts'
+import { carriesFiles, configureFileInput, prefersCameraButton } from '../../src/capture/input.ts'
 
 /** Minimal stand-in for HTMLInputElement: the unit tests run in Node, without a DOM. */
 function fakeInput (attrs: Record<string, string> = {}): HTMLInputElement & { attrs: Record<string, string> } {
@@ -45,5 +45,14 @@ describe('prefersCameraButton', () => {
 
   it('is false for a fine (mouse) pointer', () => {
     expect(prefersCameraButton(() => ({ matches: false }))).toBe(false)
+  })
+})
+
+describe('carriesFiles', () => {
+  it('is true only for drags that carry files from the system', () => {
+    expect(carriesFiles({ types: ['Files'] })).toBe(true)
+    expect(carriesFiles({ types: ['text/plain', 'Files'] })).toBe(true)
+    expect(carriesFiles({ types: ['text/uri-list'] })).toBe(false)
+    expect(carriesFiles(null)).toBe(false)
   })
 })

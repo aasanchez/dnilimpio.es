@@ -81,3 +81,47 @@ export function wirePaste (pickTarget: () => CaptureTarget | null, signal: Abort
     decodeFor(file, signal, target.onResult)
   }, { signal })
 }
+
+/** True when a drag carries files from the system, not text or a link from the page. */
+export function carriesFiles (dt: Pick<DataTransfer, 'types'> | null): boolean {
+  return dt !== null && Array.from(dt.types).includes('Files')
+}
+
+/**
+ * A file dropped outside the app's drop areas would make the browser open it in the tab, which
+ * discards the session (photos, corners, redactions). Called once at start-up: every step is safe.
+ */
+export function blockStrayDrops (target: Pick<EventTarget, 'addEventListener'>): void {
+  const stop = (e: Event): void => { if (carriesFiles((e as DragEvent).dataTransfer)) e.preventDefault() }
+  target.addEventListener('dragover', stop)
+  target.addEventListener('drop', stop)
+}
+
+/**
+ * Desktop drag and drop for the photo step: the whole page is the drop area. A file dropped
+ * anywhere goes to `pickTarget()`, unless a side's tile already took it. `onDragging` tells the UI
+ * when files are over the page, so it can show where they go. The file is only decoded in memory.
+ */
+export function wirePageDrop (
+  pickTarget: () => CaptureTarget | null,
+  onDragging: (dragging: boolean) => void,
+  signal: AbortSignal
+): void {
+  document.addEventListener('dragover', (e) => {
+    if (!carriesFiles(e.dataTransfer)) return
+    e.preventDefault()
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+    onDragging(true)
+  }, { signal })
+  // relatedTarget is null only when the pointer leaves the window (or the drag is cancelled).
+  document.addEventListener('dragleave', (e) => { if (e.relatedTarget === null) onDragging(false) }, { signal })
+  document.addEventListener('drop', (e) => {
+    onDragging(false)
+    if (e.defaultPrevented || !carriesFiles(e.dataTransfer)) return // a side's tile handled it
+    e.preventDefault()
+    const target = pickTarget()
+    // Take the file as dropped (not filtered) so a wrong type gets a clear error instead of silence.
+    const file = e.dataTransfer?.files[0] ?? null
+    if (target && file) decodeFor(file, signal, target.onResult)
+  }, { signal })
+}

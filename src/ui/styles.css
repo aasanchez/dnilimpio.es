@@ -344,6 +344,17 @@ span.chip { cursor: default; color: var(--muted); }
 .side-badge-count { font-family: var(--mono); font-size: 0.875rem; padding: 0.1rem 0.4rem; border: 1.5px solid #1f1a14; border-radius: 4px; }
 @keyframes side-pop { from { transform: scale(0.85); opacity: 0; } to { transform: none; opacity: 1; } }
 .frame-ghost { width: 70%; height: auto; }
+/* Desktop drag and drop: the viewer is the drop area; the whole page accepts the file. */
+.drop-title { font-family: var(--sans); font-size: 1.05rem; font-weight: 700; }
+.drop-choose { background: #f8f5ed; color: #1f1a14; border-color: #f8f5ed; }
+.viewer.is-dragover { outline: 4px solid var(--accent); outline-offset: -4px; }
+.drop-overlay {
+  position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+  background: rgb(31 26 20 / 0.94); color: #f8f5ed; font-size: 1.25rem; font-weight: 800;
+}
+.drop-overlay span { padding: 0.5rem 1rem; border: 2px dashed var(--accent); border-radius: 8px; }
+.local-note { display: flex; align-items: center; gap: 0.4rem; margin: 0; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+.local-note svg { inline-size: 14px; block-size: 14px; flex: none; }
 
 .dropzone.is-dragover { border: 2px solid var(--accent); background: var(--sunk); }
 .side-pick {

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { devices, expect, test } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+import { devices, expect, test, type JSHandle, type Page } from '@playwright/test'
 import { fixture, openCapture } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
@@ -104,6 +105,68 @@ test('accepts a dropped image', async ({ page }) => {
   await zone.dispatchEvent('dragover', { dataTransfer: dt })
   await zone.dispatchEvent('drop', { dataTransfer: dt })
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
+})
+
+/** A DataTransfer holding one fixture, as the browser builds it for a file dragged from the system. */
+async function dragged (page: Page, name: string, type = 'image/png'): Promise<JSHandle<DataTransfer>> {
+  const bytes = readFileSync(fixture(name)).toString('base64')
+  return await page.evaluateHandle(([b64, n, t]) => {
+    const d = new DataTransfer()
+    d.items.add(new File([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], n, { type: t }))
+    return d
+  }, [bytes, name, type] as const)
+}
+
+test('desktop: the viewer is an upload area with a choose-file button and says nothing is uploaded', async ({ page }) => {
+  await openCapture(page)
+  await expect(page.locator('#viewer')).toContainText('Arrastra aquí la imagen')
+  await expect(page.locator('#local-note')).toHaveText('La imagen se lee en este dispositivo. No se sube nada.')
+  // The button opens the same file chooser as the action bar, for the side on screen.
+  const chooser = page.waitForEvent('filechooser')
+  await page.locator('#drop-choose').click()
+  await (await chooser).setFiles(fixture('synthetic-front.png'))
+  await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
+  await expect(page.locator('#side-badge')).toHaveAttribute('data-side', 'back')
+})
+
+test('desktop: front and back dropped on the viewer are read locally, never sent', async ({ page }) => {
+  await openCapture(page)
+  // Only the app's own files may load (the corner model starts after a photo); nothing is posted.
+  const sent: string[] = []
+  page.on('request', (r) => {
+    if (r.method() !== 'GET' || r.postData() !== null || new URL(r.url()).origin !== 'http://localhost:4173') sent.push(`${r.method()} ${r.url()}`)
+  })
+  const front = await dragged(page, 'synthetic-front.png')
+  await page.locator('#viewer').dispatchEvent('dragover', { dataTransfer: front })
+  // While files are over the page, the viewer shows where they go.
+  await expect(page.locator('#viewer')).toHaveClass(/is-dragover/)
+  await page.locator('#viewer').dispatchEvent('drop', { dataTransfer: front })
+  await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
+  await expect(page.locator('#viewer')).not.toHaveClass(/is-dragover/)
+  // A drop anywhere else on the page goes to the side on screen, now the back.
+  const back = await dragged(page, 'synthetic-back.png')
+  await page.locator('h2').dispatchEvent('drop', { dataTransfer: back })
+  await expect(page.locator('#status-back')).toHaveText('Imagen cargada.')
+  await expect(page.locator('#capture-continue')).toBeEnabled()
+  expect(sent).toEqual([])
+})
+
+test('desktop: a dropped file that is not an image gets a clear error', async ({ page }) => {
+  await openCapture(page)
+  const pdf = await dragged(page, 'synthetic-front.png', 'application/pdf')
+  await page.locator('#viewer').dispatchEvent('drop', { dataTransfer: pdf })
+  await expect(page.locator('#error-front')).toContainText('no es una imagen')
+})
+
+test('a file dropped outside the photo step never replaces the app in the tab', async ({ page }) => {
+  await page.goto('/')
+  const front = await dragged(page, 'synthetic-front.png')
+  // dispatchEvent returns false when a listener cancelled the browser's default (opening the file).
+  const opened = await page.evaluate((dt) => {
+    const fire = (type: string): boolean => document.body.dispatchEvent(new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true }))
+    return { dragover: fire('dragover'), drop: fire('drop') }
+  }, front)
+  expect(opened).toEqual({ dragover: false, drop: false })
 })
 
 test('switching language keeps loaded images and updates text', async ({ page }) => {

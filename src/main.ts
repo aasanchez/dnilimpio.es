@@ -3,6 +3,7 @@
 import { isFramed } from './security/lockdown.ts'
 import { mount } from 'svelte'
 import App from './App.svelte'
+import { blockStrayDrops } from './capture/input.ts'
 import { loadExport } from './engine/load-export.ts'
 import { registerServiceWorker } from './offline/register.ts'
 import { installTrustedTypesPolicy } from './security/trusted-types.ts'
@@ -23,6 +24,9 @@ function showFramed (target: HTMLElement): void {
 
 // First, before any library can turn a string into a script URL.
 installTrustedTypesPolicy()
+
+// A file dropped by mistake must never replace the app (and the user's work) in the tab.
+blockStrayDrops(window)
 
 const target = document.getElementById('app')
 if (target && isFramed(window)) showFramed(target)
