@@ -158,7 +158,7 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Redesign of the workflow and interface: guided phone-first flow, new visual style | Done |
 | Capture coach: live camera tips (framing, tilt, light, glare, blur, movement) and automatic shot | Done |
 | DNI 3.0 and TIE, with a document picker | Done |
-| Find the card's corners automatically: on-device model, then classic edge detection, then manual | Done |
+| Find the card's corners automatically: on-device model, then classic edge detection, then manual; sides snapped onto the card's real edges | Done |
 | Automatic straightening: find, turn (sideways, upside down) and straighten both sides; corners only on request | Done |
 | On-device OCR engine and MRZ reader (Tesseract.js, self-hosted, loaded on first use) | Done |
 | Smart field finding: OCR covers names, DNI/NIE number, dates, support number, CAN and MRZ | Done |
@@ -297,7 +297,7 @@ Rules the code follows:
 
 ## Tests
 
-- **Unit** (`tests/unit/`): upright check (anchor boxes, upright and upside-down cards for every document), document type from the MRZ (code, issue date from birth and expiry dates), homography and warp, corner editing, zone data for every document (inside
+- **Unit** (`tests/unit/`): edge snapping (sides 7 % outside or inside a card on woven fabric come back onto it, past a printed band; a weak border on a light table is kept even when a band inside is much stronger), upright check (anchor boxes, upright and upside-down cards for every document), document type from the MRZ (code, issue date from birth and expiry dates), homography and warp, corner editing, zone data for every document (inside
   the card, sources, defaults, sizes), file decoding, i18n keys, build version (commit SHA checks,
   commit link, relative time in several languages),
   redaction raster (every masked pixel is opaque black, input untouched), JPEG filter (metadata
@@ -308,7 +308,7 @@ Rules the code follows:
   photo, a manual choice never overridden, a note and the manual picker when offline or without a service
   worker), photo selection, automatic straightening (photos turned 0°, 90°, 180° and 270° come out
 upright, front and back), corner alignment from **Adjust corners**, the corner model (real model under the
-  real CSP on generated cluttered photos, edge detection when the model is unavailable, the manual
+  real CSP on generated cluttered photos and on dark woven fabric in portrait phone photos, edge detection when the model is unavailable, the manual
   corner screen with a note when nothing is found, never overriding the user, cached after first use and working
   offline, a tampered model refused), the field checklist and its
   warnings, review, a real PDF download (decoded in the browser to check that hidden areas are black
