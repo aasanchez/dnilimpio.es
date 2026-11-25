@@ -71,7 +71,8 @@ Whether a recipient accepts a redacted copy is up to them.
 - **Text recognition (OCR) on the device.** When OCR is used, the image is read by a Web Worker in
   your browser. The OCR engine and Spanish language data (about 8 MB) come from this site, never from
   a third party, are downloaded only the first time OCR is used, and are checked against their hash
-  before use. If OCR cannot run (offline before the first download, or no service worker), it is
+  before use. The worker runs under its own strict CSP: it can read its own files in `ocr/` and
+  cannot send requests anywhere. If OCR cannot run (offline before the first download, or no service worker), it is
   switched off and you choose the document by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before

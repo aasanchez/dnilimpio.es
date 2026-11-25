@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { cacheName, isOnDemand, isPrecached, parseManifest, route } from '../../src/offline/precache.ts'
+import { WORKER_SCRIPTS, cacheName, isOnDemand, isPrecached, parseManifest, route, workerCsp } from '../../src/offline/precache.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
 const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }], onDemand: [{ path: 'ocr/spa.traineddata', integrity: HASH }] }
@@ -75,5 +75,17 @@ describe('isOnDemand', () => {
     expect(isOnDemand('assets/ml/model-x.js')).toBe(true)
     expect(isOnDemand('assets/ml/ort-wasm-simd-threaded-x.mjs')).toBe(true)
     expect(isOnDemand('assets/index-x.js')).toBe(false)
+  })
+})
+
+describe('workerCsp', () => {
+  it('lets the OCR worker load and read its own folder only, with no eval()', () => {
+    const csp = workerCsp('https://example.org/app/')
+    expect(csp).toBe("default-src 'none'; script-src https://example.org/app/ocr/ 'wasm-unsafe-eval'; connect-src https://example.org/app/ocr/")
+    for (const bad of ["'unsafe-eval'", "'self'", '*', 'blob:', 'data:']) expect(csp).not.toContain(bad)
+  })
+  it('applies to the OCR worker script, an on-demand file', () => {
+    expect(WORKER_SCRIPTS).toEqual(['ocr/worker.min.js'])
+    expect(WORKER_SCRIPTS.every(isOnDemand)).toBe(true)
   })
 })
