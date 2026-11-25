@@ -64,6 +64,12 @@ export default tseslint.config(
     rules: { 'no-restricted-globals': 'off' },
   },
   {
+    // The one exception to "nothing persists": the date the no-cookies notice was last closed
+    // (one key, no personal data), so it shows at most every 4 days. Nothing else may use storage.
+    files: ['src/ui/notice-memory.ts'],
+    rules: { 'no-restricted-globals': 'off', 'no-restricted-properties': 'off' },
+  },
+  {
     // Numeric kernels index fixed-size arrays inside bounds-checked loops; with noUncheckedIndexedAccess
     // the alternative to `!` is a runtime check per pixel. Allowed only here and in tests.
     files: ['src/geometry/**/*.ts', 'src/engine/**/*.ts', 'src/detect/**/*.ts', 'tests/**/*.ts'],

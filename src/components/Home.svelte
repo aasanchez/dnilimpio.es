@@ -1,10 +1,12 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Start screen: what the tool does, the privacy promise, one button. -->
+<!-- Start screen: what the tool does, the privacy promise, one button, and the no-cookies notice. -->
 <script lang="ts">
   import { t, type Lang } from '../i18n/index.ts'
   import BuildVersion from './BuildVersion.svelte'
+  import PrivacyNotice from './PrivacyNotice.svelte'
+  import AuditPrompt from './AuditPrompt.svelte'
 
-  const { lang, onStart }: { lang: Lang; onStart: () => void } = $props()
+  const { lang, onStart, notice, onNoticeDismiss }: { lang: Lang; onStart: () => void; notice: boolean; onNoticeDismiss: () => void } = $props()
 </script>
 
 <section class="step home">
@@ -35,10 +37,14 @@
 
   <footer>
     <a href={__REPO_URL__} rel="noopener noreferrer">{t(lang, 'sourceCode')}</a>
+    <AuditPrompt {lang} id="audit-footer" />
     <BuildVersion {lang} />
   </footer>
 
   <div class="actionbar">
+    {#if notice}
+      <PrivacyNotice {lang} onDismiss={onNoticeDismiss} />
+    {/if}
     <button type="button" class="button primary" id="start" onclick={onStart}>{t(lang, 'start')} <span class="flip" aria-hidden="true">→</span></button>
     <p class="hint">{t(lang, 'startHint')}</p>
   </div>

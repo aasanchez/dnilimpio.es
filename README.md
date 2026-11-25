@@ -82,8 +82,10 @@ covered by tests (see [Security reviews](#security-reviews)).
 - **No storage of your data.** Photos, fields, watermark text and PDFs are kept in memory only. The
   code is not allowed to use browser storage, cookies or network APIs (`localStorage`,
   `sessionStorage`, `indexedDB`, `document.cookie`, `fetch`, `sendBeacon` and others, enforced by the
-  linter). The only thing the browser stores is the app itself (its HTML, scripts and styles), for
-  offline use. A test checks that cookies and storage stay empty after a whole workflow.
+  linter). The browser stores only the app itself (its HTML, scripts and styles), for offline use,
+  and one `localStorage` key with the date you last closed the no-cookies notice, so it shows at most
+  every 4 days (`src/ui/notice-memory.ts`, the only file allowed to use storage). A test checks that
+  cookies and storage stay empty after a whole workflow.
 - **Clear everything means everything.** "Clear everything" drops the photos and every choice, and
   stops the OCR worker, which keeps the last image it read. Leaving the page (another site, closing the
   tab, a reload) does the same, so the browser's back-forward cache keeps no document.
@@ -347,7 +349,7 @@ Rules the code follows:
   two script URLs: the service worker and the OCR worker ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
 - No `eval`, `new Function`, inline scripts or inline styles. WebAssembly is allowed only for the
   corner model's runtime ([ADR 0007](docs/adr/0007-corner-model.md)).
-- No runtime requests and no persistent storage.
+- No runtime requests and no persistent storage, except the notice's closing date (`src/ui/notice-memory.ts`).
 - Test images are synthetic or official specimens. Never commit a photo of a real person's document.
 
 ## Tests
