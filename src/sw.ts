@@ -83,12 +83,20 @@ async function ensureOnDemand (url: string): Promise<Response> {
 
 // The page asks for optional files before using them ({ type: 'prepare', paths }), so a missing
 // network or a file that fails its integrity check is reported at once, as one clear error.
+// { type: 'status', paths } answers whether all of them are already in this build's cache.
 sw.addEventListener('message', (event) => {
   const msg = event.data as { type?: unknown; paths?: unknown } | null
   const port = event.ports[0]
-  if (!port || msg?.type !== 'prepare' || !Array.isArray(msg.paths)) return
+  if (!port || (msg?.type !== 'prepare' && msg?.type !== 'status') || !Array.isArray(msg.paths)) return
   const urls = (msg.paths as unknown[]).filter((p): p is string => typeof p === 'string').map(urlOf)
   event.waitUntil((async () => {
+    if (msg.type === 'status') {
+      // Only this build's cache counts: files of another build may not match this worker's hashes.
+      const cache = await caches.open(CACHE)
+      const cached = await Promise.all(urls.map(async (u) => await cache.match(u) !== undefined))
+      port.postMessage({ ok: true, cached: cached.every(Boolean) })
+      return
+    }
     try {
       for (const url of urls) await ensureOnDemand(url)
       port.postMessage({ ok: true })

@@ -55,8 +55,30 @@ test('reads a DNI MRZ on the device, then works offline from the cache', async (
     return { before, code: m?.documentCode, number: m?.documentNumber, valid: m?.valid }
   }, [chunk, lines] as const)
 
+  // Two jobs at once with different settings: each must get its own (they run one after the other).
+  const both = await page.evaluate(async ([path, text]) => {
+    const ocr = await import(path) as typeof import('../../src/ocr/ocr.ts')
+    const draw = (t: string[]): OffscreenCanvas => {
+      const c = new OffscreenCanvas(1400, 260)
+      const ctx = c.getContext('2d')
+      if (!ctx) throw new Error('no 2d')
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, c.width, c.height)
+      ctx.fillStyle = '#000'
+      ctx.font = '48px monospace'
+      t.forEach((l, i) => { ctx.fillText(l, 30, 70 + i * 70) })
+      return c
+    }
+    const before = (await ocr.ocrStatus()).state
+    const [mrzRead, digitsOnly] = await Promise.all([ocr.readMrz(draw(text)), ocr.recognise(draw(['ABC 123']), { whitelist: '0123456789' })])
+    return { before, valid: mrzRead?.valid, digits: digitsOnly.text.replace(/\s/g, '') }
+  }, [chunk, lines] as const)
+  expect(both.before).toBe('download')
+  expect(both.valid).toBe(true)
+  expect(both.digits).not.toMatch(/[A-Z]/)
+
   const first = await run()
-  expect(first.before).toBe('download')
+  expect(first.before).toBe('ready') // downloaded by the parallel jobs above
   expect(first).toMatchObject({ code: 'ID', number: 'BAA000589', valid: true })
 
   // Second time, offline: the files come from the service worker's cache.

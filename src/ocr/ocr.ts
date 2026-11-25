@@ -33,18 +33,29 @@ async function coreFile (): Promise<string> {
   return 'tesseract-core-lstm.wasm.js'
 }
 
+/** Files OCR needs in this browser, relative to the site. */
+async function neededFiles (): Promise<string[]> {
+  return ['worker.min.js', await coreFile(), LANG_FILE].map((p) => `ocr/${p}`)
+}
+
+/** Sends one message to the controlling service worker and waits for its answer. */
+async function ask (msg: { type: 'status' | 'prepare'; paths: string[] }): Promise<{ ok: boolean; cached?: boolean; error?: string }> {
+  const controller = navigator.serviceWorker.controller
+  if (!controller) throw new Error('OCR unavailable: no-service-worker')
+  const { port1, port2 } = new MessageChannel()
+  const reply = new Promise<{ ok: boolean; cached?: boolean; error?: string }>((resolve) => {
+    port1.onmessage = (e) => { resolve(e.data as { ok: boolean; cached?: boolean; error?: string }) }
+  })
+  controller.postMessage(msg, [port2])
+  try { return await reply } finally { port1.close() }
+}
+
 /**
  * Asks the service worker to download and check the files OCR needs, so a missing network or a file
  * that fails its integrity check is one clear error now instead of a stalled worker later.
  */
-async function prepare (paths: readonly string[]): Promise<void> {
-  const controller = navigator.serviceWorker.controller
-  if (!controller) throw new Error('OCR unavailable: no-service-worker')
-  const { port1, port2 } = new MessageChannel()
-  const reply = new Promise<{ ok: boolean; error?: string }>((resolve) => { port1.onmessage = (e) => { resolve(e.data as { ok: boolean; error?: string }) } })
-  controller.postMessage({ type: 'prepare', paths: paths.map((p) => `ocr/${p}`) }, [port2])
-  const r = await reply
-  port1.close()
+async function prepare (): Promise<void> {
+  const r = await ask({ type: 'prepare', paths: await neededFiles() })
   if (!r.ok) throw new Error(`OCR files unavailable: ${r.error ?? 'unknown error'}`)
 }
 
@@ -52,8 +63,9 @@ async function prepare (paths: readonly string[]): Promise<void> {
 export async function ocrStatus (): Promise<OcrStatus> {
   if (typeof WebAssembly !== 'object' || typeof Worker === 'undefined') return { state: 'unavailable', reason: 'unsupported' }
   if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return { state: 'unavailable', reason: 'no-service-worker' }
-  const cached = await caches.match(`${base()}${LANG_FILE}`).catch(() => undefined)
-  if (cached) return { state: 'ready' }
+  // Ask the controlling service worker: only its own build's cache counts.
+  const reply = await ask({ type: 'status', paths: await neededFiles() }).catch(() => ({ ok: false, cached: false }))
+  if (reply.cached === true) return { state: 'ready' }
   return navigator.onLine ? { state: 'download', megabytes: OCR_DOWNLOAD_MB } : { state: 'unavailable', reason: 'offline' }
 }
 
@@ -65,7 +77,7 @@ async function worker (): Promise<Worker> {
     const status = await ocrStatus()
     if (status.state === 'unavailable') throw new Error(`OCR unavailable: ${status.reason}`)
     const core = await coreFile()
-    await prepare(['worker.min.js', core, LANG_FILE])
+    await prepare()
     return await createWorker('spa', OEM.LSTM_ONLY, {
       workerPath: `${base()}worker.min.js`,
       corePath: `${base()}${core}`,
@@ -84,16 +96,23 @@ async function worker (): Promise<Worker> {
 
 export interface OcrLine { readonly text: string; readonly confidence: number; readonly bbox: { readonly x0: number; readonly y0: number; readonly x1: number; readonly y1: number } }
 
+/** Jobs run one at a time: each sets its own parameters, then recognises, before the next starts. */
+let queue: Promise<unknown> = Promise.resolve()
+
 /** Reads text from a canvas. Coordinates are in the canvas's pixels. */
 export async function recognise (image: HTMLCanvasElement | OffscreenCanvas, opts: { whitelist?: string; singleBlock?: boolean } = {}): Promise<{ text: string; lines: OcrLine[] }> {
-  const w = await worker()
-  await w.setParameters({
-    tessedit_char_whitelist: opts.whitelist ?? '',
-    tessedit_pageseg_mode: opts.singleBlock === true ? PSM.SINGLE_BLOCK : PSM.AUTO,
+  const job = queue.then(async () => {
+    const w = await worker()
+    await w.setParameters({
+      tessedit_char_whitelist: opts.whitelist ?? '',
+      tessedit_pageseg_mode: opts.singleBlock === true ? PSM.SINGLE_BLOCK : PSM.AUTO,
+    })
+    const { data } = await w.recognize(image, {}, { text: true, blocks: true })
+    const lines: OcrLine[] = (data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.map((l) => ({ text: l.text.trim(), confidence: l.confidence / 100, bbox: l.bbox }))))
+    return { text: data.text, lines }
   })
-  const { data } = await w.recognize(image, {}, { text: true, blocks: true })
-  const lines: OcrLine[] = (data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.map((l) => ({ text: l.text.trim(), confidence: l.confidence / 100, bbox: l.bbox }))))
-  return { text: data.text, lines }
+  queue = job.catch(() => undefined)
+  return await job
 }
 
 /**
