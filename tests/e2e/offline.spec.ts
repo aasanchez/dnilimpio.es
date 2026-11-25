@@ -2,7 +2,7 @@
 // Offline support (spec phase 2): after one visit the whole app, including the PDF code loaded on
 // demand, works with the network off. Service workers are on here (blocked in the other specs).
 import { expect, test, type Page } from '@playwright/test'
-import { fixture, loadBoth, openCapture, toEditor } from './helpers.ts'
+import { adjustFront, fixture, loadBoth, openCapture, toEditor } from './helpers.ts'
 
 test.use({ locale: 'es-ES', serviceWorkers: 'allow' })
 
@@ -84,8 +84,8 @@ test('offline before the model was ever used: classic edge detection places the 
   await loadBoth(page)
   await page.locator('#capture-continue').click()
   await page.locator('#doc-continue').click()
-  await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'edges', { timeout: 10_000 })
-  await expect(page.locator('#align-continue')).toBeEnabled()
+  await adjustFront(page)
+  await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'edges')
   expect(errors).toEqual([])
 })
 
@@ -104,7 +104,8 @@ test('the model is kept after its first use and then works offline', async ({ pa
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await page.locator('#capture-continue').click()
   await page.locator('#doc-continue').click()
-  await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/, { timeout: 30_000 })
+  await adjustFront(page)
+  await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/)
   await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'model')
 })
 
@@ -122,7 +123,8 @@ test('a tampered model file is refused and classic edge detection takes over', a
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await page.locator('#capture-continue').click()
   await page.locator('#doc-continue').click()
-  await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'edges', { timeout: 10_000 })
+  await adjustFront(page)
+  await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'edges')
   expect((await cachedPaths(page)).some((p) => p.startsWith('/assets/ml/model-'))).toBe(false)
   expect(errors).toEqual([])
 })

@@ -7,17 +7,20 @@ import type { Side } from '../zones/dni.ts'
 
 export interface AlignState {
   quads: Record<Side, Quad | null>;
-  /** Straightened 1712 × 1080 card per side; null until the user confirms the corners. */
+  /** Straightened 1712 × 1080 card per side; null until the card is straightened. */
   warped: Record<Side, HTMLCanvasElement | null>;
+  /** Which detector placed the corners automatically; null when nobody did or the person confirmed them. */
+  found: Record<Side, 'model' | 'edges' | null>;
 }
 
 export function emptyAlignState (): AlignState {
-  return { quads: { front: null, back: null }, warped: { front: null, back: null } }
+  return { quads: { front: null, back: null }, warped: { front: null, back: null }, found: { front: null, back: null } }
 }
 
 /** Drops everything derived from one side, e.g. when its photo is replaced. Shrinks the canvas to free memory. */
 export function resetSide (state: AlignState, side: Side): void {
   state.quads[side] = null
+  state.found[side] = null
   const c = state.warped[side]
   if (c) {
     c.width = 0

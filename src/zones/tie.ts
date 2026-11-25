@@ -17,6 +17,8 @@ import { box, ID1_MM, type ModelZones } from './types.ts'
 export const TIE: ModelZones = {
   model: 'tie',
   size: ID1_MM,
+  // Holder's photo, front left (inner part, for orientation only; see types.ts).
+  portrait: box(0.06, 0.32, 0.28, 0.78),
   source: {
     url: 'https://www.consilium.europa.eu/prado/images/ESP-HO-03001/341835.jpg',
     page: 'https://www.consilium.europa.eu/prado/en/ESP-HO-03001/index.html',

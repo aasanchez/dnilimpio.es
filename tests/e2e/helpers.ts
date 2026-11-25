@@ -46,7 +46,7 @@ export async function loadBoth (page: Page, { model = false } = {}): Promise<voi
   await expect(page.locator('#capture-continue')).toBeEnabled()
 }
 
-/** From the photo step through the document picker to the corners of the front. */
+/** From the photo step through the document picker; the photos are then straightened automatically. */
 export async function chooseDoc (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
   await page.locator('#capture-continue').click()
   await expect(page.locator('h2')).toHaveText(/documento|document/)
@@ -54,10 +54,28 @@ export async function chooseDoc (page: Page, doc: Doc = 'dni-4.0'): Promise<void
   await page.locator('#doc-continue').click()
 }
 
-/** Loads both fixtures and confirms the document, ending on the corners of the front. */
-export async function toAlign (page: Page, doc: Doc = 'dni-4.0', opts: { model?: boolean } = {}): Promise<void> {
+/**
+ * Loads both fixtures and confirms the document. Both cards are then found and straightened
+ * automatically (edge detection; the model is blocked unless `model` is true), ending in the editor.
+ */
+export async function toAuto (page: Page, doc: Doc = 'dni-4.0', opts: { model?: boolean } = {}): Promise<void> {
   await loadBoth(page, opts)
   await chooseDoc(page, doc)
+  await expect(page.locator('#preview')).toHaveJSProperty('width', DOC_PX[doc].w)
+}
+
+/** Waits for the editor (straightening can take a while with the model), then opens the front's corners. */
+export async function adjustFront (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
+  await expect(page.locator('#preview')).toHaveJSProperty('width', DOC_PX[doc].w, { timeout: 30_000 })
+  await page.locator('#tab-front').click()
+  await page.locator('#adjust-front').click()
+  await expect(page.locator('canvas.corner-editor')).toBeVisible()
+}
+
+/** Like toAuto, then opens the corners of the front with "Adjust corners". */
+export async function toAlign (page: Page, doc: Doc = 'dni-4.0', opts: { model?: boolean } = {}): Promise<void> {
+  await toAuto(page, doc, opts)
+  await adjustFront(page, doc)
 }
 
 /**
@@ -90,12 +108,7 @@ export async function pixel (page: Page, id: string, x: number, y: number): Prom
   }, [x, y])
 }
 
-/** Loads both fixtures and aligns both sides, ending in the editor. */
+/** Loads both fixtures, confirms the document and lets the app straighten both sides: ends in the editor. */
 export async function toEditor (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
-  await toAlign(page, doc)
-  await snapCorners(page, doc)
-  await page.locator('#align-continue').click()
-  await snapCorners(page, doc)
-  await page.locator('#align-continue').click()
-  await expect(page.locator('#preview')).toHaveJSProperty('width', DOC_PX[doc].w)
+  await toAuto(page, doc)
 }
