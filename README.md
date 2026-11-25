@@ -3,6 +3,8 @@
 Hide the sensitive data on a photo of your Spanish identity document before you share a copy.
 Everything runs in your browser, on your device. Nothing is uploaded.
 
+**Use it:** <https://aasanchez.github.io/dnilimpio.es/> (planned move to `dnilimpio.es`).
+
 > [!IMPORTANT]
 > **Work in progress.** Today the tool loads the front and back photos and straightens each card.
 > Hiding fields, the watermark, black and white, and the PDF download are being built now (see
@@ -178,7 +180,8 @@ pull request and on `master`. On `master` it publishes the tested `dist/` to Git
 pinned to commit SHAs and run with read-only permissions, except the deploy job.
 
 The build uses relative paths, so `dist/` works at a domain root, under a subpath and on any static
-server (Nginx, Caddy, Cloudflare Pages). To redeploy without a new commit, run the **CI** workflow on
+server (Nginx, Caddy, Cloudflare Pages). Moving to the `dnilimpio.es` domain needs no code change:
+set the custom domain in the repository's Pages settings and point DNS at GitHub Pages. To redeploy without a new commit, run the **CI** workflow on
 `master` from the Actions tab.
 
 There is no downloadable offline package ([ADR 0002](docs/adr/0002-no-standalone-release.md)).
