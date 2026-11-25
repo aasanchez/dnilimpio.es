@@ -278,8 +278,16 @@ span.chip { cursor: default; color: var(--muted); }
 .live-view { position: relative; flex: 1; min-height: 0; }
 .live-view video, .live-guide { position: absolute; inset: 0; width: 100%; height: 100%; }
 .live-view video { object-fit: contain; background: #000; }
-.live-guide rect { fill: none; stroke: #f36716; stroke-width: 3px; stroke-dasharray: 12 8; vector-effect: non-scaling-stroke; }
-.live-guide rect.ok { stroke: #7fc8a9; stroke-dasharray: none; }
+.live-guide .frame { fill: none; stroke: #f36716; stroke-width: 3px; stroke-dasharray: 12 8; vector-effect: non-scaling-stroke; }
+.live-guide .frame.ok { stroke: #7fc8a9; stroke-dasharray: none; }
+/* Ghost card: which side to show. Light enough to see the live picture through it. */
+.ghost { opacity: 0.9; transition: opacity 0.3s; }
+.ghost.dim { opacity: 0.25; }
+.ghost .ghost-block, .ghost .ghost-text { fill: rgb(248 245 237 / 0.16); stroke: rgb(248 245 237 / 0.55); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.ghost .ghost-text { stroke: none; fill: rgb(248 245 237 / 0.4); }
+.ghost .ghost-line { fill: none; stroke: rgb(248 245 237 / 0.55); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.ghost .ghost-mrz { stroke: rgb(248 245 237 / 0.5); stroke-width: 2.2; stroke-dasharray: 1.6 0.8; }
+@media (prefers-reduced-motion: reduce) { .ghost { transition: none; } }
 .live-view.flash::after { content: ''; position: absolute; inset: 0; background: #fff; opacity: 0.7; }
 .live-tip {
   margin: 0.75rem 1rem 0; padding: 0.5rem 0.75rem; min-height: 2.75rem; border: 2px solid #f8f5ed; border-radius: 6px;

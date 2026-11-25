@@ -11,6 +11,7 @@
   import { openCamera, stopStream, type CameraFailure } from '../capture/live.ts'
   import { t, type Key, type Lang } from '../i18n/index.ts'
   import type { Side } from '../zones/dni.ts'
+  import GhostCard from './GhostCard.svelte'
 
   const { lang, side, onShot, onClose, onFail }: {
     lang: Lang
@@ -171,7 +172,9 @@
     {#if size && guide}
       <!-- Same box and fit as the video, so the guide sits exactly where the coach looks. -->
       <svg class="live-guide" viewBox="0 0 {size.w} {size.h}" aria-hidden="true">
-        <rect x={guide.x} y={guide.y} width={guide.w} height={guide.h} rx={guide.w * 0.04} class:ok={tip === 'ready'} />
+        <!-- Faint drawing of the side to show; it fades once the card sits in the frame. -->
+        <GhostCard {side} rect={guide} dim={tip !== null && tip !== 'frame' && tip !== 'closer'} />
+        <rect class="frame" x={guide.x} y={guide.y} width={guide.w} height={guide.h} rx={guide.w * 0.04} class:ok={tip === 'ready'} />
       </svg>
     {/if}
   </div>
