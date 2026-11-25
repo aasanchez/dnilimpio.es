@@ -175,5 +175,6 @@
   "findNone": "Ez da ezer aurkitu. Estali datuak eskuz.",
   "findOffline": "Bilaketa automatikoak behin deskargatu behar du, eta ez duzu konexiorik. Estali datuak eskuz.",
   "findUnsupported": "Bilaketa automatikoa ez dago erabilgarri nabigatzaile honetan. Estali datuak eskuz.",
-  "findFailed": "Bilaketa automatikoak ez du funtzionatu oraingoan. Estali datuak eskuz."
+  "findFailed": "Bilaketa automatikoak ez du funtzionatu oraingoan. Estali datuak eskuz.",
+  "framed": "Segurtasunagatik, tresna honek bere fitxan bakarrik funtzionatzen du. Ireki hemen."
 }

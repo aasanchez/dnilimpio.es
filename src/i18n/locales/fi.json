@@ -175,5 +175,6 @@
   "findNone": "Mitään ei löytynyt. Piilota tiedot käsin.",
   "findOffline": "Automaattinen haku tarvitsee kertaluonteisen latauksen, eikä sinulla ole yhteyttä. Piilota tiedot käsin.",
   "findUnsupported": "Automaattinen haku ei ole käytettävissä tässä selaimessa. Piilota tiedot käsin.",
-  "findFailed": "Automaattinen haku ei toiminut tällä kertaa. Piilota tiedot käsin."
+  "findFailed": "Automaattinen haku ei toiminut tällä kertaa. Piilota tiedot käsin.",
+  "framed": "Turvallisuussyistä tämä työkalu toimii vain omassa välilehdessään. Avaa se tästä."
 }
