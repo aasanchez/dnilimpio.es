@@ -39,7 +39,9 @@ need only some of the data. This tool makes a copy that shows only what you choo
 3. **Straighten** each side by marking its four corners.
 4. **Choose the fields to hide** (signature, dates, support number, CAN, MRZ and others), and draw
    extra black boxes over anything else.
-5. **Add a watermark** (optional), for example `COPY ONLY FOR RENTAL APPLICATION`.
+5. **Add a watermark** (optional), for example `COPY ONLY FOR RENTAL APPLICATION`. The text is
+   repeated in small, faint diagonal rows over the whole card, so every part of it carries the text
+   and the card stays readable.
 6. **Convert to black and white** (optional).
 7. **Review** both sides and **download a PDF**: `protected-document.pdf`.
 
@@ -219,7 +221,10 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
      boxes. With a keyboard: **Add box**, then arrow keys move it, <kbd>Shift</kbd>+arrows resize it,
      <kbd>N</kbd> selects the next box and <kbd>Delete</kbd> removes it.
    - **Watermark:** type what the copy is for, or pick a suggestion (rental, bank, dated copy), and
-     turn on **Convert to black and white** if you like. The card updates as you type.
+     turn on **Convert to black and white** if you like. The card updates as you type. The text is
+     drawn small and light, repeated in staggered diagonal rows across the whole card, so a cropped
+     part of the image still shows it. Long text wraps onto a few short lines (at most 120
+     characters).
 7. **Download.** Check both final images and the summary, tick **I have checked both sides**, then
    **Download PDF**. The file is called `protected-document.pdf`.
 8. **Done.** On phones that support it, **Share** sends the PDF through the system share sheet.

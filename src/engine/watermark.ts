@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Watermark (spec §14): one centred, diagonal, semi-transparent block of text, wrapped and scaled to
-// stay readable. It is drawn into the sanitised raster, so it becomes part of the image pixels.
+// Watermark (spec §14): small, light, diagonal text repeated as a tiled pattern over the whole image.
+// Each copy is a short block of wrapped text; the copies sit in staggered rows (like bricks), so any
+// crop of the card still carries the text, while the card itself stays readable underneath.
+// It is drawn into the sanitised raster, so it becomes part of the image pixels.
 // Layout is pure (it takes a text-measuring function), so it is tested without a browser.
 
 /** Measures the width of `text` at font size 1 (in the same units as the result × size). */
@@ -13,13 +15,34 @@ export interface WatermarkLayout {
   /** Rotation in radians (negative: rising from bottom-left to top-right). */
   readonly angle: number
   readonly direction: 'ltr' | 'rtl'
+  /** Size of one copy of the text block, in pixels, before rotation. */
+  readonly blockWidth: number
+  readonly blockHeight: number
+  /** Distance between copies along a row and between rows, in pixels, in the rotated frame. */
+  readonly stepX: number
+  readonly stepY: number
 }
 
-/** Longest text accepted. Longer input is cut, so a pasted essay cannot make the text unreadably small. */
+/** Centre of one copy of the text block, in image pixels. */
+export interface WatermarkTile {
+  readonly x: number
+  readonly y: number
+}
+
+/** Longest text accepted. Longer input is cut, so a pasted essay cannot turn into a wall of text. */
 export const WATERMARK_MAX_CHARS = 120
-const MIN_SIZE_RATIO = 0.035 // of the image diagonal
-const MAX_SIZE_RATIO = 0.09
+/** Font size as a share of the image diagonal: about the size of the text printed on the card. */
+export const WATERMARK_SIZE_RATIO = 0.02
+const MIN_SIZE = 10 // pixels, for very small images
+/** Widest line of one copy, as a share of the image diagonal. Longer text wraps onto more lines. */
+const MAX_BLOCK_RATIO = 0.4
 const LINE_HEIGHT = 1.25
+/** Empty space between copies, in font sizes. */
+const GAP_X = 3
+const GAP_Y = 2.5
+/** Ink: dark text with a light halo, both faint, so it shows on light and dark parts of the card. */
+export const WATERMARK_FILL = 'rgba(20, 20, 20, 0.16)'
+export const WATERMARK_HALO = 'rgba(255, 255, 255, 0.16)'
 
 /** User-perceived characters (grapheme clusters), so a cut never splits an accent, emoji or ligature. */
 export function graphemes (text: string): string[] {
@@ -79,62 +102,89 @@ export function wrap (text: string, width: number, measure: Measure, hardWidth =
 }
 
 /**
- * Chooses line breaks and a font size so the block fits along the image diagonal.
- * Tries 1 to 4 lines and keeps the layout with the largest font size. Returns null for empty text.
+ * Lays out one copy of the text block and the spacing of the tiled pattern. The font size is fixed
+ * by the image size, not by the text, so the pattern looks the same for short and long text.
+ * Returns null for empty text.
  */
 export function layoutWatermark (raw: string, width: number, height: number, measure: Measure): WatermarkLayout | null {
   const text = normaliseWatermark(raw)
   if (text === '') return null
   const diagonal = Math.hypot(width, height)
-  const angle = -Math.atan2(height, width)
-  // Usable box along the diagonal: most of its length, a band across it.
-  const boxW = diagonal * 0.8
-  const boxH = Math.min(width, height) * 0.6
-  const total = measure(text)
-  const minSize = diagonal * MIN_SIZE_RATIO
-  // At the minimum size, no line may be wider than the box: break long unspaced tokens to keep them inside.
-  const hardWidth = boxW / minSize
-  let best: { lines: string[]; size: number } | null = null
-  for (let n = 1; n <= 4; n++) {
-    const lines = wrap(text, total / n, measure, hardWidth)
-    const widest = Math.max(...lines.map(measure))
-    const size = Math.min(boxW / widest, boxH / (lines.length * LINE_HEIGHT))
-    if (!best || size > best.size) best = { lines, size }
+  const size = Math.max(MIN_SIZE, diagonal * WATERMARK_SIZE_RATIO)
+  // Line width limit in font units; unspaced tokens wider than that are broken, so no line exceeds it.
+  const maxLine = Math.max((diagonal * MAX_BLOCK_RATIO) / size, measure('M'))
+  const lines = wrap(text, maxLine, measure, maxLine)
+  const blockWidth = Math.max(...lines.map(measure)) * size
+  const blockHeight = lines.length * size * LINE_HEIGHT
+  return {
+    lines,
+    size,
+    angle: -Math.atan2(height, width),
+    direction: textDirection(text),
+    blockWidth,
+    blockHeight,
+    stepX: blockWidth + GAP_X * size,
+    stepY: blockHeight + GAP_Y * size
   }
-  if (!best) return null
-  const size = Math.max(minSize, Math.min(best.size, diagonal * MAX_SIZE_RATIO))
-  return { lines: best.lines, size, angle, direction: textDirection(text) }
+}
+
+/**
+ * Centres of every copy that touches the image. Rows run along the rotated axis through the image
+ * centre; every other row is shifted by half a step, so the copies interlock instead of forming columns.
+ */
+export function tileWatermark (layout: WatermarkLayout, width: number, height: number): WatermarkTile[] {
+  const { stepX, stepY, angle } = layout
+  // Half-diagonal of one block: a copy whose centre is further than this from the image cannot touch it.
+  const reach = Math.hypot(layout.blockWidth, layout.blockHeight) / 2
+  const radius = Math.hypot(width, height) / 2 + reach
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
+  const rows = Math.ceil(radius / stepY)
+  const cols = Math.ceil(radius / stepX) + 1
+  const tiles: WatermarkTile[] = []
+  for (let r = -rows; r <= rows; r++) {
+    const shift = (Math.abs(r) % 2) * (stepX / 2)
+    for (let c = -cols; c <= cols; c++) {
+      const u = c * stepX + shift
+      const v = r * stepY
+      const x = width / 2 + u * cos - v * sin
+      const y = height / 2 + u * sin + v * cos
+      if (x >= -reach && x <= width + reach && y >= -reach && y <= height + reach) tiles.push({ x, y })
+    }
+  }
+  return tiles
 }
 
 /** Font stack: local system fonts only, never downloaded (spec §18, §22). */
 export const WATERMARK_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Arabic", sans-serif'
 
-/** Draws the watermark onto a 2D context covering the whole image. Does nothing for empty text. */
+/** Draws the tiled watermark onto a 2D context covering the whole image. Does nothing for empty text. */
 export function drawWatermark (ctx: CanvasRenderingContext2D, text: string, width: number, height: number): void {
   ctx.save()
-  ctx.font = `700 100px ${WATERMARK_FONT}`
+  ctx.font = `600 100px ${WATERMARK_FONT}`
   const layout = layoutWatermark(text, width, height, (s) => ctx.measureText(s).width / 100)
   if (!layout) {
     ctx.restore()
     return
   }
-  ctx.translate(width / 2, height / 2)
-  ctx.rotate(layout.angle)
-  ctx.font = `700 ${String(layout.size)}px ${WATERMARK_FONT}`
+  ctx.font = `600 ${String(layout.size)}px ${WATERMARK_FONT}`
   ctx.direction = layout.direction
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.lineJoin = 'round'
-  ctx.lineWidth = Math.max(2, layout.size * 0.08)
+  ctx.lineWidth = Math.max(1, layout.size * 0.1)
+  ctx.strokeStyle = WATERMARK_HALO
+  ctx.fillStyle = WATERMARK_FILL
   const step = layout.size * LINE_HEIGHT
   const top = -((layout.lines.length - 1) * step) / 2
-  layout.lines.forEach((line, i) => {
-    const y = top + i * step
-    // Light halo under dark text: readable on both light and dark parts of the card.
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)'
-    ctx.strokeText(line, 0, y)
-    ctx.fillStyle = 'rgba(20, 20, 20, 0.5)'
-    ctx.fillText(line, 0, y)
-  })
+  for (const tile of tileWatermark(layout, width, height)) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.translate(tile.x, tile.y)
+    ctx.rotate(layout.angle)
+    layout.lines.forEach((line, i) => {
+      ctx.strokeText(line, 0, top + i * step)
+      ctx.fillText(line, 0, top + i * step)
+    })
+  }
   ctx.restore()
 }
