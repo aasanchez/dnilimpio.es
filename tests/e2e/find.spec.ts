@@ -2,79 +2,9 @@
 // Smart field finding: on-device OCR reads the straightened card and adds black boxes over the data
 // the user picks. When OCR cannot run, the button is disabled with a reason and nothing fails.
 import { expect, test, type Page } from '@playwright/test'
-import { checkDigit } from '../../src/ocr/mrz.ts'
-import { CARD, blockModel, openCapture, pixel } from './helpers.ts'
-
-/** A valid TD1 MRZ for a fictional DNI. */
-function mrz (): string[] {
-  const number = 'BAA000589'
-  const l1 = `IDESP${number}${String(checkDigit(number))}99999999R<<<<<<`
-  const l2a = `800101${String(checkDigit('800101'))}F310101${String(checkDigit('310101'))}ESP<<<<<<<<<<<`
-  const composite = l1.slice(5, 30) + l2a.slice(0, 7) + l2a.slice(8, 15) + l2a.slice(18, 29)
-  return [l1, l2a + String(checkDigit(composite)), 'ESPANOLA<ESPANOLA<<CARMEN<<<<']
-}
-
-/** Draws a 1600 × 1200 photo of a card with printed text, at the same corners as the other fixtures. */
-async function cardPhoto (page: Page, lines: ReadonlyArray<readonly [string, number, number, string]>): Promise<Buffer> {
-  const b64 = await page.evaluate(async ([card, text]) => {
-    const c = new OffscreenCanvas(1600, 1200)
-    const ctx = c.getContext('2d')
-    if (!ctx) throw new Error('no 2d')
-    ctx.fillStyle = '#282830'
-    ctx.fillRect(0, 0, 1600, 1200)
-    ctx.fillStyle = '#f4f4f0'
-    ctx.fillRect(card[0]?.x ?? 0, card[0]?.y ?? 0, 1200, 756)
-    ctx.fillStyle = '#111'
-    for (const [s, x, y, font] of text) {
-      ctx.font = font
-      ctx.fillText(s, x, y)
-    }
-    const bytes = new Uint8Array(await (await c.convertToBlob({ type: 'image/png' })).arrayBuffer())
-    let bin = ''
-    for (const b of bytes) bin += String.fromCharCode(b)
-    return btoa(bin)
-  }, [CARD, lines] as const)
-  return Buffer.from(b64, 'base64')
-}
+import { SANS, controlled, pixel, toEditorWithText } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
-
-const SANS = 'bold 40px sans-serif'
-const MONO = '40px monospace'
-
-async function toEditorWithText (page: Page): Promise<void> {
-  const front = await cardPhoto(page, [
-    ['DNI 99999999R', 640, 300, SANS],
-    ['APELLIDOS', 640, 380, SANS],
-    ['ESPANOLA', 640, 430, SANS],
-    ['NOMBRE', 640, 510, SANS],
-    ['CARMEN', 640, 560, SANS],
-    ['EMISION 02 06 2021', 640, 660, SANS],
-    ['NUM SOPORTE CAA000000', 640, 760, SANS],
-    ['987654', 1180, 930, SANS],
-  ])
-  const back = await cardPhoto(page, [
-    ['DOMICILIO', 500, 320, SANS],
-    ['CALLE MAYOR 1', 500, 370, SANS],
-    ...mrz().map((l, i) => [l, 230, 800 + i * 60, MONO] as const),
-  ])
-  await blockModel(page)
-  await openCapture(page)
-  await page.locator('#file-front').setInputFiles({ name: 'front.png', mimeType: 'image/png', buffer: front })
-  await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
-  await page.locator('#file-back').setInputFiles({ name: 'back.png', mimeType: 'image/png', buffer: back })
-  await page.locator('#capture-continue').click()
-  await page.locator('[id="doc-dni-4.0"]').check()
-  await page.locator('#doc-continue').click()
-  // Found and straightened by themselves (edge detection; the model is not needed here).
-  await expect(page.locator('#preview')).toHaveJSProperty('width', 1712)
-}
-
-async function controlled (page: Page): Promise<void> {
-  await page.goto('/')
-  await page.evaluate(async () => { await navigator.serviceWorker.ready })
-  await expect.poll(async () => await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true)
-}
 
 /** Photo x of the centre of `token` in a line drawn at `x` (the text baseline is at y, glyphs sit above it). */
 async function centreX (page: Page, line: string, token: string, x: number): Promise<number> {
