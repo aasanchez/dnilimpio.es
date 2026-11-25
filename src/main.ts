@@ -3,6 +3,10 @@ import { mount } from 'svelte'
 import App from './App.svelte'
 import { loadExport } from './engine/load-export.ts'
 import { registerServiceWorker } from './offline/register.ts'
+import { installTrustedTypesPolicy } from './security/trusted-types.ts'
+
+// First, before any library can turn a string into a script URL.
+installTrustedTypesPolicy()
 
 const target = document.getElementById('app')
 if (target) mount(App, { target })

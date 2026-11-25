@@ -4,10 +4,12 @@
 
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { createRequire } from 'node:module'
+import { gunzipSync } from 'node:zlib'
+import { dirname, join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, cspWithScriptHashes } from './csp.ts'
-import { SW_FILE, isLazy, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
+import { SW_FILE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 
 export function securityHeaders (): Plugin {
   return {
@@ -101,17 +103,16 @@ function writePrecacheManifest (outDir: string): void {
   const sw = readFileSync(swPath, 'utf8')
   if (!PLACEHOLDER.test(sw)) throw new Error('dist/sw.js has no precache manifest placeholder')
   if (/^\s*import\b|\bimport\s*\(/m.test(sw)) throw new Error('dist/sw.js must not import other chunks')
-  const entry = (path: string): PrecacheFile => ({ path, integrity: sri(readFileSync(join(outDir, path))) })
-  const all = listFiles(outDir)
-  const files = all.filter(isPrecached).map(entry)
-  const lazy = all.filter(isLazy).map(entry)
+  const all: PrecacheFile[] = listFiles(outDir).filter(isPrecached).map((path) => ({ path, integrity: sri(readFileSync(join(outDir, path))) }))
+  const files = all.filter((f) => !isOnDemand(f.path))
+  const onDemand = all.filter((f) => isOnDemand(f.path))
   // The worker's own code is part of the version: a worker-only change still gets a new cache name,
   // so a failed install can never delete the cache the active worker is using.
   const version = createHash('sha256')
-    .update([...files, ...lazy].map((f) => `${f.path} ${f.integrity}`).join('\n'))
+    .update(all.map((f) => `${f.path} ${f.integrity}`).join('\n'))
     .update(`\nsw.js ${sri(sw)}`)
     .digest('hex').slice(0, 16)
-  const json = JSON.stringify({ version, files, lazy })
+  const json = JSON.stringify({ version, files, onDemand })
   parseManifest(json) // same checks as the worker runs
   writeFileSync(swPath, sw.replace(PLACEHOLDER, () => JSON.stringify(json)))
 }
@@ -137,6 +138,39 @@ export function base64Import (): Plugin {
       const file = id.slice(0, -SUFFIX.length)
       this.addWatchFile(file)
       return { code: `export default ${JSON.stringify(readFileSync(file).toString('base64'))}`, map: { mappings: '' } }
+    },
+  }
+}
+
+/**
+ * OCR engine files, served from our own origin under ocr/ (never from a CDN): the Tesseract.js worker,
+ * the WebAssembly core (three builds; the worker picks the one the browser supports, LSTM only) and
+ * the Spanish language data. The service worker downloads them on first use and checks each against
+ * its SHA-384 (see src/offline/precache.ts, ON_DEMAND_DIR).
+ */
+export function ocrAssets (): Plugin {
+  const require = createRequire(import.meta.url)
+  const tesseract = dirname(require.resolve('tesseract.js/package.json'))
+  const core = dirname(createRequire(join(tesseract, 'package.json')).resolve('tesseract.js-core/package.json'))
+  const spa = dirname(require.resolve('@tesseract.js-data/spa/package.json'))
+  const files: Record<string, string> = {
+    'ocr/worker.min.js': join(tesseract, 'dist/worker.min.js'),
+    'ocr/worker.min.js.map': join(tesseract, 'dist/worker.min.js.map'),
+    'ocr/worker.min.js.LICENSE.txt': join(tesseract, 'dist/worker.min.js.LICENSE.txt'),
+    'ocr/tesseract-core-lstm.wasm.js': join(core, 'tesseract-core-lstm.wasm.js'),
+    'ocr/tesseract-core-simd-lstm.wasm.js': join(core, 'tesseract-core-simd-lstm.wasm.js'),
+    'ocr/tesseract-core-relaxedsimd-lstm.wasm.js': join(core, 'tesseract-core-relaxedsimd-lstm.wasm.js'),
+    'ocr/LICENSE-tesseract.js-core.txt': join(core, 'LICENSE'),
+  }
+  // LSTM-only "best_int" model: small and accurate. Shipped uncompressed: some servers send .gz files
+  // with Content-Encoding: gzip, the browser then unpacks them and the SRI hash would not match.
+  const lang = gunzipSync(readFileSync(join(spa, '4.0.0_best_int/spa.traineddata.gz')))
+  return {
+    name: 'dni-redactor:ocr-assets',
+    apply: 'build',
+    generateBundle () {
+      for (const [fileName, from] of Object.entries(files)) this.emitFile({ type: 'asset', fileName, source: readFileSync(from) })
+      this.emitFile({ type: 'asset', fileName: 'ocr/spa.traineddata', source: lang })
     },
   }
 }

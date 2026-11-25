@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { defaultClientConditions, defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
-import { base64Import, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
+import { base64Import, ocrAssets, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
 
 // Override with REPO_URL for forks.
 const REPO_URL = process.env['REPO_URL'] ?? 'https://github.com/aasanchez/dnilimpio.es'
@@ -31,7 +31,10 @@ export default defineConfig({
     rolldownOptions: {
       // Two entries: the page, and the service worker, which must sit next to index.html as sw.js
       // so its scope covers the whole app.
-      input: { index: 'index.html', sw: 'src/sw.ts' },
+      // The OCR module is its own entry so its public API keeps its names; the interface loads it
+      // on demand (src/ocr/load-ocr.ts). It is not part of the first page load.
+      input: { index: 'index.html', sw: 'src/sw.ts', ocr: 'src/ocr/ocr.ts' },
+      preserveEntrySignatures: 'exports-only',
       output: {
         entryFileNames: (chunk) => (chunk.name === 'sw' ? 'sw.js' : 'assets/[name]-[hash].js'),
         chunkFileNames: (chunk) => (isModelPart(chunk.moduleIds) ? 'assets/ml/[name]-[hash].js' : 'assets/[name]-[hash].js'),
@@ -39,5 +42,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [base64Import(), svelte(), securityHeaders(), subresourceIntegrity()],
+  plugins: [base64Import(), svelte(), securityHeaders(), ocrAssets(), subresourceIntegrity()],
 })
