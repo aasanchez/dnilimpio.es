@@ -182,7 +182,7 @@ describe('Coach', () => {
     let t = 0
     const step = (o: Scene, seed: number): string => {
       const a = coach.feed(scene({ ...o, seed }), t)
-      if (a.shoot) shots.push(t)
+      if (a.shoot) { shots.push(t); coach.shotTaken(t) }
       t += 125
       return a.tip
     }
@@ -195,6 +195,27 @@ describe('Coach', () => {
     for (let i = 0; i < 3; i++) step({}, 200 + i)
     for (let i = 0; i < 6; i++) step({ card: inGuide }, 300 + i)
     expect(shots).toHaveLength(2)
+  })
+
+  it('remembers a flip made during the cooldown', () => {
+    const coach = new Coach()
+    coach.shotTaken(0)
+    // Card out of frame right after the shot (inside the cooldown), then the back held steady.
+    coach.feed(scene({ seed: 1 }), 125)
+    coach.feed(scene({ seed: 2 }), 250)
+    let shot = false
+    for (let i = 0; i < 20 && !shot; i++) shot = coach.feed(scene({ card: inGuide, seed: 10 + i }), 375 + 125 * i).shoot
+    expect(shot).toBe(true)
+  })
+
+  it('keeps a ready shot pending until the caller takes it', () => {
+    const coach = new Coach()
+    const shoots: boolean[] = []
+    for (let i = 0; i < 8; i++) shoots.push(coach.feed(scene({ card: inGuide, seed: i }), 125 * i).shoot)
+    // Ready from the 3rd steady frame on, and still ready later (e.g. automatic shot turned back on).
+    expect(shoots.slice(-3)).toEqual([true, true, true])
+    coach.shotTaken(1000)
+    expect(coach.feed(scene({ card: inGuide, seed: 50 }), 1125).shoot).toBe(false)
   })
 
   it('does not shoot a blurred frame right after sharp ones', () => {

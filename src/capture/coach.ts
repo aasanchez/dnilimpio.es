@@ -289,7 +289,9 @@ export interface Advice { readonly tip: Tip; readonly shoot: boolean; readonly m
 
 /**
  * Stateful coach for one camera session. Feed it frames; it answers with a tip and, when the card
- * has been framed, lit, steady and sharp for a few frames in a row, `shoot: true` (once).
+ * has been framed, lit, steady and sharp for a few frames in a row, `shoot: true`. The caller calls
+ * `shotTaken()` when it actually takes the photo; until then `shoot` stays true, so turning the
+ * automatic shot on while the card is ready still takes it.
  */
 export class Coach {
   private prev: Gray | null = null
@@ -297,6 +299,8 @@ export class Coach {
   private readyRun = 0
   private lastShot = -Infinity
   private armed = true
+  /** Since the last shot, the card left the frame or moved a lot (the flip). */
+  private flipped = false
   private readonly limits: Limits
 
   constructor (limits: Limits = LIMITS) {
@@ -307,6 +311,7 @@ export class Coach {
   shotTaken (now: number): void {
     this.lastShot = now
     this.armed = false
+    this.flipped = false
     this.readyRun = 0
     this.peaks = []
   }
@@ -325,12 +330,13 @@ export class Coach {
     const tip = tipFor(metrics, sharpEnough, L)
 
     // Re-arm after a shot once the card moved a lot or left the frame (a flip to the other side).
-    if (!this.armed && now - this.lastShot >= L.cooldownMs && (!framed || metrics.motion > L.maxMotion * 2)) {
-      this.armed = true
+    // The flip counts even during the cooldown; the cooldown only delays the next shot.
+    if (!this.armed) {
+      if (!framed || (Number.isFinite(metrics.motion) && metrics.motion > L.maxMotion * 2)) this.flipped = true
+      if (this.flipped && now - this.lastShot >= L.cooldownMs) this.armed = true
     }
     this.readyRun = tip === 'ready' ? this.readyRun + 1 : 0
     const shoot = this.armed && this.readyRun >= L.readyFrames
-    if (shoot) this.shotTaken(now)
     return { tip, shoot, metrics }
   }
 }
