@@ -1,57 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { expect, test, type Page } from '@playwright/test'
-import { fileURLToPath } from 'node:url'
-
-const fixture = (name: string): string => fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url))
-
-// Card corners in the 1600 × 1200 synthetic fixtures.
-const CARD = [{ x: 200, y: 222 }, { x: 1400, y: 222 }, { x: 1400, y: 978 }, { x: 200, y: 978 }]
-// Start quad from defaultQuad(1600, 1200): 70 % of the width, ID-1 aspect, centred.
-const W = 1120
-const H = W / (1712 / 1080)
-const START = [{ x: 240, y: 600 - H / 2 }, { x: 1360, y: 600 - H / 2 }, { x: 1360, y: 600 + H / 2 }, { x: 240, y: 600 + H / 2 }]
+import { expect, test } from '@playwright/test'
+import { START, loadBoth, pixel, snapCorners } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
-async function loadBoth (page: Page): Promise<void> {
-  await page.goto('/')
-  await expect(page.locator('#capture-continue')).toBeDisabled()
-  await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
-  await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
-  await expect(page.locator('#capture-continue')).toBeDisabled()
-  await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
-  await expect(page.locator('#capture-continue')).toBeEnabled()
-}
-
-/** Drags each corner handle from the start quad onto the card corners with the mouse. */
-async function snapCorners (page: Page): Promise<void> {
-  const canvas = page.locator('canvas.corner-editor')
-  await expect(canvas).toBeVisible()
-  const box = await canvas.boundingBox()
-  if (!box) throw new Error('no canvas box')
-  const k = box.width / 1600
-  for (let i = 0; i < 4; i++) {
-    const from = START[i]!
-    const to = CARD[i]!
-    await page.mouse.move(box.x + from.x * k, box.y + from.y * k)
-    await page.mouse.down()
-    await page.mouse.move(box.x + to.x * k, box.y + to.y * k, { steps: 5 })
-    await page.mouse.up()
-  }
-}
-
-/** RGB of a pixel of the straightened card canvas. */
-async function pixel (page: Page, id: string, x: number, y: number): Promise<number[]> {
-  return await page.locator(id).evaluate((c, [px, py]) => {
-    const d = (c as HTMLCanvasElement).getContext('2d')?.getImageData(px ?? 0, py ?? 0, 1, 1).data
-    return d ? [d[0] ?? 0, d[1] ?? 0, d[2] ?? 0] : []
-  }, [x, y])
-}
-
-test('continue from capture, mark corners on both sides, get two 1712 × 1080 cards', async ({ page }) => {
+test('continue from capture, mark corners on both sides, get straightened 1712 × 1080 cards', async ({ page }) => {
   await loadBoth(page)
   await page.locator('#capture-continue').click()
-  await expect(page.locator('h2')).toHaveText('Paso 2 de 6: marca las esquinas del DNI')
+  await expect(page.locator('h2')).toHaveText('Paso 2 de 3: marca las esquinas del DNI')
   await expect(page.locator('h2')).toBeFocused()
   await expect(page.locator('h3')).toHaveText('Anverso (cara con la foto)')
   await snapCorners(page)
@@ -60,18 +16,17 @@ test('continue from capture, mark corners on both sides, get two 1712 × 1080 ca
   await snapCorners(page)
   await page.locator('#align-continue').click()
 
-  for (const side of ['front', 'back']) {
-    const id = `#warped-${side}`
-    await expect(page.locator(id)).toHaveJSProperty('width', 1712)
-    await expect(page.locator(id)).toHaveJSProperty('height', 1080)
-  }
+  // The editor shows the sanitised front, 1712 × 1080.
+  await expect(page.locator('h2')).toHaveText('Paso 3 de 3: elige qué ocultar')
+  await expect(page.locator('#preview')).toHaveJSProperty('width', 1712)
+  await expect(page.locator('#preview')).toHaveJSProperty('height', 1080)
   // Corners snapped to the card: the straightened image's edges are card background (light), not the dark table.
   for (const [x, y] of [[8, 8], [1703, 8], [1703, 1071], [8, 1071]] as const) {
-    const [r = 0] = await pixel(page, '#warped-front', x, y)
+    const [r = 0] = await pixel(page, '#preview', x, y)
     expect(r).toBeGreaterThan(180)
   }
   // The photo block (dark blue) sits at the left: x 248–584 of 1200 card px → ~4–32 % of the width.
-  const [r = 255, , b = 0] = await pixel(page, '#warped-front', Math.round(1712 * 0.18), 540)
+  const [r = 255, , b = 0] = await pixel(page, '#preview', Math.round(1712 * 0.18), 540)
   expect(r).toBeLessThan(80)
   expect(b).toBeGreaterThan(100)
 })

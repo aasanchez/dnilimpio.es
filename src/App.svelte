@@ -8,9 +8,10 @@
   import CaptureStep from './components/CaptureStep.svelte'
   import type { CaptureState } from './ui/capture-state.ts'
   import AlignStep from './components/AlignStep.svelte'
-  import AlignResult from './components/AlignResult.svelte'
+  import Editor from './components/Editor.svelte'
+  import { emptyEditState } from './ui/edit-state.ts'
 
-  type Step = 'capture' | 'align-front' | 'align-back' | 'align-result'
+  type Step = 'capture' | 'align-front' | 'align-back' | 'edit'
 
   // The language choice lives in memory only: it resets to the browser's language on reload.
   let lang = $state<Lang>(pickLang(navigator.languages))
@@ -19,6 +20,8 @@
   const capture = $state<CaptureState>({ front: null, back: null })
   // Large canvases: kept out of reactivity on purpose.
   const align = emptyAlignState()
+  // Field choices, watermark and greyscale survive going back to adjust corners; Reset clears them.
+  let edit = $state(emptyEditState())
   let root: HTMLElement | undefined = $state()
 
   $effect(() => {
@@ -39,6 +42,17 @@
     }
   }
 
+  /** Spec §20: drop photos, straightened cards and every choice, and return to the start. */
+  function reset (): void {
+    for (const s of ['front', 'back'] as const) {
+      capture[s]?.close()
+      capture[s] = null
+      resetSide(align, s)
+    }
+    edit = emptyEditState()
+    void go('capture')
+  }
+
   /** A new photo for a side invalidates that side's corners and straightened card. */
   function onLoaded (side: Side, bitmap: ImageBitmap): void {
     if (capture[side] !== bitmap) capture[side]?.close()
@@ -54,12 +68,12 @@
 
   {#if step === 'align-front' && capture.front}
     <AlignStep {lang} side="front" bitmap={capture.front} {align}
-      onBack={() => go('capture')} onDone={() => go(align.warped.back ? 'align-result' : 'align-back')} />
+      onBack={() => go('capture')} onDone={() => go(align.warped.back ? 'edit' : 'align-back')} />
   {:else if step === 'align-back' && capture.back}
     <AlignStep {lang} side="back" bitmap={capture.back} {align}
-      onBack={() => go('align-front')} onDone={() => go('align-result')} />
-  {:else if step === 'align-result' && align.warped.front && align.warped.back}
-    <AlignResult {lang} {align} onEdit={(side) => go(side === 'front' ? 'align-front' : 'align-back')} />
+      onBack={() => go('align-front')} onDone={() => go('edit')} />
+  {:else if step === 'edit' && align.warped.front && align.warped.back}
+    <Editor {lang} {align} {edit} onAdjust={(side: Side) => go(side === 'front' ? 'align-front' : 'align-back')} onReset={reset} />
   {:else}
     <CaptureStep {lang} state={capture} {onLoaded} onContinue={() => go('align-front')} />
   {/if}

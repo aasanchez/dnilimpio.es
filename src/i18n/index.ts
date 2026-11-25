@@ -70,6 +70,19 @@ export function t (lang: Lang, key: Key): string {
   return translations[lang][key] ?? es[key]
 }
 
+/** Translates and fills `{name}` placeholders. Unknown placeholders are left as they are. */
+export function tf (lang: Lang, key: Key, vars: Readonly<Record<string, string | number>>): string {
+  return t(lang, key).replace(/\{(\w+)\}/g, (whole, name: string) => {
+    const v = vars[name]
+    return v === undefined ? whole : String(v)
+  })
+}
+
+/** Placeholder names used in a string, sorted. For tests and CI. */
+export function placeholders (text: string): string[] {
+  return [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1] ?? '').sort()
+}
+
 /** Keys of `es` that a translation lacks, and keys it has that `es` does not. For tests and CI. */
 export function diffKeys (lang: Lang): { missing: Key[]; extra: string[] } {
   const own = Object.keys(translations[lang])
