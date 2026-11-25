@@ -2,7 +2,7 @@
 // Offline support (spec phase 2): after one visit the whole app, including the PDF code loaded on
 // demand, works with the network off. Service workers are on here (blocked in the other specs).
 import { expect, test, type Page } from '@playwright/test'
-import { fixture, loadBoth, toEditor } from './helpers.ts'
+import { fixture, loadBoth, openCapture, toEditor } from './helpers.ts'
 
 test.use({ locale: 'es-ES', serviceWorkers: 'allow' })
 
@@ -88,14 +88,14 @@ test('offline before the model was ever used: classic edge detection places the 
 test('the model is kept after its first use and then works offline', async ({ page, context }) => {
   await page.goto('/')
   await offlineReady(page)
-  await page.locator('#start').click()
+  await openCapture(page)
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
   // Choosing a photo starts loading the model; the worker keeps its files.
   await expect.poll(async () => (await cachedPaths(page)).filter((p) => p.startsWith('/assets/ml/')).length, { timeout: 20_000 }).toBe(2)
 
   await context.setOffline(true)
   await page.reload()
-  await page.locator('#start').click()
+  await openCapture(page)
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await page.locator('#capture-continue').click()
@@ -112,7 +112,7 @@ test('a tampered model file is refused and classic edge detection takes over', a
   })
   await page.goto('/')
   await offlineReady(page)
-  await page.locator('#start').click()
+  await openCapture(page)
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await page.locator('#capture-continue').click()

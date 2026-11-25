@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Bridges ImageBitmap ↔ the pure warp kernel: reads the photo's pixels once, warps, returns a
-// 1712 × 1080 canvas. The temporary full-size canvas is shrunk to 0 × 0 right after use (§4.8).
+// canvas of the document's size (1712 × 1080 for an ID-1 card). The temporary full-size canvas is shrunk to 0 × 0 right after use (§4.8).
 
 import type { Quad } from '../geometry/homography.ts'
 import { fitPixels, scaleQuad } from '../geometry/quad-edit.ts'
 import { CARD_PX, warpToCard } from '../geometry/warp.ts'
 
-export function warpBitmap (bitmap: ImageBitmap, quad: Quad): HTMLCanvasElement {
+export function warpBitmap (bitmap: ImageBitmap, quad: Quad, size: { readonly w: number, readonly h: number } = CARD_PX): HTMLCanvasElement {
   const s = fitPixels(bitmap.width, bitmap.height)
   const w = Math.max(1, Math.round(bitmap.width * s))
   const h = Math.max(1, Math.round(bitmap.height * s))
@@ -20,13 +20,13 @@ export function warpBitmap (bitmap: ImageBitmap, quad: Quad): HTMLCanvasElement 
   tmp.width = 0
   tmp.height = 0
 
-  const out = new ImageData(CARD_PX.w, CARD_PX.h)
+  const out = new ImageData(size.w, size.h)
   warpToCard(src, scaleQuad(quad, w / bitmap.width, h / bitmap.height), out)
   src.data.fill(0)
 
   const canvas = document.createElement('canvas')
-  canvas.width = CARD_PX.w
-  canvas.height = CARD_PX.h
+  canvas.width = size.w
+  canvas.height = size.h
   canvas.getContext('2d')?.putImageData(out, 0, 0)
   out.data.fill(0)
   return canvas

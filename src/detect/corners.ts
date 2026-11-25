@@ -9,7 +9,8 @@ import type { Detection } from './result.ts'
 
 export type { Detection } from './result.ts'
 
-type Detector = (bitmap: ImageBitmap) => Promise<Detection | null>
+/** `aspect`: width / height of the document (landscape), for detectors that check the shape. */
+type Detector = (bitmap: ImageBitmap, aspect: number) => Promise<Detection | null>
 
 let model: Promise<typeof import('./model.ts')> | null = null
 
@@ -34,7 +35,7 @@ const byModel: Detector = async (bitmap) => {
 const EDGES_PX = 800
 
 /** Classic edge detection (no model, no download): works offline from the first visit. */
-const byEdges: Detector = async (bitmap) => {
+const byEdges: Detector = async (bitmap, aspect) => {
   await Promise.resolve() // let the corners step render before the (synchronous) detector runs
   const k = Math.min(1, EDGES_PX / Math.max(bitmap.width, bitmap.height))
   const w = Math.max(1, Math.round(bitmap.width * k))
@@ -43,7 +44,7 @@ const byEdges: Detector = async (bitmap) => {
   const ctx = canvas.getContext('2d', { willReadFrequently: true }) as Pick<CanvasRenderingContext2D, 'drawImage' | 'getImageData'> | null
   if (!ctx) return null
   ctx.drawImage(bitmap, 0, 0, w, h)
-  const found = detectCard(ctx.getImageData(0, 0, w, h))
+  const found = detectCard(ctx.getImageData(0, 0, w, h), { aspect })
   if (!found) return null
   const q = found.quad
   const up = (i: 0 | 1 | 2 | 3): { x: number; y: number } => ({ x: q[i].x / k, y: q[i].y / k })
@@ -61,10 +62,10 @@ export function prefetchCornerModel (): void {
 }
 
 /** The card's corners in `bitmap`, or null when no detector is available or confident. */
-export async function findCorners (bitmap: ImageBitmap): Promise<Detection | null> {
+export async function findCorners (bitmap: ImageBitmap, aspect: number): Promise<Detection | null> {
   for (const detect of DETECTORS) {
     try {
-      const found = await detect(bitmap)
+      const found = await detect(bitmap, aspect)
       if (found) return found
     } catch {
       // Unavailable or failed: try the next detector, then fall back to manual corners.

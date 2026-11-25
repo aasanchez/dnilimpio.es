@@ -10,11 +10,13 @@
   import { cornerEditor, type CornerEditor } from '../ui/corner-editor.ts'
   import { warpBitmap } from '../ui/warp-bitmap.ts'
   import { findCorners } from '../detect/corners.ts'
-  import type { Side } from '../zones/dni.ts'
+  import type { Side } from '../zones/types.ts'
 
-  const { lang, side, bitmap, align, aligned, onSide, onDone }: {
+  const { lang, side, size, bitmap, align, aligned, onSide, onDone }: {
     lang: Lang
     side: Side
+    /** Size of the straightened document in pixels; also sets the starting frame's shape. */
+    size: { readonly w: number; readonly h: number }
     bitmap: ImageBitmap
     align: AlignState
     /** Which sides already have confirmed corners. */
@@ -27,7 +29,7 @@
   // Corners are looked for only the first time a photo reaches this step; after that the user's own
   // corners are kept.
   const fresh = untrack(() => align.quads[side] === null)
-  let quad = $state.raw<Quad>(untrack(() => align.quads[side] ?? defaultQuad(bitmap.width, bitmap.height)))
+  let quad = $state.raw<Quad>(untrack(() => align.quads[side] ?? defaultQuad(bitmap.width, bitmap.height, size.w / size.h)))
   untrack(() => { align.quads[side] = quad })
   /** searching: the detector runs; found: its corners are shown; idle: manual (nothing to say). */
   let auto = $state<'idle' | 'searching' | 'found'>('idle')
@@ -58,7 +60,7 @@
     if (!fresh) return
     let live = true
     auto = 'searching'
-    void findCorners(bitmap).then((found) => {
+    void findCorners(bitmap, size.w / size.h).then((found) => {
       if (!live || touched) return
       if (found) {
         setQuad(found.quad)
@@ -93,7 +95,7 @@
   }
 
   function restart (): void {
-    userQuad(defaultQuad(bitmap.width, bitmap.height))
+    userQuad(defaultQuad(bitmap.width, bitmap.height, size.w / size.h))
     editor?.setQuad(quad)
   }
 
@@ -102,7 +104,7 @@
     const q = quad
     resetSide(align, side)
     align.quads[side] = q
-    align.warped[side] = warpBitmap(bitmap, q)
+    align.warped[side] = warpBitmap(bitmap, q, size)
     onDone()
   }
 </script>

@@ -6,9 +6,11 @@
 import type { Point, Quad } from './homography.ts'
 import { CARD_PX } from './warp.ts'
 
-/** Starting quad: a card-shaped rectangle centred in the image, covering 70 % of its limiting side. */
-export function defaultQuad (width: number, height: number): Quad {
-  const aspect = CARD_PX.w / CARD_PX.h
+/**
+ * Starting quad: a document-shaped rectangle centred in the image, covering 70 % of its limiting side.
+ * `aspect` is the document's width / height (ID-1 card by default).
+ */
+export function defaultQuad (width: number, height: number, aspect = CARD_PX.w / CARD_PX.h): Quad {
   let w = width * 0.7
   let h = w / aspect
   if (h > height * 0.7) {

@@ -2,7 +2,7 @@
 // The corner model ("better edges"): suggests the corners when it can, stays silent when it cannot.
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { fixture, loadBoth, pixel } from './helpers.ts'
+import { fixture, loadBoth, openCapture, pixel } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
@@ -10,7 +10,7 @@ test('the model places the corners on the card; Continue straightens it without 
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
-  await loadBoth(page, { model: true })
+  await loadBoth(page, 'dni-4.0', { model: true })
   await page.locator('#capture-continue').click()
   await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/, { timeout: 30_000 })
   await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'model')
@@ -41,8 +41,7 @@ test('with no card in the photo the corners stay where they start, with no messa
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   const blank = await plainPhoto(page)
-  await page.goto('/')
-  await page.locator('#start').click()
+  await openCapture(page)
   await page.locator('#file-front').setInputFiles({ name: 'plain.png', mimeType: 'image/png', buffer: blank })
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await page.locator('#capture-continue').click()
@@ -77,7 +76,7 @@ test('a corner moved by the user is never overridden by a late detection', async
   let release: () => void = () => undefined
   const held = new Promise<void>((resolve) => { release = resolve })
   await page.route('**/assets/ml/**', async (route) => { await held; await route.continue() })
-  await loadBoth(page, { model: true })
+  await loadBoth(page, 'dni-4.0', { model: true })
   await page.locator('#capture-continue').click()
   const canvas = page.locator('canvas.corner-editor')
   await canvas.focus()
@@ -156,8 +155,7 @@ async function corners (page: import('@playwright/test').Page): Promise<{ x: num
 for (const v of VARIANTS) {
   test(`finds the card on a messy background (seed ${String(v.seed)})`, async ({ page }) => {
     const photo = await messyPhoto(page, v)
-    await page.goto('/')
-    await page.locator('#start').click()
+    await openCapture(page)
     await page.locator('#file-front').setInputFiles({ name: 'messy.png', mimeType: 'image/png', buffer: photo })
     await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
     await page.locator('#capture-continue').click()
