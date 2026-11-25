@@ -48,6 +48,12 @@ test('the ⓘ beside a field opens its entry and leaves the editor as it was', a
   await expect(entry).toHaveAttribute('open', '')
   await expect(entry).toBeInViewport()
   await expect(entry).toContainText('PACE')
+  // Collapsed by the reader, the entry opens again on the next ⓘ.
+  await entry.locator('summary').click()
+  await expect(entry).not.toHaveAttribute('open', '')
+  await page.locator('#guide-close').click()
+  await page.locator('#about-can').click()
+  await expect(entry).toHaveAttribute('open', '')
   await page.locator('#guide-close').click()
   await expect(can).toBeChecked()
   await expect(page.locator('#preview')).toBeVisible()

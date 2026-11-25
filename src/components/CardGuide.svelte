@@ -50,8 +50,13 @@
     }
     dialog?.showModal()
     await tick()
-    if (e) body?.querySelector(`#${id}-${e.id}`)?.scrollIntoView({ block: 'start' })
-    else if (body) body.scrollTop = 0
+    // Set open on the element too: if the reader collapsed this entry before, `focused` has not
+    // changed and the attribute alone would not re-expand it.
+    const el = e ? body?.querySelector<HTMLDetailsElement>(`#${id}-${e.id}`) : null
+    if (el) {
+      el.open = true
+      el.scrollIntoView({ block: 'start' })
+    } else if (body) body.scrollTop = 0
   }
 
   function pick (d: DocModel): void {
