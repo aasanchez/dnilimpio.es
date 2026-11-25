@@ -7,11 +7,11 @@ One file per document in `src/zones/`; each file's header repeats its source and
 | DNI 4.0 | `dni.ts` | Policía Nacional specimen | ID-1, 85.60 × 53.98 mm |
 | DNI 3.0 | `dni-3.ts` | PRADO ESP-BO-05001 | ID-1 |
 | TIE (2020 model) | `tie.ts` | PRADO ESP-HO-03001 | ID-1 |
-| EU citizen registration certificate | `eu-registration.ts` | PRADO ESP-HP-01002 | card 83 × 53 mm |
 
 [PRADO](https://www.consilium.europa.eu/prado/en/prado-start-page.html) is the Council of the EU's
 public register of identity documents; its entries are compiled by each country's document experts.
-Straightened images are 20 px per mm: 1712 × 1080 for ID-1, 1660 × 1060 for the certificate card.
+Straightened images are 20 px per mm: 1712 × 1080 for ID-1. Each zone file states its document's size,
+so a document with another shape needs no engine change.
 
 ## DNI 4.0
 
@@ -68,26 +68,6 @@ Findings:
 - The NIE stays visible by design, like the DNI number. It is also in the MRZ.
 - Earlier TIE models (PRADO ESP-HO-02xxx) are not covered; they were replaced in 2020 and their
   5-year validity has ended.
-
-## EU citizen registration certificate (Certificado de registro de ciudadano de la Unión)
-
-1. Source: PRADO ESP-HP-01002. The certificate is an A4 sheet with a micro-perforated card of
-   83 × 53 mm that the holder detaches; the tool works on that card. Retrieved 2026-11-25.
-2. Front: the card on the A4 specimen (426 × 600 px) is only about 170 px wide. Its edges are not
-   visible, so it was placed from the card size and the sheet centre: x 128.7–297.3, y 325–432.6.
-   Text lines were located with per-row dark-pixel profiles (line pitch about 5 % of the card height).
-3. Back: PRADO's card image (300 × 201 px). Only the serial number is sensitive.
-
-Findings:
-
-- The data is **printed by an office printer** on a pre-printed form, so on a real certificate the
-  lines can sit about a millimetre (about 2 % of the card height) away from the specimen. Each
-  rectangle covers whole lines, but users must check the outlines; the editor says so.
-- There is **no CAN and no MRZ**, so the CAN and MRZ warnings never show for this document.
-- Hidden by default: the place and date of issue, and the card's serial number on the back. Date of
-  birth, place of birth, parents and address are optional. Name and NIE stay visible by design.
-- The line "Es residente comunitario … desde …" (registration date) is not a field; use a black box
-  if needed.
 
 ## To re-measure
 

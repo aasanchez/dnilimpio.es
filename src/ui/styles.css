@@ -317,7 +317,6 @@ span.chip { cursor: default; color: var(--muted); }
 .toggle-state.is-on { color: var(--ink); }
 /* Document picker: a real radio button drawn as a ring. */
 .doc-shape { width: 42px; height: 27px; flex: none; border: 1.5px solid var(--ink); border-radius: 4px; background: var(--sunk); }
-.doc-shape.paper { background: #cfe7dc; border-radius: 1px; }
 .radio {
   appearance: none; flex: none; width: 26px; height: 26px; margin: 0; border: 2px solid var(--ink); border-radius: 50%;
   background: var(--surface); cursor: pointer;

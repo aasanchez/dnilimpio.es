@@ -6,8 +6,7 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 **Use it:** <https://aasanchez.github.io/dnilimpio.es/> (planned move to `dnilimpio.es`).
 
 > [!IMPORTANT]
-> **Work in progress.** The full flow works for the DNI 4.0, DNI 3.0, TIE and the EU citizen
-> registration certificate: choose the document, select both sides, straighten them, choose the
+> **Work in progress.** The full flow works for the DNI 4.0, DNI 3.0 and TIE: choose the document, select both sides, straighten them, choose the
 > fields to hide, draw extra black boxes, add a watermark, review and download the PDF.
 > Automatic detection is still being built (see [Status](#status)).
 > Always check the result before you share it.
@@ -30,10 +29,10 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 
 ## What it does
 
-When a landlord, employer or company asks for a copy of your DNI, TIE or NIE certificate, they usually
+When a landlord, employer or company asks for a copy of your DNI or TIE, they usually
 need only some of the data. This tool makes a copy that shows only what you choose:
 
-1. **Choose the document**: DNI 4.0, DNI 3.0, TIE or EU registration certificate.
+1. **Choose the document**: DNI 4.0, DNI 3.0 or TIE.
 2. **Select** a photo of the front and the back (JPEG, PNG, WebP; camera on mobile).
 3. **Straighten** each side by marking its four corners.
 4. **Choose the fields to hide** (signature, dates, support number, CAN, MRZ and others), and draw
@@ -100,13 +99,10 @@ Whether a recipient accepts a redacted copy is up to them.
 | DNI 4.0 (August 2021 onwards) | card, 85.6 × 54 mm | Policía Nacional specimen | CAN, signature, issue and expiry dates, support number (3 places), MRZ | date and place of birth, address, parents |
 | DNI 3.0 (2015 to 2021) | card, 85.6 × 54 mm | PRADO ESP-BO-05001 | CAN, signature, issue date (laser text by the small photo), expiry date, support number (3 places), MRZ | date and place of birth, address, parents |
 | TIE, foreigner identity card (2020 model) | card, 85.6 × 54 mm | PRADO ESP-HO-03001 | CAN, signature, issue and expiry dates, card number (2 places), MRZ | date and place of birth, address, permit type |
-| EU citizen registration certificate (green card with the NIE) | paper card, 83 × 53 mm | PRADO ESP-HP-01002 | place and date of issue, card serial number | date and place of birth, address, parents |
 
 Positions were measured on official specimens ([method and findings](docs/ZONES.md)). The name, the
-photo and the DNI or NIE number stay visible by design; cover them with a black box if needed. On the
-EU certificate the data is printed by an office printer, so its lines can be a millimetre off: check
-the outlines and add a black box where needed. For an uncut A4 certificate, mark the corners of the
-card part. Any other photo can be redacted by hand with black boxes.
+photo and the DNI or NIE number stay visible by design; cover them with a black box if needed. Any
+other document can be redacted by hand with black boxes.
 
 The document is chosen by hand. Automatic detection is planned: it will only preselect the choice
 ([ADR 0006](docs/adr/0006-document-types.md)).
@@ -126,7 +122,7 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
 | Offline mode with service worker and integrity checks | Done |
 | Redesign of the workflow and interface: guided phone-first flow, new visual style | Done |
-| DNI 3.0, TIE and EU registration certificate, with a document picker | Done |
+| DNI 3.0 and TIE, with a document picker | Done |
 | Automatic detection (edges, document type, OCR) | Planned |
 | 31 languages | 13 today |
 
@@ -140,8 +136,8 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 1. Optional: disconnect from the Internet after the page has loaded. After the first visit, the
    tool also opens with no connection.
 2. **Start.** The first screen explains what the tool does. Press **Start**.
-3. **Document.** Choose DNI 4.0 (preselected), DNI 3.0, TIE or EU registration certificate, then
-   **Continue**. Each one has its own field positions and shape. To change it later, go back from
+3. **Document.** Choose DNI 4.0 (preselected), DNI 3.0 or TIE, then **Continue**. Each one has its
+   own field positions. To change it later, go back from
    the photo screen: your photos are kept, the corners and choices start again.
 4. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself. On a
    phone, **Take photo** opens the camera and **Gallery** opens your pictures; on a computer,

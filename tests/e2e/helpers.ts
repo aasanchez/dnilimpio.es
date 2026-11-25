@@ -8,7 +8,7 @@ export const fixture = (name: string): string => fileURLToPath(new URL(`../fixtu
 // Card corners in the 1600 × 1200 synthetic fixtures.
 export const CARD = [{ x: 200, y: 222 }, { x: 1400, y: 222 }, { x: 1400, y: 978 }, { x: 200, y: 978 }]
 /** Straightened size per document (src/zones/documents.ts). */
-export const DOC_PX = { 'dni-4.0': { w: 1712, h: 1080 }, 'dni-3.0': { w: 1712, h: 1080 }, tie: { w: 1712, h: 1080 }, 'eu-registration': { w: 1660, h: 1060 } } as const
+export const DOC_PX = { 'dni-4.0': { w: 1712, h: 1080 }, 'dni-3.0': { w: 1712, h: 1080 }, tie: { w: 1712, h: 1080 } } as const
 export type Doc = keyof typeof DOC_PX
 
 /** Start quad from defaultQuad(1600, 1200, aspect): 70 % of the width, the document's aspect, centred. */

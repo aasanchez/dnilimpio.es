@@ -5,7 +5,7 @@
 export type Side = 'front' | 'back'
 
 /** Supported documents. The ids are stable: tests, translations (`doc_<id>`) and e2e ids use them. */
-export type DocModel = 'dni-4.0' | 'dni-3.0' | 'tie' | 'eu-registration'
+export type DocModel = 'dni-4.0' | 'dni-3.0' | 'tie'
 
 export type ZoneId =
   | 'signature' | 'issueDate' | 'expiryDate' | 'supportNumber' | 'can' // hidden by default

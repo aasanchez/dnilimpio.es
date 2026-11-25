@@ -2,7 +2,6 @@
 import { describe, expect, it } from 'vitest'
 import { defaultHidden, fieldsOf, hasField, masksFor, mrzLeaks } from '../../src/engine/fields.ts'
 import { DOCUMENTS } from '../../src/zones/documents.ts'
-import { EU_REGISTRATION } from '../../src/zones/eu-registration.ts'
 import { TIE } from '../../src/zones/tie.ts'
 import { DNI_4_0, type ZoneId } from '../../src/zones/dni.ts'
 
@@ -28,8 +27,9 @@ describe('fields', () => {
     expect(mrzLeaks(TIE, new Set<ZoneId>(['expiryDate']))).toBe(true)
   })
   it('never warns about an MRZ the document does not have', () => {
-    expect(hasField(EU_REGISTRATION, 'mrz')).toBe(false)
-    expect(mrzLeaks(EU_REGISTRATION, new Set<ZoneId>(['dateOfBirth', 'supportNumber']))).toBe(false)
+    const noMrz = { ...DNI_4_0, zones: DNI_4_0.zones.filter((z) => z.id !== 'mrz') }
+    expect(hasField(noMrz, 'mrz')).toBe(false)
+    expect(mrzLeaks(noMrz, new Set<ZoneId>(['dateOfBirth', 'supportNumber']))).toBe(false)
   })
   it.each(DOCUMENTS.map((d) => [d.model, d] as const))('%s hides data by default and keeps every field togglable', (_, d) => {
     const hidden = defaultHidden(d)

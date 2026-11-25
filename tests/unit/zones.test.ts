@@ -81,21 +81,18 @@ describe.each(DOCUMENTS.map((d) => [d.model, d] as const))('%s zone data', (_, d
 })
 
 describe('documents', () => {
-  it('lists DNI 4.0, DNI 3.0, TIE and the EU certificate, DNI 4.0 first and by default', () => {
-    expect(DOCUMENTS.map((d) => d.model)).toEqual(['dni-4.0', 'dni-3.0', 'tie', 'eu-registration'])
+  it('lists DNI 4.0, DNI 3.0 and TIE, DNI 4.0 first and by default', () => {
+    expect(DOCUMENTS.map((d) => d.model)).toEqual(['dni-4.0', 'dni-3.0', 'tie'])
     expect(DEFAULT_DOC).toBe('dni-4.0')
     expect(documentOf('tie').model).toBe('tie')
   })
-  it('straightens ID-1 cards to 1712 × 1080 and the certificate card to its own 83 × 53 mm shape', () => {
+  it('straightens every card (ID-1) to 1712 × 1080', () => {
     expect(pixelSize(documentOf('dni-4.0').size)).toEqual({ w: 1712, h: 1080 })
     expect(pixelSize(documentOf('dni-3.0').size)).toEqual({ w: 1712, h: 1080 })
     expect(pixelSize(documentOf('tie').size)).toEqual({ w: 1712, h: 1080 })
-    expect(pixelSize(documentOf('eu-registration').size)).toEqual({ w: 1660, h: 1060 })
   })
-  it('gives the certificate no CAN and no MRZ, and the cards both', () => {
+  it('gives every card a CAN and an MRZ', () => {
     const ids = (m: Parameters<typeof documentOf>[0]): string[] => documentOf(m).zones.map((z) => z.id)
-    expect(ids('eu-registration')).not.toContain('can')
-    expect(ids('eu-registration')).not.toContain('mrz')
     for (const m of ['dni-4.0', 'dni-3.0', 'tie'] as const) expect(ids(m)).toEqual(expect.arrayContaining(['can', 'mrz']))
   })
 })

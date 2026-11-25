@@ -5,21 +5,6 @@ import { loadBoth, toEditor } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
-test('EU registration certificate: own card shape, no CAN and no MRZ', async ({ page }) => {
-  await toEditor(page, 'eu-registration')
-  await expect(page.locator('#preview')).toHaveJSProperty('height', 1060)
-  await expect(page.locator('#hidden-count')).toHaveText('2 de 6')
-  await expect(page.locator('#field-can')).toHaveCount(0)
-  await expect(page.locator('#can-warning')).toHaveCount(0)
-  await expect(page.locator('#field-issueDate')).toBeChecked()
-  await expect(page.locator('#field-address')).not.toBeChecked()
-  await page.locator('#tab-back').click()
-  await expect(page.locator('#field-supportNumber')).toBeChecked()
-  await expect(page.locator('#field-mrz')).toHaveCount(0)
-  await page.locator('#field-supportNumber').uncheck()
-  await expect(page.locator('#mrz-warning')).toHaveCount(0)
-})
-
 test('TIE: permit type is a field, the hint names the document', async ({ page }) => {
   await toEditor(page, 'tie')
   await expect(page.locator('#hidden-count')).toHaveText('6 de 10')
@@ -47,7 +32,7 @@ test('changing the document keeps the photos; Back without Continue keeps the ol
   // Going back without continuing keeps the previous choice.
   await page.locator('#back').click()
   await expect(page.locator('#doc-tie')).toBeChecked()
-  await page.locator('#doc-eu-registration').check()
+  await page.locator('[id="doc-dni-3.0"]').check()
   await page.locator('#back').click()
   await page.locator('#start').click()
   await expect(page.locator('#doc-tie')).toBeChecked()

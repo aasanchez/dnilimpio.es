@@ -11,8 +11,8 @@ test('the start screen leads to the document picker, then to the photo step, fro
   await expect(page.locator('h2')).toHaveText('¿Qué documento vas a copiar?')
   await expect(page.locator('h2')).toBeFocused()
   await expect(page.locator('.progress [aria-current="step"]')).toContainText('Fotos')
-  // Four documents; DNI 4.0 is preselected.
-  await expect(page.locator('input[name="doc"]')).toHaveCount(4)
+  // Three documents; DNI 4.0 is preselected.
+  await expect(page.locator('input[name="doc"]')).toHaveCount(3)
   await expect(page.locator('[id="doc-dni-4.0"]')).toBeChecked()
   await page.locator('#doc-continue').click()
   await expect(page.locator('h2')).toHaveText('Foto del anverso')

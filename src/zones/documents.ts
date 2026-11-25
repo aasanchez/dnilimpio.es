@@ -3,11 +3,10 @@
 
 import { DNI_4_0 } from './dni.ts'
 import { DNI_3_0 } from './dni-3.ts'
-import { EU_REGISTRATION } from './eu-registration.ts'
 import { TIE } from './tie.ts'
 import type { DocModel, ModelZones, SizeMm } from './types.ts'
 
-export const DOCUMENTS: readonly ModelZones[] = [DNI_4_0, DNI_3_0, TIE, EU_REGISTRATION]
+export const DOCUMENTS: readonly ModelZones[] = [DNI_4_0, DNI_3_0, TIE]
 
 export const DEFAULT_DOC: DocModel = 'dni-4.0'
 

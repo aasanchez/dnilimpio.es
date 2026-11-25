@@ -81,8 +81,6 @@
   "docHint_dni-3.0": "Vuodet 2015–2021. Ei EU-lippua.",
   "doc_tie": "TIE (ulkomaalaisen kortti)",
   "docHint_tie": "Oleskelukortti, jossa on NIE-numerosi, vuoden 2020 malli.",
-  "doc_eu-registration": "EU-kansalaisen rekisteröintitodistus",
-  "docHint_eu-registration": "Vihreä paperikortti, jossa on NIE-numerosi.",
   "progress": "Edistyminen",
   "stepPhotos": "Kuvat",
   "stepCorners": "Kulmat",

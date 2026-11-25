@@ -22,8 +22,7 @@
     {#each DOCUMENTS as d (d.model)}
       <li>
         <label class="toggle">
-          <!-- Card or paper shape, to tell the documents apart at a glance. -->
-          <span class="doc-shape" class:paper={d.model === 'eu-registration'} aria-hidden="true"></span>
+          <span class="doc-shape" aria-hidden="true"></span>
           <span class="toggle-text">
             <span class="toggle-label">{t(lang, `doc_${d.model}`)}</span>
             <span class="toggle-note">{t(lang, `docHint_${d.model}`)}</span>
