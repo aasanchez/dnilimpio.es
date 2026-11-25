@@ -20,10 +20,14 @@ async function toJpeg (canvas: HTMLCanvasElement): Promise<Uint8Array> {
 /** Builds the PDF from already sanitised canvases (one page each, in order). */
 export async function exportPdf (sanitised: readonly HTMLCanvasElement[]): Promise<Blob> {
   const jpegs: Uint8Array[] = []
-  for (const c of sanitised) jpegs.push(await toJpeg(c))
-  const pdf = await buildPdf(jpegs)
-  for (const j of jpegs) j.fill(0)
-  const blob = new Blob([new Uint8Array(pdf)], { type: 'application/pdf' })
-  pdf.fill(0)
-  return blob
+  let pdf: Uint8Array | undefined
+  try {
+    for (const c of sanitised) jpegs.push(await toJpeg(c))
+    pdf = await buildPdf(jpegs)
+    return new Blob([new Uint8Array(pdf)], { type: 'application/pdf' })
+  } finally {
+    // Also when encoding or the PDF fails: only the Blob keeps the result.
+    for (const j of jpegs) j.fill(0)
+    pdf?.fill(0)
+  }
 }

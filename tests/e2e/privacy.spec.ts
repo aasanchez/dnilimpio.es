@@ -85,7 +85,7 @@ test('nothing about the document is stored in the browser', async ({ page }) => 
       for (const r of await (await caches.open(k)).keys()) cached.push(new URL(r.url).pathname)
     }
     return {
-      cookies: document.cookie,
+      cookies: document.cookie, // eslint-disable-line no-restricted-properties
       // The test only reads these stores to check that they are empty.
       local: localStorage.length, // eslint-disable-line no-restricted-properties
       session: sessionStorage.length, // eslint-disable-line no-restricted-properties

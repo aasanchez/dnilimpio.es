@@ -34,8 +34,34 @@ export default tseslint.config(
         { object: 'localStorage', message: 'Nothing persists (§2.2).' },
         { object: 'sessionStorage', message: 'Nothing persists (§2.2).' },
         { object: 'indexedDB', message: 'Nothing persists (§2.2).' },
+        // The same stores reached through a global object, and the other ways to keep or send data.
+        ...['window', 'self', 'globalThis'].flatMap((object) => ['localStorage', 'sessionStorage', 'indexedDB', 'caches', 'openDatabase', 'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'RTCPeerConnection'].map((property) => ({ object, property, message: 'Nothing persists and nothing is sent (§2.2).' }))),
+        { object: 'document', property: 'cookie', message: 'No cookies (§2.2).' },
+        { object: 'navigator', property: 'sendBeacon', message: 'Nothing is sent (§2.2).' },
+        { object: 'navigator', property: 'storage', message: 'Nothing persists (§2.2).' },
+        { object: 'window', property: 'open', message: 'No new windows with data in the URL.' },
+      ],
+      // The bare globals: storage and every API that sends data. Only the service worker may use
+      // fetch() and Cache Storage (it caches the app's own files); see the override below.
+      'no-restricted-globals': ['error',
+        ...['localStorage', 'sessionStorage', 'indexedDB', 'openDatabase', 'caches'].map((name) => ({ name, message: 'Nothing persists (§2.2).' })),
+        ...['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'WebTransport', 'RTCPeerConnection', 'webkitRTCPeerConnection'].map((name) => ({ name, message: 'Nothing is sent (§2.2): photos and data never leave the device.' })),
+      ],
+      'no-restricted-syntax': ['error',
+        // Navigating to a URL built at run time could carry data in it.
+        { selector: "AssignmentExpression[left.type='Identifier'][left.name='location']", message: 'No navigation to computed URLs (§2.2).' },
+        { selector: "AssignmentExpression[left.object.name='location']", message: 'No navigation to computed URLs (§2.2).' },
+        { selector: "AssignmentExpression[left.property.name='location']", message: 'No navigation to computed URLs (§2.2).' },
+        { selector: "AssignmentExpression[left.object.property.name='location']", message: 'No navigation to computed URLs (§2.2).' },
+        { selector: "CallExpression[callee.object.name='location'][callee.property.name=/^(assign|replace)$/]", message: 'No navigation to computed URLs (§2.2).' },
       ],
     },
+  },
+  {
+    // The service worker downloads and caches the app's own files (fetch with integrity). Tests read
+    // the stores to check they are empty, and the build and CI scripts run in Node.
+    files: ['src/sw.ts', 'src/offline/**/*.ts', 'tests/**/*.ts', 'scripts/**/*.ts'],
+    rules: { 'no-restricted-globals': 'off' },
   },
   {
     // Numeric kernels index fixed-size arrays inside bounds-checked loops; with noUncheckedIndexedAccess
