@@ -18,7 +18,12 @@ register one under Trusted Types?
 - On install, the worker downloads each file with `fetch(url, { integrity })`. The browser checks
   every file against its hash. If one file fails, the install fails and the partial cache is deleted.
 - The worker answers GET requests in its scope from that cache, and page loads from the cached
-  `index.html`. It deletes the caches of older builds when a new build activates.
+  `index.html`.
+- The cache name comes from the hashes of all files and of the worker's own code, so every new
+  worker fills a new cache. A failed install deletes only its own cache, never the active one.
+- No `skipWaiting()`: a new build activates only when no tab runs the old one. Open tabs keep their
+  worker and their cache, including the PDF chunk they may still load. The new build then deletes the
+  old caches.
 - Change one CSP directive: `trusted-types 'none'` becomes `trusted-types dnilimpio-sw`. The page
   creates that one policy at start-up. Its only function returns the URL of `sw.js` and throws for
   anything else. A second policy with that name, or any other name, is refused by the browser.
@@ -37,8 +42,9 @@ register one under Trusted Types?
 
 - The browser stores the app's files in Cache Storage. It never stores user data: photos, choices,
   the watermark and PDFs stay in memory.
-- A new deploy reaches a user on their next visit: the browser checks `sw.js` for changes (bypassing
-  the HTTP cache), installs the new build in the background and uses it from the next page load.
+- A new deploy reaches a user once all their tabs of the tool are closed: the browser checks `sw.js`
+  for changes (bypassing the HTTP cache), installs the new build in the background, and uses it from
+  the next visit. Reloading a single open tab is not enough.
 - e2e tests block service workers by default, so `page.route()` sees every request.
   `tests/e2e/offline.spec.ts` turns them on and checks the offline flow up to the PDF download, and
   that a tampered file stops the install.

@@ -5,7 +5,8 @@
 //   cache only ever holds the exact bytes of one build.
 // - Fetch: answers GET requests inside its scope from that cache; page loads get the cached index.html.
 //   Anything not in the cache goes to the network as usual (there should be nothing).
-// - Activate: deletes the caches of older builds.
+// - Activate: deletes the caches of older builds. A new build activates only once no tab runs the
+//   old one, so no open page loses files it still needs.
 // It never stores user data: images and PDFs live in memory and blob: URLs, which never reach it.
 // The build (scripts/vite-plugins.ts) replaces the manifest placeholder below with the file list.
 
@@ -29,10 +30,13 @@ sw.addEventListener('install', (event) => {
       }
     } catch (e) {
       // Never leave a partial cache behind: the install fails and the app keeps working online.
+      // This cache is never the active worker's: the version also covers sw.js itself, so a new
+      // worker always has a new cache name (see writePrecacheManifest in scripts/vite-plugins.ts).
       await caches.delete(CACHE)
       throw e
     }
-    await sw.skipWaiting()
+    // No skipWaiting(): an update waits until every tab of the previous build is closed, so those
+    // tabs keep their own worker and cache (including the PDF chunk they may still need to load).
   })())
 })
 
