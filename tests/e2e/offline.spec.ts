@@ -71,6 +71,22 @@ test('the worker refuses every request that is not a file of this build (deny by
   await expect(page.locator('h1')).toBeVisible()
 })
 
+test('page loads from the worker carry the headers Pages cannot send; no page may frame the app', async ({ page, context, baseURL }) => {
+  await page.goto('/')
+  await offlineReady(page)
+  const res = await page.reload()
+  expect(res?.fromServiceWorker()).toBe(true)
+  const h = res?.headers() ?? {}
+  expect([h['content-security-policy'], h['x-frame-options'], h['x-content-type-options'], h['referrer-policy']])
+    .toEqual(["frame-ancestors 'none'", 'DENY', 'nosniff', 'no-referrer'])
+  // Another site that frames the app. Its frame gets a partitioned (empty) worker registration, so
+  // the header does not reach it; the page's own check does: the app does not start there.
+  const framer = await context.newPage()
+  await framer.setContent(`<iframe src="${baseURL ?? ''}"></iframe>`)
+  await expect(framer.frameLocator('iframe').locator('#app a[target="_blank"]')).toBeVisible()
+  await expect(framer.frameLocator('iframe').locator('h1')).toHaveCount(0)
+})
+
 test('a tampered file stops the install and leaves no cache behind', async ({ page, context }) => {
   // context.route also sees the worker's own requests.
   let fromWorker = 0

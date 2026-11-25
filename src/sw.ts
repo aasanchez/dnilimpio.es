@@ -32,6 +32,25 @@ const WORKERS = new Set(WORKER_SCRIPTS.map(urlOf))
  * script's response, not from the page. The OCR engine never runs without this worker (ocr.ts), so
  * the policy always applies. The cached copy stays unchanged; only the response given out carries it.
  */
+/**
+ * Headers GitHub Pages cannot send, added to every page load the worker answers. frame-ancestors only
+ * works as a header (a <meta> CSP ignores it): no same-site page may show the app in a frame. A frame
+ * on another site gets its own, partitioned worker registration, so it never sees these headers; there
+ * the page's own check refuses to start the app (src/security/lockdown.ts), as on a first visit.
+ */
+const PAGE_HEADERS: Readonly<Record<string, string>> = {
+  'Content-Security-Policy': "frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'no-referrer',
+}
+
+function withPageHeaders (res: Response): Response {
+  const headers = new Headers(res.headers)
+  for (const [k, v] of Object.entries(PAGE_HEADERS)) headers.set(k, v)
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers })
+}
+
 function withWorkerCsp (url: string, res: Response): Response {
   if (!WORKERS.has(url)) return res
   const headers = new Headers(res.headers)
@@ -136,10 +155,10 @@ sw.addEventListener('fetch', (event) => {
       case 'file': {
         const url = to.kind === 'index' ? INDEX : to.url
         const hit = await (await caches.open(CACHE)).match(url)
-        if (hit) return hit
         // Not expected (install saved every file), but if the cache was cleared under us: the same
         // file again, checked against its hash.
-        return await fetch(url, { integrity: FILES.get(url) ?? '', credentials: 'omit' })
+        const res = hit ?? await fetch(url, { integrity: FILES.get(url) ?? '', credentials: 'omit' })
+        return to.kind === 'index' ? withPageHeaders(res) : res
       }
     }
   })())

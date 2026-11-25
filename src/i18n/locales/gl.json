@@ -175,5 +175,6 @@
   "findNone": "Non se atopou nada. Tapa os datos a man.",
   "findOffline": "A busca automática necesita unha descarga única e non tes conexión. Tapa os datos a man.",
   "findUnsupported": "A busca automática non está dispoñible neste navegador. Tapa os datos a man.",
-  "findFailed": "A busca automática non funcionou esta vez. Tapa os datos a man."
+  "findFailed": "A busca automática non funcionou esta vez. Tapa os datos a man.",
+  "framed": "Por seguridade, esta ferramenta só funciona na súa propia lapela. Ábrea aquí."
 }

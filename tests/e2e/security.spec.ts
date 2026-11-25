@@ -2,7 +2,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createHash } from 'node:crypto'
 import { cspWithScriptHashes } from '../../scripts/csp.ts'
-import { toEditor } from './helpers.ts'
+import { fixture, openCapture, toEditor } from './helpers.ts'
 
 /** The inline import map's text, or null. It is the only inline script the CSP allows (by hash). */
 const importMapText = async (page: Page): Promise<string | null> =>
@@ -95,5 +95,35 @@ test.describe('tampering', () => {
     await page.locator('#download').click()
     await expect(page.locator('#download-status')).toHaveAttribute('role', 'alert')
     expect(downloaded).toBe(false)
+  })
+})
+
+test.describe('hardening (security audit of 2026-11-25)', () => {
+  test.use({ locale: 'es-ES' })
+
+  test('WebRTC is removed before the app runs; the camera API stays', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('h1')).toBeVisible()
+    expect(await page.evaluate(() => ({
+      peer: typeof (window as unknown as Record<string, unknown>)['RTCPeerConnection'],
+      webkit: typeof (window as unknown as Record<string, unknown>)['webkitRTCPeerConnection'],
+      channel: typeof (window as unknown as Record<string, unknown>)['RTCDataChannel'],
+      camera: typeof navigator.mediaDevices.getUserMedia,
+    }))).toEqual({ peer: 'undefined', webkit: 'undefined', channel: 'undefined', camera: 'function' })
+  })
+
+  test('inside another page\'s frame the app does not start, it only links to itself', async ({ page, baseURL }) => {
+    await page.setContent(`<iframe src="${baseURL ?? ''}" width="800" height="600"></iframe>`)
+    const frame = page.frameLocator('iframe')
+    await expect(frame.locator('#app a[target="_blank"]')).toHaveText(/solo funciona en su propia pestaña/)
+    await expect(frame.locator('h1')).toHaveCount(0)
+  })
+
+  test('leaving the page drops the photos (nothing is kept for the back-forward cache)', async ({ page }) => {
+    await openCapture(page)
+    await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
+    await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
+    await page.evaluate(() => { dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })) })
+    await expect(page.locator('#status-front')).not.toHaveText('Imagen cargada.')
   })
 })

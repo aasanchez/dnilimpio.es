@@ -175,5 +175,6 @@
   "findNone": "Rien trouvé. Masquez les données à la main.",
   "findOffline": "La recherche automatique a besoin d'un téléchargement unique et vous êtes hors ligne. Masquez les données à la main.",
   "findUnsupported": "La recherche automatique n'est pas disponible dans ce navigateur. Masquez les données à la main.",
-  "findFailed": "La recherche automatique n'a pas fonctionné cette fois. Masquez les données à la main."
+  "findFailed": "La recherche automatique n'a pas fonctionné cette fois. Masquez les données à la main.",
+  "framed": "Pour votre sécurité, cet outil ne fonctionne que dans son propre onglet. Ouvrez-le ici."
 }

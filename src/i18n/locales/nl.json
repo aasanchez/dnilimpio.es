@@ -175,5 +175,6 @@
   "findNone": "Niets gevonden. Dek de gegevens met de hand af.",
   "findOffline": "Automatisch zoeken heeft één download nodig en je bent offline. Dek de gegevens met de hand af.",
   "findUnsupported": "Automatisch zoeken is niet beschikbaar in deze browser. Dek de gegevens met de hand af.",
-  "findFailed": "Automatisch zoeken werkte deze keer niet. Dek de gegevens met de hand af."
+  "findFailed": "Automatisch zoeken werkte deze keer niet. Dek de gegevens met de hand af.",
+  "framed": "Voor je veiligheid werkt deze tool alleen in een eigen tabblad. Open hem hier."
 }

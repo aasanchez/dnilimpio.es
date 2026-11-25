@@ -60,6 +60,14 @@
   // The document choice belongs to the Photos step.
   const current = $derived(step === 'edit' && phase !== 'edit' ? 3 : step === 'doc' ? 0 : step === 'auto' ? 1 : ['capture', 'align', 'edit'].indexOf(step))
 
+  // Leaving the page (another site, closing the tab, a reload): drop the photos and stop OCR, so a
+  // page kept in the back-forward cache holds no document when the user comes back.
+  $effect(() => {
+    const leave = (): void => { reset() }
+    addEventListener('pagehide', leave)
+    return () => { removeEventListener('pagehide', leave) }
+  })
+
   $effect(() => {
     document.documentElement.lang = lang
     document.documentElement.dir = dir(lang)
