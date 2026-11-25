@@ -126,3 +126,13 @@ test('Arabic switches the page to right-to-left', async ({ page }) => {
   await page.locator('#lang').selectOption('fr')
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
 })
+
+test.describe('with reduced motion', () => {
+  test.use({ reducedMotion: 'reduce' })
+
+  test('the side badge does not animate', async ({ page }) => {
+    await openCapture(page)
+    const name = await page.locator('#side-badge').evaluate((n) => getComputedStyle(n).animationName)
+    expect(name).toBe('none')
+  })
+})
