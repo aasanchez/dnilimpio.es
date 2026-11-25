@@ -31,6 +31,14 @@ falls back to the manual path, never a random error. Images must never leave the
 - `connect-src 'none'` and `script-src 'self'` do not change. The OCR worker is a same-origin script
   file, not a `blob:` URL; its own requests are answered by the service worker. Tesseract's
   IndexedDB cache is off (`cacheMethod: 'none'`).
+- The OCR worker has its own CSP (added after the security audit of 2026-11-25, finding SEC-003). A
+  Web Worker does not inherit the page's CSP: it takes the policy of its script's response, and
+  GitHub Pages sends no headers, so the worker had no policy at all. The service worker now adds a
+  `Content-Security-Policy` header when it serves `ocr/worker.min.js` (`workerCsp()` in
+  `src/offline/precache.ts`): `default-src 'none'`, scripts and `fetch()` only from `ocr/`, and
+  `'wasm-unsafe-eval'` for the engine's WebAssembly. Since OCR never runs without the service worker,
+  the policy always applies. An e2e test runs `fetch()` inside the worker and checks that only `ocr/`
+  is reachable.
 - MRZ reading (`src/ocr/mrz.ts`, ICAO 9303 TD1) is plain TypeScript and fully unit tested: check
   digits, document code (`ID` for DNI, `IR` for TIE), and correction of one common OCR confusion in
   the document number when exactly one fix passes both the number and the composite check digits.

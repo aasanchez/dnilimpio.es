@@ -14,7 +14,7 @@
 // It never stores user data: images and PDFs live in memory and blob: URLs, which never reach it.
 // The build (scripts/vite-plugins.ts) replaces the manifest placeholder below with the file list.
 
-import { CACHE_PREFIX, cacheName, parseManifest, route } from './offline/precache.ts'
+import { CACHE_PREFIX, WORKER_SCRIPTS, cacheName, parseManifest, route, workerCsp } from './offline/precache.ts'
 
 const sw = self as unknown as ServiceWorkerGlobalScope
 
@@ -25,6 +25,19 @@ const urlOf = (path: string): string => new URL(path, sw.location.href).href
 const ON_DEMAND = new Map(manifest.onDemand.map((f) => [urlOf(f.path), f.integrity]))
 const FILES = new Map(manifest.files.map((f) => [urlOf(f.path), f.integrity]))
 const KNOWN = { files: new Set(FILES.keys()), onDemand: new Set(ON_DEMAND.keys()) }
+const WORKERS = new Set(WORKER_SCRIPTS.map(urlOf))
+
+/**
+ * The worker scripts get their own CSP header (workerCsp()): a Web Worker takes its policy from its
+ * script's response, not from the page. The OCR engine never runs without this worker (ocr.ts), so
+ * the policy always applies. The cached copy stays unchanged; only the response given out carries it.
+ */
+function withWorkerCsp (url: string, res: Response): Response {
+  if (!WORKERS.has(url)) return res
+  const headers = new Headers(res.headers)
+  headers.set('Content-Security-Policy', workerCsp(sw.registration.scope))
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers })
+}
 
 /** SHA-384 of a response body, as an SRI string. */
 async function sri (res: Response): Promise<string> {
@@ -118,7 +131,7 @@ sw.addEventListener('fetch', (event) => {
         // A network error, as if the request had been blocked: nothing is sent.
         return Response.error()
       case 'on-demand':
-        return await ensureOnDemand(to.url)
+        return withWorkerCsp(to.url, await ensureOnDemand(to.url))
       case 'index':
       case 'file': {
         const url = to.kind === 'index' ? INDEX : to.url

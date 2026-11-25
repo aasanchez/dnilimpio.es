@@ -124,3 +124,25 @@ test('a tampered OCR file is refused and nothing is cached', async ({ page, cont
   expect(result).toBe('refused')
   expect(await page.evaluate(async () => await caches.match(new URL('ocr/spa.traineddata', document.baseURI).href) !== undefined)).toBe(false)
 })
+
+test('the OCR worker runs under its own strict CSP: it can read ocr/ and nothing else', async ({ page }) => {
+  test.setTimeout(60_000)
+  await controlled(page)
+  const chunk = await ocrChunk(page)
+  // Start the engine and keep it running.
+  await page.evaluate(async (path) => {
+    const ocr = await import(path) as typeof import('../../src/ocr/ocr.ts')
+    const c = new OffscreenCanvas(100, 30)
+    c.getContext('2d')?.fillRect(0, 0, 1, 1)
+    await ocr.recognise(c)
+  }, chunk)
+  const worker = page.workers().find((w) => w.url().endsWith('/ocr/worker.min.js'))
+  expect(worker).toBeDefined()
+  // Run inside the worker, where the page's CSP does not apply.
+  const tryFetch = async (url: string): Promise<string> => await (worker?.evaluate(async (u) => {
+    try { await fetch(u); return 'sent' } catch { return 'blocked' }
+  }, url) ?? 'no worker')
+  expect(await tryFetch('/ocr/spa.traineddata')).toBe('sent') // its own data
+  expect(await tryFetch('/index.html')).toBe('blocked') // a file the service worker would serve
+  expect(await tryFetch('https://example.org/?dni=12345678Z')).toBe('blocked')
+})
