@@ -79,16 +79,34 @@ export async function toAlign (page: Page, doc: Doc = 'dni-4.0', opts: { model?:
 }
 
 /**
+ * The corner editor's box once it has stopped moving. The page can still scroll or settle right
+ * after the corner screen opens (focus moves to its heading), and a box read too early sends the
+ * mouse next to the handles.
+ */
+export async function editorBox (page: Page): Promise<{ x: number; y: number; width: number; height: number }> {
+  const canvas = page.locator('canvas.corner-editor')
+  await expect(canvas).toBeVisible()
+  await canvas.scrollIntoViewIfNeeded()
+  let last = ''
+  for (let i = 0; i < 50; i++) {
+    const box = await canvas.boundingBox()
+    if (!box) throw new Error('no canvas box')
+    const key = JSON.stringify(box)
+    if (key === last) return box
+    last = key
+    await page.waitForTimeout(100)
+  }
+  throw new Error('the corner editor kept moving')
+}
+
+/**
  * Drags each corner handle from the start quad onto the card corners with the mouse. Reset first
  * puts the corners at the start quad even if a detector already moved them.
  */
 export async function snapCorners (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
   const start = startQuad(doc)
-  const canvas = page.locator('canvas.corner-editor')
-  await expect(canvas).toBeVisible()
   await page.locator('#align-restart').click()
-  const box = await canvas.boundingBox()
-  if (!box) throw new Error('no canvas box')
+  const box = await editorBox(page)
   const k = box.width / 1600
   for (let i = 0; i < 4; i++) {
     const from = start[i]!

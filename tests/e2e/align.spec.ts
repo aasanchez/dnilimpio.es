@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, test } from '@playwright/test'
-import { CARD, fixture, pixel, snapCorners, toAlign } from './helpers.ts'
+import { CARD, editorBox, fixture, pixel, snapCorners, toAlign } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
@@ -31,9 +31,7 @@ test('Adjust corners from the editor: mark them by hand, Continue straightens ag
 
 test('crossed corners disable Continue; Back returns to the editor, then the document and the photos', async ({ page }) => {
   await toAlign(page)
-  const canvas = page.locator('canvas.corner-editor')
-  const box = await canvas.boundingBox()
-  if (!box) throw new Error('no canvas box')
+  const box = await editorBox(page)
   const k = box.width / 1600
   // Drag the top-left corner past the bottom-right one.
   // The corners start where the card was found.
@@ -72,8 +70,7 @@ test.describe('touch', () => {
     await toAlign(page)
     const canvas = page.locator('canvas.corner-editor')
     await expect(canvas).toHaveCSS('touch-action', 'none')
-    const box = await canvas.boundingBox()
-    if (!box) throw new Error('no canvas box')
+    const box = await editorBox(page)
     const k = box.width / 1600
     // Synthetic touch pointer events, as a finger would produce, landing a bit off the handle.
     const at = (p: { x: number; y: number }): { clientX: number; clientY: number } => ({ clientX: box.x + p.x * k, clientY: box.y + p.y * k })
