@@ -49,6 +49,26 @@ function checkFiles (list: unknown[]): PrecacheFile[] {
   })
 }
 
+/** Scripts the app starts as Web Workers (see workerCsp()). */
+export const WORKER_SCRIPTS: readonly string[] = [`${ON_DEMAND_DIR}worker.min.js`]
+
+/**
+ * Content-Security-Policy for the OCR worker. A worker does not inherit the page's CSP: it gets the
+ * policy of its own script's response, and GitHub Pages sends none. The service worker adds this one
+ * when it serves the worker script, so the OCR engine (third-party code that sees the image) may load
+ * only its own files from ocr/ and can send nothing anywhere else.
+ */
+export function workerCsp (scope: string): string {
+  const ocr = `${scope}${ON_DEMAND_DIR}`
+  return [
+    "default-src 'none'",
+    // importScripts() of the engine; the engine compiles its WebAssembly (no eval()).
+    `script-src ${ocr} 'wasm-unsafe-eval'`,
+    // The language data, read with fetch().
+    `connect-src ${ocr}`,
+  ].join('; ')
+}
+
 /** What the service worker does with one request (see route()). */
 export type Route =
   /** A page load inside the scope: answer with the cached index.html. */
