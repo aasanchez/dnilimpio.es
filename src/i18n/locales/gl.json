@@ -117,5 +117,21 @@
   "doneHint": "Cando o envíes, preme Borrar todo. Pechar a lapela tamén o borra.",
   "share": "Compartir",
   "errShare": "Non se puido compartir. O PDF segue no cartafol de descargas.",
-  "clearAll": "Borrar todo"
+  "clearAll": "Borrar todo",
+  "liveAuto": "Foto automática",
+  "liveClose": "Pechar a cámara",
+  "liveShutter": "Facer a foto",
+  "liveStarting": "Abrindo a cámara…",
+  "liveFlip": "Feito. Agora dálle a volta á tarxeta.",
+  "liveDenied": "Non hai permiso para usar a cámara. Usa «Facer foto» ou «Galería».",
+  "liveUnavailable": "A cámara en directo non está dispoñible. Usa «Facer foto» ou «Galería».",
+  "tipFrame": "Encaixa a tarxeta no marco",
+  "tipCloser": "Achégate un pouco",
+  "tipTilt": "Pon a tarxeta recta",
+  "tipDark": "Falta luz",
+  "tipGlare": "Hai reflexos: inclina un pouco a tarxeta",
+  "tipSteady": "Mantén o móbil quieto",
+  "tipBlur": "Está borrosa: agarda a que enfoque",
+  "tipReady": "Non te movas…",
+  "tipReadyManual": "Todo ben: fai a foto"
 }

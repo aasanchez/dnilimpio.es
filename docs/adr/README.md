@@ -11,3 +11,4 @@ project specification on purpose).
 | [0003](0003-svelte-vite-pnpm.md) | Svelte 5 + Vite; Node.js and pnpm pinned to latest stable | accepted |
 | [0004](0004-offline-service-worker.md) | Offline mode with a verified service worker; one Trusted Types policy for its URL | accepted |
 | [0005](0005-guided-flow-and-visual-style.md) | Guided phone-first flow; openaggregator.io-style visuals with self-hosted fonts | accepted |
+| [0006](0006-capture-coach.md) | Capture coach: live tips and automatic shot from classical image metrics, no model | accepted |

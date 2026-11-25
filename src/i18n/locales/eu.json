@@ -117,5 +117,21 @@
   "doneHint": "Bidali ondoren, sakatu Ezabatu dena. Fitxa ixteak ere ezabatzen du.",
   "share": "Partekatu",
   "errShare": "Ezin izan da partekatu. PDFa deskargen karpetan dago oraindik.",
-  "clearAll": "Ezabatu dena"
+  "clearAll": "Ezabatu dena",
+  "liveAuto": "Argazki automatikoa",
+  "liveClose": "Itxi kamera",
+  "liveShutter": "Atera argazkia",
+  "liveStarting": "Kamera irekitzen…",
+  "liveFlip": "Eginda. Orain eman buelta txartelari.",
+  "liveDenied": "Ez dago kamera erabiltzeko baimenik. Erabili «Atera argazki bat» edo «Galeria».",
+  "liveUnavailable": "Zuzeneko kamera ez dago erabilgarri. Erabili «Atera argazki bat» edo «Galeria».",
+  "tipFrame": "Sartu txartela markoaren barruan",
+  "tipCloser": "Hurbildu pixka bat",
+  "tipTilt": "Jarri txartela zuzen",
+  "tipDark": "Argi gutxi dago",
+  "tipGlare": "Islak daude: okertu pixka bat txartela",
+  "tipSteady": "Eutsi mugikorra geldi",
+  "tipBlur": "Lausotuta dago: itxaron fokatu arte",
+  "tipReady": "Ez mugitu…",
+  "tipReadyManual": "Dena ondo: atera argazkia"
 }

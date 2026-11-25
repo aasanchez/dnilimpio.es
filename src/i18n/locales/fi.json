@@ -117,5 +117,21 @@
   "doneHint": "Kun olet lähettänyt sen, paina Tyhjennä kaikki. Myös välilehden sulkeminen tyhjentää kaiken.",
   "share": "Jaa",
   "errShare": "Jakaminen epäonnistui. PDF on yhä latauskansiossa.",
-  "clearAll": "Tyhjennä kaikki"
+  "clearAll": "Tyhjennä kaikki",
+  "liveAuto": "Automaattinen kuvaus",
+  "liveClose": "Sulje kamera",
+  "liveShutter": "Ota kuva nyt",
+  "liveStarting": "Avataan kameraa…",
+  "liveFlip": "Valmis. Käännä nyt kortti.",
+  "liveDenied": "Kameran käyttölupaa ei ole. Käytä ”Ota kuva” tai ”Galleria”.",
+  "liveUnavailable": "Livekamera ei ole käytettävissä. Käytä ”Ota kuva” tai ”Galleria”.",
+  "tipFrame": "Sovita kortti kehyksen sisään",
+  "tipCloser": "Tule vähän lähemmäs",
+  "tipTilt": "Pidä kortti suorassa",
+  "tipDark": "Liian pimeää",
+  "tipGlare": "Heijastuksia: kallista korttia hieman",
+  "tipSteady": "Pidä puhelin paikallaan",
+  "tipBlur": "Epätarkka: odota, että kamera tarkentaa",
+  "tipReady": "Pysy paikallasi…",
+  "tipReadyManual": "Kaikki kunnossa: ota kuva"
 }
