@@ -92,7 +92,8 @@ const PLACEHOLDER = /(["'`])__DNI_PRECACHE_MANIFEST__\1/
 
 /**
  * Writes the offline file list into dist/sw.js: every file of the build (final bytes, so this runs
- * after SRI has rewritten index.html) with its SHA-384, and a version derived from all of them.
+ * after SRI has rewritten index.html) with its SHA-384, and a version derived from all of them and
+ * from the worker's own code.
  * Any change to any file gives a new sw.js, which is what makes browsers install the update.
  */
 function writePrecacheManifest (outDir: string): void {
@@ -101,7 +102,12 @@ function writePrecacheManifest (outDir: string): void {
   if (!PLACEHOLDER.test(sw)) throw new Error('dist/sw.js has no precache manifest placeholder')
   if (/^\s*import\b|\bimport\s*\(/m.test(sw)) throw new Error('dist/sw.js must not import other chunks')
   const files: PrecacheFile[] = listFiles(outDir).filter(isPrecached).map((path) => ({ path, integrity: sri(readFileSync(join(outDir, path))) }))
-  const version = createHash('sha256').update(files.map((f) => `${f.path} ${f.integrity}`).join('\n')).digest('hex').slice(0, 16)
+  // The worker's own code is part of the version: a worker-only change still gets a new cache name,
+  // so a failed install can never delete the cache the active worker is using.
+  const version = createHash('sha256')
+    .update(files.map((f) => `${f.path} ${f.integrity}`).join('\n'))
+    .update(`\nsw.js ${sri(sw)}`)
+    .digest('hex').slice(0, 16)
   const json = JSON.stringify({ version, files })
   parseManifest(json) // same checks as the worker runs
   writeFileSync(swPath, sw.replace(PLACEHOLDER, () => JSON.stringify(json)))
