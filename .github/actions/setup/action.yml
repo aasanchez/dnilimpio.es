@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Shared setup for every CI job that needs the project's dependencies:
+# Node from .nvmrc, the exact pnpm from package.json "packageManager", the pnpm store from cache and
+# `pnpm install --frozen-lockfile`. Optionally Chromium for Playwright, also cached.
+# Only the `install` job saves the pnpm store cache (save-cache: 'true'); the other jobs only restore it,
+# so parallel jobs never race to write the same cache entry.
+name: Setup project
+description: Node, pnpm, cached dependencies and (optionally) Playwright Chromium
+
+inputs:
+  save-cache:
+    description: "'true' to save the pnpm store cache after install (the install job only)"
+    default: 'false'
+  playwright:
+    description: "'true' to install Playwright Chromium and its system libraries"
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version-file: .nvmrc
+
+    # Exact pnpm version from package.json "packageManager", installed with the npm that ships with
+    # Node, so no third-party setup action is needed. Install scripts are disabled.
+    - name: Install pnpm
+      shell: bash
+      run: npm install --global --ignore-scripts "$(node -p "require('./package.json').packageManager")"
+
+    - id: store
+      name: Locate pnpm store
+      shell: bash
+      run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+    - if: inputs.save-cache == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.store.outputs.path }}
+        key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: pnpm-store-${{ runner.os }}-
+
+    - if: inputs.save-cache != 'true'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.store.outputs.path }}
+        key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: pnpm-store-${{ runner.os }}-
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile --prefer-offline
+
+    # Browser version comes from the exact @playwright/test pin in pnpm-lock.yaml.
+    - if: inputs.playwright == 'true'
+      id: pw
+      name: Read Playwright version
+      shell: bash
+      run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+    - if: inputs.playwright == 'true'
+      id: pw-cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+
+    # Cache hit: the browser is there, only the system libraries (not cacheable) are installed.
+    - if: inputs.playwright == 'true'
+      name: Install Playwright Chromium
+      shell: bash
+      env:
+        CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+      run: |
+        if [ "$CACHE_HIT" = 'true' ]; then
+          pnpm exec playwright install-deps chromium
+        else
+          pnpm exec playwright install --with-deps chromium
+        fi

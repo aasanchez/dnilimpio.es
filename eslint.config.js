@@ -7,7 +7,7 @@ import svelte from 'eslint-plugin-svelte'
 import svelteConfig from './svelte.config.js'
 
 export default tseslint.config(
-  { ignores: ['dist/', 'test-results/', 'playwright-report/'] },
+  { ignores: ['dist/', 'coverage/', 'test-results/', 'playwright-report/'] },
   ...neostandard({ ts: true, noJsx: true, filesTs: ['**/*.ts', '**/*.svelte'] }),
   ...tseslint.configs.strictTypeChecked,
   ...svelte.configs.recommended,

@@ -1,9 +1,20 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Licence for files that cannot carry a comment header (JSON, binary fixtures).
+# Copyright and licence for every file (checked by `reuse lint`, CI job `reuse`).
 version = 1
 
+# Default for the whole repository: a file's own SPDX-License-Identifier header comes first; the
+# copyright line and, for files that cannot carry a header (JSON, images), the licence come from here.
+# Later annotations override this one for the files they match.
 [[annotations]]
-path = ["src/i18n/locales/*.json", "tests/fixtures/**", "docs/images/**", "package.json", "pnpm-lock.yaml"]
+path = "**"
+precedence = "closest"
+SPDX-FileCopyrightText = "dnilimpio.es contributors"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# Files that cannot carry a comment header (JSON, binary fixtures).
+
+[[annotations]]
+path = ["src/i18n/locales/*.json", "lighthouserc.json", "tests/fixtures/**", "docs/images/**", "package.json", "pnpm-lock.yaml"]
 SPDX-FileCopyrightText = "dnilimpio.es contributors"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
 

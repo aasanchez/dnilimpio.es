@@ -21,6 +21,7 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 - [Languages](#languages)
 - [Development](#development)
 - [Tests](#tests)
+- [Continuous integration](#continuous-integration)
 - [Deployment](#deployment)
 - [Project layout](#project-layout)
 - [Design decisions](#design-decisions)
@@ -280,8 +281,10 @@ pnpm dev                                     # http://localhost:5173 (no CSP in 
 | `pnpm lint` | ESLint: neostandard style, typescript-eslint strict, Svelte rules, security bans |
 | `pnpm format` | Fix style issues automatically (ESLint `--fix`) |
 | `pnpm test` / `pnpm test:unit` | Unit tests (Vitest) |
+| `pnpm test:coverage` | Unit tests with a coverage report in `coverage/` |
 | `pnpm test:e2e` | End-to-end tests (Playwright, against the production build) |
-| `pnpm verify` | All of the above, in the order CI runs them |
+| `pnpm size` | Bundle size against its budgets (after `pnpm build`) |
+| `pnpm verify` | Type check, lint, unit tests, build and end-to-end tests, as CI runs them |
 
 Stack: [Svelte 5](https://svelte.dev) with runes for the interface, Vite, strict TypeScript, native
 CSS and the Canvas API. Image, geometry, redaction and PDF logic are plain TypeScript modules that do
@@ -322,16 +325,75 @@ upright, front and back), corner alignment from **Adjust corners**, the corner m
   hash, a tampered PDF chunk refused by the browser, and offline mode (reload and full flow to the
   PDF with the network off; a tampered file stops the service worker install).
 
+## Continuous integration
+
+Every pull request and every push to `master` runs the **CI** workflow
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). It is split into small jobs, each with one
+purpose, grouped in logical stages (the layout follows the
+[to-be-continuous](https://gitlab.com/to-be-continuous/samples/svelte-on-s3) GitLab templates).
+GitHub Actions has no stages: a job starts as soon as the jobs it `needs` have passed, so
+independent checks run in parallel and a failure shows exactly which check failed.
+
+```text
+changes ─ install ─┬─ build ──────┬─ e2e (2 shards) ─┐
+                   ├─ typecheck   ├─ bundle-size     │
+                   ├─ lint        └─ lighthouse      │
+                   └─ unit                           ├─ ci-ok ─ deploy ─ smoke
+reuse · audit · dependency-review · workflow-lint ───┘   (master only)
+```
+
+| Stage | Job | What it checks | Fails the pipeline |
+|---|---|---|---|
+| changes | `changes` | Whether a pull request touches code. A change to only Markdown, `docs/` or `LICENSES/` skips the code jobs | No |
+| setup | `install` | `pnpm install --frozen-lockfile`; saves the pnpm store cache that every later job restores | Yes |
+| build | `build` | `pnpm build`. Uploads `dist/` once; every later job tests and deploys that same build | Yes |
+| build | `typecheck` | `pnpm typecheck` (svelte-check, strict TypeScript) | Yes |
+| build | `lint` | `pnpm lint` (ESLint) | Yes |
+| build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. No threshold yet | Yes |
+| test | `e2e (1/2)`, `e2e (2/2)` | `pnpm test:e2e`, split in two shards, against the built `dist/`. The Playwright browser is cached | Yes |
+| test | `bundle-size` | `pnpm size`: gzip size of the start page, PDF chunk, corner model and OCR files against budgets in [`scripts/bundle-size.ts`](scripts/bundle-size.ts) | No, warns (`--strict` makes it fail) |
+| code analysis | `reuse` | Every file has copyright and licence information ([REUSE](https://reuse.software)) | Yes |
+| code analysis | `audit` | `pnpm audit --prod`: known high or critical vulnerabilities in the code that ships | Yes |
+| code analysis | `dependency-review` | Pull requests only: a new or updated dependency with a known moderate or worse vulnerability | Yes |
+| code analysis | `workflow-lint` | [actionlint](https://github.com/rhysd/actionlint) and [zizmor](https://docs.zizmor.sh) on the workflows (syntax, script injection, permissions, pinning). Rules turned off are explained in [`.github/zizmor.yml`](.github/zizmor.yml) | Yes |
+| acceptance | `lighthouse` | Lighthouse on the built site (performance, accessibility, best practices, SEO), thresholds in [`lighthouserc.json`](lighthouserc.json). Reports are a workflow artifact; nothing is uploaded elsewhere | No, warns |
+| gate | `ci-ok` | Passes when every job above passed or was skipped on purpose | Yes |
+| deploy | `deploy` | `master` only: publishes the tested `dist/` to GitHub Pages. A running deploy is never cancelled | Yes |
+| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves this commit's build and its entry script matches its SRI hash. Retries for up to 5 minutes while Pages updates | Yes |
+
+The **CodeQL** workflow ([`.github/workflows/codeql.yml`](.github/workflows/codeql.yml)) runs static
+security analysis of the TypeScript and Svelte code and of the workflows, on pull requests, on
+`master` and every Monday. Results appear under **Security > Code scanning**. GitGuardian scans for
+secrets.
+
+Rules the workflows follow:
+
+- Actions are pinned to full commit SHAs; the comment gives the release tag.
+- Every job has read-only permissions, except `deploy` (Pages) and CodeQL (code scanning results).
+- Checkout never keeps the token (`persist-credentials: false`).
+- Node, pnpm and Playwright versions come from `.nvmrc`, `package.json` and `pnpm-lock.yaml`, set up
+  by one shared action ([`.github/actions/setup`](.github/actions/setup/action.yml)).
+- A new push to a pull request cancels its previous run. On `master` runs queue instead.
+
+**Branch protection.** Require only the `ci-ok` status check. It covers every other job, so adding or
+renaming a job does not need a settings change.
+
+To run the same checks locally: `pnpm verify`, then `pnpm size` and `pnpm test:coverage`. The CI
+tools that are not npm packages (REUSE, actionlint, zizmor) can be run with `pipx run reuse lint`,
+`pipx run zizmor .github/` and the actionlint binary.
+
 ## Deployment
 
-GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs `pnpm verify` on every
-pull request and on `master`. On `master` it publishes the tested `dist/` to GitHub Pages. Actions are
-pinned to commit SHAs and run with read-only permissions, except the deploy job.
+On `master`, the `deploy` job publishes the `dist/` that passed every check to GitHub Pages, and
+`smoke` then checks the live site. To redeploy without a new commit, run the **CI** workflow on
+`master` from the Actions tab.
+
+Do not re-run the old **pages build and deployment** workflow if it appears in the Actions tab. It
+publishes the raw, unbuilt source of an old commit over the real site.
 
 The build uses relative paths, so `dist/` works at a domain root, under a subpath and on any static
 server (Nginx, Caddy, Cloudflare Pages). Moving to the `dnilimpio.es` domain needs no code change:
-set the custom domain in the repository's Pages settings and point DNS at GitHub Pages. To redeploy without a new commit, run the **CI** workflow on
-`master` from the Actions tab.
+set the custom domain in the repository's Pages settings and point DNS at GitHub Pages.
 
 ### Version shown in the app
 
@@ -340,8 +402,8 @@ The start screen's footer shows the running build: `Versión 2a07023 · desplega
 - The SHA is the commit the build comes from, shortened to 7 characters and linked to
   `<REPO_URL>/commit/<full SHA>`. CI takes it from `GITHUB_SHA`; a local build takes it from
   `git rev-parse HEAD`. Without either, the footer says `desarrollo` and shows no link.
-- The time is when `dist/` was built. On `master` the deploy job publishes that build right after the
-  check job, so it is the deploy time to within minutes. It is shown as relative time in the page's
+- The time is when `dist/` was built. On `master` the `deploy` job publishes that build once every check
+  has passed, so it is the deploy time to within minutes. It is shown as relative time in the page's
   language (`Intl.RelativeTimeFormat`), updates every 30 seconds, and shows the exact date on hover.
   Set `SOURCE_DATE_EPOCH` (seconds) to fix it, for example for a reproducible build.
 - Both values are written into the JavaScript bundle at build time (Vite `define`, see
@@ -396,6 +458,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0010](docs/adr/0010-smart-field-finding.md): smart field finding from OCR text; results become ordinary boxes.
 - [0011](docs/adr/0011-document-detection.md): document type detected from the MRZ, after the photos; it only preselects.
 - [0012](docs/adr/0012-automatic-straightening.md): automatic straightening (find, turn, straighten); the corner screen only on request.
+- [0013](docs/adr/0013-ci-pipeline.md): CI split into small, single-purpose jobs in logical stages, with one required check.
 
 ## Contributing
 

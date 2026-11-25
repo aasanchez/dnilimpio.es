@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# zizmor (workflow security audit, CI job workflow-lint). Each rule turned off says why.
+rules:
+  # pnpm is installed with `npm install --global` at the exact version in package.json
+  # "packageManager", with install scripts disabled. There is no lockfile for a global tool.
+  adhoc-packages:
+    disable: true
+  # The `$/` self-repository syntax is not supported by actionlint yet; `./` works the same here.
+  self-repository:
+    disable: true
