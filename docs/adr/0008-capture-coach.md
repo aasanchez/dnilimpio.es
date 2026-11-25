@@ -1,4 +1,4 @@
-# 0006. Capture coach with classical image metrics
+# 0008. Capture coach with classical image metrics
 
 - Status: accepted
 - Date: 2026-11-25

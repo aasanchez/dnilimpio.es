@@ -122,7 +122,8 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Offline mode with service worker and integrity checks | Done |
 | Redesign of the workflow and interface: guided phone-first flow, new visual style | Done |
 | Capture coach: live camera tips (framing, tilt, light, glare, blur, movement) and automatic shot | Done |
-| Automatic detection (edges, document type, OCR) | Planned |
+| Automatic card edge detection (engine, classic image processing) | Done, not yet in the interface |
+| Document type detection, OCR, smart field finding | Planned |
 | 31 languages | 13 today |
 
 ## How to use it
@@ -265,6 +266,7 @@ src/
   zones/             field positions per document, from official specimens
   redact/            normalised zones to pixels, opaque fills
   engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
+  detect/            automatic card edge detection (Sobel + Hough, no model)
   i18n/              dictionaries, one JSON file per language
   ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state
 scripts/             CSP, build plugins (CSP, SRI, offline file list), test fixture generator
@@ -281,7 +283,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0003](docs/adr/0003-svelte-vite-pnpm.md): Svelte 5, Vite, pinned Node.js and pnpm.
 - [0004](docs/adr/0004-offline-service-worker.md): offline mode with a verified service worker.
 - [0005](docs/adr/0005-guided-flow-and-visual-style.md): guided phone-first flow and visual style.
-- [0006](docs/adr/0006-capture-coach.md): capture coach with classical image metrics, no model.
+- [0008](docs/adr/0008-capture-coach.md): capture coach with classical image metrics, no model.
 
 ## Contributing
 
