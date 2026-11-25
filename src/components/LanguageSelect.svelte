@@ -6,7 +6,7 @@
 </script>
 
 <div class="lang">
-  <label for="lang">{t(lang, 'language')}</label>
+  <label class="visually-hidden" for="lang">{t(lang, 'language')}</label>
   <select id="lang" value={lang} onchange={(e) => { if (isLang(e.currentTarget.value)) lang = e.currentTarget.value }}>
     {#each LANGS as l (l)}
       <option value={l} lang={l} dir={dir(l)}>{AUTONYMS[l]}</option>

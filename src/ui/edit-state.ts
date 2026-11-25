@@ -5,6 +5,9 @@ import { defaultHidden } from '../engine/fields.ts'
 import { start, type History } from '../engine/history.ts'
 import { DNI_4_0, type Rect, type Side, type ZoneId } from '../zones/dni.ts'
 
+/** Screen inside step 3: choosing what to hide, reviewing the result, or done after the download. */
+export type Phase = 'edit' | 'review' | 'done'
+
 /** Extra black boxes per side, in normalised card coordinates. */
 export type Boxes = Readonly<Record<Side, readonly Rect[]>>
 

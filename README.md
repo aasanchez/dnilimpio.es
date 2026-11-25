@@ -116,36 +116,47 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Fields to hide, live preview, watermark, black and white, review, PDF download, reset | Done |
 | Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
 | Offline mode with service worker and integrity checks | Done |
-| Redesign of the workflow and interface (including zoom) | In progress |
+| Redesign of the workflow and interface: guided phone-first flow, new visual style | Done |
 | Automatic detection (edges, document type, OCR) | Planned |
 | 31 languages | 13 today |
 
 ## How to use it
 
 Open the site in a current browser (Chrome, Edge, Firefox, Safari; desktop or mobile). No account,
-no installation.
+no installation. The layout is built for a phone first: one step per screen, the main button always
+at the bottom within thumb reach, and a progress bar at the top (**Photos**, **Corners**, **Hide**,
+**Download**). The back arrow in the top bar returns to the previous step without losing work.
 
 1. Optional: disconnect from the Internet after the page has loaded. After the first visit, the
    tool also opens with no connection.
-2. Select the front, then the back.
-3. Drag the four circles onto the corners of the card. On a keyboard, arrow keys move the selected
-   corner and <kbd>N</kbd> selects the next one. **Rotate** turns the frame if the photo is sideways.
-4. Do the same for the back.
-5. **Fields to hide:** a checked box hides that field on every side where it is printed. The
-   recommended fields start checked: signature, issue and expiry dates, support number, CAN and the
-   machine-readable lines (MRZ). Fields left visible get a dashed outline in the preview; tick
-   **Final preview** to see the result without outlines. **Adjust corners** goes back to step 2
-   and keeps your choices.
-6. **Extra black boxes** cover anything the list does not. Turn on **Draw black box** and drag on
-   the image. Select a box to move it, or drag its corners to resize it. **Undo** and **Redo**
-   (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>) work on boxes. With a
-   keyboard: **Add box**, then arrow keys move it, <kbd>Shift</kbd>+arrows resize it, <kbd>N</kbd>
-   selects the next box and <kbd>Delete</kbd> removes it.
-7. Optional: type a **watermark** and tick **Convert to black and white**. The preview updates as
-   you type.
-8. **Review and download:** check both final images and the summary, tick **I have checked both
-   sides**, then **Download PDF**. The file is called `protected-document.pdf`.
-9. **Start again** clears the photos and all your choices from the page.
+2. **Start.** The first screen explains what the tool does. Press **Start**.
+3. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself. On a
+   phone, **Take photo** opens the camera and **Gallery** opens your pictures; on a computer,
+   **Choose image**, drag and drop, or paste (<kbd>Ctrl</kbd>+<kbd>V</kbd>) also work. Tap a side's
+   tile to replace its photo.
+4. **Corners.** Drag the four circles onto the corners of the card; a magnifier shows the area under
+   your finger. On a keyboard, arrow keys move the selected corner and <kbd>N</kbd> selects the next
+   one. **Rotate** turns the frame if the photo is sideways, **Reset** puts the circles back. The
+   button takes you from the front to the back, then on to the next step.
+5. **Hide.** The card stays on screen. Choose **Front** or **Back**; the list below shows that
+   side's fields as switches. You can also tap a field on the card itself to cover or uncover it.
+   The recommended fields start covered: signature, issue and expiry dates, support number, CAN and
+   the machine-readable lines (MRZ). Fields left visible get a dashed orange outline; **Final
+   preview** hides the outlines. **Adjust corners** goes back to step 4 and keeps your choices.
+   Three tabs:
+   - **Data:** the field switches and quick choices (**Recommended**, **Hide all**, **Show all**).
+   - **Boxes:** extra black boxes for anything the list does not cover. Turn on **Draw black box**
+     and drag on the card. Select a box to move it, or drag its corners to resize it. **Undo** and
+     **Redo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>) work on
+     boxes. With a keyboard: **Add box**, then arrow keys move it, <kbd>Shift</kbd>+arrows resize it,
+     <kbd>N</kbd> selects the next box and <kbd>Delete</kbd> removes it.
+   - **Watermark:** type what the copy is for, or pick a suggestion (rental, bank, dated copy), and
+     turn on **Convert to black and white** if you like. The card updates as you type.
+6. **Download.** Check both final images and the summary, tick **I have checked both sides**, then
+   **Download PDF**. The file is called `protected-document.pdf`.
+7. **Done.** On phones that support it, **Share** sends the PDF through the system share sheet.
+   **Clear everything** removes the photos and all your choices from the page; closing the tab does
+   the same.
 
 ## Languages
 
@@ -238,7 +249,7 @@ src/
   redact/            normalised zones to pixels, opaque fills
   engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
   i18n/              dictionaries, one JSON file per language
-  ui/                corner editor (canvas widget) and in-memory state
+  ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state
 scripts/             CSP, build plugins (CSP, SRI, offline file list), test fixture generator
 tests/               unit, e2e and synthetic fixtures
 docs/                plan, zone measurement method, decision records
@@ -252,6 +263,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0002](docs/adr/0002-no-standalone-release.md): no standalone offline release.
 - [0003](docs/adr/0003-svelte-vite-pnpm.md): Svelte 5, Vite, pinned Node.js and pnpm.
 - [0004](docs/adr/0004-offline-service-worker.md): offline mode with a verified service worker.
+- [0005](docs/adr/0005-guided-flow-and-visual-style.md): guided phone-first flow and visual style.
 
 ## Contributing
 
@@ -269,5 +281,7 @@ not in a public issue.
 ## Licence
 
 [AGPL-3.0-or-later](LICENSE). If you run a modified version as a website, you must offer its source code
-to its users. Third-party libraries keep their own licences (`@cantoo/pdf-lib`: MIT). File-level
+to its users. Third-party libraries keep their own licences (`@cantoo/pdf-lib`: MIT). The bundled
+fonts (Bricolage Grotesque, JetBrains Mono, Caveat) are under the [SIL Open Font Licence
+1.1](LICENSES/OFL-1.1.txt). File-level
 licence data follows [REUSE](REUSE.toml).

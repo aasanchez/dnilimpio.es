@@ -37,6 +37,7 @@ async function samples (page: Page, jpeg: Buffer, points: Array<[number, number]
 // Centre of the CAN zone on the front (src/zones/dni.ts) and of the photo block in the fixture.
 const CAN: [number, number] = [0.8825, 0.875]
 const PHOTO: [number, number] = [0.18, 0.5]
+const at = (f: [number, number]): [number, number] => [Math.round(f[0] * 1712), Math.round(f[1] * 1080)]
 
 test('checklist: recommended fields hidden, live preview, warnings, hide all and show all', async ({ page }) => {
   await toEditor(page)
@@ -50,6 +51,9 @@ test('checklist: recommended fields hidden, live preview, warnings, hide all and
   await expect(page.locator('#hidden-count')).toHaveText('5 de 10')
   expect((await pixel(page, '#preview', Math.round(CAN[0] * 1712), Math.round(CAN[1] * 1080)))[0]).toBeGreaterThan(0)
 
+  // The list shows the fields of the side on screen; the MRZ is on the back.
+  await expect(page.locator('#field-mrz')).toBeHidden()
+  await page.locator('#tab-back').click()
   await page.locator('#field-mrz').uncheck()
   await expect(page.locator('#mrz-warning')).toBeVisible()
 
@@ -61,8 +65,22 @@ test('checklist: recommended fields hidden, live preview, warnings, hide all and
   await expect(page.locator('#hidden-count')).toHaveText('0 de 10')
 })
 
+test('tapping a field on the card covers and uncovers it', async ({ page }) => {
+  await toEditor(page)
+  const can = at(CAN)
+  expect(await pixel(page, '#preview', ...can)).toEqual([0, 0, 0])
+  const box = await page.locator('#preview').boundingBox()
+  if (!box) throw new Error('no preview box')
+  await page.mouse.click(box.x + CAN[0] * box.width, box.y + CAN[1] * box.height)
+  await expect(page.locator('#field-can')).not.toBeChecked()
+  await expect.poll(async () => (await pixel(page, '#preview', ...can))[0]).toBeGreaterThan(0)
+  await page.mouse.click(box.x + CAN[0] * box.width, box.y + CAN[1] * box.height)
+  await expect(page.locator('#field-can')).toBeChecked()
+})
+
 test('review, then download a PDF with only sanitised images', async ({ page }) => {
   await toEditor(page)
+  await page.locator('#tool-mark').click()
   await page.locator('#watermark').fill('COPIA SOLO PARA ALQUILER')
   await page.locator('#greyscale').check()
   await page.locator('#review').click()
@@ -83,6 +101,8 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
     expect(text).not.toContain(forbidden)
   }
   await expect(page.locator('#download-status')).toHaveText('PDF creado. Búscalo en tu carpeta de descargas.')
+  await expect(page.locator('h2')).toHaveText('Tu PDF está listo')
+  await expect(page.locator('#reset-done')).toBeVisible()
 
   const [front, back] = jpegs(pdf)
   if (!front || !back) throw new Error('expected two images')
@@ -100,15 +120,18 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
 
 test('reset clears photos and choices', async ({ page }) => {
   await toEditor(page)
+  await page.locator('#tool-mark').click()
   await page.locator('#watermark').fill('X')
   await page.locator('#reset').click()
-  await expect(page.locator('h2')).toHaveText('Paso 1 de 3: añade las fotos del DNI')
+  await expect(page.locator('h2')).toHaveText('Foto del anverso')
   await expect(page.locator('#status-front')).toHaveText('')
-  await expect(page.locator('#capture-continue')).toBeDisabled()
+  await expect(page.locator('#capture-continue')).toHaveCount(0)
 })
 
 /** Drags with the mouse between two points given as fractions of the preview canvas. */
 async function dragOnPreview (page: Page, from: [number, number], to: [number, number]): Promise<void> {
+  // Centre the card so neither the sticky top bar nor the action bar covers it.
+  await page.locator('#preview').evaluate((c) => { c.scrollIntoView({ block: 'center' }) })
   const box = await page.locator('#preview').boundingBox()
   if (!box) throw new Error('no preview box')
   await page.mouse.move(box.x + from[0] * box.width, box.y + from[1] * box.height)
@@ -117,14 +140,13 @@ async function dragOnPreview (page: Page, from: [number, number], to: [number, n
   await page.mouse.up()
 }
 
-const at = (f: [number, number]): [number, number] => [Math.round(f[0] * 1712), Math.round(f[1] * 1080)]
-
 test('manual black boxes: draw, move, undo, redo, delete, keyboard, and they reach the PDF', async ({ page }) => {
   await toEditor(page)
   const photo = at(PHOTO)
   expect((await pixel(page, '#preview', ...photo))[2]).toBeGreaterThan(100) // dark blue photo block
 
   // Draw a box over the photo block.
+  await page.locator('#tool-boxes').click()
   await page.locator('#draw-box').click()
   await expect(page.locator('#draw-box')).toHaveAttribute('aria-pressed', 'true')
   await dragOnPreview(page, [0.08, 0.3], [0.3, 0.7])
