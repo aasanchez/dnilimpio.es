@@ -65,7 +65,7 @@ Whether a recipient accepts a redacted copy is up to them.
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
   The corner model (about 2.6 MB) is not part of that first copy: it is stored the first time you use
-  it online. Offline before that, you place the corners by hand.
+  it online. Offline before that, classic edge detection places the corners, or you place them by hand.
 - **No tracking.** No analytics, telemetry, cookies, fonts or scripts from third parties.
 - **Real redaction.** Hidden areas are painted as opaque black pixels on a new image, with a margin
   around each field. Blur and pixelation are not offered, because they can be reversed.
