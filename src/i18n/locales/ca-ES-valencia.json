@@ -144,5 +144,19 @@
   "tipSteady": "Mantín el mòbil quiet",
   "tipBlur": "Està borrosa: espera que enfoque",
   "tipReady": "No et menegis…",
-  "tipReadyManual": "Tot bé: fes la foto"
+  "tipReadyManual": "Tot bé: fes la foto",
+  "findTitle": "Busca automàtica",
+  "findIntro": "Llig la targeta en este dispositiu i afig requadres negres sobre les dades que tries. No s'envia res.",
+  "findKinds": "Dades que cal buscar",
+  "find_name": "Nom i cognoms",
+  "find_idNumber": "Número de DNI/NIE",
+  "find_date": "Dates",
+  "findRun": "Busca i tapa",
+  "findDownload": "La primera vegada baixa uns {mb} MB, només una vegada.",
+  "findRunning": "S'està llegint la targeta…",
+  "findDone": "S'han afegit {n} requadres. Revisa'ls en Requadres: els pots moure o esborrar.",
+  "findNone": "No s'ha trobat res. Tapa les dades a mà.",
+  "findOffline": "La busca automàtica necessita una baixada única i no tens connexió. Tapa les dades a mà.",
+  "findUnsupported": "La busca automàtica no està disponible en este navegador. Tapa les dades a mà.",
+  "findFailed": "La busca automàtica no ha funcionat esta vegada. Tapa les dades a mà."
 }

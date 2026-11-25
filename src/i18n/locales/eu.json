@@ -144,5 +144,19 @@
   "tipSteady": "Eutsi mugikorra geldi",
   "tipBlur": "Lausotuta dago: itxaron fokatu arte",
   "tipReady": "Ez mugitu…",
-  "tipReadyManual": "Dena ondo: atera argazkia"
+  "tipReadyManual": "Dena ondo: atera argazkia",
+  "findTitle": "Bilatu automatikoki",
+  "findIntro": "Txartela gailu honetan irakurtzen du eta aukeratzen dituzun datuen gainean lauki beltzak jartzen ditu. Ez da ezer bidaltzen.",
+  "findKinds": "Bilatu beharreko datuak",
+  "find_name": "Izen-abizenak",
+  "find_idNumber": "NAN/AIZ zenbakia",
+  "find_date": "Datak",
+  "findRun": "Bilatu eta estali",
+  "findDownload": "Lehen aldian {mb} MB inguru deskargatzen ditu, behin bakarrik.",
+  "findRunning": "Txartela irakurtzen…",
+  "findDone": "{n} lauki gehitu dira. Berrikusi Laukiak atalean: mugitu edo ezabatu ditzakezu.",
+  "findNone": "Ez da ezer aurkitu. Estali datuak eskuz.",
+  "findOffline": "Bilaketa automatikoak behin deskargatu behar du, eta ez duzu konexiorik. Estali datuak eskuz.",
+  "findUnsupported": "Bilaketa automatikoa ez dago erabilgarri nabigatzaile honetan. Estali datuak eskuz.",
+  "findFailed": "Bilaketa automatikoak ez du funtzionatu oraingoan. Estali datuak eskuz."
 }
