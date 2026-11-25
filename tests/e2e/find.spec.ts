@@ -131,6 +131,12 @@ test.describe('with the service worker', () => {
     await expect(page.locator('#panel-boxes .count')).toHaveText('0 recuadros en esta cara')
     await page.locator('#tab-front').click()
     await expect(page.locator('#panel-boxes .count')).toHaveText('0 recuadros en esta cara')
+
+    // Clearing everything also stops the OCR worker, which keeps the last card it read.
+    const ocrWorkers = (): number => page.workers().filter((w) => w.url().endsWith('/ocr/worker.min.js')).length
+    expect(ocrWorkers()).toBe(1)
+    await page.locator('#reset').click()
+    await expect.poll(ocrWorkers).toBe(0)
   })
 
   test('offline before the first download, the button is disabled and says to hide the data by hand', async ({ page, context }) => {
