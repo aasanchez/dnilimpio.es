@@ -4,6 +4,7 @@
 // may be unavailable (offline before first use, an old browser, no WebAssembly) and then the editor
 // simply keeps its manual starting position. Nothing here ever throws to the caller.
 
+import { detectCard } from './edges.ts'
 import type { Detection } from './result.ts'
 
 export type { Detection } from './result.ts'
@@ -29,8 +30,29 @@ const byModel: Detector = async (bitmap) => {
   return await (await loadModel()).detect(bitmap)
 }
 
-// The model first; the classical edge detector joins this list when it lands.
-const DETECTORS: readonly Detector[] = [byModel]
+/** Long side of the copy the edge detector reads; it works at 400 px internally (edges.ts). */
+const EDGES_PX = 800
+
+/** Classic edge detection (no model, no download): works offline from the first visit. */
+const byEdges: Detector = async (bitmap) => {
+  await Promise.resolve() // let the corners step render before the (synchronous) detector runs
+  const k = Math.min(1, EDGES_PX / Math.max(bitmap.width, bitmap.height))
+  const w = Math.max(1, Math.round(bitmap.width * k))
+  const h = Math.max(1, Math.round(bitmap.height * k))
+  const canvas = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h })
+  const ctx = canvas.getContext('2d', { willReadFrequently: true }) as Pick<CanvasRenderingContext2D, 'drawImage' | 'getImageData'> | null
+  if (!ctx) return null
+  ctx.drawImage(bitmap, 0, 0, w, h)
+  const found = detectCard(ctx.getImageData(0, 0, w, h))
+  if (!found) return null
+  const q = found.quad
+  const up = (i: 0 | 1 | 2 | 3): { x: number; y: number } => ({ x: q[i].x / k, y: q[i].y / k })
+  return { quad: [up(0), up(1), up(2), up(3)], score: found.confidence, source: 'edges' }
+}
+
+// The model first (best on cluttered backgrounds), then classic edges (always available), then the
+// editor's manual start position.
+const DETECTORS: readonly Detector[] = [byModel, byEdges]
 
 /** Starts downloading the model in the background, e.g. as soon as a photo is chosen. */
 export function prefetchCornerModel (): void {

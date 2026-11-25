@@ -71,7 +71,7 @@ async function cachedPaths (page: Page): Promise<string[]> {
   })
 }
 
-test('offline before the model was ever used: corners start manual, silently', async ({ page, context }) => {
+test('offline before the model was ever used: classic edge detection places the corners, silently', async ({ page, context }) => {
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   await page.goto('/')
@@ -80,9 +80,7 @@ test('offline before the model was ever used: corners start manual, silently', a
   await page.reload()
   await loadBoth(page)
   await page.locator('#capture-continue').click()
-  await expect(page.locator('canvas.corner-editor')).toBeVisible()
-  await page.waitForTimeout(1000)
-  await expect(page.locator('#align-auto')).toHaveText('')
+  await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'edges', { timeout: 10_000 })
   await expect(page.locator('#align-continue')).toBeEnabled()
   expect(errors).toEqual([])
 })
@@ -102,9 +100,10 @@ test('the model is kept after its first use and then works offline', async ({ pa
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await page.locator('#capture-continue').click()
   await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/, { timeout: 30_000 })
+  await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'model')
 })
 
-test('a tampered model file is refused and the corners stay manual', async ({ page, context }) => {
+test('a tampered model file is refused and classic edge detection takes over', async ({ page, context }) => {
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   await context.route('**/assets/ml/model-*.js', async (route) => {
@@ -117,9 +116,7 @@ test('a tampered model file is refused and the corners stay manual', async ({ pa
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await page.locator('#capture-continue').click()
-  await expect(page.locator('canvas.corner-editor')).toBeVisible()
-  await page.waitForTimeout(2000)
-  await expect(page.locator('#align-auto')).toHaveText('')
+  await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'edges', { timeout: 10_000 })
   expect((await cachedPaths(page)).some((p) => p.startsWith('/assets/ml/model-'))).toBe(false)
   expect(errors).toEqual([])
 })

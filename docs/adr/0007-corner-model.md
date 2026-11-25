@@ -39,9 +39,10 @@ Alexis chose this option on 2026-11-25, out of three proposed (see Alternatives)
 - **Offline.** The service worker does not download `assets/ml/` at install. The first time the page
   loads one of those files, the worker fetches it checked against its build-time hash and keeps it.
   A new build copies the kept files whose names (content hashes) did not change.
-- **Fallback.** Any failure (offline before first use, no WebAssembly, a refused file, a low score)
-  leaves the corners at their manual start position, with no message. The detector list in
-  `src/detect/corners.ts` is ordered, so the classical edge detector can follow the model.
+- **Fallback order** (`src/detect/corners.ts`): the model, then classic edge detection
+  (`src/detect/edges.ts`, Sobel + Hough, no download, works offline from the first visit), then the
+  editor's manual start position. Any failure (offline before first use, no WebAssembly, a refused
+  file, a low score) moves to the next step silently, with no message.
 - The model never overrides the user: once a corner is moved, rotated or reset, a late answer is
   ignored. When the model places the corners, a status line says so and asks the user to check.
 - **CSP change:** `script-src 'self'` becomes `script-src 'self' 'wasm-unsafe-eval'`.
@@ -69,7 +70,8 @@ Alexis chose this option on 2026-11-25, out of three proposed (see Alternatives)
   sees and fixes it on the same screen.
 - Training data is DocCornerDataset (documents in general, not only Spanish IDs). Accuracy on real
   DNI photos should be checked on devices; the threshold lives in `src/detect/result.ts`.
-- Tests: `tests/unit/detect.test.ts` (answer checks), `tests/e2e/corners.spec.ts` (real model under
-  the real CSP; three generated cluttered photos, each corner within 32 px; manual fallback; the user
-  is never overridden), and `tests/e2e/offline.spec.ts` (not downloaded at install, kept after first
-  use and then working offline, silent fallback offline before first use, a tampered model refused).
+- Tests: `tests/unit/detect-model.test.ts` (answer checks), `tests/e2e/corners.spec.ts` (real model
+  under the real CSP; three generated cluttered photos, each corner within 32 px; edge detection when
+  the model is blocked; manual start with no card in the photo; the user is never overridden), and
+  `tests/e2e/offline.spec.ts` (not downloaded at install, kept after first use and then working
+  offline, edge detection offline before first use, a tampered model refused).

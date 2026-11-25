@@ -33,6 +33,8 @@
   let auto = $state<'idle' | 'searching' | 'found'>('idle')
   /** True once the user moved, rotated or reset the corners: a late detection then never overrides them. */
   let touched = false
+  /** Which detector placed the corners, for the e2e tests ('' when none did). */
+  let source = $state('')
   const valid = $derived(isConvex(quad))
   const sideName = (s: Side): string => t(lang, s === 'front' ? 'tabFront' : 'tabBack')
   const label = $derived(`${t(lang, 'editorLabel')}: ${sideName(side)}`)
@@ -62,6 +64,7 @@
         setQuad(found.quad)
         editor?.setQuad(found.quad)
         auto = 'found'
+        source = found.source
       } else {
         auto = 'idle'
       }
@@ -118,8 +121,8 @@
   </div>
   <div class="win">
     <div class="winbar"><i></i><i></i><i></i><span class="title">{sideName(side).toLowerCase()}.jpg</span></div>
-    <!-- data-corners: the current corners in photo pixels, read by the e2e tests. -->
-    <div {@attach mountEditor} data-corners={quad.map((p) => `${String(Math.round(p.x))},${String(Math.round(p.y))}`).join(' ')}></div>
+    <!-- data-corners / data-source: current corners in photo pixels and who placed them, for e2e tests. -->
+    <div {@attach mountEditor} data-source={source} data-corners={quad.map((p) => `${String(Math.round(p.x))},${String(Math.round(p.y))}`).join(' ')}></div>
   </div>
   <p class="status" id="align-auto" role="status">{auto === 'searching' ? t(lang, 'cornersSearching') : auto === 'found' ? t(lang, 'cornersFound') : ''}</p>
   <p class="hint">{t(lang, 'alignHint')}</p>

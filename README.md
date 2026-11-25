@@ -142,8 +142,8 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    phone, **Take photo** opens the camera and **Gallery** opens your pictures; on a computer,
    **Choose image**, drag and drop, or paste (<kbd>Ctrl</kbd>+<kbd>V</kbd>) also work. Tap a side's
    tile to replace its photo.
-4. **Corners.** When it can, the app finds the card and places the four circles on its corners for
-   you ("We placed the corners on the document"). Check them. Otherwise, or to correct them, drag
+4. **Corners.** When it can, the app finds the card (with the on-device model, or classic edge
+   detection) and places the four circles on its corners for you ("We placed the corners on the document"). Check them. Otherwise, or to correct them, drag
    the four circles onto the corners of the card; a magnifier shows the area under
    your finger. On a keyboard, arrow keys move the selected corner and <kbd>N</kbd> selects the next
    one. **Rotate** turns the frame if the photo is sideways, **Reset** puts the circles back. The
@@ -225,8 +225,9 @@ Rules the code follows:
   segments dropped, image data unchanged), corner model answer checks, and PDF structure (pages, images, no metadata, no text,
   deterministic output).
 - **End to end** (`tests/e2e/`): photo selection, corner alignment, the corner model (real model
-  under the real CSP on generated cluttered photos, silent manual fallback, never overriding the
-  user, cached after first use and working offline, a tampered model refused), the field checklist and its
+  under the real CSP on generated cluttered photos, edge detection when the model is unavailable,
+  silent manual start when nothing is found, never overriding the user, cached after first use and
+  working offline, a tampered model refused), the field checklist and its
   warnings, review, a real PDF download (decoded in the browser to check that hidden areas are black
   and that the file has no metadata, no source file name and no watermark text), reset, and
   security checks on the built page: exact CSP, referrer policy, SRI on every asset, no inline code, no CSP violations and no
@@ -258,11 +259,11 @@ src/
   components/        Svelte components, one per screen or control
   capture/           file input, drag and drop, paste, decoding
   geometry/          homography, perspective warp, corner editing (pure TypeScript)
-  detect/            corner finding: on-device model loaded on demand, answer checks, fallback
   zones/             field positions per document, from official specimens
   redact/            normalised zones to pixels, opaque fills
   engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
-  detect/            automatic card edge detection (Sobel + Hough, no model)
+  detect/            corner finding: on-device model (loaded on demand), classic edge detection
+                     (Sobel + Hough), answer checks, fallback order
   i18n/              dictionaries, one JSON file per language
   ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state
 scripts/             CSP, build plugins (CSP, SRI, offline file list), test fixture generator

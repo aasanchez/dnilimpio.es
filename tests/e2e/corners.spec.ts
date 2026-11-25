@@ -13,6 +13,7 @@ test('the model places the corners on the card; Continue straightens it without 
   await loadBoth(page, { model: true })
   await page.locator('#capture-continue').click()
   await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/, { timeout: 30_000 })
+  await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'model')
   await page.locator('#align-continue').click()
   await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/, { timeout: 30_000 })
   await page.locator('#align-continue').click()
@@ -26,16 +27,50 @@ test('the model places the corners on the card; Continue straightens it without 
   expect(errors).toEqual([])
 })
 
-test('without the model the corners stay where they start, with no message and no error', async ({ page }) => {
+test('without the model, classic edge detection places the corners', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   await loadBoth(page)
   await page.locator('#capture-continue').click()
+  await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/)
+  await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'edges')
+  expect(errors).toEqual([])
+})
+
+test('with no card in the photo the corners stay where they start, with no message and no error', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  const blank = await plainPhoto(page)
+  await page.goto('/')
+  await page.locator('#start').click()
+  await page.locator('#file-front').setInputFiles({ name: 'plain.png', mimeType: 'image/png', buffer: blank })
+  await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
+  await page.locator('#capture-continue').click()
   await expect(page.locator('canvas.corner-editor')).toBeVisible()
+  await page.waitForTimeout(1500)
   await expect(page.locator('#align-auto')).toHaveText('')
+  await expect(page.locator('[data-source]')).toHaveAttribute('data-source', '')
   await expect(page.locator('#align-continue')).toBeEnabled()
   expect(errors).toEqual([])
 })
+
+/** A 1600 × 1200 photo of an empty grey table, with no card: no detector should answer. */
+async function plainPhoto (page: import('@playwright/test').Page): Promise<Buffer> {
+  const blank = await page.context().newPage()
+  const out = await blank.evaluate(async () => {
+    const c = new OffscreenCanvas(1600, 1200)
+    const g = c.getContext('2d')
+    if (!g) throw new Error('no 2d')
+    g.fillStyle = '#5a5a5a'
+    g.fillRect(0, 0, 1600, 1200)
+    const u8 = new Uint8Array(await (await c.convertToBlob({ type: 'image/png' })).arrayBuffer())
+    let bin = ''
+    for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode(...u8.subarray(i, i + 0x8000))
+    return btoa(bin)
+  })
+  await blank.close()
+  return Buffer.from(out, 'base64')
+}
 
 test('a corner moved by the user is never overridden by a late detection', async ({ page }) => {
   // Hold the model back until the user has dragged a corner.
@@ -127,6 +162,7 @@ for (const v of VARIANTS) {
     await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
     await page.locator('#capture-continue').click()
     await expect(page.locator('#align-auto')).toHaveText(/Hemos colocado las esquinas/, { timeout: 30_000 })
+    await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'model')
     // Where messyPhoto() drew the card: 900 × 567, centred on (cx, cy), rotated by `angle`.
     const [c, s] = [Math.cos(v.angle), Math.sin(v.angle)]
     const truth = [[-450, -283.5], [450, -283.5], [450, 283.5], [-450, 283.5]].map(([dx = 0, dy = 0]) => ({ x: v.cx + dx * c - dy * s, y: v.cy + dx * s + dy * c }))
