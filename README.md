@@ -442,6 +442,15 @@ security analysis of the TypeScript and Svelte code and of the workflows, on pul
 `master` and every Monday. Results appear under **Security > Code scanning**. GitGuardian scans for
 secrets.
 
+The **Dependency check** workflow ([`.github/workflows/deps-check.yml`](.github/workflows/deps-check.yml))
+runs every Wednesday at 16:00 Madrid time, and by hand from the Actions tab. It never blocks a pull
+request. Results are in each job's summary (`scripts/deps-report.ts`).
+
+| Job | Command | Scope | Fails |
+|---|---|---|---|
+| `audit` | `pnpm audit --json` | Whole tree (direct and transitive), runtime and dev. Each advisory names the direct dependency to update | At high or critical (manual run: level of your choice) |
+| `outdated` | `pnpm outdated --format json` | Direct dependencies only, runtime and dev | Never; deprecated packages get a warning |
+
 Rules the workflows follow:
 
 - Actions are pinned to full commit SHAs; the comment gives the release tag.

@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Weekly dependency check, separate from CI: known vulnerabilities (`pnpm audit`) and newer versions
+# (`pnpm outdated`). Results are in each job's summary. Runs on a schedule and by hand only, so it never
+# blocks a pull request (the PR gate is the `audit` job in ci.yml: runtime dependencies, high and up).
+#
+#   audit     whole tree (direct and transitive), runtime and dev. Fails at high or critical, so
+#             GitHub notifies by email. Each advisory names the direct dependency to update.
+#   outdated  direct dependencies only (what `pnpm outdated` lists), runtime and dev. Report only.
+#
+# Both read pnpm-lock.yaml and the registry; neither installs node_modules, so there is nothing to cache.
+# Actions are pinned to full commit SHAs; the comment gives the release tag.
+name: Dependency check
+
+on:
+  schedule:
+    - cron: '0 16 * * 3' # Wednesdays 16:00 Madrid time, all year (DST included)
+      timezone: Europe/Madrid
+  workflow_dispatch:
+    inputs:
+      audit-level:
+        description: Lowest severity that fails the audit job
+        type: choice
+        options: [low, moderate, high, critical]
+        default: high
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deps-check
+  cancel-in-progress: false
+
+env:
+  # Manual run: the level chosen. Schedule: high.
+  AUDIT_LEVEL: ${{ inputs.audit-level || 'high' }}
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install pnpm
+        run: npm install --global --ignore-scripts "$(node -p "require('./package.json').packageManager")"
+      # pnpm audit exits 1 when it finds anything; the report script decides with AUDIT_LEVEL. Any other
+      # failure (registry down) leaves no valid JSON, and the report step fails on that.
+      - name: pnpm audit
+        run: pnpm audit --json > audit.json || test "$?" -eq 1
+      - name: Report
+        run: node scripts/deps-report.ts audit audit.json "$AUDIT_LEVEL"
+
+  outdated:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install pnpm
+        run: npm install --global --ignore-scripts "$(node -p "require('./package.json').packageManager")"
+      # Exit code 1 means "something is outdated", which is the expected case here.
+      - name: pnpm outdated
+        run: pnpm outdated --format json > outdated.json || test "$?" -eq 1
+      - name: Report
+        run: node scripts/deps-report.ts outdated outdated.json
