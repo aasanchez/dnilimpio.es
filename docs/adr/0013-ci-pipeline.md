@@ -34,7 +34,10 @@ sit in fixed stages: build, test, code analysis, package, deploy, acceptance.
 - New checks: REUSE lint, `pnpm audit --prod` (high and critical), GitHub dependency review,
   actionlint and zizmor, bundle-size budgets (`scripts/bundle-size.ts`), Lighthouse, CodeQL
   (separate workflow, also weekly), and a post-deploy smoke test (`scripts/smoke.ts`) that checks
-  the live site serves this commit's build with a matching SRI hash.
+  the live site serves this commit's build with a matching SRI hash. Since the security audit of
+  2026-11-25 (finding SEC-004) it checks every file: the exact CSP and referrer policy, every file of
+  the service worker's manifest against its SHA-384, and every file of the `dist` artifact that the
+  same run deployed, byte for byte.
 - Bundle size and Lighthouse start as warnings until there is a baseline from real runs. Unit
   coverage is reported with no threshold.
 - No second secret scanner: GitGuardian already scans pull requests.
