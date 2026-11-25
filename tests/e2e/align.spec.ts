@@ -87,15 +87,19 @@ test.describe('touch', () => {
 
 test('corners confirmed by hand survive replacing only the other photo', async ({ page }) => {
   await toAlign(page)
-  const canvas = page.locator('canvas.corner-editor')
-  const box = await canvas.boundingBox()
-  if (!box) throw new Error('no canvas box')
-  const k = box.width / 1600
-  // Move the top-left corner out onto the dark table: the straightened front then starts dark there.
-  await page.mouse.move(box.x + CARD[0]!.x * k, box.y + CARD[0]!.y * k)
-  await page.mouse.down()
-  await page.mouse.move(box.x + 60 * k, box.y + 60 * k, { steps: 5 })
-  await page.mouse.up()
+  // Move the top-left corner (selected first) out onto the dark table with the keyboard: the
+  // straightened front then starts dark there.
+  await page.locator('canvas.corner-editor').focus()
+  const topLeft = async (): Promise<number[]> => ((await page.locator('[data-corners]').getAttribute('data-corners')) ?? '').split(' ')[0]!.split(',').map(Number)
+  for (let i = 0; i < 40; i++) {
+    const [x = 0, y = 0] = await topLeft()
+    if (x < CARD[0]!.x - 80 && y < CARD[0]!.y - 80) break
+    await page.keyboard.press('Shift+ArrowLeft')
+    await page.keyboard.press('Shift+ArrowUp')
+  }
+  const [x = 0, y = 0] = await topLeft()
+  expect(x).toBeLessThan(CARD[0]!.x - 80)
+  expect(y).toBeLessThan(CARD[0]!.y - 80)
   await page.locator('#align-continue').click()
   await expect(page.locator('#preview')).toHaveJSProperty('width', 1712)
   const dark = async (): Promise<number> => (await pixel(page, '#preview', 8, 8))[0] ?? 255
