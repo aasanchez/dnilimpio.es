@@ -24,7 +24,7 @@ Target specification since 2026-11-25: the identity-privacy master prompt (Svelt
 ## What the scaffold already enforces
 
 - TS strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`.
-- Vite: `minify: false`, `sourcemap: true`, `base: './'`, no module-preload polyfill (it is an inline script).
+- Vite: `minify: true` (since 2026-11-25, Alexis), `sourcemap: true` (maps published), `base: './'`, no module-preload polyfill (it is an inline script).
 - Build plugin injects the §5.1 CSP and `referrer=no-referrer` right after `<meta charset>`; CSP lives in one file (`scripts/csp.ts`) shared with the e2e test.
 - Build plugin adds `integrity="sha384-…"` to every local script and stylesheet.
 - ESLint bans `eval`, `new Function`, `innerHTML`/`outerHTML`/`insertAdjacentHTML`/`document.write`, and `localStorage`/`sessionStorage`/`indexedDB`.

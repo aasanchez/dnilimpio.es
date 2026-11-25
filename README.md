@@ -62,7 +62,8 @@ Whether a recipient accepts a redacted copy is up to them.
 - **Clean PDF.** Each image is re-encoded, and the JPEG is rebuilt with only the data a decoder needs:
   no EXIF, GPS, camera model, thumbnail or comments. The PDF has no metadata, no text, no
   annotations, no scripts and no attachments. Tests check this object by object.
-- **Verifiable code.** The production build is not minified, ships source maps, and every script and
+- **Verifiable code.** The production build is minified but ships source maps (`.map` files) that
+  map every line back to the source in this repository, and every script and
   stylesheet has a Subresource Integrity hash.
 
 ### What it cannot guarantee
