@@ -20,3 +20,12 @@ export const CSP_DIRECTIVES: readonly string[] = [
 ]
 
 export const CSP = CSP_DIRECTIVES.join('; ')
+
+/**
+ * The policy with extra script hashes. The build adds one: the hash of the inline import map that
+ * carries the integrity of chunks loaded on demand (see scripts/vite-plugins.ts).
+ */
+export function cspWithScriptHashes (hashes: readonly string[]): string {
+  if (hashes.length === 0) return CSP
+  return CSP_DIRECTIVES.map((d) => (d.startsWith('script-src ') ? `${d} ${hashes.map((h) => `'${h}'`).join(' ')}` : d)).join('; ')
+}

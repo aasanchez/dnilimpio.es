@@ -3,10 +3,10 @@
 // The dev server is left without CSP because Vite's HMR client needs inline code and a WebSocket.
 
 import { createHash } from 'node:crypto'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
-import { CSP } from './csp.ts'
+import { CSP, cspWithScriptHashes } from './csp.ts'
 
 export function securityHeaders (): Plugin {
   return {
@@ -28,7 +28,15 @@ export function securityHeaders (): Plugin {
   }
 }
 
-/** Adds integrity="sha384-…" to every local <script src> and <link rel=stylesheet|modulepreload> in dist/index.html. */
+const sri = (bytes: Buffer | string): string => `sha384-${createHash('sha384').update(bytes).digest('base64')}`
+
+/**
+ * Subresource Integrity for every script and stylesheet:
+ * - adds integrity="sha384-…" to each local <script src> and <link rel=stylesheet|modulepreload>;
+ * - for JavaScript chunks loaded on demand (dynamic import), adds an inline import map with an
+ *   `integrity` entry per chunk, so the browser checks them too, and allows exactly that inline
+ *   script in the CSP by its SHA-256 hash.
+ */
 export function subresourceIntegrity (): Plugin {
   let config: ResolvedConfig
   return {
@@ -47,10 +55,25 @@ export function subresourceIntegrity (): Plugin {
         if (/^[a-z]+:|^\/\//i.test(url) || whole.includes('integrity=')) return whole
         if (tag === 'link' && !/rel="(stylesheet|modulepreload)"/.test(whole)) return whole
         const file = join(outDir, url.replace(/^\.?\//, '').replace(config.base.replace(/^\.?\//, ''), ''))
-        const digest = createHash('sha384').update(readFileSync(file)).digest('base64')
-        return `<${tag}${pre} ${attr}="${url}" integrity="sha384-${digest}"${post}>`
+        return `<${tag}${pre} ${attr}="${url}" integrity="${sri(readFileSync(file))}"${post}>`
       })
-      writeFileSync(htmlPath, out)
+
+      // Chunks not referenced from the HTML are loaded with import(): list them in the import map.
+      const assets = join(outDir, 'assets')
+      const lazy = readdirSync(assets).filter((f) => f.endsWith('.js') && !out.includes(`assets/${f}"`)).sort()
+      if (lazy.length === 0) {
+        writeFileSync(htmlPath, out)
+        return
+      }
+      const integrity = Object.fromEntries(lazy.map((f) => [`./assets/${f}`, sri(readFileSync(join(assets, f)))]))
+      const importMap = JSON.stringify({ imports: {}, integrity })
+      const hash = `sha256-${createHash('sha256').update(importMap).digest('base64')}`
+      const firstModule = out.indexOf('<script type="module"')
+      if (firstModule === -1) throw new Error('dist/index.html has no module script')
+      const cspMeta = /(<meta http-equiv="Content-Security-Policy" content=")[^"]*(")/
+      if (!cspMeta.test(out)) throw new Error('dist/index.html has no CSP meta tag')
+      const withMap = out.slice(0, firstModule) + `<script type="importmap">${importMap}</script>\n    ` + out.slice(firstModule)
+      writeFileSync(htmlPath, withMap.replace(cspMeta, `$1${cspWithScriptHashes([hash]).replaceAll("'", '&#39;')}$2`))
     },
   }
 }

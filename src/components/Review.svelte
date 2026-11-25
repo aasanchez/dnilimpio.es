@@ -1,8 +1,8 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Review before download (spec §17): final sanitised images, summary, warning, explicit confirmation. -->
 <script lang="ts">
-  import { exportPdf, saveFile } from '../engine/render.ts'
-  import { PDF_FILE_NAME } from '../engine/pdf.ts'
+  import { saveFile } from '../engine/render.ts'
+  import { loadExport } from '../engine/load-export.ts'
   import { normaliseWatermark } from '../engine/watermark.ts'
   import { t, tf, type Lang } from '../i18n/index.ts'
   import type { Side } from '../zones/dni.ts'
@@ -40,6 +40,7 @@
     busy = true
     status = 'idle'
     try {
+      const { exportPdf, PDF_FILE_NAME } = await loadExport()
       saveFile(await exportPdf(SIDES.map((s) => secure[s])), PDF_FILE_NAME)
       status = 'done'
     } catch {

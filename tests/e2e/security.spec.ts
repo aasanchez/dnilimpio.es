@@ -1,17 +1,27 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { expect, test } from '@playwright/test'
-import { CSP } from '../../scripts/csp.ts'
+import { expect, test, type Page } from '@playwright/test'
+import { createHash } from 'node:crypto'
+import { cspWithScriptHashes } from '../../scripts/csp.ts'
+import { toEditor } from './helpers.ts'
+
+/** The inline import map's text, or null. It is the only inline script the CSP allows (by hash). */
+const importMapText = async (page: Page): Promise<string | null> =>
+  await page.locator('script[type="importmap"]').evaluate((s) => s.textContent).catch(() => null)
+
+const sha = (alg: 'sha256' | 'sha384', data: string | Buffer): string => `${alg}-${createHash(alg).update(data).digest('base64')}`
 
 test('built page carries the exact CSP and referrer policy', async ({ page }) => {
   await page.goto('/')
-  await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute('content', CSP)
+  const map = await importMapText(page)
+  const expected = cspWithScriptHashes(map === null ? [] : [sha('sha256', map)])
+  await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute('content', expected)
   await expect(page.locator('meta[name="referrer"]')).toHaveAttribute('content', 'no-referrer')
 })
 
 test('every script and stylesheet has SRI; no inline scripts or styles', async ({ page }) => {
   await page.goto('/')
   const report = await page.evaluate(() => ({
-    scripts: [...document.querySelectorAll('script')].map((s) => ({ src: s.getAttribute('src'), integrity: s.integrity, inline: !s.src && s.textContent !== '' })),
+    scripts: [...document.querySelectorAll<HTMLScriptElement>('script:not([type="importmap"])')].map((s) => ({ src: s.getAttribute('src'), integrity: s.integrity, inline: !s.src && s.textContent !== '' })),
     styles: [...document.querySelectorAll('link[rel="stylesheet"]')].map((l) => (l as HTMLLinkElement).integrity),
     inlineStyles: document.querySelectorAll('style, [style]').length,
   }))
@@ -49,4 +59,36 @@ test('Trusted Types: HTML strings are rejected and no policy can be created', as
     }
   })
   expect(result).toEqual({ innerHTML: 'blocked', policy: 'blocked' })
+})
+
+test('chunks loaded on demand are listed in the import map with a matching hash', async ({ page, request }) => {
+  await page.goto('/')
+  const map = await importMapText(page)
+  expect(map).not.toBeNull()
+  const integrity = (JSON.parse(map ?? '{}') as { integrity?: Record<string, string> }).integrity ?? {}
+  const entries = Object.entries(integrity)
+  expect(entries.length).toBeGreaterThan(0)
+  for (const [path, hash] of entries) {
+    const body = await (await request.get(path)).body()
+    expect(hash).toBe(sha('sha384', body))
+  }
+})
+
+test.describe('tampering', () => {
+  test.use({ locale: 'es-ES' })
+
+  test('a tampered PDF chunk is refused by the browser and the export fails safely', async ({ page }) => {
+    await page.route('**/assets/export-*.js', async (route) => {
+      const res = await route.fetch()
+      await route.fulfill({ response: res, body: (await res.text()) + '\n// tampered' })
+    })
+    await toEditor(page)
+    await page.locator('#review').click()
+    await page.locator('#review-confirm').check()
+    let downloaded = false
+    page.on('download', () => { downloaded = true })
+    await page.locator('#download').click()
+    await expect(page.locator('#download-status')).toHaveAttribute('role', 'alert')
+    expect(downloaded).toBe(false)
+  })
 })
