@@ -138,9 +138,13 @@ export async function readMrz (image: HTMLCanvasElement | OffscreenCanvas): Prom
  */
 export async function findOnCard<S extends string> (sides: ReadonlyArray<readonly [S, HTMLCanvasElement | OffscreenCanvas]>): Promise<Array<{ side: S; found: Found[] }>> {
   const read = []
-  for (const [side, image] of sides) read.push({ side, image, ...(await recognise(image)) })
+  for (const [side, image] of sides) {
+    // Size taken before reading: the boxes are normalised to the image that was read.
+    const size = { w: image.width, h: image.height }
+    read.push({ side, size, ...(await recognise(image)) })
+  }
   const names = namesFromText(read.map((r) => r.text).join('\n'))
-  return read.map((r) => ({ side: r.side, found: findSensitive(r.lines, { w: r.image.width, h: r.image.height }, names) }))
+  return read.map((r) => ({ side: r.side, found: findSensitive(r.lines, r.size, names) }))
 }
 
 /** Stops the OCR worker and frees its memory. */

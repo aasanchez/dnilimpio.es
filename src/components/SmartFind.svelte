@@ -33,6 +33,8 @@
   let kinds = $state<FoundKind[]>([...DEFAULT_KINDS])
   let running = $state(false)
   let result = $state<Result | null>(null)
+  /** False once the editor is left (e.g. Adjust corners): a run still in progress then discards its results. */
+  let mounted = true
 
   async function check (): Promise<void> {
     try {
@@ -51,6 +53,7 @@
     const sw = 'serviceWorker' in navigator ? navigator.serviceWorker : null
     sw?.addEventListener('controllerchange', recheck)
     return () => {
+      mounted = false
       removeEventListener('online', recheck)
       removeEventListener('offline', recheck)
       sw?.removeEventListener('controllerchange', recheck)
@@ -67,6 +70,8 @@
     try {
       const ocr = await loadOcr()
       const found = await ocr.findOnCard(cards)
+      // The cards may have been re-aligned meanwhile: these boxes belong to the old alignment.
+      if (!mounted) return
       const picked = found.map(({ side, found: f }) => ({ side, rects: f.filter((x) => kinds.includes(x.kind)).map((x) => x.rect) }))
       const n = onFound(picked)
       result = n > 0 ? { kind: 'done', n } : { kind: 'none' }

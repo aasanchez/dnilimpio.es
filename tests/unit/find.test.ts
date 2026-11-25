@@ -104,6 +104,10 @@ describe('findSensitive', () => {
     expect(found.map((f) => [f.kind, f.text])).toEqual([['name', 'ESPAÑOLA'], ['name', 'Española'], ['name', 'CARMEN']])
     const byLabel = findSensitive([line(100, 650, 'NOMBRE'), line(150, 650, 'LUCÍA')], SIZE)
     expect(byLabel.map((f) => f.kind)).toEqual(['name'])
+    // The MRZ cuts long names ("MARIA<DOL"): the labelled line is still covered in full.
+    const cut = findSensitive([line(100, 650, 'NOMBRE'), line(150, 650, 'MARIA', 'DOLORES')], SIZE, mrzNames('FERNANDEZ<FERNANDEZ<<MARIA<DOL'))
+    expect(cut.map((f) => f.text)).toEqual(['MARIA DOLORES'])
+    expect(cut[0]?.rect.w).toBeGreaterThan((5 + 7) * 30 / SIZE.w)
     const notAName = findSensitive([line(100, 650, 'NOMBRE'), line(150, 650, 'CALLE', '12')], SIZE)
     expect(notAName).toEqual([])
   })

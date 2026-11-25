@@ -128,12 +128,16 @@ export function findSensitive (lines: readonly OcrLineWords[], size: { readonly 
         add(kind, ws, joined)
       }
     }
+    // A whole line of letters under a name label is a name, even when the MRZ (30 characters, so
+    // long names are cut) matches only some of its words.
+    const underLabel = LABELS.test(fold(lines[li - 1]?.text.trim() ?? '')) && !LABELS.test(fold(line.text.trim()))
+    const letters = words.filter((w) => /^[A-Z'-]{2,}$/.test(fold(w.text)))
+    if (underLabel && used.size === 0 && letters.length > 0 && letters.length === words.length) {
+      add('name', letters, line.text.trim())
+      return
+    }
     const nameWords = words.filter((w, k) => !used.has(k) && nameSet.has(clean(w.text).replace(/[^A-Z]/g, '')))
     if (nameWords.length > 0) add('name', nameWords, nameWords.map((w) => w.text).join(' '))
-    else if (LABELS.test(fold(lines[li - 1]?.text.trim() ?? '')) && !LABELS.test(fold(line.text.trim()))) {
-      const letters = words.filter((w) => /^[A-Z'-]{2,}$/.test(fold(w.text)))
-      if (letters.length > 0 && letters.length === words.length) add('name', letters, line.text.trim())
-    }
   })
   return out
 }
