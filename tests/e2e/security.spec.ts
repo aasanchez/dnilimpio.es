@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, test, type Page } from '@playwright/test'
 import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { cspWithScriptHashes } from '../../scripts/csp.ts'
 import { fixture, openCapture, toEditor } from './helpers.ts'
 
@@ -124,6 +125,25 @@ test.describe('hardening (security audit of 2026-11-25)', () => {
     await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
     await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
     await page.evaluate(() => { dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })) })
+    await expect(page.locator('#status-front')).not.toHaveText('Imagen cargada.')
+  })
+
+  test('a photo still decoding when the page is left is dropped too', async ({ page }) => {
+    await openCapture(page)
+    const png = readFileSync(fixture('synthetic-front.png')).toString('base64')
+    // Choose the file and leave in the same task: the decode is still running when pagehide fires.
+    await page.evaluate((b64) => {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
+      const input = document.querySelector<HTMLInputElement>('#file-front')
+      if (!input) throw new Error('no #file-front')
+      const dt = new DataTransfer()
+      dt.items.add(new File([bytes], 'front.png', { type: 'image/png' }))
+      input.files = dt.files
+      input.dispatchEvent(new Event('change'))
+      dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }))
+    }, png)
+    // Give the decode time to finish: its result must not come back.
+    await page.waitForTimeout(1500)
     await expect(page.locator('#status-front')).not.toHaveText('Imagen cargada.')
   })
 })

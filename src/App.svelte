@@ -100,8 +100,12 @@
     void focusHeading()
   }
 
+  // Bumped by reset(): the capture step is rebuilt, which cancels photos it is still decoding.
+  let session = $state(0)
+
   /** Spec §20: drop photos, straightened cards and every choice, and return to the start. */
   function reset (): void {
+    session++
     for (const s of ['front', 'back'] as const) {
       capture[s]?.close()
       capture[s] = null
@@ -204,7 +208,9 @@
     {:else if step === 'doc'}
       <DocStep {lang} bind:doc={docPick} photos={capture} preselect={!docConfirmed} onContinue={chooseDoc} />
     {:else if step === 'capture'}
-      <CaptureStep {lang} state={capture} {onLoaded} onContinue={() => { go('doc') }} />
+      {#key session}
+        <CaptureStep {lang} state={capture} {onLoaded} onContinue={() => { go('doc') }} />
+      {/key}
     {:else}
       <Home {lang} onStart={() => { go('capture', 'front') }} />
     {/if}
