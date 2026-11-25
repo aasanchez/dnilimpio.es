@@ -55,25 +55,45 @@ Whether a recipient accepts a redacted copy is up to them.
 
 ## Privacy
 
+**In short.** Your document never leaves your device. Detection, text recognition (OCR), redaction,
+the watermark and the PDF all run in your browser. The site sends no photo, file name or data read
+from the card to any server, and uses no analytics or trackers. It downloads only its own files; once
+they are on your device you can go offline. The PDF leaves the app only when you download or share it.
+An external security and privacy audit (25 November 2026) reviewed this; its findings are fixed and
+covered by tests (see [Security reviews](#security-reviews)).
+
 ### What the tool guarantees
 
 - **No upload.** Photos are processed in the browser with the Canvas API. The page has no server side.
 - **No network access from the page.** The Content Security Policy sets `connect-src 'none'`: the page
   cannot send requests with `fetch`, `XMLHttpRequest`, WebSocket or beacons. It loads scripts, styles
-  and images only from its own origin.
+  and images only from its own origin. WebRTC, which no CSP rule covers, is removed before any code
+  runs.
+- **Deny by default.** After the first visit, the service worker answers only the exact files of this
+  build. Any other request from the page or its workers (another address, a query string, another
+  method) is refused and never reaches the network, so even a same-origin request cannot carry data
+  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). An end-to-end test runs a whole document
+  workflow with fictional card values and checks that no request is sent and none carries those
+  values (`tests/e2e/privacy.spec.ts`).
 - **On-device AI only.** The corner finder is a small model that runs in the page with WebAssembly.
   The photo goes to it in memory, scaled to 224 × 224 pixels, and nowhere else. The CSP allows
   WebAssembly (`'wasm-unsafe-eval'`) but still no `eval()` and no connections
   ([ADR 0007](docs/adr/0007-corner-model.md)).
 - **No storage of your data.** Photos, fields, watermark text and PDFs are kept in memory only. The
-  code is not allowed to use `localStorage`, `sessionStorage` or `indexedDB` (enforced by the linter).
-  The only thing the browser stores is the app itself (its HTML, scripts and styles), for offline use.
+  code is not allowed to use browser storage, cookies or network APIs (`localStorage`,
+  `sessionStorage`, `indexedDB`, `document.cookie`, `fetch`, `sendBeacon` and others, enforced by the
+  linter). The only thing the browser stores is the app itself (its HTML, scripts and styles), for
+  offline use. A test checks that cookies and storage stay empty after a whole workflow.
+- **Clear everything means everything.** "Clear everything" drops the photos and every choice, and
+  stops the OCR worker, which keeps the last image it read. Leaving the page (another site, closing the
+  tab, a reload) does the same, so the browser's back-forward cache keeps no document.
 - **Text recognition (OCR) on the device.** When OCR is used, the image is read by a Web Worker in
   your browser. The OCR engine and Spanish language data (about 8 MB) come from this site, never from
   a third party, are downloaded only the first time OCR is used, and are checked against their hash
   before use. The worker runs under its own strict CSP: it can read its own files in `ocr/` and
-  cannot send requests anywhere. If OCR cannot run (offline before the first download, or no service worker), it is
-  switched off and you choose the document by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
+  cannot send requests anywhere. If OCR cannot run (offline before the first download, or no service
+  worker), it is switched off and you choose the document by hand
+  ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
@@ -83,6 +103,8 @@ Whether a recipient accepts a redacted copy is up to them.
   memory. No frame is stored or sent, and the camera turns off when you close the view, finish both
   sides or leave the tab.
 - **No tracking.** No analytics, telemetry, cookies, fonts or scripts from third parties.
+- **No framing.** Inside another site's frame the app does not start; it only offers to open itself
+  in its own tab. No page can overlay it with invisible controls.
 - **Real redaction.** Hidden areas are painted as opaque black pixels on a new image, with a margin
   around each field. Blur and pixelation are not offered, because they can be reversed.
 - **Clean PDF.** Each image is re-encoded, and the JPEG is rebuilt with only the data a decoder needs:
@@ -93,12 +115,25 @@ Whether a recipient accepts a redacted copy is up to them.
   Subresource Integrity hash, including the PDF code that loads in the background after the page
   appears (its hash is in an import map, allowed by the CSP through its own SHA-256 hash). A changed
   file is refused by the browser, both when the page loads it and when it is saved for offline use.
+  The build is reproducible, every deployed file has signed build provenance, and after each deploy
+  CI checks that the live site serves exactly the files it built (see [Continuous integration](#continuous-integration)).
 
 ### What it cannot guarantee
 
 - **Automatic detection can miss data.** Always check both sides before you download.
 - **The browser, extensions and operating system are outside the tool's control.** A malicious
-  extension or a compromised device can read what the page shows.
+  extension or a compromised device can read what the page shows. Swap files, crash reports and GPU
+  memory are managed by the system.
+- **The host sees that you visited.** Like any website, GitHub Pages receives your IP address,
+  browser, time and which of the app's files were downloaded (for example, that the OCR files were
+  fetched the first time you used OCR). It never receives your photos or data.
+- **The first visit and a forced reload are not covered by the service worker.** The CSP still
+  applies; the deny-by-default rule starts once the service worker controls the page.
+- **No browser rule can stop a page from navigating to a URL.** The protection there is that only
+  this build's verified code runs (CSP, SRI, the locked dependency list) and that the code never
+  navigates with your data (enforced by the linter).
+- **Sharing is your choice.** "Share" hands the PDF to the app you pick; what that app does with it is
+  outside the tool.
 - **Memory is released, not wiped.** The tool drops its references and clears canvases, but cannot
   force the browser to erase memory.
 - **A watermark discourages reuse but cannot prevent identity fraud.**
@@ -115,6 +150,20 @@ Whether a recipient accepts a redacted copy is up to them.
 4. Read the policy in the page source: `<meta http-equiv="Content-Security-Policy">`.
 5. Check which code you run: the start screen's footer shows the short commit SHA of the build, linked
    to that commit on GitHub (see [Deployment](#deployment)).
+6. Check that a file is the one CI built from this repository:
+   `gh attestation verify <file> --repo aasanchez/dnilimpio.es`, or rebuild it yourself and compare
+   (see [Continuous integration](#continuous-integration)).
+
+### Security reviews
+
+An external static review of the source (25 November 2026) found no upload or storage of documents
+and no high or critical issue. It raised 6 medium and 5 low findings about defence in depth. One,
+that the host can see when the OCR files are first downloaded, is a limit of any website and is
+described above. The others were fixed in separate pull requests with tests: the service worker's deny-by-default rule and the OCR
+worker's own CSP ([#29](https://github.com/aasanchez/dnilimpio.es/pull/29), [#31](https://github.com/aasanchez/dnilimpio.es/pull/31)), OCR cleanup ([#32](https://github.com/aasanchez/dnilimpio.es/pull/32)), the end-to-end privacy test ([#33](https://github.com/aasanchez/dnilimpio.es/pull/33)), the full
+post-deploy check ([#34](https://github.com/aasanchez/dnilimpio.es/pull/34)), reproducible builds, SBOM and provenance ([#35](https://github.com/aasanchez/dnilimpio.es/pull/35)), WebRTC, framing and
+`pagehide` ([#36](https://github.com/aasanchez/dnilimpio.es/pull/36)), and buffer clearing and wider lint rules ([#38](https://github.com/aasanchez/dnilimpio.es/pull/38)). Headers that need a server
+(HSTS, Permissions-Policy, COOP) cannot be set on GitHub Pages; github.io is on the HSTS preload list.
 
 ## Supported documents
 
