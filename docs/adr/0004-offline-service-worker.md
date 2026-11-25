@@ -1,6 +1,6 @@
 # 0004. Offline mode with a verified service worker
 
-- Status: accepted
+- Status: accepted; the Trusted Types policy is now `default` ([ADR 0005](0005-on-device-ocr.md))
 - Date: 2026-11-25
 
 ## Context

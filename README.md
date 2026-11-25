@@ -57,6 +57,11 @@ Whether a recipient accepts a redacted copy is up to them.
 - **No storage of your data.** Photos, fields, watermark text and PDFs are kept in memory only. The
   code is not allowed to use `localStorage`, `sessionStorage` or `indexedDB` (enforced by the linter).
   The only thing the browser stores is the app itself (its HTML, scripts and styles), for offline use.
+- **Text recognition (OCR) on the device.** When OCR is used, the image is read by a Web Worker in
+  your browser. The OCR engine and Spanish language data (about 8 MB) come from this site, never from
+  a third party, are downloaded only the first time OCR is used, and are checked against their hash
+  before use. If OCR cannot run (offline before the first download, or no service worker), it is
+  switched off and you place the fields by hand ([ADR 0005](docs/adr/0005-on-device-ocr.md)).
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
@@ -118,7 +123,8 @@ The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
 | Offline mode with service worker and integrity checks | Done |
 | Redesign of the workflow and interface: guided phone-first flow, new visual style | Done |
 | Automatic card edge detection (engine, classic image processing) | Done, not yet in the interface |
-| Document type detection, OCR, smart field finding | Planned |
+| On-device OCR engine and MRZ reader (Tesseract.js, self-hosted, loaded on first use) | Done, not yet in the interface |
+| Document type detection, smart field finding | Planned |
 | 31 languages | 13 today |
 
 ## How to use it
@@ -202,8 +208,8 @@ not depend on Svelte. See [ADR 0003](docs/adr/0003-svelte-vite-pnpm.md).
 Rules the code follows:
 
 - No HTML strings: no `innerHTML` and no `{@html}`. Svelte builds DOM nodes directly
-  (`fragments: 'tree'`). The CSP allows one Trusted Types policy, `dnilimpio-sw`, which only
-  accepts the service worker's URL ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
+  (`fragments: 'tree'`). The CSP allows one Trusted Types policy, `default`, which only accepts
+  two script URLs: the service worker and the OCR worker ([ADR 0005](docs/adr/0005-on-device-ocr.md)).
 - No `eval`, `new Function`, inline scripts or inline styles.
 - No runtime requests and no persistent storage.
 - Test images are synthetic or official specimens. Never commit a photo of a real person's document.
@@ -250,6 +256,8 @@ src/
   redact/            normalised zones to pixels, opaque fills
   engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
   detect/            automatic card edge detection (Sobel + Hough, no model)
+  ocr/               on-device OCR (Tesseract.js, loaded on demand) and MRZ reader
+  security/          Trusted Types policy
   i18n/              dictionaries, one JSON file per language
   ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state
 scripts/             CSP, build plugins (CSP, SRI, offline file list), test fixture generator
@@ -265,6 +273,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0002](docs/adr/0002-no-standalone-release.md): no standalone offline release.
 - [0003](docs/adr/0003-svelte-vite-pnpm.md): Svelte 5, Vite, pinned Node.js and pnpm.
 - [0004](docs/adr/0004-offline-service-worker.md): offline mode with a verified service worker.
+- [0005](docs/adr/0005-on-device-ocr.md): on-device OCR with Tesseract.js, self-hosted and loaded on demand.
 - [0005](docs/adr/0005-guided-flow-and-visual-style.md): guided phone-first flow and visual style.
 
 ## Contributing
@@ -283,7 +292,8 @@ not in a public issue.
 ## Licence
 
 [AGPL-3.0-or-later](LICENSE). If you run a modified version as a website, you must offer its source code
-to its users. Third-party libraries keep their own licences (`@cantoo/pdf-lib`: MIT). The bundled
+to its users. Third-party libraries keep their own licences (`@cantoo/pdf-lib`: MIT; Tesseract.js and its core
+and language data: Apache-2.0; `wasm-feature-detect`: Apache-2.0). The bundled
 fonts (Bricolage Grotesque, JetBrains Mono, Caveat) are under the [SIL Open Font Licence
 1.1](LICENSES/OFL-1.1.txt). File-level
 licence data follows [REUSE](REUSE.toml).
