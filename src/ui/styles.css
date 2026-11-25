@@ -493,6 +493,8 @@ footer .link-btn { display: flex; margin: 0 auto; min-height: 32px; font-size: 0
 
 footer { padding: 1rem; text-align: center; font-family: var(--mono); font-size: 0.75rem; }
 footer a { color: var(--muted); }
+footer .source-link { display: inline-flex; align-items: center; gap: 0.4em; min-height: 24px; }
+.github-mark { flex: none; width: 1.25em; height: 1.25em; }
 .build-version { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.6875rem; }
 
 /* Smart field finding (SmartFind.svelte) */
