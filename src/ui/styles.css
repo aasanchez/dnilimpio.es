@@ -391,6 +391,7 @@ span.chip { cursor: default; color: var(--muted); }
 
 footer { padding: 1rem; text-align: center; font-family: var(--mono); font-size: 0.75rem; }
 footer a { color: var(--muted); }
+.build-version { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.6875rem; }
 
 /* Smart field finding (SmartFind.svelte) */
 .smart-find { display: grid; gap: 0.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--dash); }

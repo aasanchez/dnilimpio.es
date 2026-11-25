@@ -2,6 +2,7 @@
 <!-- Start screen: what the tool does, the privacy promise, one button. -->
 <script lang="ts">
   import { t, type Lang } from '../i18n/index.ts'
+  import BuildVersion from './BuildVersion.svelte'
 
   const { lang, onStart }: { lang: Lang; onStart: () => void } = $props()
 </script>
@@ -32,7 +33,10 @@
     <li><span class="chip">{t(lang, 'chipNoAccount')}</span></li>
   </ul>
 
-  <footer><a href={__REPO_URL__} rel="noopener noreferrer">{t(lang, 'sourceCode')}</a></footer>
+  <footer>
+    <a href={__REPO_URL__} rel="noopener noreferrer">{t(lang, 'sourceCode')}</a>
+    <BuildVersion {lang} />
+  </footer>
 
   <div class="actionbar">
     <button type="button" class="button primary" id="start" onclick={onStart}>{t(lang, 'start')} <span class="flip" aria-hidden="true">→</span></button>

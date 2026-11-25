@@ -1,6 +1,9 @@
 {
   "appTitle": "DNI curat",
   "sourceCode": "Cod sursă",
+  "buildVersion": "Versiune",
+  "buildDeployed": "publicat {when}",
+  "buildDev": "dezvoltare",
   "language": "Limbă",
   "continue": "Continuă",
   "goBack": "Înapoi",

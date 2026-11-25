@@ -1,17 +1,36 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { execFileSync } from 'node:child_process'
 import { defaultClientConditions, defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import { normalizeSha } from './src/version/build-info.ts'
 import { base64Import, ocrAssets, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
 
 // Override with REPO_URL for forks.
 const REPO_URL = process.env['REPO_URL'] ?? 'https://github.com/aasanchez/dnilimpio.es'
+
+// Version shown in the footer (src/version/build-info.ts). CI sets GITHUB_SHA; locally it comes from
+// git; without either the footer shows no commit. SOURCE_DATE_EPOCH (seconds) fixes the build time.
+function gitSha (): string {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch {
+    return ''
+  }
+}
+const BUILD_SHA = normalizeSha(process.env['GITHUB_SHA'] ?? gitSha())
+const epoch = Number(process.env['SOURCE_DATE_EPOCH'])
+const BUILD_TIME = Number.isFinite(epoch) && epoch > 0 ? epoch * 1000 : Date.now()
 
 // The corner model (src/detect/model.ts) and its runtime go to assets/ml/: the service worker caches
 // that folder on first use instead of at install (src/offline/precache.ts).
 const isModelPart = (ids: readonly string[]): boolean => ids.some((id) => /[\\/](scanic-ml|onnxruntime-(web|common))[\\/]|[\\/]src[\\/]detect[\\/]model\.ts$/.test(id))
 
 export default defineConfig({
-  define: { __REPO_URL__: JSON.stringify(REPO_URL) },
+  define: {
+    __REPO_URL__: JSON.stringify(REPO_URL),
+    __BUILD_SHA__: JSON.stringify(BUILD_SHA),
+    __BUILD_TIME__: JSON.stringify(BUILD_TIME),
+  },
   // Relative base: the same dist/ works on the GitHub Pages subpath and when opened from disk.
   base: './',
   resolve: {

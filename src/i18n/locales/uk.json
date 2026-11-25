@@ -1,6 +1,9 @@
 {
   "appTitle": "Чистий DNI",
   "sourceCode": "Вихідний код",
+  "buildVersion": "Версія",
+  "buildDeployed": "розгорнуто {when}",
+  "buildDev": "розробка",
   "language": "Мова",
   "continue": "Продовжити",
   "goBack": "Назад",

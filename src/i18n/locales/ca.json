@@ -1,6 +1,9 @@
 {
   "appTitle": "DNI net",
   "sourceCode": "Codi font",
+  "buildVersion": "Versió",
+  "buildDeployed": "desplegat {when}",
+  "buildDev": "desenvolupament",
   "language": "Llengua",
   "continue": "Continua",
   "goBack": "Enrere",

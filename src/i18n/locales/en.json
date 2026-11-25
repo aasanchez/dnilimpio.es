@@ -1,6 +1,9 @@
 {
   "appTitle": "Clean DNI",
   "sourceCode": "Source code",
+  "buildVersion": "Version",
+  "buildDeployed": "deployed {when}",
+  "buildDev": "development",
   "language": "Language",
   "continue": "Continue",
   "goBack": "Back",
