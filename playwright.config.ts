@@ -8,7 +8,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
   reporter: process.env['CI'] ? 'github' : 'list',
-  use: { baseURL: 'http://localhost:4173/', trace: 'off' },
+  // Service workers are blocked by default so page.route() sees every request; tests/e2e/offline.spec.ts
+  // turns them on.
+  use: { baseURL: 'http://localhost:4173/', trace: 'off', serviceWorkers: 'block' },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],

@@ -47,7 +47,7 @@ test('app renders with no CSP violations and no requests outside its origin', as
   expect(violations).toEqual([])
 })
 
-test('Trusted Types: HTML strings are rejected and no policy can be created', async ({ page }) => {
+test('Trusted Types: HTML strings are rejected and no other policy can be created', async ({ page }) => {
   await page.goto('/')
   const result = await page.evaluate(() => {
     const tryIt = (f: () => void): string => { try { f(); return 'allowed' } catch { return 'blocked' } }
@@ -56,9 +56,11 @@ test('Trusted Types: HTML strings are rejected and no policy can be created', as
       // eslint-disable-next-line no-restricted-properties -- this test checks that the browser blocks it
       innerHTML: tryIt(() => { document.createElement('div').innerHTML = '<b>x</b>' }),
       policy: tt ? tryIt(() => tt.createPolicy('probe', {})) : 'unsupported',
+      // The app already created the only allowed policy (service worker URL); a second copy is refused.
+      swPolicy: tt ? tryIt(() => tt.createPolicy('dnilimpio-sw', {})) : 'unsupported',
     }
   })
-  expect(result).toEqual({ innerHTML: 'blocked', policy: 'blocked' })
+  expect(result).toEqual({ innerHTML: 'blocked', policy: 'blocked', swPolicy: 'blocked' })
 })
 
 test('chunks loaded on demand are listed in the import map with a matching hash', async ({ page, request }) => {
