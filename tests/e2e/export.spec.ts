@@ -140,8 +140,8 @@ test('manual black boxes: draw, move, undo, redo, delete, keyboard, and they rea
   await dragOnPreview(page, [0.2, 0.5], [0.6, 0.5])
   await expect.poll(async () => (await pixel(page, '#preview', ...photo))[2]).toBeGreaterThan(100)
 
-  // Keyboard: Delete removes the selected box, Ctrl+Z brings it back.
-  await page.locator('#preview').focus()
+  // Keyboard: the drag focused the canvas, so Delete removes the selected box and Ctrl+Z brings it back.
+  await expect(page.locator('#preview')).toBeFocused()
   await page.keyboard.press('Delete')
   await expect(page.locator('#delete-box')).toBeDisabled()
   await page.keyboard.press('Control+z')

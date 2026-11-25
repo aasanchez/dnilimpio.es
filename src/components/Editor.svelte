@@ -84,6 +84,8 @@
       return
     }
     e.preventDefault()
+    // preventDefault() also stops the click from moving focus; focus the canvas so the keys work next.
+    canvas.focus()
     try { canvas.setPointerCapture(e.pointerId) } catch { /* synthetic events cannot be captured */ }
   }
 
