@@ -16,7 +16,7 @@ out by the owner's choice.
   source (Policía Nacional or PRADO). `src/zones/documents.ts` lists them.
 - The straightened image size follows the document's size at 20 px per mm (1712 × 1080 for ID-1),
   and the starting corner frame takes its shape, so a document with another shape needs only data.
-- A **Document** screen after **Start** asks which document it is, with DNI 4.0 preselected. It is
+- A **Document** screen after **Start** asks which document it is, with DNI 4.0 preselected (no default since ADR 0011). It is
   part of the Photos step in the progress bar. Back from the photo screen returns to it.
 - Choosing another document keeps the photos but clears corners, straightened images and choices,
   because positions and fields differ. Leaving the screen without **Continue** changes nothing.
