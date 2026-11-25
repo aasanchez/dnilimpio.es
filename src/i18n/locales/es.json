@@ -42,6 +42,8 @@
   "positionsHint": "Los recuadros negros se colocan según el diseño de: {doc}. Comprueba que cada uno cubre su campo.",
   "watermarkLabel": "Texto de marca de agua (opcional)",
   "watermarkHint": "Por ejemplo: COPIA SOLO PARA SOLICITUD DE ALQUILER. Una marca de agua dificulta la reutilización, pero no puede impedir un fraude.",
+  "watermarkSize": "Tamaño del texto",
+  "watermarkOpacity": "Opacidad",
   "greyscale": "Convertir a blanco y negro",
   "finalPreview": "Vista final",
   "previewLabel": "Vista previa: {side}",

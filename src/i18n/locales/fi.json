@@ -42,6 +42,8 @@
   "positionsHint": "Mustat laatikot sijoitetaan tämän asettelun mukaan: {doc}. Tarkista, että jokainen peittää kenttänsä.",
   "watermarkLabel": "Vesileiman teksti (valinnainen)",
   "watermarkHint": "Esimerkiksi: KOPIO VAIN VUOKRAHAKEMUSTA VARTEN. Vesileima vaikeuttaa uudelleenkäyttöä, mutta se ei voi estää petosta.",
+  "watermarkSize": "Tekstin koko",
+  "watermarkOpacity": "Peittävyys",
   "greyscale": "Muunna mustavalkoiseksi",
   "finalPreview": "Lopullinen esikatselu",
   "previewLabel": "Esikatselu: {side}",

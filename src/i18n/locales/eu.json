@@ -42,6 +42,8 @@
   "positionsHint": "Lauki beltzak honen diseinuaren arabera kokatzen dira: {doc}. Egiaztatu bakoitzak bere eremua estaltzen duela.",
   "watermarkLabel": "Ur-markaren testua (aukerakoa)",
   "watermarkHint": "Adibidez: ALOKAIRU-ESKAERARAKO KOPIA SOILIK. Ur-markak berrerabilpena zailtzen du, baina ezin du iruzurra eragotzi.",
+  "watermarkSize": "Testuaren tamaina",
+  "watermarkOpacity": "Opakutasuna",
   "greyscale": "Bihurtu zuri-beltzera",
   "finalPreview": "Azken ikuspegia",
   "previewLabel": "Aurrebista: {side}",

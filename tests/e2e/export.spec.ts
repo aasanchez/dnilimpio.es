@@ -118,6 +118,43 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
   for (const c of bk.px[0] ?? []) expect(c).toBeLessThan(16)
 })
 
+/** Number of pure black pixels in the preview canvas (masks plus any solid black watermark text). */
+async function blackPixels (page: Page): Promise<number> {
+  return await page.locator('#preview').evaluate((c: HTMLCanvasElement) => {
+    const ctx = c.getContext('2d')
+    if (!ctx) throw new Error('no 2d')
+    const d = ctx.getImageData(0, 0, c.width, c.height).data
+    let n = 0
+    for (let i = 0; i < d.length; i += 4) if (d[i] === 0 && d[i + 1] === 0 && d[i + 2] === 0) n++
+    return n
+  })
+}
+
+test('watermark size and opacity sliders update the preview live', async ({ page }) => {
+  await toEditor(page)
+  await page.locator('#tool-mark').click()
+  const size = page.locator('#watermark-size')
+  const opacity = page.locator('#watermark-opacity')
+  // Nothing to adjust until there is text; defaults are the original look.
+  await expect(size).toBeDisabled()
+  await expect(opacity).toBeDisabled()
+  await expect(page.locator('#watermark-size-value')).toHaveText(/100\s?%/)
+  await expect(page.locator('#watermark-opacity-value')).toHaveText(/16\s?%/)
+
+  await page.locator('#watermark').fill('COPIA SOLO PARA ALQUILER')
+  await expect(size).toBeEnabled()
+  const faint = await blackPixels(page)
+  // 100% opacity: the text is solid black, so the preview gains many pure black pixels.
+  await opacity.fill('1')
+  await expect(page.locator('#watermark-opacity-value')).toHaveText(/100\s?%/)
+  await expect.poll(async () => await blackPixels(page)).toBeGreaterThan(faint + 5000)
+  const solid = await blackPixels(page)
+  // Bigger text: thicker strokes cover more of the card.
+  await size.fill('2')
+  await expect(page.locator('#watermark-size-value')).toHaveText(/200\s?%/)
+  await expect.poll(async () => await blackPixels(page)).toBeGreaterThan(solid)
+})
+
 test('reset clears photos and choices', async ({ page }) => {
   await toEditor(page)
   await page.locator('#tool-mark').click()
