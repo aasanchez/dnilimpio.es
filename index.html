@@ -8,7 +8,12 @@
     <title>DNI Tapado.es</title>
     <!-- Installable app (ADR 0018). Relative URLs: the same build works at the site root and under a subpath. -->
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="icon" type="image/png" sizes="64x64" href="./icons/favicon-64.png" />
+    <!-- Favicon: SVG where supported (it follows the dark theme), PNG and ICO for the rest. sizes="32x32"
+         on the ICO keeps browsers that read SVG from picking it instead. -->
+    <link rel="icon" href="./favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="./icons/favicon-16.png" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="DT.es" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f5ed" />

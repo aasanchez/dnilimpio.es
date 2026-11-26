@@ -21,8 +21,14 @@ nothing about the user is stored or sent must not change.
 - **Icons:** the top bar's brand mark ("DT.es" in JetBrains Mono on orange `#f36716`), drawn by
   `scripts/make-icons.ts` and committed as PNG, so the build stays reproducible and needs no
   browser. `any` icons (192, 512) keep the mark's rounded ink border; `maskable` icons (192, 512) are
-  full-bleed with the text inside the 40 % safe zone; `apple-touch-icon.png` (180) is opaque; a
-  64 px favicon replaces the browser's request for `/favicon.ico`.
+  full-bleed with the text inside the 40 % safe zone; `apple-touch-icon.png` (180) is opaque; the
+  favicon (see below) shows "DT" only.
+- **Favicon:** "DT.es" cannot be read at 16 px, so the tab icon shows "DT" in the same orange box,
+  drawn as shapes on a 32-unit grid whose edges fall on whole pixels at 16 and 32 px.
+  `icons/favicon.svg` is the main one and turns its border cream in a dark theme, like the top bar's
+  mark; `icons/favicon-32.png`, `icons/favicon-16.png` and `favicon.ico` (16, 32 and 48 px) serve
+  browsers without SVG favicons. All are linked with relative URLs. The ICO carries `sizes="32x32"`
+  so browsers that read SVG do not pick it instead.
 - **Offline and CSP:** the manifest and icons are ordinary build files, so the service worker caches
   them at install with their SHA-384, like the rest. `manifest-src 'self'` and `img-src 'self'` were
   already in the CSP: no directive changes.

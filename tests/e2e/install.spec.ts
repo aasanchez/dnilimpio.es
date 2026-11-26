@@ -22,7 +22,7 @@ test('has a manifest with relative URLs and icons of the stated sizes', async ({
   const m = await manifestOf(page)
   expect(m).toMatchObject({ id: './', name: 'DNI Tapado.es', short_name: 'DT.es', start_url: './', scope: './', display: 'standalone' })
   expect(m.icons.map((i) => i.purpose).sort()).toEqual(['any', 'any', 'maskable', 'maskable'])
-  const icons = [...m.icons.map((i) => ({ src: i.src, size: i.sizes })), { src: 'icons/apple-touch-icon.png', size: '180x180' }, { src: 'icons/favicon-64.png', size: '64x64' }]
+  const icons = [...m.icons.map((i) => ({ src: i.src, size: i.sizes })), { src: 'icons/apple-touch-icon.png', size: '180x180' }, { src: 'icons/favicon-32.png', size: '32x32' }, { src: 'icons/favicon-16.png', size: '16x16' }]
   for (const icon of icons) {
     expect(icon.src.startsWith('/')).toBe(false)
     const size = await page.evaluate(async (src) => {
@@ -34,6 +34,32 @@ test('has a manifest with relative URLs and icons of the stated sizes', async ({
     expect(size).toBe(icon.size)
   }
   await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', './icons/apple-touch-icon.png')
+})
+
+test('links a favicon in SVG, PNG and ICO with relative URLs', async ({ page }) => {
+  await page.goto('/')
+  const links = await page.locator('link[rel="icon"]').evaluateAll((els) => els.map((el) => ({
+    href: el.getAttribute('href'), type: el.getAttribute('type'), sizes: el.getAttribute('sizes'),
+  })))
+  expect(links).toEqual([
+    { href: './favicon.ico', type: null, sizes: '32x32' },
+    { href: './icons/favicon.svg', type: 'image/svg+xml', sizes: null },
+    { href: './icons/favicon-32.png', type: 'image/png', sizes: '32x32' },
+    { href: './icons/favicon-16.png', type: 'image/png', sizes: '16x16' },
+  ])
+  for (const { href, type } of links) {
+    const res = await page.request.get(new URL(href ?? '', page.url()).href)
+    expect(res.ok(), href ?? '').toBe(true)
+    if (type !== null) expect(res.headers()['content-type']).toContain(type)
+    // The browser can draw each one.
+    const ok = await page.evaluate(async (src) => {
+      const img = new Image()
+      img.src = src
+      await img.decode()
+      return img.naturalWidth > 0
+    }, href ?? '')
+    expect(ok, href ?? '').toBe(true)
+  }
 })
 
 test.describe('with the service worker', () => {

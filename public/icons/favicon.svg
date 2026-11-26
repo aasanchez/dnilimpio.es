@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<style>rect{stroke:#1f1a14}@media (prefers-color-scheme:dark){rect{stroke:#f8f5ed}}</style>
+<rect x="1" y="1" width="30" height="30" rx="7" fill="#f36716" stroke-width="2"/>
+<path fill="#1f1a14" fill-rule="evenodd" d="M4 8H10A4 4 0 0 1 14 12V20A4 4 0 0 1 10 24H4ZM8 12V20H10V12Z"/>
+<path fill="#1f1a14" d="M16 8H28V12H24V24H20V12H16Z"/>
+</svg>
