@@ -7,6 +7,7 @@
   import { canUseLiveCamera, type CameraFailure } from '../capture/live.ts'
   import { t, type Key, type Lang } from '../i18n/index.ts'
   import type { CaptureState } from '../ui/capture-state.ts'
+  import { shrink } from '../engine/wipe.ts'
   import type { Side } from '../zones/dni.ts'
   import CaptureSide from './CaptureSide.svelte'
   import LiveCamera from './LiveCamera.svelte'
@@ -114,6 +115,12 @@
     viewer.width = Math.round(bitmap.width * scale)
     viewer.height = Math.round(bitmap.height * scale)
     viewer.getContext('2d')?.drawImage(bitmap, 0, 0, viewer.width, viewer.height)
+  })
+
+  // Leaving the step (Reset, Continue, leaving the page): free the preview's pixels at once.
+  $effect(() => {
+    const v = viewer
+    return () => { shrink(v) }
   })
 </script>
 
