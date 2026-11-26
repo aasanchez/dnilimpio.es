@@ -41,8 +41,8 @@ some of the data. This tool makes a copy that shows only what you choose:
 1. **Select** a photo of the front and of the back. On a phone, the **capture coach** gives live
    tips and takes the photo by itself when the card is sharp. On a computer, drag and drop, choose a
    file or paste.
-2. **Confirm the document**: DNI 4.0, DNI 3.0 or TIE. The app reads the code on the back (MRZ) on
-   your device and preselects it.
+2. **Confirm the document**: DNI or TIE. The app reads the card on your device and preselects it,
+   including the DNI version (3.0 or 4.0), so you never need to know it.
 3. **Straighten**: the app finds the card in each photo, turns it the right way up (sideways or
    upside down) and straightens it. You can place the corners by hand if needed.
 4. **Choose the fields to hide** (signature, dates, support number, CAN, MRZ and others). Move or
@@ -81,10 +81,15 @@ redacted by hand with black boxes.
 and you always confirm it ([ADR 0011](docs/adr/0011-document-detection.md)):
 
 - Code `IR` → TIE. Code `ID` → DNI.
-- DNI 3.0 or 4.0: both have the same MRZ, so the version comes from the issue date. It is worked out
-  from the dates of birth and expiry (a DNI is valid 2 years under age 5, 5 years under 30 and
-  10 years under 70; the DNI 4.0 is issued from 2 August 2021). When the dates fit both versions, or
-  for a permanent DNI (holder 70 or over), the app says it is a DNI and asks you to choose the version.
+- The picker has one **DNI** choice; each version keeps its own layout inside the app
+  ([ADR 0021](docs/adr/0021-one-dni-choice.md)). Both versions have the same MRZ, so the version
+  comes from the issue date. It is worked out from the dates of birth and expiry (a DNI is valid
+  2 years under age 5, 5 years under 30 and 10 years under 70; the DNI 4.0 is issued from
+  2 August 2021).
+- When the version cannot be detected (dates that fit both and an unreadable front, a permanent DNI
+  for a holder 70 or over, or no OCR), the app uses the DNI 4.0, the most common one, and says so.
+  The editor has an **Older DNI (3.0)** switch next to the box controls: it changes the layout and
+  keeps your photos and choices.
 - Nothing is preselected until detection answers or you choose: **Continue** waits for a document,
   so a TIE is never handled with DNI positions by mistake.
 - When the MRZ cannot settle it (no MRZ read, or dates that fit both DNI versions), the app also reads
@@ -96,7 +101,7 @@ and you always confirm it ([ADR 0011](docs/adr/0011-document-detection.md)):
   choice you make yourself is never changed.
 
 **Card guide.** "What is on my card?" on the start screen, and the ⓘ beside each field in the
-editor, open a guide to every element of each card: what it is, how a copy of it can be misused, and
+editor, open a guide to every element of each card (one DNI tab with a 4.0/3.0 switch, and the TIE): what it is, how a copy of it can be misused, and
 what the app does with it. Every statement cites the official text that says it (BOE, EUR-Lex, ICAO
 Doc 9303, Policía Nacional, PRADO, AEPD, INCIBE), with links that open in a new tab. When no official
 source was found, the guide says so instead of guessing ([ADR 0014](docs/adr/0014-card-guide.md),
@@ -147,9 +152,10 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    camera, and your permission. If either is missing (permission refused, no camera, an old browser,
    the page opened from a file), the coach does not open: a short note appears, and **Take a photo**
    opens the phone's own camera app instead.
-3. **Document.** Confirm DNI 4.0, DNI 3.0 or TIE, then **Continue**. Each one has its own field
-   positions. The app reads the MRZ on your device and preselects the document: *Document detected:
-   TIE. Check it before you continue.* You can choose by hand at any moment. Until a document is
+3. **Document.** Confirm DNI or TIE, then **Continue**. The app reads the card on your device and
+   preselects the document: *Document detected: TIE. Check it before you continue.* For a DNI it
+   also picks the version (3.0 or 4.0), whose field positions differ; when it cannot tell, it uses
+   the 4.0 and the editor offers an **Older DNI (3.0)** switch. You can choose by hand at any moment. Until a document is
    chosen, **Continue** stays off. To change the document later, go back from the editor: your
    photos are kept, the corners and choices start again.
 4. **Straighten (automatic).** After **Continue**, the app looks for the card in each photo (with the
@@ -445,7 +451,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 |---|---|
 | Select front and back photos (file, drag and drop, paste, camera) | Done |
 | Capture coach: live camera tips and automatic shot | Done |
-| DNI 4.0, DNI 3.0 and TIE, with a document picker | Done |
+| DNI 4.0, DNI 3.0 and TIE, with a two-choice picker (DNI, TIE); DNI version detected, 4.0 fallback with a switch | Done |
 | Document type detection from the MRZ (preselects the picker) | Done |
 | Corner finding: on-device model, then classic edge detection, then manual; sides snapped onto the card's real edges | Done |
 | Automatic straightening: find, turn (sideways, upside down) and straighten both sides | Done |
@@ -748,6 +754,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0018](docs/adr/0018-installable-app.md): installable app; relative manifest, maskable and Apple icons, install link only where the browser supports it.
 - [0019](docs/adr/0019-ppocr-and-text-detection.md): PP-OCRv6 tiny replaces Tesseract; the front's printed text helps detect the document.
 - [0020](docs/adr/0020-fit-boxes-to-text.md): fit to the text; ticked field boxes grow to cover the words OCR finds, never shrink.
+- [0021](docs/adr/0021-one-dni-choice.md): one "DNI" choice; the version is detected, the DNI 4.0 is the fallback, and the editor has an Older DNI (3.0) switch.
 
 ## Contributing
 

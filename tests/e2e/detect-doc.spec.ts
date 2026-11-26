@@ -72,7 +72,7 @@ test('reads the back, preselects TIE, then DNI 4.0 for a new photo', async ({ pa
   await page.locator('#file-back').setInputFiles(await back(page, mrz('ID', '800101', '330101')))
   await page.locator('#capture-continue').click()
   await expect(page.locator('#detect-status')).toHaveText('Documento detectado: DNI 4.0. Compruébalo antes de continuar.', { timeout: 60_000 })
-  await expect(page.locator('[id="doc-dni-4.0"]')).toBeChecked()
+  await expect(page.locator('#doc-dni')).toBeChecked()
 })
 
 test('a sideways photo is detected too', async ({ page }) => {
@@ -93,9 +93,9 @@ test('a choice made by hand is never overridden', async ({ page }) => {
   await page.locator('#file-back').setInputFiles(await back(page, mrz('IR', '900101', '290101')))
   await page.locator('#capture-continue').click()
   // Picked while the back is still being read: the result informs, it does not override.
-  await page.locator('[id="doc-dni-3.0"]').click()
+  await page.locator('#doc-dni').click()
   await expect(page.locator('#detect-status')).toContainText('TIE', { timeout: 90_000 })
-  await expect(page.locator('[id="doc-dni-3.0"]')).toBeChecked()
+  await expect(page.locator('#doc-dni')).toBeChecked()
 })
 
 test('offline without the OCR files: a note, and the manual choice', async ({ page, context }) => {
@@ -164,5 +164,22 @@ test('when the MRZ dates allow both DNI versions, the front tells the version', 
   await page.locator('#file-back').setInputFiles(await back(page, mrz('ID', '800101', '311201')))
   await page.locator('#capture-continue').click()
   await expect(page.locator('#detect-status')).toHaveText('Documento detectado: DNI 4.0. Compruébalo antes de continuar.', { timeout: 120_000 })
-  await expect(page.locator('[id="doc-dni-4.0"]')).toBeChecked()
+  await expect(page.locator('#doc-dni')).toBeChecked()
+})
+
+test('a DNI whose version cannot be told: DNI, the 4.0 layout, and the switch', async ({ page }) => {
+  test.setTimeout(180_000)
+  await controlled(page)
+  await openCapture(page)
+  // Issued between December 2020 and December 2021, and nothing printed on the front: either version.
+  await page.locator('#file-front').setInputFiles(await front(page, []))
+  await page.locator('#file-back').setInputFiles(await back(page, mrz('ID', '800101', '311201')))
+  await page.locator('#capture-continue').click()
+  await expect(page.locator('#detect-status')).toHaveText(/^Documento detectado: DNI\. No se pudo saber la versión/, { timeout: 120_000 })
+  await expect(page.locator('#doc-dni')).toBeChecked()
+  await page.locator('#doc-continue').click()
+  await expect(page.locator('h2')).toHaveText('Elige qué tapar', { timeout: 30_000 })
+  await expect(page.locator('#dni-older')).not.toBeChecked()
+  await expect(page.locator('#dni-guessed')).toBeVisible()
+  await expect(page.locator('#panel-fields')).toContainText('DNI 4.0')
 })

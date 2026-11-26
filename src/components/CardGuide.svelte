@@ -1,13 +1,14 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Card guide: every element of each supported card, what it is and how a copy of it can be misused,
-     each statement with its official source (src/guide/). A dialog, so opening it from the editor
+     each statement with its official source (src/guide/). One tab per picker option (DNI, TIE); the
+     DNI tab has a switch between its two versions, as their elements differ. A dialog, so opening it from the editor
      keeps the editor as it was. Its text loads when it first opens; it never fetches anything else,
      and source links open in a new tab. -->
 <script lang="ts">
   import { tick } from 'svelte'
   import { t, type Key, type Lang } from '../i18n/index.ts'
   import type { DocModel, ZoneId } from '../zones/types.ts'
-  import { DOCUMENTS, documentOf } from '../zones/documents.ts'
+  import { CHOICES, DNI_VERSIONS, choiceOf, documentOf, isDni, type DniVersion, type DocChoice } from '../zones/documents.ts'
   import { GENERAL_RISK, GUIDE, PLACES, textOf, type Cite, type Entry } from '../guide/entries.ts'
   import { SOURCES } from '../guide/sources.ts'
   import { loadGuideText } from '../guide/text.ts'
@@ -18,6 +19,8 @@
   let dialog: HTMLDialogElement | undefined = $state()
   let body: HTMLElement | undefined = $state()
   let doc = $state<DocModel>('dni-4.0')
+  /** DNI version shown on the DNI tab; kept when the reader looks at the TIE and comes back. */
+  let dniVersion = $state<DniVersion>('dni-4.0')
   /** Entry opened from the editor: expanded and scrolled into view. */
   let focused = $state<string | null>(null)
   let g = $state<((key: string) => string) | null>(null)
@@ -42,6 +45,7 @@
   /** Opens the guide, on a document and optionally on the entry of an editor field. */
   export async function show (model: DocModel = doc, field?: ZoneId): Promise<void> {
     doc = model
+    if (isDni(model)) dniVersion = model
     const e = field ? entryForField(GUIDE[model], field) : undefined
     focused = e ? e.id : null
     if (loadedLang !== lang) {
@@ -61,9 +65,13 @@
 
   function pick (d: DocModel): void {
     doc = d
+    if (isDni(d)) dniVersion = d
     focused = null
     if (body) body.scrollTop = 0
   }
+
+  /** The layout a tab opens: the DNI version last shown, or the TIE. */
+  const choiceTarget = (c: DocChoice): DocModel => (c === 'dni' ? dniVersion : 'tie')
 
   const byPlace = (place: string): Entry[] => entries.filter((e) => e.place === place)
 </script>
@@ -86,10 +94,17 @@
       <p class="text-sm text-muted">{tx('lead')}</p>
 
       <div class="tabs flex-wrap" role="tablist" aria-label={tx('title')}>
-        {#each DOCUMENTS as d (d.model)}
-          <button type="button" role="tab" id="{id}-tab-{d.model}" aria-selected={doc === d.model} onclick={() => { pick(d.model) }}>{t(lang, `doc_${d.model}` as Key)}</button>
+        {#each CHOICES as c (c)}
+          <button type="button" role="tab" id="{id}-tab-{c}" aria-selected={choiceOf(doc) === c} onclick={() => { pick(choiceTarget(c)) }}>{t(lang, `doc_${c}` as Key)}</button>
         {/each}
       </div>
+      {#if isDni(doc)}
+        <div class="segmented" role="group" aria-label={t(lang, 'doc_dni')}>
+          {#each DNI_VERSIONS as v (v)}
+            <button type="button" id="{id}-ver-{v}" aria-pressed={doc === v} onclick={() => { pick(v) }}>{t(lang, `doc_${v}`)}</button>
+          {/each}
+        </div>
+      {/if}
 
       <section class="rounded-md border border-dashed border-dash bg-sunk p-3" aria-labelledby="{id}-general">
         <h3 class="text-[1.05rem]" id="{id}-general">{tx('generalTitle')}</h3>

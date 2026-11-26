@@ -7,7 +7,7 @@
   import { dir, pickLang, t, type Key, type Lang } from './i18n/index.ts'
   import { emptyAlignState, resetSide } from './ui/align-state.ts'
   import type { DocModel, Side, ZoneId } from './zones/types.ts'
-  import { DEFAULT_DOC, documentOf, pixelSize } from './zones/documents.ts'
+  import { DEFAULT_DOC, choiceOf, documentOf, pixelSize, type DniVersion } from './zones/documents.ts'
   import LanguageSelect from './components/LanguageSelect.svelte'
   import Home from './components/Home.svelte'
   import DocStep from './components/DocStep.svelte'
@@ -38,6 +38,11 @@
    * Null until detection or the person picks one: a silent default put DNI boxes on a TIE.
    */
   let docPick = $state<DocModel | null>(null)
+  /**
+   * True when the DNI version in use was detected from the photos or chosen in the editor; false
+   * when it is the default (4.0) because detection could not tell. The editor then says so.
+   */
+  let dniFound = $state(false)
   /** True once the person confirmed a document for the current photos; automatic detection then stops preselecting. */
   let docConfirmed = $state(false)
   const doc = $derived(documentOf(docModel))
@@ -141,6 +146,7 @@
     }
     edit = emptyEditState(doc)
     docConfirmed = false
+    dniFound = false
     // The OCR worker keeps the last card it read: stop it (a new one starts if OCR is used again).
     void stopOcrIfLoaded()
     go('capture', 'front')
@@ -153,8 +159,10 @@
   function chooseDoc (): void {
     const pick = docPick
     if (pick === null) return
-    // Same document and both sides already straightened (e.g. back from the editor): keep them.
-    if (pick === docModel && aligned.front && aligned.back) {
+    // Same card and both sides already straightened (e.g. back from the editor): keep them. The two
+    // DNI versions are the same card shape, so only the field positions change.
+    if (choiceOf(pick) === choiceOf(docModel) && aligned.front && aligned.back) {
+      if (pick !== docModel) setDniVersion(pick as DniVersion)
       docConfirmed = true
       go('edit')
       return
@@ -170,6 +178,15 @@
     docConfirmed = true
     missed = []
     go('auto')
+  }
+
+  /**
+   * The editor's "Older DNI (3.0)" switch: the other DNI layout. Same card shape, so the straightened
+   * photos and the choices stay; only box positions moved by hand start over, as they belong to a layout.
+   */
+  function setDniVersion (version: DniVersion): void {
+    docModel = version
+    edit.placement = {}
   }
 
   /** Automatic straightening finished: on to the editor, or to the corners of a card it missed. */
@@ -232,13 +249,13 @@
       {/key}
     {:else if step === 'edit' && align.warped.front && align.warped.back}
       {#key docModel}
-        <Editor {lang} {doc} {align} {edit} bind:phase onAdjust={(side: Side) => { go('align', side) }} onReset={reset} onPhase={focusHeading}
+        <Editor {lang} {doc} {align} {edit} {dniFound} bind:phase onDniVersion={(v: DniVersion) => { setDniVersion(v); dniFound = true }} onAdjust={(side: Side) => { go('align', side) }} onReset={reset} onPhase={focusHeading}
           onGuide={(field: ZoneId) => { void openGuide(docModel, field) }} />
       {/key}
     {:else if step === 'auto'}
       <StraightenStep {lang} {doc} {size} photos={capture} {align} onDone={onStraightened} onManual={() => { missed = []; go('align', 'front') }} />
     {:else if step === 'doc'}
-      <DocStep {lang} bind:doc={docPick} photos={capture} preselect={!docConfirmed} onContinue={chooseDoc} />
+      <DocStep {lang} bind:doc={docPick} bind:dniFound photos={capture} preselect={!docConfirmed} onContinue={chooseDoc} />
     {:else if step === 'capture'}
       {#key session}
         <CaptureStep {lang} state={capture} {onLoaded} onContinue={() => { go('doc') }} />
