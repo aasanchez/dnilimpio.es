@@ -231,8 +231,19 @@ function area (q: Quad): number {
 export function detectCard (img: RGBA, opts: DetectOptions = {}): Detection | null {
   const aspect = Math.max(1, opts.aspect ?? ID1_ASPECT)
   const { grey, scale } = toWorkGrey(img)
-  const { w, h } = grey
   const mag = gradient(grey)
+  try {
+    return bestOutline(img, grey, mag, scale, aspect)
+  } finally {
+    // The grey copy of the photo and its gradient are not needed once the outline is chosen.
+    grey.v.fill(0)
+    mag.fill(0)
+  }
+}
+
+/** The best four-sided outline on the grey copy, in the input image's pixels, or null. */
+function bestOutline (img: RGBA, grey: Grey, mag: Float32Array, scale: number, aspect: number): Detection | null {
+  const { w, h } = grey
   const thr = strongThreshold(mag)
   const lines = houghLines(mag, w, h)
   const margin = Math.max(w, h) * 0.02

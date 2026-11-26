@@ -9,6 +9,7 @@
   import { onMount } from 'svelte'
   import { Coach, guideRect, toGray, type Tip } from '../capture/coach.ts'
   import { openCamera, stopStream, type CameraFailure } from '../capture/live.ts'
+  import { shrink } from '../engine/wipe.ts'
   import { t, type Key, type Lang } from '../i18n/index.ts'
   import type { Side } from '../zones/dni.ts'
   import GhostCard from './GhostCard.svelte'
@@ -118,7 +119,9 @@
       const h = Math.max(1, Math.round(vh * scale))
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h }
       ctx.drawImage(video, 0, 0, w, h)
-      const advice = coach.feed(toGray(ctx.getImageData(0, 0, w, h).data, w, h), performance.now())
+      const frame = ctx.getImageData(0, 0, w, h).data
+      const advice = coach.feed(toGray(frame, w, h), performance.now())
+      frame.fill(0)
       // Change the tip only when it holds for two frames, so it does not flicker; "ready" shows at once.
       if (advice.tip === 'ready' || advice.tip === pendingTip) {
         if (advice.tip !== shownTip) { shownTip = advice.tip; tip = advice.tip }
@@ -154,6 +157,9 @@
       document.removeEventListener('visibilitychange', onVisibility)
       stopStream(stream)
       if (video) video.srcObject = null
+      // The last frames of the camera: the analysis canvas and the coach's previous frame.
+      shrink(canvas)
+      coach.dispose()
       if (dialog?.open) dialog.close()
     }
   })
