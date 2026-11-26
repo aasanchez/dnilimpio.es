@@ -12,6 +12,7 @@
 import * as ort from 'onnxruntime-web/wasm'
 import { PaddleOcrService } from 'paddleocr'
 import { MODEL_FILES, type Reply, type Request } from './protocol.ts'
+import { wordSpans } from './spans.ts'
 
 interface Scope { postMessage: (m: Reply) => void; onmessage: ((e: MessageEvent<Request>) => void) | null; location: { href: string } }
 const scope = self as unknown as Scope
@@ -59,7 +60,11 @@ scope.onmessage = (e) => {
     try {
       const ocr = await load()
       const raw = await ocr.recognize({ width, height, data: pixels })
-      const lines = raw.map((r) => ({ text: r.text, confidence: r.confidence, x: r.box.x, y: r.box.y, w: r.box.width, h: r.box.height }))
+      const lines = raw.map((r) => {
+        const box = { x: r.box.x, y: r.box.y, w: r.box.width, h: r.box.height }
+        const words = r.text.trim().split(/\s+/).filter((t) => t !== '').length
+        return { text: r.text, confidence: r.confidence, ...box, spans: wordSpans(pixels, width, height, box, words) ?? undefined }
+      })
       scope.postMessage({ type: 'lines', id, lines })
     } catch (err) {
       scope.postMessage({ type: 'error', id, message: err instanceof Error ? err.message : String(err) })

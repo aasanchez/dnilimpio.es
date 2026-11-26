@@ -14,7 +14,19 @@ export const MODEL_FILES = {
 export type Request =
   | { readonly type: 'read'; readonly id: number; readonly width: number; readonly height: number; readonly data: ArrayBuffer }
 
-export interface WireLine { readonly text: string; readonly confidence: number; readonly x: number; readonly y: number; readonly w: number; readonly h: number }
+/**
+ * One recognised line and its box in the image's pixels. `spans`: where each word is, measured from the
+ * ink (spans.ts), present only when the ink splits into exactly as many runs as the text has words.
+ */
+export interface WireLine {
+  readonly text: string
+  readonly confidence: number
+  readonly x: number
+  readonly y: number
+  readonly w: number
+  readonly h: number
+  readonly spans?: ReadonlyArray<{ readonly x0: number; readonly x1: number }> | undefined
+}
 
 export type Reply =
   | { readonly type: 'lines'; readonly id: number; readonly lines: readonly WireLine[] }

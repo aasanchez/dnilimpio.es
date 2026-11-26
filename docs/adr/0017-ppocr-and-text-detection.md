@@ -52,9 +52,13 @@ Not yet measured on photos of real cards; the confirmation step and the manual p
   service worker, the worker's own CSP (scripts and `fetch()` only from `ocr/`), the Trusted Types
   policy, `ocrStatus()`, `stopOcr()`.
 - **Worker.** The page sends the pixels of one canvas (moved, not copied); the worker answers with the
-  text lines and their boxes and zeroes the pixels. PP-OCR returns line boxes; word boxes are
-  estimated from character offsets (`src/ocr/lines.ts`), and the margin smart field finding adds to
-  each box absorbs the estimate. A browser without WebAssembly SIMD reports OCR as unavailable.
+  text lines and their boxes and zeroes the pixels. PP-OCR returns line boxes. Word boxes, which
+  smart field finding turns into black boxes, are measured in the worker from the ink: gaps wider than
+  30 % of the line height split words (`src/ocr/spans.ts`), used only when the count matches the
+  recognised words. Otherwise they are estimated from character offsets and made conservative: from
+  half the estimated start to one and a half times the estimated end, within the line
+  (`src/ocr/lines.ts`), so a proportional font cannot leave part of a number uncovered. A browser
+  without WebAssembly SIMD reports OCR as unavailable.
 - **Detection** (`src/detect/doc-text.ts`, pure). After the MRZ, when it leaves the answer open, the
   straightened front is read (then the card turned 180°, then the back in case the photos were
   swapped), and the text is scored against markers taken from the specimens: "PERMISO DE RESIDENCIA",
