@@ -192,9 +192,9 @@ export const MONO = '40px monospace'
 /**
  * Loads two synthetic cards with printed text (a fictional DNI) and goes to the editor. The corner
  * model is blocked unless `model` is true (edge detection finds these cards). `frontLines` replaces
- * the text of the front.
+ * the text of the front. `names` are the file names the photos are loaded with.
  */
-export async function toEditorWithText (page: Page, { model = false, frontLines }: { model?: boolean; frontLines?: ReadonlyArray<readonly [string, number, number, string]> } = {}): Promise<void> {
+export async function toEditorWithText (page: Page, { model = false, frontLines, names = ['front.png', 'back.png'] }: { model?: boolean; frontLines?: ReadonlyArray<readonly [string, number, number, string]>; names?: readonly [string, string] } = {}): Promise<void> {
   const front = await cardPhoto(page, frontLines ?? [
     ['DNI 99999999R', 640, 300, SANS],
     ['APELLIDOS', 640, 380, SANS],
@@ -212,9 +212,9 @@ export async function toEditorWithText (page: Page, { model = false, frontLines 
   ])
   if (!model) await blockModel(page)
   await openCapture(page)
-  await page.locator('#file-front').setInputFiles({ name: 'front.png', mimeType: 'image/png', buffer: front })
+  await page.locator('#file-front').setInputFiles({ name: names[0], mimeType: 'image/png', buffer: front })
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
-  await page.locator('#file-back').setInputFiles({ name: 'back.png', mimeType: 'image/png', buffer: back })
+  await page.locator('#file-back').setInputFiles({ name: names[1], mimeType: 'image/png', buffer: back })
   await page.locator('#capture-continue').click()
   await page.locator('#doc-dni').check()
   await page.locator('#doc-continue').click()
