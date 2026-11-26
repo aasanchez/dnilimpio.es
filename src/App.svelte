@@ -19,6 +19,8 @@
   import { stopOcrIfLoaded } from './ocr/load-ocr.ts'
   import { noticeDue, rememberNoticeClosed } from './ui/notice-memory.ts'
   import { setAppIdle } from './offline/update.ts'
+  import { statsAllowedHere } from './analytics/stats-frame.ts'
+  import StatsFrame from './components/StatsFrame.svelte'
   import Editor from './components/Editor.svelte'
   import type CardGuideT from './components/CardGuide.svelte'
   import { emptyEditState, type Phase } from './ui/edit-state.ts'
@@ -94,6 +96,12 @@
     addEventListener('pagehide', leave)
     return () => { removeEventListener('pagehide', leave) }
   })
+
+  // Visit counter (ADR 0024): an isolated frame, once per page load, on the start screen only and only
+  // until the first time the person leaves it. Production builds on the public site only.
+  let statsShown = $state(false)
+  const stats = $derived(import.meta.env.PROD && !statsShown && step === 'home' && capture.front === null && capture.back === null && statsAllowedHere())
+  $effect(() => { if (step !== 'home') statsShown = true })
 
   // Idle (start screen, no photos): a new build of the app may replace this one (offline/update.ts).
   $effect(() => {
@@ -262,6 +270,7 @@
       {/key}
     {:else}
       <Home {lang} {notice} onGuide={() => { void openGuide() }} onNoticeDismiss={() => { notice = false; rememberNoticeClosed() }} onStart={() => { go('capture', 'front') }} />
+      {#if stats}<StatsFrame />{/if}
     {/if}
   </div>
   {#if CardGuide}<CardGuide {lang} id="guide" bind:this={guide} />{/if}
