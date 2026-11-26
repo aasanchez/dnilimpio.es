@@ -241,8 +241,9 @@ test.describe('counter frame (ADR 0024)', () => {
     expect(traffic.sent.filter((s) => s.url === STATS_URL)).toHaveLength(1)
   })
 
-  test('the frame cannot reach the app even if it were shown beside a photo', async ({ page, context }) => {
-    // Puts a frame with the same attributes next to a loaded photo, to prove the isolation itself.
+  test('a counter frame added beside a photo cannot even load: the photo step\'s policy refuses it', async ({ page, context }) => {
+    // Puts a frame with the same attributes next to a loaded photo. Since ADR 0025 the photo step has
+    // frame-src 'none', so the frame never loads and nothing reaches the counter page or its report.
     const traffic = await asPublicSite(context)
     await page.goto(ROOT)
     await frameReport(traffic)
@@ -250,6 +251,9 @@ test.describe('counter frame (ADR 0024)', () => {
     await page.locator('#file-front').setInputFiles('tests/fixtures/synthetic-front.png')
     await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
     const before = traffic.sent.length
+    const refused = page.evaluate(async () => await new Promise<string>((resolve) => {
+      document.addEventListener('securitypolicyviolation', (e) => { resolve(e.effectiveDirective) }, { once: true })
+    }))
     await page.evaluate((src) => {
       const f = document.createElement('iframe')
       f.setAttribute('sandbox', 'allow-scripts')
@@ -257,8 +261,9 @@ test.describe('counter frame (ADR 0024)', () => {
       f.src = src
       document.body.append(f)
     }, STATS_URL)
-    await expect.poll(() => traffic.sent.slice(before).filter((s) => s.url.startsWith(REPORT)).length, { timeout: 15_000 }).toBe(1)
-    for (const s of traffic.sent.slice(before)) expect(s.body).toBe(s.url.startsWith(REPORT) ? 'nothing' : '')
+    expect(await refused).toBe('frame-src')
+    await page.waitForTimeout(2000)
+    expect(traffic.sent.slice(before)).toEqual([])
   })
 
   for (const [name, init] of [

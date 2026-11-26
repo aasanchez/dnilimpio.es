@@ -23,6 +23,7 @@
   "dropHere": "Drag the image here",
   "chooseFile": "Choose a file",
   "localOnly": "The image is read on this device. Nothing is uploaded.",
+  "filterOff": "The extra network filter (service worker) is not active on this visit. The app works the same and does not send your photo. It usually starts when you reload the page.",
   "loaded": "Image loaded.",
   "errNotImage": "The file is not an image. Use a JPEG, PNG or HEIC photo.",
   "errHeic": "This browser cannot open HEIC photos. Take a screenshot of the photo or convert it to JPEG on your device.",

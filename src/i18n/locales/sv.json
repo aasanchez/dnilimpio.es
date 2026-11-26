@@ -23,6 +23,7 @@
   "dropHere": "Dra bilden hit",
   "chooseFile": "Välj en fil",
   "localOnly": "Bilden läses på den här enheten. Inget laddas upp.",
+  "filterOff": "Det extra nätverksfiltret (service worker) är inte aktivt vid det här besöket. Appen fungerar likadant och skickar inte ditt foto. Det brukar starta när du laddar om sidan.",
   "loaded": "Bilden har lästs in.",
   "errNotImage": "Filen är inte en bild. Använd ett foto i JPEG, PNG eller HEIC.",
   "errHeic": "Den här webbläsaren kan inte öppna HEIC-foton. Ta en skärmbild av fotot eller konvertera det till JPEG på din enhet.",
