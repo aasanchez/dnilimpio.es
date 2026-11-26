@@ -27,8 +27,12 @@ const manifest = parseManifest('__DNI_PRECACHE_MANIFEST__')
 const CACHE = cacheName(manifest.version)
 const INDEX = new URL('index.html', sw.location.href).href
 const urlOf = (path: string): string => new URL(path, sw.location.href).href
-const ON_DEMAND = new Map(manifest.onDemand.map((f) => [urlOf(f.path), f.integrity]))
-const FILES = new Map(manifest.files.map((f) => [urlOf(f.path), f.integrity]))
+/** A file of this build: its absolute URL, taken from the manifest, and its hash. */
+interface BuildFile { readonly url: string; readonly integrity: string }
+// Keyed by URL. Requests are looked up here, and only the entry's own URL (from the manifest, never
+// the request) is cached or downloaded.
+const ON_DEMAND = new Map(manifest.onDemand.map((f): [string, BuildFile] => [urlOf(f.path), { url: urlOf(f.path), integrity: f.integrity }]))
+const FILES = new Map(manifest.files.map((f): [string, BuildFile] => [urlOf(f.path), { url: urlOf(f.path), integrity: f.integrity }]))
 const KNOWN = { files: new Set(FILES.keys()), onDemand: new Set(ON_DEMAND.keys()), analytics: manifest.analytics }
 const WORKERS = new Set(WORKER_SCRIPTS.map(urlOf))
 
@@ -103,7 +107,7 @@ sw.addEventListener('install', (event) => {
         await cache.put(url, res)
       }
       // Keep optional files the user already downloaded, if this build ships the same bytes.
-      for (const [url, integrity] of ON_DEMAND) {
+      for (const { url, integrity } of ON_DEMAND.values()) {
         const old = await caches.match(url)
         if (old?.ok && await sriOf(await old.clone().arrayBuffer()) === integrity) await cache.put(url, old)
       }
@@ -131,10 +135,10 @@ sw.addEventListener('activate', (event) => {
 
 /** One on-demand file: from the cache if its bytes still match, else downloaded again with its integrity. */
 async function ensureOnDemand (url: string): Promise<Response> {
-  const integrity = ON_DEMAND.get(url)
-  if (integrity === undefined) throw new Error(`Not an on-demand file: ${url}`)
+  const file = ON_DEMAND.get(url)
+  if (file === undefined) throw new Error('Not an on-demand file')
   const cache = await caches.open(CACHE)
-  return await verifiedHit(cache, url, integrity) ?? await download(cache, url, integrity)
+  return await verifiedHit(cache, file.url, file.integrity) ?? await download(cache, file.url, file.integrity)
 }
 
 // The page asks for optional files before using them ({ type: 'prepare', paths }), so a missing
@@ -162,8 +166,8 @@ sw.addEventListener('message', (event) => {
       const cache = await caches.open(CACHE)
       let cached = true
       for (const url of urls) {
-        const integrity = ON_DEMAND.get(url)
-        if (integrity === undefined || await verifiedHit(cache, url, integrity) === undefined) { cached = false; break }
+        const file = ON_DEMAND.get(url)
+        if (file === undefined || await verifiedHit(cache, file.url, file.integrity) === undefined) { cached = false; break }
       }
       port.postMessage({ ok: true, cached })
       return
@@ -192,12 +196,12 @@ sw.addEventListener('fetch', (event) => {
       case 'index':
       case 'file': {
         const url = to.kind === 'index' ? INDEX : to.url
-        const integrity = FILES.get(url)
-        if (integrity === undefined) return Response.error()
+        const file = FILES.get(url)
+        if (file === undefined) return Response.error()
         // A missing or rewritten entry (install saved every file): the same fixed URL again, checked
         // against its hash. Offline, that fails, and the request gets a network error.
         const cache = await caches.open(CACHE)
-        const res = await verifiedHit(cache, url, integrity) ?? await download(cache, url, integrity)
+        const res = await verifiedHit(cache, file.url, file.integrity) ?? await download(cache, file.url, file.integrity)
         return to.kind === 'index' ? withPageHeaders(res) : res
       }
     }
