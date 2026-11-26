@@ -263,18 +263,24 @@ span.chip { cursor: default; color: var(--muted); }
 .mini-card > span:nth-child(7) { left: 73%; top: 72%; width: 20%; height: 10%; background: #1f1a14; }
 .home-demo { padding: 0 1rem 1rem; }
 
-/* No-cookies notice: a cookie-banner card that sits on the start screen's action bar. */
+/* No-cookies notice: a cookie-banner card that sits on the start screen's action bar. It takes 80 %
+   of the screen width on every screen, centred, so on wide screens it reaches past the app column. */
 .privacy-notice {
   position: relative; display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 0.2rem 0.75rem;
-  margin: -2.5rem 6px 0.4rem 0; padding: 0.75rem 0.9rem 0.85rem; border: 2px solid var(--ink); border-radius: 8px;
+  width: 80vw; align-self: center; margin: -2.5rem 0 0.4rem; padding: 0.75rem 0.9rem 0.85rem; border: 2px solid var(--ink); border-radius: 8px;
   background: var(--surface); box-shadow: 6px 6px 0 var(--ink);
 }
 .privacy-notice > * { grid-column: 1; }
 .privacy-notice .kicker { font-size: 1.2rem; }
 .privacy-notice h2 { font-size: 1.125rem; letter-spacing: -0.3px; }
-.privacy-notice p:not(.kicker) { font-size: 0.875rem; color: var(--muted); }
+.privacy-notice p:not(.kicker) { max-width: 72ch; font-size: 0.875rem; color: var(--muted); }
 .privacy-notice > .button { grid-column: 2; grid-row: 2 / span 3; align-self: end; }
 .privacy-notice .link-btn { justify-self: start; margin-top: 0.15rem; }
+/* Narrow screens: the button goes under the text instead of beside it. */
+@media (max-width: 30rem) {
+  .privacy-notice { grid-template-columns: 1fr; }
+  .privacy-notice > .button { grid-column: 1; grid-row: auto; justify-self: stretch; margin-top: 0.35rem; }
+}
 
 /* Link-style button: opens the AI audit prompt. */
 .link-btn {
