@@ -42,7 +42,9 @@
     <li><span class="chip">{t(lang, 'chipNoAccount')}</span></li>
   </ul>
 
-  <footer class="area-foot p-4 text-center font-mono text-xs lg:mt-8 lg:border-t lg:border-hair lg:pt-6">
+  <!-- On wide screens the notice is fixed at the bottom of the window: while it shows, the footer
+       keeps room below it so its links can be scrolled above the notice. -->
+  <footer class={['area-foot p-4 text-center font-mono text-xs lg:mt-8 lg:border-t lg:border-hair lg:pt-6', notice && 'lg:pb-80']}>
     <InstallApp {lang} />
     <!-- New tab: leaving this page clears the photos (pagehide in App.svelte). -->
     <a class="source-link inline-flex min-h-6 items-center gap-[0.4em] text-muted" id="source-link" href={__REPO_URL__} target="_blank" rel="noopener noreferrer"><GitHubMark />{t(lang, 'sourceCode')}</a>

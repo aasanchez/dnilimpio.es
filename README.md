@@ -1,7 +1,8 @@
 # DNI Tapado.es
 
 Hide the sensitive data on a photo of your Spanish identity document (DNI or TIE) before you share a
-copy. Everything runs in your browser, on your device. Your photos are never uploaded.
+copy. Document processing runs in your browser, on your device. The app does not upload your
+document.
 
 **Use it:** <https://dnitapado.es>
 
@@ -120,10 +121,14 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 1. **Start screen.** It explains what the tool does and has:
    - **What is on my card?**, the [card guide](#supported-documents).
    - The **no-cookies notice**, in the place where other sites put a cookie banner. It only informs:
-     there is nothing to accept. English text: *"No cookies, no profiles, no data to sell. Every
-     Eurocrat's dream: this banner only exists to tell you it isn't needed. Your photos never leave
-     your device."* **I believe you** closes it;
-     it comes back after 4 days at the earliest.
+     there is nothing to accept. English text: *"No cookies, no profiles, no data to sell. Your
+     document is processed on your device, and the app does not upload it. Cloudflare hosts the site
+     and counts visits with an isolated frame from another site, on this screen only. They see your
+     IP address, browser and load times, but not your photos. Every Eurocrat's dream: this banner
+     only exists to tell you it isn't needed."* A second paragraph says what the browser keeps:
+     *"Your browser keeps the app's files and AI models, for offline use, and the date you close
+     this notice. Your photos stay in memory only."* **I believe you** closes it; it comes back after 4 days at
+     the earliest.
    - In the footer: **Source code** (this repository, in a new tab), **Check it with your AI** (see
      [Audit it yourself](#audit-it-yourself)), the build version and deploy time, and the NagWara
      product band.
@@ -215,8 +220,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 
 ## Privacy and security
 
-**In short.** Your document never leaves your device. Detection, text recognition (OCR), redaction,
-the watermark and the PDF all run in your browser. The site sends no photo, file name or data read
+**In short.** Document processing runs on your device: detection, text recognition (OCR),
+redaction, the watermark and the PDF all run in your browser. The app does not upload your
+document. The site sends no photo, file name or data read
 from the card to any server. It uses no cookies, trackers, analytics or third-party scripts. It
 downloads only its own files; once they are on your device you can go offline. The PDF leaves the
 app only when you download or share it. An external security and privacy audit (25 November 2026)
@@ -246,12 +252,20 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **No storage of your data.** Photos, fields, watermark text and PDFs are kept in memory only. The
   code is not allowed to use browser storage, cookies or network APIs (`localStorage`,
   `sessionStorage`, `indexedDB`, `document.cookie`, `fetch`, `sendBeacon` and others, enforced by the
-  linter). The browser stores only the app itself (its HTML, scripts and styles), for offline use,
-  and one `localStorage` key, `dnilimpio.noticeDismissedAt`, with the date you last closed the
-  no-cookies notice, so it shows at most every 4 days
-  ([`src/ui/notice-memory.ts`](src/ui/notice-memory.ts), the only file allowed to use storage). If
-  the browser blocks storage, the notice simply shows on every visit. A test checks that cookies and
-  storage hold nothing else after a whole workflow.
+  linter). The site does store two things in your browser, and neither holds data from your
+  document:
+  - **The app's own files, in Cache Storage** (caches named `dnilimpio-…`), written by the service
+    worker for offline use: the HTML, scripts, styles, fonts and icons on the first visit, and the
+    AI files the first time you use them (the corner model in `assets/ml/`, about 2.6 MB, and the
+    OCR engine in `ocr/`, about 9 MB). They are the same bytes for every visitor, checked by hash.
+    The browser's ordinary HTTP cache can also keep copies of these files.
+  - **One `localStorage` key**, `dnilimpio.noticeDismissedAt`, with the date and time you last
+    closed the no-cookies notice, so it shows at most every 4 days
+    ([`src/ui/notice-memory.ts`](src/ui/notice-memory.ts), the only file allowed to use storage). If
+    the browser blocks storage, the notice simply shows on every visit.
+
+  The notice says both. To remove them, clear the site's data in the browser settings. A test
+  checks that cookies and storage hold nothing else after a whole workflow.
 - **Clear everything means everything.** **Clear everything** drops the photos and every choice, and
   stops the OCR worker, which keeps the last image it read. Leaving the page (another site, closing
   the tab, a reload) does the same, so the browser's back-forward cache keeps no document. Links that
@@ -330,8 +344,11 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   you pick through the system share sheet; what that app does with it is outside the tool. Where the
   browser cannot share files, they are plain `wa.me` and `mailto:` links with a fixed message and no
   file, and you attach the PDF yourself. No link carries data from your document.
-- **Memory is released, not wiped.** The tool drops its references and clears canvases, but cannot
-  force the browser to erase memory.
+- **Memory is released, not wiped.** The tool drops its references and clears canvases, but
+  JavaScript cannot force the browser or the operating system to erase memory securely.
+- **Cache Storage is not private storage.** The cached app files hold nothing from your document,
+  but anyone with access to your browser profile can see that the site was used, and that its AI
+  files were downloaded.
 - **A watermark discourages reuse but cannot prevent identity fraud.**
 - **Greyscale is not a security measure.**
 
@@ -532,7 +549,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
 | Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, manual box maths, every masked pixel opaque black |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages, images, no metadata, no text, deterministic output |
-| Platform | `precache`, `lockdown`, `build-info`, `i18n`, `guide`, `deps-report` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, version and relative time, translation keys, guide citations, dependency report |
+| Platform | `precache`, `lockdown`, `build-info`, `i18n`, `guide`, `deps-report` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, version and relative time, translation keys and no absolute privacy claims in es/en, guide citations, dependency report |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP):
 
@@ -551,7 +568,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, a real PDF decoded in the browser (hidden areas black, no metadata, no file name, no watermark text in the file), reset |
 | `share` | WhatsApp and email as share sheet or as plain links, and a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
-| `privacy-notice` | No accept step, 4-day memory, blocked storage, translations, audit prompt |
+| `privacy-notice` | Exact privacy wording (processing on the device, hosting, visit-count frame, what the browser keeps), no accept step, 4-day memory, blocked storage, translations, audit prompt |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, build SHA and relative deploy time (also offline) |
 

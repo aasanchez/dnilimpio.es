@@ -102,8 +102,8 @@ Pull requests are merged with **Squash and merge**: the whole pull request becom
 
 ## Rules every change must respect
 
-DNI Tapado.es promises users that their photos never leave their device. Every change must keep that
-promise. CI tests these rules, and a review rejects changes that break them.
+DNI Tapado.es promises users that document processing runs on their device and that the app does
+not upload their document. Every change must keep that promise. CI tests these rules, and a review rejects changes that break them.
 
 **Privacy**
 
@@ -112,7 +112,10 @@ promise. CI tests these rules, and a review rejects changes that break them.
   scripts or images from other servers.
 - No new persistent storage: no cookies, no `localStorage` keys, no IndexedDB. The only stored value
   is the date the privacy notice was closed (`src/ui/notice-memory.ts`).
-- Photos stay in memory and never leave the page.
+- Photos stay in memory and are never sent anywhere by the app.
+- Public wording (the notice, the README, the audit prompt) states only what is exactly true. The
+  browser does keep the app's files and AI models in Cache Storage and the notice's closing date;
+  say so instead of writing "nothing is stored".
 - Every feature works online and offline. If a feature needs a model that is not available (for
   example offline before first use), disable it and fall back to the manual way. Never show a
   random error.

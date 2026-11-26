@@ -9,8 +9,11 @@ change the code safely. Do not copy README content here; link to it.
 
 **DNI Tapado.es** (short mark **DT.es**) hides sensitive data on a photo of a Spanish identity
 document (DNI or TIE) and exports a redacted PDF. Everything runs in the browser, on the device.
-The promise to users is: **your photos never leave your device, no cookies, nothing stored.**
-Every rule below protects that promise.
+The promise to users is: **document processing runs on your device, the app does not upload your
+document, no cookies, and nothing from the document is stored.** Every rule below protects that
+promise. Public wording states only what is exactly true: the browser does keep the app's files and
+AI models (Cache Storage) and the notice's closing date, and the host sees each request. Say so;
+never write "nothing stored" or "never leaves" without that context.
 
 - Live site: <https://dnitapado.es> (GitHub Pages, custom domain). The old address
   <https://aasanchez.github.io/dnilimpio.es/> still exists; keep both working (see rule 6).
@@ -70,7 +73,7 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
    APIs outside the service worker; do not disable those rules. No third-party script may run in the
    page that holds the photos (ADR 0023): `connect-src` is `'none'` and `tests/e2e/third-party.spec.ts`
    fails otherwise. Never add Google Analytics, GTM or any cookie-based tool.
-2. **Nothing persists.** No cookies, no `localStorage`/`sessionStorage`/IndexedDB, except the
+2. **Nothing of the user's persists.** No cookies, no `localStorage`/`sessionStorage`/IndexedDB, except the
    notice's closing date in `src/ui/notice-memory.ts`. Photos are cleared on `pagehide`.
 3. **Strict CSP, single source.** The policy lives in `scripts/csp.ts`; the e2e test asserts the
    built page carries exactly that value. No inline scripts or styles, no `style` attributes with
