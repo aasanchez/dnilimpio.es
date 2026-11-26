@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0024. Visit counts from an isolated, cross-origin frame
 
-- Status: accepted
+- Status: superseded by [ADR 0027](0027-security-headers-from-the-host.md): the frame is removed, the host counts requests
 - Date: 2026-11-26
 - Decided by: Alexis
 

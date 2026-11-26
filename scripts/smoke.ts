@@ -4,6 +4,7 @@
 //
 //   node scripts/smoke.ts <site URL> <expected commit SHA> [<dist dir>]
 //
+// On every host it fails if any response sets a cookie.
 // With SMOKE_HOST_HEADERS=1 (the Cloudflare host, ADR 0027) it also checks that the page, the service
 // worker and the OCR worker are served with exactly the HTTP headers of scripts/headers.ts.
 //
@@ -23,7 +24,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { cspWithScriptHashes } from './csp.ts'
-import { HEADERS_FILE, headersFor, hostHeaderRules } from './headers.ts'
+import { HEADERS_FILE, cookiesSetBy, headersFor, hostHeaderRules } from './headers.ts'
 import { SW_FILE, WORKER_SCRIPTS, parseManifest } from '../src/offline/precache.ts'
 
 const [siteArg = '', expectedSha = '', distDir] = process.argv.slice(2)
@@ -42,6 +43,9 @@ const checkHostHeaders = process.env['SMOKE_HOST_HEADERS'] === '1'
 async function get (url: URL): Promise<{ text: string, bytes: Buffer, headers: Headers }> {
   const res = await fetch(url, { headers: { 'cache-control': 'no-cache' } })
   if (!res.ok) throw new Error(`${url.href}: HTTP ${String(res.status)}`)
+  // The no-cookies promise covers the host too: no response may set one (ADR 0027).
+  const cookies = cookiesSetBy(res.headers)
+  if (cookies.length > 0) throw new Error(`${url.href}: the host sets a cookie (${cookies.join(', ')}). Turn off the host feature that adds it`)
   const bytes = Buffer.from(await res.arrayBuffer())
   return { text: bytes.toString('utf8'), bytes, headers: res.headers }
 }

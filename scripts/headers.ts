@@ -113,6 +113,14 @@ export function headersFor (rules: readonly HeaderRule[], path: string): Record<
   return out
 }
 
+/**
+ * The names of the cookies a response sets. The site promises no cookies, and a host feature (a bot
+ * check, a load balancer) could add one without any change in this repository.
+ */
+export function cookiesSetBy (headers: Headers): string[] {
+  return headers.getSetCookie().map((c) => c.split('=')[0]?.trim() ?? '')
+}
+
 if (import.meta.main) {
   const dist = process.argv[2]
   if (dist === undefined) {

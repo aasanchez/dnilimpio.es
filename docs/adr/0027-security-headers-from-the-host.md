@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-# 0027. Security headers from the host: dnitapado.es on Cloudflare Workers
+# 0027. Security headers from the host: dnitapado.es on Cloudflare Workers, with no analytics code
 
 - Status: accepted
 - Date: 2026-11-26
@@ -19,9 +19,13 @@ plus a few headers that the service worker adds once it controls the page. This 
 - A Web Worker takes its CSP from its own script's response. Before the service worker controls the
   page, the OCR worker ran with no CSP at all.
 
-The domain's DNS is already on Cloudflare (records in "DNS only" mode). Visits are counted by
-Cloudflare Web Analytics in a sandboxed frame on another site
-([ADR 0024](0024-visit-counter-in-isolated-frame.md)).
+The domain's DNS is already on Cloudflare (records in "DNS only" mode).
+
+Visits were counted by Cloudflare Web Analytics in a sandboxed frame on another site
+([ADR 0024](0024-visit-counter-in-isolated-frame.md)). That frame needed a second repository, a
+second host and a `frame-src` exception in the CSP. The app passes it nothing, so it could report
+only page loads, with a country and a device type. A host that serves the files can count requests
+itself, with no code in the page.
 
 ## Decision
 
@@ -54,13 +58,28 @@ Serve <https://dnitapado.es> from **Cloudflare Workers static assets**, with no 
   (`addPageHeaders()`), instead of replacing it.
 - `vite preview` sends the same headers, so every e2e test runs under them.
 
+**No analytics code.** The visit counter frame of ADR 0024 is removed, with its module, its
+component, its `frame-src` exception and its tests. This supersedes ADR 0024.
+
+- The site contains no script, frame, pixel or cookie that counts visits. Counts come from the
+  host's own statistics of the requests it serves: requests, unique visitors by IP address and
+  countries.
+- The CSP has no `frame-src`, so `default-src 'none'` applies: the page can open no frame at all.
+- The no-cookies notice no longer mentions visit counts. The README says that the host counts
+  requests.
+- The counter page's repository (`aasanchez/dnitapado-stats`) and the Web Analytics site in
+  Cloudflare are no longer used. The owner can delete both.
+- `tests/e2e/third-party.spec.ts` fails if the page opens a frame, if a script from another site
+  runs or if anything leaves for another site. The post-deploy check fails if the live site sets a
+  cookie.
+
 **HSTS preload** is not requested: leaving the preload list takes months.
 
-**COEP is not set.** `require-corp` would block the visit counter's frame
-([ADR 0024](0024-visit-counter-in-isolated-frame.md)) unless that page, on GitHub Pages, sent COEP and
-CORP too, and GitHub Pages cannot send headers. `credentialless` is not available in Safari. Cross-origin isolation would only
-enable `SharedArrayBuffer`, for multithreaded OCR, which the app does not need today. A later ADR can
-add it, with a test.
+**COEP is not set.** Assessed and left out: with the frame gone the page loads nothing from another
+site, so `require-corp` would protect nothing more. Cross-origin isolation would only enable
+`SharedArrayBuffer` and more precise timers. The app needs neither today; multithreaded OCR would be
+the only reason. COEP would also have to be sent with the page and with both worker scripts, by the
+host and by the service worker alike. A later ADR can add it, with a test.
 
 ## Alternatives
 
@@ -80,8 +99,13 @@ add it, with a test.
   that the host changes.
 - Cloudflare features that rewrite HTML (Rocket Loader, Email Obfuscation, automatic Web Analytics
   injection) must stay off for the zone. The smoke test fails if any of them changes a file.
-- Cloudflare can count visits on the server side, so the counter frame could be removed later
-  without losing visit counts.
+- Visit counts are coarser than a script's. They include bots, and they undercount returning
+  visitors, whose files come from the service worker's copy. Page views, paths and referrers need a
+  paid Cloudflare plan. This is accepted for now: the site has no traffic to analyse yet.
+- Cloudflare features that set a cookie (Bot Fight Mode and other bot or challenge features) must
+  stay off for the zone, or the site would break its no-cookies promise. The post-deploy check
+  fails on any `Set-Cookie` header.
+- Any future counter that runs in the browser needs a new ADR and the owner's approval.
 - A wrong header can break the app for everyone. The e2e suite runs under the same headers, and
   `pnpm test:e2e` was also run against `wrangler dev` (Cloudflare's local runtime).
 - The repository now has a second lockfile, `deploy/pnpm-lock.yaml`. The weekly dependency check

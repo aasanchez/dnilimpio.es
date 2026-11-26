@@ -73,9 +73,9 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
    remote API. ESLint bans `fetch`, `XMLHttpRequest`, `WebSocket`, `RTCPeerConnection` and storage
    APIs outside the service worker; do not disable those rules. No third-party script may run in the
    page that holds the photos (ADR 0023): `connect-src` is `'none'` and `tests/e2e/third-party.spec.ts`
-   fails otherwise. Visit counts come only from the sandboxed counter frame on another site
-   (`src/analytics/stats-frame.ts`, ADR 0024): pass it nothing and never add `postMessage`. Never add
-   Google Analytics, GTM or any cookie-based tool.
+   fails otherwise. The site has no analytics code: no script, frame, pixel or cookie. Visit counts
+   come only from the host's own request statistics (ADR 0027). Never add Google Analytics, GTM, a
+   counter frame or any cookie-based tool.
 2. **Nothing of the user's persists.** No cookies, no `localStorage`/`sessionStorage`/IndexedDB, except the
    notice's closing date in `src/ui/notice-memory.ts`. Photos are cleared on `pagehide`.
 3. **Strict CSP, single source.** The policy lives in `scripts/csp.ts`; the e2e test asserts the
