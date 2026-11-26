@@ -2,6 +2,8 @@
 // Single source of truth for the Content-Security-Policy (spec §5.1).
 // The build injects it as a <meta> tag; the e2e test asserts the built page carries exactly this value.
 
+import { STATS_URL } from '../src/analytics/stats-frame.ts'
+
 export const CSP_DIRECTIVES: readonly string[] = [
   "default-src 'none'",
   // 'wasm-unsafe-eval' lets the page compile WebAssembly (the corner model's runtime, ADR 0007).
@@ -15,6 +17,9 @@ export const CSP_DIRECTIVES: readonly string[] = [
   "font-src 'self'",
   "manifest-src 'self'",
   "worker-src 'self'",
+  // One frame only: the visit counter page on another site, by its exact path (ADR 0024). It runs
+  // sandboxed (allow-scripts only), so it cannot reach this page.
+  `frame-src ${STATS_URL}`,
   // The page can send nothing, to anyone (ADR 0023). No 'self' either (ADR 0022): code in the page
   // cannot send a request to the site's own origin, even before the service worker controls the page. The OCR worker reads its files under its own CSP
   // (workerCsp() in src/offline/precache.ts), not this one.
