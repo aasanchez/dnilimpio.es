@@ -28,7 +28,8 @@ each element should say briefly how bad actors can misuse it.
   - `src/guide/locales/<lang>.json`: the text, which says only what the cited passages say.
 - **No source, no claim.** A part without citations shows "No official source found" instead of
   text. The unit test fails if an entry has no citation for what it is, unless it is listed in
-  `UNSOURCED_WHAT` (today: the NIE, because Título XIII of Real Decreto 1155/2024 could not be read),
+  `UNSOURCED_WHAT` (empty since 2026-11-26, when the NIE got a source: the Interior ministry note
+  published by La Moncloa, because Título XIII of Real Decreto 1155/2024 could not be read),
   and if any language fills in text that Spanish leaves empty.
 - Sources used: Real Decreto 255/2025 (DNI; RD 1553/2005 for cards issued before 2 April 2025),
   Regulation (EU) 2025/1208, Regulation (EC) 1030/2002 (consolidated), ICAO Doc 9303 Parts 3 and 5
@@ -54,5 +55,5 @@ each element should say briefly how bad actors can misuse it.
 - Adding a document or an element means adding citations first; the tests enforce it.
 - Sources change (the DNI decree was replaced in 2025, the EU regulation in 2025). Each source shows
   the date it was read, and repealed ones are marked as such.
-- Gaps are visible to users: today the NIE definition and the misuse of several elements say that no
-  official source was found.
+- Gaps are visible to users: today the misuse of several elements says that no official source was
+  found.
