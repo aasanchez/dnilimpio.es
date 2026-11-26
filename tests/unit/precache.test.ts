@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { WORKER_SCRIPTS, cacheName, isOnDemand, isPrecached, parseManifest, route, workerCsp } from '../../src/offline/precache.ts'
+import { createHash } from 'node:crypto'
+import { WORKER_SCRIPTS, cacheName, isOnDemand, isPrecached, parseManifest, route, sriOf, workerCsp } from '../../src/offline/precache.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
 const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }], onDemand: [{ path: 'ocr/ppocrv6-tiny-rec.onnx', integrity: HASH }] }
@@ -112,5 +113,19 @@ describe('workerCsp', () => {
   it('applies to the OCR worker script, an on-demand file', () => {
     expect(WORKER_SCRIPTS).toEqual(['ocr/worker.min.js'])
     expect(WORKER_SCRIPTS.every(isOnDemand)).toBe(true)
+  })
+})
+
+describe('sriOf', () => {
+  const bytes = (text: string): ArrayBuffer => new TextEncoder().encode(text).buffer
+  const sri = (text: string): string => `sha384-${createHash('sha384').update(text).digest('base64')}`
+
+  it('gives the SRI string the manifest records (SHA-384, base64)', async () => {
+    expect(await sriOf(bytes('<!doctype html>'))).toBe(sri('<!doctype html>'))
+    expect(await sriOf(bytes(''))).toBe(sri(''))
+  })
+
+  it('changes when one byte of a cached file is rewritten', async () => {
+    expect(await sriOf(bytes('self.onmessage = run'))).not.toBe(await sriOf(bytes('self.onmessage = rum')))
   })
 })

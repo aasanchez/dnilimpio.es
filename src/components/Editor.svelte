@@ -19,6 +19,7 @@
   import SmartFind from './SmartFind.svelte'
   import FitZones from './FitZones.svelte'
   import { fitSide } from '../engine/snap.ts'
+  import { shrink } from '../engine/wipe.ts'
 
   let { lang, doc, align, edit, dniFound, phase = $bindable(), onDniVersion, onAdjust, onReset, onPhase, onGuide }: {
     lang: Lang
@@ -400,11 +401,12 @@
   })
 
   // Free the rasters when the editor goes away (Reset, or adjusting corners).
-  $effect(() => () => {
-    for (const s of SIDES) {
-      secure[s].width = 0
-      secure[s].height = 0
-    }
+  $effect(() => () => { shrink(secure.front, secure.back) })
+
+  // The on-screen copy too: when it leaves the screen (review, Reset, adjusting corners).
+  $effect(() => {
+    const d = display
+    return () => { shrink(d) }
   })
 </script>
 

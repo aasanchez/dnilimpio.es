@@ -55,11 +55,17 @@ function drop (c: HTMLCanvasElement): void {
 function findCard (bitmap: ImageBitmap): Quad | null {
   const s = Math.min(1, FIND_PX / Math.max(bitmap.width, bitmap.height))
   const { c, ctx } = canvas(Math.max(1, Math.round(bitmap.width * s)), Math.max(1, Math.round(bitmap.height * s)))
-  ctx.drawImage(bitmap, 0, 0, c.width, c.height)
-  const img = ctx.getImageData(0, 0, c.width, c.height)
-  drop(c)
-  const found = detectCard(img, { aspect: ID1_ASPECT })
-  img.data.fill(0)
+  let img: ImageData | undefined
+  let found
+  try {
+    ctx.drawImage(bitmap, 0, 0, c.width, c.height)
+    img = ctx.getImageData(0, 0, c.width, c.height)
+    found = detectCard(img, { aspect: ID1_ASPECT })
+  } finally {
+    // Also when it throws: the copy of the photo is cleared and the canvas freed.
+    drop(c)
+    img?.data.fill(0)
+  }
   if (!found) return null
   const k = bitmap.width / img.width
   // A sideways card is found short edge first: relabel it so it straightens to landscape.
@@ -151,10 +157,14 @@ async function textOf (bitmap: ImageBitmap, recognise: Recognise): Promise<DocGu
   }
 }
 
-const cache = new WeakMap<ImageBitmap, Promise<Mrz | null>>()
+const cache = new WeakMap<ImageBitmap, Promise<DocGuess | null>>()
 const textCache = new WeakMap<ImageBitmap, Promise<DocGuess | null>>()
 
-/** Runs `read` once per photo, keeping the promise (never the text) until the photo is dropped. */
+/**
+ * Runs `read` once per photo, keeping the promise until the photo is dropped. The promise holds only
+ * the guess (document kind and layout), never the text read: names, numbers and dates are dropped
+ * as soon as they are classified.
+ */
 function once<T> (map: WeakMap<ImageBitmap, Promise<T>>, bitmap: ImageBitmap, read: () => Promise<T>): Promise<T> {
   let pending = map.get(bitmap)
   if (!pending) {
@@ -182,9 +192,12 @@ export async function detectDocument (photos: { readonly front: ImageBitmap | nu
   let fromMrz: DocGuess | null = null
   for (const bitmap of [photos.back, photos.front]) {
     if (!bitmap) continue
-    const m = await once(cache, bitmap, async () => await mrzOf(bitmap, readMrz))
-    if (m) {
-      fromMrz = classify(m, today())
+    const g = await once(cache, bitmap, async () => {
+      const m = await mrzOf(bitmap, readMrz)
+      return m ? classify(m, today()) : null
+    })
+    if (g) {
+      fromMrz = g
       break
     }
   }

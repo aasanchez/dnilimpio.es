@@ -9,8 +9,11 @@ change the code safely. Do not copy README content here; link to it.
 
 **DNI Tapado.es** (short mark **DT.es**) hides sensitive data on a photo of a Spanish identity
 document (DNI or TIE) and exports a redacted PDF. Everything runs in the browser, on the device.
-The promise to users is: **your photos never leave your device, no cookies, nothing stored.**
-Every rule below protects that promise.
+The promise to users is: **document processing runs on your device, the app does not upload your
+document, no cookies, and nothing from the document is stored.** Every rule below protects that
+promise. Public wording states only what is exactly true: the browser does keep the app's files and
+AI models (Cache Storage) and the notice's closing date, and the host sees each request. Say so;
+never write "nothing stored" or "never leaves" without that context.
 
 - Live site: <https://dnitapado.es> (GitHub Pages, custom domain). The old address
   <https://aasanchez.github.io/dnilimpio.es/> still exists; keep both working (see rule 6).
@@ -72,13 +75,15 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
    fails otherwise. Visit counts come only from the sandboxed counter frame on another site
    (`src/analytics/stats-frame.ts`, ADR 0024): pass it nothing and never add `postMessage`. Never add
    Google Analytics, GTM or any cookie-based tool.
-2. **Nothing persists.** No cookies, no `localStorage`/`sessionStorage`/IndexedDB, except the
+2. **Nothing of the user's persists.** No cookies, no `localStorage`/`sessionStorage`/IndexedDB, except the
    notice's closing date in `src/ui/notice-memory.ts`. Photos are cleared on `pagehide`.
 3. **Strict CSP, single source.** The policy lives in `scripts/csp.ts`; the e2e test asserts the
    built page carries exactly that value. No inline scripts or styles, no `style` attributes with
    dynamic values, no `eval`/`new Function`, no `innerHTML` or `{@html}`. The only Trusted Types
-   policy is `default` (`src/security/trusted-types.ts`). Any CSP change needs an ADR and Alexis's
-   approval.
+   policy is `default` (`src/security/trusted-types.ts`). From the photo step on, a second, stricter
+   policy is added (`src/security/intake-lockdown.ts`, ADR 0025): after the start screen the page
+   cannot load any image except `blob:`/`data:`, any font, stylesheet or connection. Load such files
+   before intake. Any CSP change needs an ADR and Alexis's approval.
 4. **Self-hosted assets with integrity.** Every script, style, font, model and WebAssembly file is
    bundled and served from this site, checked by SHA-384 (`scripts/vite-plugins.ts`). No CDNs, no
    Google Fonts, no runtime downloads from third parties, no third-party scripts.
@@ -138,8 +143,8 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 | `src/zones/` | Field positions per document; `documents.ts` lists the documents |
 | `src/engine/` | Fields, masks, secure raster, watermark, JPEG filter, PDF export, undo history |
 | `src/guide/` | Card guide: sources, cited entries, text per language |
-| `src/offline/`, `src/sw.ts` | Service worker, precache manifest and `route()`, update of idle tabs |
-| `src/security/` | Trusted Types policy, WebRTC and framing lockdown, audit prompt |
+| `src/offline/`, `src/sw.ts` | Service worker, precache manifest and `route()`, update of idle tabs, worker check |
+| `src/security/` | Trusted Types policy, WebRTC and framing lockdown, photo-step CSP (intake lockdown), audit prompt |
 | `src/i18n/` | Dictionaries, language choice |
 | `scripts/` | CSP, Vite plugins (SRI, import map, SW manifest), smoke test, size, icons, fixtures |
 | `tests/unit/`, `tests/e2e/` | Vitest and Playwright; the README lists what each file checks |

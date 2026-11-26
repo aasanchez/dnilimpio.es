@@ -316,9 +316,17 @@ export class Coach {
     this.peaks = []
   }
 
+  /** Clears the frame kept for the motion check. Call when the camera closes. */
+  dispose (): void {
+    this.prev?.data.fill(0)
+    this.prev = null
+  }
+
   feed (g: Gray, now: number): Advice {
     const L = this.limits
     const metrics = measure(g, this.prev, L)
+    // Only the latest frame is kept (for the next motion check); the one before is cleared.
+    if (this.prev !== g) this.prev?.data.fill(0)
     this.prev = g
     const placement = tipFor(metrics, true, L)
     const framed = placement !== 'frame' && placement !== 'closer'

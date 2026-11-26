@@ -1,7 +1,8 @@
 # DNI Tapado.es
 
 Hide the sensitive data on a photo of your Spanish identity document (DNI or TIE) before you share a
-copy. Everything runs in your browser, on your device. Your photos are never uploaded.
+copy. Document processing runs in your browser, on your device. The app does not upload your
+document.
 
 **Use it:** <https://dnitapado.es>
 
@@ -120,10 +121,12 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 1. **Start screen.** It explains what the tool does and has:
    - **What is on my card?**, the [card guide](#supported-documents).
    - The **no-cookies notice**, in the place where other sites put a cookie banner. It only informs:
-     there is nothing to accept. English text: *"No cookies, no profiles, no data to sell. Every
-     Eurocrat's dream: this banner only exists to tell you it isn't needed. Your photos never leave
-     your device."* **I believe you** closes it;
-     it comes back after 4 days at the earliest.
+     there is nothing to accept. English text: *"No cookies, no profiles, no data to sell. Your
+     document is processed on your device, and the app does not upload it. Visits are counted in an
+     isolated frame that cannot see your photos. Every Eurocrat's dream: this
+     banner only exists to tell you it isn't needed."* It stays short on purpose; this README lists
+     exactly what is sent and stored ([Privacy and security](#privacy-and-security)). **I believe you** closes it; it comes back after 4 days at
+     the earliest.
    - In the footer: **Source code** (this repository, in a new tab), **Check it with your AI** (see
      [Audit it yourself](#audit-it-yourself)), the build version and deploy time, and the NagWara
      product band.
@@ -215,11 +218,14 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 
 ## Privacy and security
 
-**In short.** Your document never leaves your device. Detection, text recognition (OCR), redaction,
-the watermark and the PDF all run in your browser. The site sends no photo, file name or data read
-from the card to any server. It uses no cookies, trackers or profiles, and no third-party script
-runs in the page that holds your photos. The public site counts visits with a sandboxed frame from
-another site (see [Visit counts](#visit-counts)). Apart from that, the page downloads only its own files; once they are on your device you can go offline. The PDF leaves the
+**In short.** Document processing runs on your device: detection, text recognition (OCR),
+redaction, the watermark and the PDF all run in your browser. The app does not upload your
+document. The site sends no photo, file name or data read from the card to any server. It uses no
+cookies, trackers or profiles, and no third-party script runs in the page that holds your photos.
+The public site counts visits with a sandboxed frame from another site (see
+[Visit counts](#visit-counts)). Apart from that, the page downloads only its own files; once they
+are on your device you can go offline. Your browser keeps those files and one date (see **No
+storage of your data** below). The PDF leaves the
 app only when you download or share it. An external security and privacy audit (25 November 2026)
 reviewed this; its findings are fixed and covered by tests (see [Security reviews](#security-reviews)).
 
@@ -241,6 +247,13 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). There is no exception. An end-to-end test runs a whole document workflow with
   fictional card values and checks that no request is sent and none carries those values
   ([`tests/e2e/privacy.spec.ts`](tests/e2e/privacy.spec.ts)).
+- **Tighter rules while photos are in the page.** Before the photo step opens, the app loads every
+  font it needs and adds a second, stricter CSP. From then on the page can load only this build's
+  scripts and workers, each by its exact address, and images only from memory (`blob:`, `data:`).
+  No font, stylesheet, manifest or frame (the visit counter frame shows on the start screen only), and no connection at all.
+  The policy stays until the page is reloaded, and a reload drops the photos. The photo step says
+  when the service worker's filter is not active on this visit; the app then works the same
+  ([ADR 0025](docs/adr/0025-intake-lockdown.md)).
 - **On-device AI only.** The corner finder is a small model (DocCornerNet from `scanic-ml`) that runs
   in the page with WebAssembly. The photo goes to it in memory, scaled to 224 × 224 pixels, and
   nowhere else. The CSP allows WebAssembly (`'wasm-unsafe-eval'`) but still no `eval()`
@@ -248,16 +261,33 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **No storage of your data.** Photos, fields, watermark text and PDFs are kept in memory only. The
   code is not allowed to use browser storage, cookies or network APIs (`localStorage`,
   `sessionStorage`, `indexedDB`, `document.cookie`, `fetch`, `sendBeacon` and others, enforced by the
-  linter). The browser stores only the app itself (its HTML, scripts and styles), for offline use,
-  and one `localStorage` key, `dnilimpio.noticeDismissedAt`, with the date you last closed the
-  no-cookies notice, so it shows at most every 4 days
-  ([`src/ui/notice-memory.ts`](src/ui/notice-memory.ts), the only file allowed to use storage). If
-  the browser blocks storage, the notice simply shows on every visit. A test checks that cookies and
-  storage hold nothing else after a whole workflow.
-- **Clear everything means everything.** **Clear everything** drops the photos and every choice, and
-  stops the OCR worker, which keeps the last image it read. Leaving the page (another site, closing
-  the tab, a reload) does the same, so the browser's back-forward cache keeps no document. Links that
-  leave the app (source code, card guide sources, NagWara) open in a new tab for that reason.
+  linter). The site does store two things in your browser, and neither holds data from your
+  document:
+  - **The app's own files, in Cache Storage** (caches named `dnilimpio-…`), written by the service
+    worker for offline use: the HTML, scripts, styles, fonts and icons on the first visit, and the
+    AI files the first time you use them (the corner model in `assets/ml/`, about 2.6 MB, and the
+    OCR engine in `ocr/`, about 9 MB). They are the same bytes for every visitor, checked by hash.
+    The browser's ordinary HTTP cache can also keep copies of these files.
+  - **One `localStorage` key**, `dnilimpio.noticeDismissedAt`, with the date and time you last
+    closed the no-cookies notice, so it shows at most every 4 days
+    ([`src/ui/notice-memory.ts`](src/ui/notice-memory.ts), the only file allowed to use storage). If
+    the browser blocks storage, the notice simply shows on every visit.
+
+  To remove them, clear the site's data in the browser settings. A test
+  checks that cookies and storage hold nothing else after a whole workflow.
+- **Clear everything means everything.** **Clear everything** drops the photos and every choice,
+  stops the OCR worker, which keeps the last image it read, and revokes the PDF's download link if
+  it is still open. Leaving the page (another site, closing the tab, a reload) does the same, so the
+  browser's back-forward cache keeps no document. Links that leave the app (source code, card guide
+  sources, NagWara) open in a new tab for that reason.
+- **Memory is cleared as far as a page can.** Each screen shrinks its canvases to 0 × 0 pixels when
+  it closes. Temporary copies of the photo (scaled copies, grey copies for the upside-down check and
+  edge detection, the model's input, camera frames) are overwritten with zeros right after use, also
+  when a step fails. The PDF kept for sharing is dropped when you leave the review, and its download
+  link is revoked after 10 seconds or at once by **Clear everything**. Work still running for old
+  photos (straightening, corner finding, OCR, the PDF) checks that its screen is still open, so a
+  late result never brings a cleared document back ([`src/engine/wipe.ts`](src/engine/wipe.ts),
+  [`tests/e2e/cleanup.spec.ts`](tests/e2e/cleanup.spec.ts)).
 - **Text recognition (OCR) on the device.** When OCR is used, the image is read by a Web Worker in
   your browser. The OCR engine (PP-OCRv6 tiny on ONNX Runtime, about 9 MB) comes from this site, never from
   a third party, are downloaded only the first time OCR is used, and are checked against their hash
@@ -268,6 +298,8 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
+  Each file is checked again every time the worker serves it from the cache; a copy that was changed
+  is deleted and downloaded again, or refused offline ([ADR 0026](docs/adr/0026-recheck-cache-hits.md)).
   The corner model (about 2.6 MB) is not part of that first copy: it is stored the first time you use
   it online. Offline before that, classic edge detection places the corners, or you place them by
   hand.
@@ -326,7 +358,13 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   `script-src`, `style-src`, `font-src`), and the OCR worker runs without its own CSP. `connect-src`
   has no `'self'`, so page code cannot send a `fetch()`, a request body or custom headers there.
   GitHub Pages stores nothing it receives, but GitHub would see the address of an image or script
-  request. Only this build's verified code runs, and it never makes one.
+  request. Only this build's verified code runs, and it never makes one. Once photos are in the
+  page, the stricter policy closes images, styles and fonts too; a script import of one of the
+  build's own files with a query string is the one load CSP alone cannot stop, because CSP ignores
+  query strings ([ADR 0025](docs/adr/0025-intake-lockdown.md)).
+- **The service worker does not protect against code already in the page.** Code running with the
+  page's privileges could unregister the worker, delete its caches or navigate away. The worker
+  stops a missing or foreign worker setup from going unnoticed, not a compromised page.
 - **No browser rule can stop a page from navigating to a URL.** The protection there is that only
   this build's verified code runs (CSP, SRI, the locked dependency list) and that the code never
   navigates with your data (enforced by the linter).
@@ -334,8 +372,16 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   you pick through the system share sheet; what that app does with it is outside the tool. Where the
   browser cannot share files, they are plain `wa.me` and `mailto:` links with a fixed message and no
   file, and you attach the PDF yourself. No link carries data from your document.
-- **Memory is released, not wiped.** The tool drops its references and clears canvases, but cannot
-  force the browser to erase memory.
+- **Memory is released, not securely erased.** JavaScript cannot erase memory securely. Zeroing a
+  buffer overwrites that buffer only; the browser, the graphics driver and the operating system may
+  keep other copies (the decoded photo, GPU textures, the file you chose, swap or a crash report).
+  Shrinking a canvas lets the browser free its pixels sooner, but does not overwrite them. Text read
+  by OCR lives in JavaScript strings, which cannot be overwritten at all. These steps shorten how long
+  your data stays in memory; they do not guarantee it is gone. To be sure, close the browser after
+  use.
+- **Cache Storage is not private storage.** The cached app files hold nothing from your document,
+  but anyone with access to your browser profile can see that the site was used, and that its AI
+  files were downloaded.
 - **A watermark discourages reuse but cannot prevent identity fraud.**
 - **Greyscale is not a security measure.**
 
@@ -501,10 +547,12 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | Share via WhatsApp, email or the system share sheet | Done |
 | Card guide with official citations | Done |
 | Offline mode with a verified service worker; automatic update of idle tabs | Done |
+| Memory clean-up: canvases, temporary buffers, download links, late results after a reset | Done |
 | Installable app: manifest, maskable and Apple icons, install link and iOS steps | Done |
 | No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
 | No third-party script in the page with photos (ADR 0023) | Done |
 | Visit counts from a sandboxed frame on another site (ADR 0024) | Done |
+| Stricter CSP while photos are in the page; service worker check on the photo step | Done |
 | Custom domain `dnitapado.es`, HTTPS enforced | Done |
 | Languages: 31 in the specification | 13 today |
 
@@ -576,7 +624,8 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
 | Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, manual box maths, every masked pixel opaque black |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages, images, no metadata, no text, deterministic output |
-| Platform | `precache`, `lockdown`, `stats-frame`, `build-info`, `i18n`, `guide`, `deps-report`, `verify-release` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, counter frame hosts, sandbox and CSP, version and relative time, translation keys, guide citations, dependency report, pinned provenance identity |
+| Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
+| Platform | `precache`, `lockdown`, `intake-lockdown`, `stats-frame`, `build-info`, `i18n`, `guide`, `deps-report`, `verify-release` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, the photo step's policy and the service worker check, counter frame hosts, sandbox and CSP, version and relative time, translation keys and no absolute privacy claims in es/en, guide citations, dependency report, pinned provenance identity |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP):
 
@@ -584,7 +633,9 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 |---|---|
 | `privacy` | A whole workflow sends no request and stores nothing. Canaries from the card text (OCR), the photos' file names and the watermark never appear in any request's address, headers or body, from the first visit on, nor as text in the PDF |
 | `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused, photos dropped on `pagehide` |
-| `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers, a tampered file stops the install, corner model cached after first use |
+| `cleanup` | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
+| `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
+| `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
 | `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; page code that gathers the canary file names, OCR text and watermark cannot send them by beacon, fetch, image, style sheet, font, frame or form; the counter frame is cross-site, sandboxed, given nothing, gone before any photo, not shown offline, under GPC or DNT, or on other hosts |
 | `update` | An idle single tab switches to a new build; a tab with photos, or a second tab, holds it back |
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks |
@@ -595,7 +646,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, a real PDF decoded in the browser (hidden areas black, no metadata, no file name, no watermark text in the file), reset |
 | `share` | WhatsApp and email as share sheet or as plain links, and a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
-| `privacy-notice` | No accept step, 4-day memory, blocked storage, translations, audit prompt |
+| `privacy-notice` | Exact privacy wording (processing on the device, no upload, visit-count frame), no accept step, 4-day memory, blocked storage, translations, audit prompt |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, build SHA and relative deploy time (also offline) |
 
@@ -796,6 +847,8 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0022](docs/adr/0022-no-published-source-maps.md): no published source maps and no `'self'` in `connect-src`, so page code cannot send requests to its own origin (review finding PRIV-003).
 - [0023](docs/adr/0023-no-third-party-script-with-photos.md): no third-party script in the page that holds the photos; the Cloudflare beacon is removed and `connect-src` is `'none'`.
 - [0024](docs/adr/0024-visit-counter-in-isolated-frame.md): visit counts from a sandboxed frame on another site, on the start screen only.
+- [0025](docs/adr/0025-intake-lockdown.md): a second, stricter CSP from the photo step on: exact build scripts, images only from memory, no fonts, styles or connections; a service worker check with a calm note when it is missing.
+- [0026](docs/adr/0026-recheck-cache-hits.md): the service worker hashes every cache hit again before it answers; a rewritten entry is deleted and downloaded again, or refused offline.
 
 ## Contributing
 
