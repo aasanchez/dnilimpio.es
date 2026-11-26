@@ -14,7 +14,7 @@ SPDX-License-Identifier = "AGPL-3.0-or-later"
 # Files that cannot carry a comment header (JSON, binary fixtures).
 
 [[annotations]]
-path = ["src/i18n/locales/*.json", "src/guide/locales/*.json", "lighthouserc.json", "lighthouserc.live.json", "tests/fixtures/**", "docs/images/**", "package.json", "pnpm-lock.yaml"]
+path = ["src/i18n/locales/*.json", "src/guide/locales/*.json", "lighthouserc.json", "lighthouserc.live.json", "tests/fixtures/**", "docs/images/**", "public/manifest.webmanifest", "public/icons/**", "package.json", "pnpm-lock.yaml"]
 SPDX-FileCopyrightText = "dnitapado.es contributors"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
 

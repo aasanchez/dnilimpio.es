@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Fits the template field boxes to the text that OCR finds on the card (ADR 0019). Pure: template
+// Fits the template field boxes to the text that OCR finds on the card (ADR 0020). Pure: template
 // rectangles and word boxes in, new rectangles out, all in normalised card coordinates.
 //
 // The template positions come from one specimen; a real card can print a field a little elsewhere

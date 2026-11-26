@@ -1,4 +1,4 @@
-# 0017. PP-OCRv6 tiny replaces Tesseract; the card's printed text helps detect the document
+# 0019. PP-OCRv6 tiny replaces Tesseract; the card's printed text helps detect the document
 
 - Status: accepted
 - Date: 2026-11-26

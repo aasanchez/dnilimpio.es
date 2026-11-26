@@ -22,10 +22,11 @@ interface Budget {
 // that makes the bundle bigger, and say why.
 const BUDGETS: readonly Budget[] = [
   { name: 'Start page JavaScript', match: /^assets\/index-[\w-]+\.js$/, limitKb: 100, measure: 'gzip' },
-  { name: 'Start page CSS', match: /^assets\/index-[\w-]+\.css$/, limitKb: 6, measure: 'gzip' },
+  // CSS: 12 kB since Tailwind CSS (ADR 0017): its base reset and the utility classes, about 10.3 kB.
+  { name: 'Start page CSS', match: /^assets\/index-[\w-]+\.css$/, limitKb: 12, measure: 'gzip' },
   { name: 'PDF export chunk', match: /^assets\/export-[\w-]+\.js$/, limitKb: 275, measure: 'gzip' },
   { name: 'Corner model (on demand)', match: /^assets\/ml\/.+\.js$/, limitKb: 2850, measure: 'gzip' },
-  { name: 'OCR worker and data (on demand)', match: /^ocr\//, limitKb: 9600, measure: 'gzip' }, // PP-OCRv6 tiny and its runtime (ADR 0017)
+  { name: 'OCR worker and data (on demand)', match: /^ocr\//, limitKb: 9600, measure: 'gzip' }, // PP-OCRv6 tiny and its runtime (ADR 0019)
   { name: 'Whole dist/ folder', match: /^(?!.*\.map$)/, limitKb: 28000, measure: 'raw' },
 ]
 

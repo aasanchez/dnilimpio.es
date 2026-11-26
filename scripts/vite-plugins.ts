@@ -148,7 +148,7 @@ export function base64Import (): Plugin {
 }
 
 /**
- * OCR engine files, served from our own origin under ocr/ (never from a CDN; ADR 0017):
+ * OCR engine files, served from our own origin under ocr/ (never from a CDN; ADR 0019):
  * - worker.min.js: src/ocr/worker.ts bundled on its own (paddleocr.js and ONNX Runtime Web), so the
  *   worker loads nothing from outside ocr/;
  * - the ONNX Runtime WebAssembly build (SIMD, one thread) and its loader;

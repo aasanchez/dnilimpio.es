@@ -87,3 +87,16 @@ test('offers an audit prompt to copy into an AI coding agent, from the notice an
   await page.locator('#audit-footer-close').click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
+
+for (const [width, height] of [[390, 844], [820, 1180], [1440, 900]] as const) {
+  test(`takes 80 % of the screen width, centred, at ${String(width)} px`, async ({ page }) => {
+    await page.setViewportSize({ width, height })
+    await page.goto('/')
+    const box = await page.locator('#privacy-notice').boundingBox()
+    expect(box).not.toBeNull()
+    expect(Math.abs((box?.width ?? 0) - width * 0.8)).toBeLessThanOrEqual(1)
+    expect(Math.abs((box?.x ?? 0) - width * 0.1)).toBeLessThanOrEqual(1)
+    // No sideways scrolling.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+  })
+}

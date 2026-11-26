@@ -70,29 +70,29 @@
 
 {#snippet cites (list: readonly Cite[])}
   {#if list.length > 0}
-    <p class="guide-cites">
+    <p class="guide-cites mt-0.5 flex flex-wrap gap-x-2 font-mono text-xs text-muted">
       {#each list as c, i (i)}<bdi class="guide-cite" dir="ltr">[{num(c)}, {c.at}]</bdi>{/each}
     </p>
   {/if}
 {/snippet}
 
-<dialog class="audit guide" bind:this={dialog} aria-labelledby="{id}-title">
+<dialog class="guide dialog-win w-[min(44rem,calc(100%-2rem))] open:flex open:flex-col open:overflow-hidden" bind:this={dialog} aria-labelledby="{id}-title">
   <div class="winbar"><i></i><i></i><i></i><span class="title">card.guide</span></div>
-  <div class="guide-body" bind:this={body}>
+  <div class="flex min-h-0 flex-col gap-2.5 overflow-y-auto p-4 text-start font-sans text-base leading-normal *:shrink-0" bind:this={body}>
     {#if g}
       {@const tx = g}
       <p class="kicker">{tx('kicker')}</p>
       <h2 id="{id}-title">{tx('title')}</h2>
-      <p class="audit-lead">{tx('lead')}</p>
+      <p class="text-sm text-muted">{tx('lead')}</p>
 
-      <div class="tools guide-tabs" role="tablist" aria-label={tx('title')}>
+      <div class="tabs flex-wrap" role="tablist" aria-label={tx('title')}>
         {#each DOCUMENTS as d (d.model)}
           <button type="button" role="tab" id="{id}-tab-{d.model}" aria-selected={doc === d.model} onclick={() => { pick(d.model) }}>{t(lang, `doc_${d.model}` as Key)}</button>
         {/each}
       </div>
 
-      <section class="guide-general" aria-labelledby="{id}-general">
-        <h3 id="{id}-general">{tx('generalTitle')}</h3>
+      <section class="rounded-md border border-dashed border-dash bg-sunk p-3" aria-labelledby="{id}-general">
+        <h3 class="text-[1.05rem]" id="{id}-general">{tx('generalTitle')}</h3>
         <p>{tx('generalText')}</p>
         {@render cites(GENERAL_RISK)}
       </section>
@@ -100,30 +100,30 @@
       {#each PLACES as place (place)}
         {@const list = byPlace(place)}
         {#if list.length > 0}
-          <h3 class="guide-place">{tx(place === 'front' ? 'placeFront' : place === 'back' ? 'placeBack' : 'placeChip')}</h3>
-          <ul class="plain guide-list">
+          <h3 class="mt-3 text-[1.05rem]">{tx(place === 'front' ? 'placeFront' : place === 'back' ? 'placeBack' : 'placeChip')}</h3>
+          <ul class="overflow-hidden rounded-lg border border-line bg-surface [&>li+li]:border-t [&>li+li]:border-hair">
             {#each list as e (e.id)}
               {@const key = textOf(e)}
               {@const what = tx(`${key}_what`)}
               {@const state = appState(model, e.field)}
               <li>
-                <details id="{id}-{e.id}" class="guide-entry" open={focused === e.id}>
-                  <summary>{tx(`${key}_title`)}</summary>
+                <details id="{id}-{e.id}" class="px-3.5 open:pb-3 [&_h4]:mt-2.5 [&_h4]:mb-0.5 [&_h4]:font-mono [&_h4]:text-xs [&_h4]:tracking-[0.04em] [&_h4]:text-muted [&_h4]:uppercase" open={focused === e.id}>
+                  <summary class="flex min-h-12 cursor-pointer items-center font-semibold">{tx(`${key}_title`)}</summary>
                   <h4>{tx('what')}</h4>
                   {#if e.what.length > 0 && what !== ''}
                     <p>{what}</p>
                     {@render cites(e.what)}
                   {:else}
-                    <p class="guide-none">{tx('noSource')}</p>
+                    <p class="guide-none text-muted italic">{tx('noSource')}</p>
                   {/if}
                   <h4>{tx('risk')}</h4>
                   {#if e.risk.length > 0}
                     <p>{tx(`${key}_risk`)}</p>
                     {@render cites(e.risk)}
                   {:else}
-                    <p class="guide-none">{tx('noRisk')}</p>
+                    <p class="guide-none text-muted italic">{tx('noRisk')}</p>
                   {/if}
-                  <p class="guide-app">{fill(tx(state === 'mandatory' ? 'appMandatory' : state === 'hidden' ? 'appHidden' : state === 'visible' ? 'appVisible' : 'appNone'))}</p>
+                  <p class="mt-2 text-sm text-accent-text">{fill(tx(state === 'mandatory' ? 'appMandatory' : state === 'hidden' ? 'appHidden' : state === 'visible' ? 'appVisible' : 'appNone'))}</p>
                 </details>
               </li>
             {/each}
@@ -131,8 +131,8 @@
         {/if}
       {/each}
 
-      <h3 class="guide-place">{tx('sources')}</h3>
-      <ol class="guide-sources">
+      <h3 class="mt-3 text-[1.05rem]">{tx('sources')}</h3>
+      <ol class="guide-sources m-0 list-decimal ps-6 text-[0.8125rem] wrap-anywhere [&_a]:text-accent-text [&>li+li]:mt-1.5">
         {#each order as s (s)}
           {@const src = SOURCES[s]}
           <li id="{id}-src-{s}">
@@ -141,7 +141,7 @@
             {tx('checked').replace('{date}', src.checked)}.
             <!-- New tab: leaving this page clears the photos (pagehide in App.svelte). -->
             <a href={src.url} target="_blank" rel="noopener noreferrer" dir="ltr">{src.url}</a>
-            <span class="visually-hidden">({tx('newTab')})</span>
+            <span class="sr-only">({tx('newTab')})</span>
           </li>
         {/each}
       </ol>

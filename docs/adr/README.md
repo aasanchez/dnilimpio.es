@@ -14,7 +14,7 @@ project specification on purpose).
 | [0006](0006-document-types.md) | Several document types (DNI 4.0, DNI 3.0, TIE), chosen by the user | accepted; screen order changed by 0011 |
 | [0007](0007-corner-model.md) | Find the card's corners with a small on-device model (DocCornerNet + minimal ONNX Runtime); CSP adds `'wasm-unsafe-eval'` | accepted |
 | [0008](0008-capture-coach.md) | Capture coach: live tips and automatic shot from classical image metrics, no model | accepted |
-| [0009](0009-on-device-ocr.md) | On-device OCR with Tesseract.js, self-hosted, on demand; Trusted Types policy `default` | accepted; engine replaced by 0017 |
+| [0009](0009-on-device-ocr.md) | On-device OCR with Tesseract.js, self-hosted, on demand; Trusted Types policy `default` | accepted; engine replaced by 0019 |
 | [0010](0010-smart-field-finding.md) | Smart field finding: OCR text patterns and checks; results become ordinary undoable boxes | accepted |
 | [0011](0011-document-detection.md) | Document type detected from the MRZ after the photos; it only preselects the picker | accepted; screen order changed by 0012 |
 | [0012](0012-automatic-straightening.md) | Automatic straightening: find, turn (sideways, upside down) and straighten both photos; corner screen only on request | accepted |
@@ -22,5 +22,7 @@ project specification on purpose).
 | [0014](0014-card-guide.md) | Card guide: every element explained with official citations; no source, no claim | accepted |
 | [0015](0015-cookieless-analytics.md) | Cookieless visit counts with Cloudflare Web Analytics, public site only | accepted |
 | [0016](0016-source-maps-in-devtools.md) | Source maps readable in the developer tools: `connect-src 'self'`; the service worker serves only this build's maps | accepted |
-| [0017](0017-ppocr-and-text-detection.md) | PP-OCRv6 tiny replaces Tesseract; the front's printed text helps detect the document | accepted |
-| [0019](0019-fit-boxes-to-text.md) | Fit to the text: ticked field boxes grow to cover the words OCR finds; never shrink | accepted |
+| [0017](0017-tailwind-css.md) | Styles with Tailwind CSS v4 (build time only, palette as theme); two-column layout on wide screens | accepted |
+| [0018](0018-installable-app.md) | Installable app: relative manifest, maskable and Apple icons, install link only where the browser supports it | accepted |
+| [0019](0019-ppocr-and-text-detection.md) | PP-OCRv6 tiny replaces Tesseract; the front's printed text helps detect the document | accepted |
+| [0020](0020-fit-boxes-to-text.md) | Fit to the text: ticked field boxes grow to cover the words OCR finds; never shrink | accepted |

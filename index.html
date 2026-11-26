@@ -6,6 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>DNI Tapado.es</title>
+    <!-- Installable app (ADR 0018). Relative URLs: the same build works at the site root and under a subpath. -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="64x64" href="./icons/favicon-64.png" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="DT.es" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f5ed" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#16120e" />
     <link rel="stylesheet" href="/src/ui/styles.css" />
   </head>
   <body>

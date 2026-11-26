@@ -1,5 +1,7 @@
 {
   "sourceCode": "Source code",
+  "installApp": "Install the app",
+  "installIos": "On iPhone or iPad: tap Share (the square with an up arrow; on iOS 26 it is in the ··· menu), choose “Add to Home Screen”, then tap “Add”.",
   "nagwaraVisit": "Visit NagWara",
   "nagwaraProduct": "This is a NagWara product,",
   "nagwaraMachines": "Machines execute,",

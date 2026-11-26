@@ -1,5 +1,7 @@
 {
   "sourceCode": "الشيفرة المصدرية",
+  "installApp": "ثبّت التطبيق",
+  "installIos": "على iPhone أو iPad: اضغط زر المشاركة (المربع الذي فيه سهم إلى الأعلى؛ في iOS 26 تجده في القائمة ···)، واختر «إضافة إلى الشاشة الرئيسية»، ثم اضغط «إضافة».",
   "nagwaraVisit": "زيارة NagWara",
   "nagwaraProduct": "هذا منتج من NagWara،",
   "nagwaraMachines": "الآلات تنفّذ،",

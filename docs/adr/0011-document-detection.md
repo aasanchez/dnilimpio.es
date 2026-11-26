@@ -1,6 +1,6 @@
 # 0011. Document type detected from the MRZ, after the photos
 
-- Status: accepted; the front's printed text added by [0017](0017-ppocr-and-text-detection.md)
+- Status: accepted; the front's printed text added by [0019](0019-ppocr-and-text-detection.md)
 - Date: 2026-11-25
 - Changes: [0006](0006-document-types.md) (screen order)
 

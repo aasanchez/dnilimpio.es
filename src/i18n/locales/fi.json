@@ -1,5 +1,7 @@
 {
   "sourceCode": "Lähdekoodi",
+  "installApp": "Asenna sovellus",
+  "installIos": "iPhonessa tai iPadissa: napauta Jaa (neliö, jossa on ylöspäin osoittava nuoli; iOS 26:ssa se on ···-valikossa), valitse ”Lisää Koti-valikkoon” ja napauta ”Lisää”.",
   "nagwaraVisit": "Vieraile NagWarassa",
   "nagwaraProduct": "Tämä on NagWara-tuote,",
   "nagwaraMachines": "Koneet toteuttavat,",

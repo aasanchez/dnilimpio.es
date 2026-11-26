@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Fit to the text (ADR 0019): on-device OCR finds where the text is on both straightened sides and
+<!-- Fit to the text (ADR 0020): on-device OCR finds where the text is on both straightened sides and
      the boxes of the ticked fields grow to cover it (src/engine/snap.ts). Only word boxes reach the
      editor; the text read is dropped in the OCR module. When OCR cannot run, the button is disabled
      with a short reason and the user adjusts the boxes by hand. It never shows a raw error. -->
@@ -71,9 +71,9 @@
   const unavailable = $derived(status?.state === 'unavailable')
 </script>
 
-<div class="fit-zones">
+<div class="mt-3 grid gap-2">
   <p class="hint">{t(lang, 'fitHint')}</p>
-  <button type="button" class="button small" id="fit-zones" disabled={disabled || status === null || unavailable || running || cards.length === 0}
+  <button type="button" class="button small justify-self-start" id="fit-zones" disabled={disabled || status === null || unavailable || running || cards.length === 0}
     onclick={() => { void run() }}>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5M8 12h8" /></svg>
     {t(lang, 'fitZones')}
@@ -86,7 +86,7 @@
     {:else if result?.kind === 'none'}
       <p class="hint">{t(lang, 'fitNone')}</p>
     {:else if result?.kind === 'failed'}
-      <p class="warning">{t(lang, 'fitFailed')}</p>
+      <p class="notice-warn">{t(lang, 'fitFailed')}</p>
     {:else if unavailable}
       <p class="hint">{t(lang, 'fitUnavailable')}</p>
     {:else if status?.state === 'download'}

@@ -1,8 +1,8 @@
-# 0019. Fit to the text: ticked field boxes grow to cover the text OCR finds
+# 0020. Fit to the text: ticked field boxes grow to cover the text OCR finds
 
 - Status: accepted
 - Date: 2026-11-26
-- Builds on: [0010](0010-smart-field-finding.md), [0017](0017-ppocr-and-text-detection.md)
+- Builds on: [0010](0010-smart-field-finding.md), [0019](0019-ppocr-and-text-detection.md)
 - Decided by: Alexis (asked whether the text detector's boxes could make the cover "more accurate"
   with manual selection; chose "Field boxes you tick (Datos tab)")
 
@@ -11,7 +11,7 @@
 Field boxes come from one measured specimen per document (`src/zones/`). A real card can print a
 field a little lower, or longer, than the specimen. The user can then move or resize each box by
 hand (**Adjust boxes**), or add free boxes with smart field finding ([ADR 0010](0010-smart-field-finding.md)).
-PP-OCRv6 ([ADR 0017](0017-ppocr-and-text-detection.md)) gives word boxes measured from the ink, so
+PP-OCRv6 ([ADR 0019](0019-ppocr-and-text-detection.md)) gives word boxes measured from the ink, so
 the field boxes themselves can follow the text.
 
 ## Decision

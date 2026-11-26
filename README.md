@@ -89,7 +89,7 @@ and you always confirm it ([ADR 0011](docs/adr/0011-document-detection.md)):
   so a TIE is never handled with DNI positions by mistake.
 - When the MRZ cannot settle it (no MRZ read, or dates that fit both DNI versions), the app also reads
   the printed text of the front, such as "PERMISO DE RESIDENCIA" or "REINO DE ESPAÑA", and where the
-  DNI number sits ([ADR 0017](docs/adr/0017-ppocr-and-text-detection.md)). The MRZ wins when both answer.
+  DNI number sits ([ADR 0019](docs/adr/0019-ppocr-and-text-detection.md)). The MRZ wins when both answer.
 - Detection needs OCR. Online, the first time, it downloads the OCR files by itself (about 9 MB; the
   status line says so). After that it also runs offline. When OCR cannot run (offline before the
   first download, no service worker, an old browser), a note says so and you choose by hand. A
@@ -105,7 +105,8 @@ source was found, the guide says so instead of guessing ([ADR 0014](docs/adr/001
 ## How to use it
 
 Open the site in a current browser (Chrome, Edge, Firefox, Safari; desktop or mobile). No account,
-no installation. The layout is built for a phone first: one step per screen, the main button always
+no installation needed. If you want it on your home screen or desktop, you can install it as an app
+(see **Install the app** below). The layout is built for a phone first: one step per screen, the main button always
 at the bottom within thumb reach, and a progress bar at the top (**Photos**, **Corners**, **Hide**,
 **Download**). The back arrow in the top bar returns to the previous step without losing work. The
 **DT.es** logo returns to the start screen without reloading the page; your photos are kept.
@@ -258,13 +259,18 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   before use. The worker runs under its own strict CSP: it can read its own files in `ocr/` and
   cannot send requests anywhere. If OCR cannot run (offline before the first download, or no service
   worker), it is switched off and you choose by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md),
-  [ADR 0017](docs/adr/0017-ppocr-and-text-detection.md)).
+  [ADR 0019](docs/adr/0019-ppocr-and-text-detection.md)).
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
   The corner model (about 2.6 MB) is not part of that first copy: it is stored the first time you use
   it online. Offline before that, classic edge detection places the corners, or you place them by
   hand.
+- **Installable.** The tool can be installed as an app (Android, iPhone and iPad, desktop Chrome and
+  Edge). It is the same build in its own window: the manifest and icons are static files of the
+  build, cached and checked like the rest, and installing sends nothing anywhere. The start screen
+  shows **Install the app** only where it works: it opens the browser's own dialog, or, on iPhone and
+  iPad, shows the steps in the Share menu ([ADR 0018](docs/adr/0018-installable-app.md)).
 - **Updates never interrupt work.** A new version reaches an open tab by itself: when the tab is on
   the start screen with no photos, and it is the only tab of the tool, it switches to the new version
   and reloads once. A tab with photos keeps its version until it returns to the start screen
@@ -454,6 +460,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | Share via WhatsApp, email or the system share sheet | Done |
 | Card guide with official citations | Done |
 | Offline mode with a verified service worker; automatic update of idle tabs | Done |
+| Installable app: manifest, maskable and Apple icons, install link and iOS steps | Done |
 | No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
 | Cookieless visit counts (Cloudflare Web Analytics) | Done |
 | Published source maps, verified by hash | Done |
@@ -489,7 +496,7 @@ pnpm dev                                     # http://localhost:5173 (no CSP in 
 | `pnpm verify` | Type check, lint, unit tests, build and end-to-end tests, as CI runs them |
 
 **Stack.** [Svelte 5](https://svelte.dev) with runes for the interface, Vite, strict TypeScript,
-native CSS and the Canvas API ([ADR 0003](docs/adr/0003-svelte-vite-pnpm.md)). Image, geometry,
+Tailwind CSS v4 (build time only, [ADR 0017](docs/adr/0017-tailwind-css.md)) and the Canvas API ([ADR 0003](docs/adr/0003-svelte-vite-pnpm.md)). Image, geometry,
 redaction and PDF logic are plain TypeScript modules that do not depend on Svelte.
 
 Runtime dependencies, all bundled and served from this site:
@@ -498,7 +505,7 @@ Runtime dependencies, all bundled and served from this site:
 |---|---|---|
 | `@cantoo/pdf-lib` | PDF export ([ADR 0001](docs/adr/0001-pdf-library.md)) | In the background after the page appears |
 | `scanic-ml`, `onnxruntime-web` | Corner model and its WebAssembly runtime ([ADR 0007](docs/adr/0007-corner-model.md)) | On first use |
-| `paddleocr`, `onnxruntime-web` | OCR engine (paddleocr.js) and its WebAssembly runtime, in the OCR worker ([ADR 0017](docs/adr/0017-ppocr-and-text-detection.md)) | On first use |
+| `paddleocr`, `onnxruntime-web` | OCR engine (paddleocr.js) and its WebAssembly runtime, in the OCR worker ([ADR 0019](docs/adr/0019-ppocr-and-text-detection.md)) | On first use |
 | `@arcships/light-ocr-model-ppocrv6-tiny` | PP-OCRv6 tiny models, checked at build time against PaddlePaddle's published SHA-256 | On first use |
 
 **Rules the code follows**
@@ -547,6 +554,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `share` | WhatsApp and email as share sheet or as plain links, and a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `privacy-notice` | No accept step, 4-day memory, blocked storage, translations, audit prompt |
+| `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, build SHA and relative deploy time (also offline) |
 
 ## Continuous integration
@@ -736,8 +744,10 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0014](docs/adr/0014-card-guide.md): card guide; every element explained with official citations, nothing guessed.
 - [0015](docs/adr/0015-cookieless-analytics.md): cookieless visit counts with Cloudflare Web Analytics, on the public site only.
 - [0016](docs/adr/0016-source-maps-in-devtools.md): source maps readable in the developer tools (`connect-src 'self'`); the service worker serves only this build's maps, checked by hash.
-- [0017](docs/adr/0017-ppocr-and-text-detection.md): PP-OCRv6 tiny replaces Tesseract; the front's printed text helps detect the document.
-- [0019](docs/adr/0019-fit-boxes-to-text.md): fit to the text; ticked field boxes grow to cover the words OCR finds, never shrink.
+- [0017](docs/adr/0017-tailwind-css.md): styles with Tailwind CSS v4, compiled at build time; two-column layout on wide screens.
+- [0018](docs/adr/0018-installable-app.md): installable app; relative manifest, maskable and Apple icons, install link only where the browser supports it.
+- [0019](docs/adr/0019-ppocr-and-text-detection.md): PP-OCRv6 tiny replaces Tesseract; the front's printed text helps detect the document.
+- [0020](docs/adr/0020-fit-boxes-to-text.md): fit to the text; ticked field boxes grow to cover the words OCR finds, never shrink.
 
 ## Contributing
 
