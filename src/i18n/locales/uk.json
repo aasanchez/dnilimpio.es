@@ -1,5 +1,9 @@
 {
   "sourceCode": "Вихідний код",
+  "nagwaraVisit": "Відвідати NagWara",
+  "nagwaraProduct": "Це продукт NagWara,",
+  "nagwaraMachines": "Машини виконують,",
+  "nagwaraPeople": "люди керують.",
   "buildVersion": "Версія",
   "buildDeployed": "розгорнуто {when}",
   "buildDev": "розробка",

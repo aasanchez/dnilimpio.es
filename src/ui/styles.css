@@ -90,6 +90,8 @@
   --on-accent: #1f1a14;
   --term-bg: #1f1a14;
   --term-fg: #f8f5ed;
+  /* NagWara red (thelobby.bet): 4.61:1 on paper. */
+  --nagwara: #d42b2b;
   --sans: 'Bricolage Grotesque', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --hand: Caveat, 'Bradley Hand', cursive;
@@ -116,6 +118,7 @@
     --warn-text: #f1d9ac;
     --off: #4a4036;
     --term-bg: #0d0b08;
+    --nagwara: #ff6b5e;
   }
 }
 
@@ -533,6 +536,23 @@ footer a { color: var(--muted); }
 footer .source-link { display: inline-flex; align-items: center; gap: 0.4em; min-height: 24px; }
 .github-mark { flex: none; width: 1.25em; height: 1.25em; }
 .build-version { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.6875rem; }
+
+/* NagWara attribution band (NagwaraBand.svelte), adapted from thelobby.bet's footer. */
+.nagwara {
+  display: grid; gap: 0.75rem; justify-items: center; margin-top: 1.25rem; padding-top: 1rem;
+  border-top: 3px solid var(--nagwara); font-family: var(--sans); text-align: center;
+}
+footer .nagwara-brand { display: inline-flex; align-items: center; gap: 0.6rem; color: var(--ink); text-decoration: none; }
+footer .nagwara-brand:hover span { color: var(--nagwara); }
+.nagwara-brand span { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.5px; }
+.nagwara-mark { flex: none; width: 3.25rem; height: auto; color: var(--nagwara); }
+.nagwara-claim p { margin: 0; }
+.nagwara-product { color: var(--nagwara); font-size: 0.9375rem; font-weight: 700; }
+.nagwara-tagline { color: var(--ink); font-size: 1.25rem; font-weight: 800; line-height: 1.2; letter-spacing: -0.3px; }
+.nagwara-tagline span { color: var(--nagwara); }
+@media (min-width: 40rem) {
+  .nagwara { grid-template-columns: auto 1fr; justify-items: start; align-items: center; gap: 1.5rem; text-align: start; }
+}
 
 /* Smart field finding (SmartFind.svelte) */
 .smart-find { display: grid; gap: 0.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--dash); }

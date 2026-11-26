@@ -1,0 +1,8 @@
+NagWara name and logo
+
+Copyright NagWara. All rights reserved.
+
+The NagWara name and the NagWara mark (src/components/NagwaraMark.svelte) identify this project as a
+NagWara product. They are not covered by the AGPL-3.0-or-later licence of the rest of this repository.
+You may keep them unchanged in copies of this project that credit NagWara. Do not use them to name,
+brand or endorse any other product without written permission from NagWara.

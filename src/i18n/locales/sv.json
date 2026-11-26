@@ -1,5 +1,9 @@
 {
   "sourceCode": "Källkod",
+  "nagwaraVisit": "Besök NagWara",
+  "nagwaraProduct": "Det här är en NagWara-produkt,",
+  "nagwaraMachines": "Maskiner utför,",
+  "nagwaraPeople": "människor leder.",
   "buildVersion": "Version",
   "buildDeployed": "publicerad {when}",
   "buildDev": "utveckling",

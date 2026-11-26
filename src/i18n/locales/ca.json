@@ -1,5 +1,9 @@
 {
   "sourceCode": "Codi font",
+  "nagwaraVisit": "Visita NagWara",
+  "nagwaraProduct": "Això és un producte NagWara,",
+  "nagwaraMachines": "Les màquines executen,",
+  "nagwaraPeople": "les persones lideren.",
   "buildVersion": "Versió",
   "buildDeployed": "desplegat {when}",
   "buildDev": "desenvolupament",

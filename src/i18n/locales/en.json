@@ -1,5 +1,9 @@
 {
   "sourceCode": "Source code",
+  "nagwaraVisit": "Visit NagWara",
+  "nagwaraProduct": "This is a NagWara product,",
+  "nagwaraMachines": "Machines execute,",
+  "nagwaraPeople": "People lead.",
   "buildVersion": "Version",
   "buildDeployed": "deployed {when}",
   "buildDev": "development",

@@ -1,5 +1,9 @@
 {
   "sourceCode": "Cod sursă",
+  "nagwaraVisit": "Vizitează NagWara",
+  "nagwaraProduct": "Acesta este un produs NagWara,",
+  "nagwaraMachines": "Mașinile execută,",
+  "nagwaraPeople": "oamenii conduc.",
   "buildVersion": "Versiune",
   "buildDeployed": "publicat {when}",
   "buildDev": "dezvoltare",

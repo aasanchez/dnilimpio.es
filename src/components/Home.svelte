@@ -6,6 +6,7 @@
   import PrivacyNotice from './PrivacyNotice.svelte'
   import AuditPrompt from './AuditPrompt.svelte'
   import GitHubMark from './GitHubMark.svelte'
+  import NagwaraBand from './NagwaraBand.svelte'
 
   const { lang, onStart, notice, onNoticeDismiss, onGuide }: { lang: Lang; onStart: () => void; notice: boolean; onNoticeDismiss: () => void; onGuide: () => void } = $props()
 </script>
@@ -42,6 +43,7 @@
     <a class="source-link" id="source-link" href={__REPO_URL__} target="_blank" rel="noopener noreferrer"><GitHubMark />{t(lang, 'sourceCode')}</a>
     <AuditPrompt {lang} id="audit-footer" />
     <BuildVersion {lang} />
+    <NagwaraBand {lang} />
   </footer>
 
   <div class="actionbar">

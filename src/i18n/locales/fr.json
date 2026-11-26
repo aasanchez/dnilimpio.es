@@ -1,5 +1,9 @@
 {
   "sourceCode": "Code source",
+  "nagwaraVisit": "Visiter NagWara",
+  "nagwaraProduct": "Ceci est un produit NagWara,",
+  "nagwaraMachines": "Les machines exécutent,",
+  "nagwaraPeople": "les humains dirigent.",
   "buildVersion": "Version",
   "buildDeployed": "déployé {when}",
   "buildDev": "développement",

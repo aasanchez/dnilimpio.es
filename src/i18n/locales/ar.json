@@ -1,5 +1,9 @@
 {
   "sourceCode": "الشيفرة المصدرية",
+  "nagwaraVisit": "زيارة NagWara",
+  "nagwaraProduct": "هذا منتج من NagWara،",
+  "nagwaraMachines": "الآلات تنفّذ،",
+  "nagwaraPeople": "والبشر يقودون.",
   "buildVersion": "الإصدار",
   "buildDeployed": "نُشر {when}",
   "buildDev": "تطوير",

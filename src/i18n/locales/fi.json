@@ -1,5 +1,9 @@
 {
   "sourceCode": "Lähdekoodi",
+  "nagwaraVisit": "Vieraile NagWarassa",
+  "nagwaraProduct": "Tämä on NagWara-tuote,",
+  "nagwaraMachines": "Koneet toteuttavat,",
+  "nagwaraPeople": "ihmiset johtavat.",
   "buildVersion": "Versio",
   "buildDeployed": "julkaistu {when}",
   "buildDev": "kehitys",
