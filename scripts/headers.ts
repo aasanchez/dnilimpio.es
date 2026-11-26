@@ -13,7 +13,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { cspWithScriptHashes } from './csp.ts'
-import { SW_FILE, WORKER_SCRIPTS } from '../src/offline/precache.ts'
+import { SECURITY_HEADERS, SW_FILE, WORKER_SCRIPTS } from '../src/offline/precache.ts'
 
 /** One rule of the `_headers` file: a path, headers it removes (set by an earlier rule), headers it adds. */
 export interface HeaderRule {
@@ -25,42 +25,11 @@ export interface HeaderRule {
 /** The file the host reads its headers from. */
 export const HEADERS_FILE = '_headers'
 
-/**
- * Browser features the app may use. Every other powerful feature is off, also for any frame.
- * camera: live capture (src/capture/live.ts). clipboard-write: copy the audit prompt.
- * web-share: share the PDF on phones (Review.svelte).
- */
-export const PERMISSIONS_POLICY = [
-  'accelerometer=()',
-  'browsing-topics=()',
-  'camera=(self)',
-  'clipboard-read=()',
-  'clipboard-write=(self)',
-  'display-capture=()',
-  'geolocation=()',
-  'gyroscope=()',
-  'hid=()',
-  'magnetometer=()',
-  'microphone=()',
-  'midi=()',
-  'payment=()',
-  'serial=()',
-  'usb=()',
-  'web-share=(self)',
-].join(', ')
-
-/** Sent with every file. */
+/** Sent with every file: HSTS and the security headers the service worker also sets (SECURITY_HEADERS). */
 export const COMMON_HEADERS: Readonly<Record<string, string>> = {
   // One year, also for subdomains. No `preload`: getting off the browsers' preload list takes months.
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-  'X-Content-Type-Options': 'nosniff',
-  'Referrer-Policy': 'no-referrer',
-  'Permissions-Policy': PERMISSIONS_POLICY,
-  // No other window keeps a handle on the app's window, and no other site may embed its files.
-  'Cross-Origin-Opener-Policy': 'same-origin',
-  'Cross-Origin-Resource-Policy': 'same-origin',
-  // For browsers without frame-ancestors.
-  'X-Frame-Options': 'DENY',
+  ...SECURITY_HEADERS,
 }
 
 /**

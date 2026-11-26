@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { PAGE_HEADERS, WORKER_SCRIPTS, addPageHeaders, cacheName, isOnDemand, isPrecached, parseManifest, route, workerCsp } from '../../src/offline/precache.ts'
+import { createHash } from 'node:crypto'
+import { PAGE_HEADERS, SECURITY_HEADERS, WORKER_SCRIPTS, addPageHeaders, cacheName, isOnDemand, isPrecached, parseManifest, route, sriOf, workerCsp } from '../../src/offline/precache.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
 const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }], onDemand: [{ path: 'ocr/ppocrv6-tiny-rec.onnx', integrity: HASH }] }
@@ -115,6 +116,20 @@ describe('workerCsp', () => {
   })
 })
 
+describe('sriOf', () => {
+  const bytes = (text: string): ArrayBuffer => new TextEncoder().encode(text).buffer
+  const sri = (text: string): string => `sha384-${createHash('sha384').update(text).digest('base64')}`
+
+  it('gives the SRI string the manifest records (SHA-384, base64)', async () => {
+    expect(await sriOf(bytes('<!doctype html>'))).toBe(sri('<!doctype html>'))
+    expect(await sriOf(bytes(''))).toBe(sri(''))
+  })
+
+  it('changes when one byte of a cached file is rewritten', async () => {
+    expect(await sriOf(bytes('self.onmessage = run'))).not.toBe(await sriOf(bytes('self.onmessage = rum')))
+  })
+})
+
 describe('addPageHeaders', () => {
   it('adds frame-ancestors as one more policy, never in place of the host CSP (ADR 0027)', () => {
     const host = new Headers({ 'Content-Security-Policy': "default-src 'none'", 'X-Frame-Options': 'SAMEORIGIN' })
@@ -124,7 +139,13 @@ describe('addPageHeaders', () => {
     expect(h.get('referrer-policy')).toBe('no-referrer')
     expect(host.get('content-security-policy')).toBe("default-src 'none'") // the cached copy is untouched
   })
-  it('on a host without headers (GitHub Pages) sends exactly PAGE_HEADERS', () => {
+  it('sets every security header itself, so a cached entry needs none (ADR 0026)', () => {
+    expect(Object.keys(PAGE_HEADERS)).toEqual(['Content-Security-Policy', ...Object.keys(SECURITY_HEADERS)])
+    expect(PAGE_HEADERS['Permissions-Policy']).toMatch(/camera=\(self\)/)
+    expect(PAGE_HEADERS['Permissions-Policy']).toMatch(/microphone=\(\)/)
+    expect(PAGE_HEADERS['Cross-Origin-Opener-Policy']).toBe('same-origin')
+  })
+  it('on a response without headers sends exactly PAGE_HEADERS', () => {
     expect(Object.fromEntries(addPageHeaders(new Headers()))).toEqual(Object.fromEntries(Object.entries(PAGE_HEADERS).map(([k, v]) => [k.toLowerCase(), v])))
   })
 })

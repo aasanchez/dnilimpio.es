@@ -84,6 +84,10 @@ export function sanitise (src: RGBA, opts: SanitiseOptions): RGBA {
   if (opts.greyscale) toGreyscale(out)
   const rects = maskPixels(opts.masks, out.width, out.height, opts.margin ?? MASK_MARGIN_PX)
   fillRects(out.data, out.width, out.height, rects)
-  if (findUnmaskedPixel(out, rects) !== -1) throw new Error('Redaction check failed: a masked pixel is not opaque black')
+  if (findUnmaskedPixel(out, rects) !== -1) {
+    // The copy is thrown away: clear it first, so a failed check leaves no copy of the card behind.
+    out.data.fill(0)
+    throw new Error('Redaction check failed: a masked pixel is not opaque black')
+  }
   return out
 }

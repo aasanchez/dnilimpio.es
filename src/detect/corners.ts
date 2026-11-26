@@ -7,6 +7,7 @@
 
 import { detectCard, toWorkGrey } from './edges.ts'
 import { refineQuad } from './refine.ts'
+import { shrink, wipe } from '../engine/wipe.ts'
 import type { Detection } from './result.ts'
 
 export type { Detection } from './result.ts'
@@ -59,8 +60,16 @@ const byEdges: Detector = async (bitmap, aspect) => {
   const canvas = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h })
   const ctx = canvas.getContext('2d', { willReadFrequently: true }) as Pick<CanvasRenderingContext2D, 'drawImage' | 'getImageData'> | null
   if (!ctx) return null
-  ctx.drawImage(bitmap, 0, 0, w, h)
-  const found = detectCard(ctx.getImageData(0, 0, w, h), { aspect })
+  let img: ImageData | undefined
+  let found
+  try {
+    ctx.drawImage(bitmap, 0, 0, w, h)
+    img = ctx.getImageData(0, 0, w, h)
+    found = detectCard(img, { aspect })
+  } finally {
+    shrink(canvas)
+    wipe(img?.data)
+  }
   if (!found) return null
   const q = found.quad
   const up = (i: 0 | 1 | 2 | 3): { x: number; y: number } => ({ x: q[i].x / k, y: q[i].y / k })
@@ -88,10 +97,20 @@ function refined (bitmap: ImageBitmap, found: Detection): Detection {
   const canvas = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h })
   const ctx = canvas.getContext('2d', { willReadFrequently: true }) as Pick<CanvasRenderingContext2D, 'drawImage' | 'getImageData'> | null
   if (!ctx) return found
-  ctx.drawImage(bitmap, 0, 0, w, h)
-  const { grey } = toWorkGrey(ctx.getImageData(0, 0, w, h), REFINE_PX)
+  let img: ImageData | undefined
+  let grey: ReturnType<typeof toWorkGrey>['grey'] | undefined
   const small = found.quad.map((p) => ({ x: p.x * k, y: p.y * k })) as unknown as Detection['quad']
-  const q = refineQuad(grey, small)
+  let q: Detection['quad']
+  try {
+    ctx.drawImage(bitmap, 0, 0, w, h)
+    img = ctx.getImageData(0, 0, w, h)
+    grey = toWorkGrey(img, REFINE_PX).grey
+    q = refineQuad(grey, small)
+  } finally {
+    // Also when it throws: the copies of the photo are cleared and the canvas freed.
+    shrink(canvas)
+    wipe(img?.data, grey?.v)
+  }
   if (q === small) return found
   return { ...found, quad: q.map((p) => ({ x: p.x / k, y: p.y / k })) as unknown as Detection['quad'] }
 }

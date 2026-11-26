@@ -3,6 +3,7 @@
 // demand, works with the network off. Service workers are on here (blocked in the other specs).
 import { expect, test, type Page } from '@playwright/test'
 import { adjustFront, fixture, loadBoth, openCapture, toEditor } from './helpers.ts'
+import { PAGE_HEADERS, SECURITY_HEADERS } from '../../src/offline/precache.ts'
 
 test.use({ locale: 'es-ES', serviceWorkers: 'allow' })
 
@@ -108,19 +109,20 @@ test('no source map is published, and the worker refuses any .map (ADR 0022)', a
   expect(leaked).toEqual([])
 })
 
-test('page loads from the worker keep the host\'s headers and add the ones Pages cannot send', async ({ page, context, baseURL }) => {
+test('page loads from the worker carry the security headers, whatever the cached entry held', async ({ page, context, baseURL }) => {
   const first = await page.goto('/')
   await offlineReady(page)
-  const hostCsp = first?.headers()['content-security-policy'] ?? ''
-  expect(hostCsp).toContain("frame-ancestors 'none'")
+  const host = first?.headers() ?? {}
   const res = await page.reload()
   expect(res?.fromServiceWorker()).toBe(true)
   const h = res?.headers() ?? {}
-  // The worker adds its frame-ancestors policy next to the host's full CSP, never in its place
-  // (addPageHeaders(), ADR 0027): the browser enforces both.
-  expect([h['content-security-policy'], h['x-frame-options'], h['x-content-type-options'], h['referrer-policy']])
-    .toEqual([`${hostCsp}, frame-ancestors 'none'`, 'DENY', 'nosniff', 'no-referrer'])
-  expect(h['permissions-policy']).toContain('camera=(self)')
+  // The worker keeps no header of a cached entry (ADR 0026) and sets PAGE_HEADERS itself (ADR 0027).
+  for (const [k, v] of Object.entries(PAGE_HEADERS)) expect([k, h[k.toLowerCase()]]).toEqual([k, v])
+  // A returning visitor gets the same security headers as a first visit from the host. The full CSP
+  // is the page's <meta> policy, which equals the host's header apart from frame-ancestors.
+  for (const k of Object.keys(SECURITY_HEADERS)) expect([k, h[k.toLowerCase()]]).toEqual([k, host[k.toLowerCase()]])
+  const meta = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content')
+  expect(host['content-security-policy']).toBe(`${meta ?? ''}; frame-ancestors 'none'`)
   // Another site that frames the app: the host's frame-ancestors refuses it, so nothing of the app runs.
   const framer = await context.newPage()
   await framer.setContent(`<iframe src="${baseURL ?? ''}"></iframe>`)
@@ -216,4 +218,79 @@ test('a tampered model file is refused and classic edge detection takes over', a
   await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'edges')
   expect((await cachedPaths(page)).some((p) => p.startsWith('/assets/ml/model-'))).toBe(false)
   expect(errors).toEqual([])
+})
+
+/**
+ * Writes a forged entry into the app's cache, as any same-origin script could. The body is a marker
+ * that shows whether it ever ran: a page with #poisoned, or a worker that posts on a BroadcastChannel.
+ */
+async function poison (page: Page, path: string, body: string, type: string): Promise<void> {
+  await page.evaluate(async ({ path, body, type }) => {
+    const key = (await caches.keys()).find((k) => k.startsWith('dnilimpio-')) ?? ''
+    await (await caches.open(key)).put(new URL(path, document.baseURI).href, new Response(body, { headers: { 'Content-Type': type } }))
+  }, { path, body, type })
+}
+
+/** The text of one cache entry of the app ('' when it is missing). */
+async function cachedText (page: Page, path: string): Promise<string> {
+  return await page.evaluate(async (path) => {
+    const res = await caches.match(new URL(path, document.baseURI).href)
+    return res ? await res.text() : ''
+  }, path)
+}
+
+const POISONED_PAGE = '<!doctype html><title>poisoned</title><p id="poisoned">poisoned</p>'
+const POISONED_WORKER = "new BroadcastChannel('poisoned').postMessage('ran')"
+
+/** Starts the OCR worker the way the app does, and reports whether the forged one ran. */
+async function startWorker (page: Page): Promise<{ ran: boolean; failed: boolean }> {
+  return await page.evaluate(async () => await new Promise((resolve) => {
+    const channel = new BroadcastChannel('poisoned')
+    const state = { ran: false, failed: false }
+    channel.onmessage = () => { state.ran = true }
+    const w = new Worker(new URL('ocr/worker.min.js', document.baseURI).href)
+    w.onerror = () => { state.failed = true }
+    setTimeout(() => { w.terminate(); channel.close(); resolve(state) }, 3000)
+  }))
+}
+
+test('a rewritten cached index.html is never served: the worker refetches the real one', async ({ page }) => {
+  await page.goto('/')
+  await offlineReady(page)
+  const real = await cachedText(page, 'index.html')
+  await poison(page, 'index.html', POISONED_PAGE, 'text/html')
+  await page.reload()
+  await expect(page.locator('#guide-open')).toBeVisible()
+  await expect(page.locator('#poisoned')).toHaveCount(0)
+  // The forged entry is gone and the cache holds the build's bytes again.
+  expect(await cachedText(page, 'index.html')).toBe(real)
+})
+
+test('offline, a rewritten cached index.html is refused, never shown', async ({ page, context }) => {
+  await page.goto('/')
+  await offlineReady(page)
+  await poison(page, 'index.html', POISONED_PAGE, 'text/html')
+  await context.setOffline(true)
+  // No verified copy and no network: a network error instead of the forged page.
+  const failed = await page.reload().then(() => false, () => true)
+  expect(failed).toBe(true)
+  await expect(page.locator('#poisoned')).toHaveCount(0)
+  await context.setOffline(false)
+  await page.goto('/')
+  await expect(page.locator('#guide-open')).toBeVisible()
+  expect(await cachedText(page, 'index.html')).not.toContain('poisoned')
+})
+
+test('a rewritten cached OCR worker never runs: online it is replaced, offline it is refused', async ({ page, context }) => {
+  await page.goto('/')
+  await offlineReady(page)
+  await poison(page, 'ocr/worker.min.js', POISONED_WORKER, 'text/javascript')
+  expect(await startWorker(page)).toEqual({ ran: false, failed: false })
+  // The real worker, downloaded again with its integrity, replaced the forged entry.
+  expect(await cachedText(page, 'ocr/worker.min.js')).not.toContain('poisoned')
+
+  await poison(page, 'ocr/worker.min.js', POISONED_WORKER, 'text/javascript')
+  await context.setOffline(true)
+  expect(await startWorker(page)).toEqual({ ran: false, failed: true })
+  expect(await cachedText(page, 'ocr/worker.min.js')).toBe('')
 })

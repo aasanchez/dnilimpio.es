@@ -54,23 +54,73 @@ function checkFiles (list: unknown[]): PrecacheFile[] {
 }
 
 /**
- * Headers added to every page load the service worker answers. GitHub Pages sends none of them, and
- * frame-ancestors only works as a header (a <meta> CSP ignores it): no same-site page may show the app
- * in a frame. A frame on another site gets its own, partitioned worker registration, so it never sees
- * these headers; there the host's headers (ADR 0027) or the page's own check (src/security/lockdown.ts)
- * refuse it.
+ * SHA-384 of some bytes, as an SRI string (`sha384-…`), the form the manifest records. Web Crypto, so
+ * the service worker and the unit tests in Node use the same code.
  */
-export const PAGE_HEADERS: Readonly<Record<string, string>> = {
-  'Content-Security-Policy': "frame-ancestors 'none'",
-  'X-Frame-Options': 'DENY',
-  'X-Content-Type-Options': 'nosniff',
-  'Referrer-Policy': 'no-referrer',
+export async function sriOf (bytes: ArrayBuffer): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-384', bytes))
+  let bin = ''
+  for (const b of digest) bin += String.fromCharCode(b)
+  return `sha384-${btoa(bin)}`
 }
 
 /**
- * The response headers of index.html plus PAGE_HEADERS. The CSP is added as one more policy, never
- * in place of the host's: a browser enforces every policy it gets, so the host's full CSP (ADR 0027)
- * stays in force.
+ * Browser features the app may use. Every other powerful feature is off, also for any frame.
+ * camera: live capture (src/capture/live.ts). clipboard-write: copy the audit prompt.
+ * web-share: share the PDF on phones (Review.svelte).
+ */
+export const PERMISSIONS_POLICY = [
+  'accelerometer=()',
+  'browsing-topics=()',
+  'camera=(self)',
+  'clipboard-read=()',
+  'clipboard-write=(self)',
+  'display-capture=()',
+  'geolocation=()',
+  'gyroscope=()',
+  'hid=()',
+  'magnetometer=()',
+  'microphone=()',
+  'midi=()',
+  'payment=()',
+  'serial=()',
+  'usb=()',
+  'web-share=(self)',
+].join(', ')
+
+/**
+ * Security headers of every response, apart from the CSP and HSTS. One list for the two places that
+ * send them: the host (scripts/headers.ts, ADR 0027) and the service worker (PAGE_HEADERS).
+ */
+export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'no-referrer',
+  'Permissions-Policy': PERMISSIONS_POLICY,
+  // No other window keeps a handle on the app's window, and no other site may embed its files.
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  // For browsers without frame-ancestors.
+  'X-Frame-Options': 'DENY',
+}
+
+/**
+ * Headers of every page load the service worker answers. The worker answers from its cache and keeps
+ * none of the cached entry's headers (ADR 0026), so it sets the security headers itself: a returning
+ * visitor gets the same ones as a first visit from the host, and gets them on a host that sends none.
+ * The full CSP is the page's own <meta> policy; frame-ancestors is added here because a <meta> CSP
+ * ignores it. A frame on another site gets its own, partitioned worker registration, so it never
+ * sees these headers; there the host's headers (ADR 0027) or the page's own check
+ * (src/security/lockdown.ts) refuse it.
+ */
+export const PAGE_HEADERS: Readonly<Record<string, string>> = {
+  'Content-Security-Policy': "frame-ancestors 'none'",
+  ...SECURITY_HEADERS,
+}
+
+/**
+ * The response's own headers plus PAGE_HEADERS. The CSP is added as one more policy, never in place
+ * of one the response carries: a browser enforces every policy it gets, so when the worker passes on
+ * a fresh download from the host, the host's full CSP (ADR 0027) stays in force.
  */
 export function addPageHeaders (from: Headers): Headers {
   const headers = new Headers(from)

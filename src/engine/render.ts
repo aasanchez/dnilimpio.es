@@ -9,6 +9,8 @@
 import type { Rect } from '../zones/dni.ts'
 import { sanitise } from './raster.ts'
 import { drawWatermark, type WatermarkStyle } from './watermark.ts'
+import { downloadUrl } from './downloads.ts'
+import { wipe } from './wipe.ts'
 
 export interface RenderOptions {
   readonly masks: readonly Rect[]
@@ -27,22 +29,29 @@ function context (c: HTMLCanvasElement): CanvasRenderingContext2D {
 export function renderSecure (card: HTMLCanvasElement, opts: RenderOptions, out: HTMLCanvasElement): void {
   const { width, height } = card
   const src = context(card).getImageData(0, 0, width, height)
-  const clean = sanitise(src, { masks: opts.masks, greyscale: opts.greyscale })
-  src.data.fill(0)
-  if (out.width !== width) out.width = width
-  if (out.height !== height) out.height = height
-  const ctx = context(out)
-  const img = new ImageData(width, height)
-  img.data.set(clean.data)
-  clean.data.fill(0)
-  ctx.putImageData(img, 0, 0)
-  img.data.fill(0)
-  drawWatermark(ctx, opts.watermark, width, height, opts.watermarkStyle)
+  let clean: { data: Uint8ClampedArray } | undefined
+  let img: ImageData | undefined
+  try {
+    clean = sanitise(src, { masks: opts.masks, greyscale: opts.greyscale })
+    if (out.width !== width) out.width = width
+    if (out.height !== height) out.height = height
+    const ctx = context(out)
+    img = new ImageData(width, height)
+    img.data.set(clean.data)
+    ctx.putImageData(img, 0, 0)
+    drawWatermark(ctx, opts.watermark, width, height, opts.watermarkStyle)
+  } finally {
+    // Also when the self-check or drawing fails: no copy of the card's pixels outlives this call.
+    wipe(src.data, clean?.data, img?.data)
+  }
 }
 
-/** Saves a Blob as a file through a temporary object URL, which is revoked right after. */
+/**
+ * Saves a Blob as a file through a temporary object URL. The URL is revoked after a short delay, or
+ * at once by revokeDownloads() (downloads.ts) when the person clears everything or leaves the page.
+ */
 export function saveFile (blob: Blob, name: string): void {
-  const url = URL.createObjectURL(blob)
+  const url = downloadUrl(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = name
@@ -50,6 +59,4 @@ export function saveFile (blob: Blob, name: string): void {
   document.body.append(a)
   a.click()
   a.remove()
-  // Revoke once the browser has started the download (some need the URL for a moment after the click).
-  setTimeout(() => { URL.revokeObjectURL(url) }, 10_000)
 }
