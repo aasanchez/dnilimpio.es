@@ -90,7 +90,8 @@ The [README test section](README.md#tests) describes what each test file covers.
    free number, in the format described in [`docs/adr/README.md`](docs/adr/README.md) (context,
    decision, alternatives, consequences), and add a row to that file's table.
 7. **Keep licence information complete.** The project follows [REUSE](https://reuse.software). A new
-   source file starts with an `SPDX-License-Identifier: AGPL-3.0-or-later` comment. Files that
+   source file starts with an SPDX licence header comment (copy the first line of a
+   neighbouring file). Files that
    cannot carry a comment (JSON, images) must match a path in [`REUSE.toml`](REUSE.toml).
 8. **Run `pnpm verify`.** It must pass.
 9. **Open the pull request** against `master`. Say what changes and why, and how you tested it.
