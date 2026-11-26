@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0016. Source maps readable in the developer tools: `connect-src 'self'`
 
-- Status: accepted
+- Status: superseded by [ADR 0022](0022-no-published-source-maps.md) (2026-11-26): no maps are published and `connect-src` has no `'self'`
 - Date: 2026-11-26
 
 ## Context

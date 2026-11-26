@@ -15,7 +15,7 @@ Execute the audit across the following areas:
 
    - Search the entire codebase and dependencies for network primitives (fetch, XMLHttpRequest, navigator.sendBeacon, WebSocket, EventSource, WebRTC, form action attributes, dynamic <img>/<script> beacons).
    - Check if any telemetry, analytics (e.g., Google Analytics, Plausible, Sentry, PostHog), error reporting, or third-party font/CDN requests leak document data, filenames, or usage payloads.
-   - The site declares one exception: on its public host only, it loads Cloudflare Web Analytics (cookieless visit counts; src/analytics/, docs/adr/0015-cookieless-analytics.md). Verify that the beacon is handed nothing but its site token, that it is skipped offline, off the public host and under Global Privacy Control or Do Not Track, that it sets no cookies or storage, and that the CSP (script-src by exact URL, connect-src 'self' https://cloudflareinsights.com only; 'self' exists so browser developer tools can load the published source maps, docs/adr/0016-source-maps-in-devtools.md), Trusted Types and the service worker let nothing else out. Assess what a third-party script running in the page could technically reach, and whether those limits contain it.
+   - The site declares one exception: on its public host only, it loads Cloudflare Web Analytics (cookieless visit counts; src/analytics/, docs/adr/0015-cookieless-analytics.md). Verify that the beacon is handed nothing but its site token, that it is skipped offline, off the public host and under Global Privacy Control or Do Not Track, that it sets no cookies or storage, and that the CSP (script-src by exact URL, connect-src https://cloudflareinsights.com only, without 'self', so the page cannot send requests to its own origin either; docs/adr/0022-no-published-source-maps.md), Trusted Types and the service worker let nothing else out. Assess what a third-party script running in the page could technically reach, and whether those limits contain it.
    - Inspect any server-side code, API routes, serverless functions, or backend configurations (e.g., Next.js API routes, Cloudflare Workers, Nginx/Vercel configs) to confirm whether endpoints exist that could receive uploads.
 
 3. Dependency & Supply Chain Verification
@@ -25,13 +25,13 @@ Execute the audit across the following areas:
 4. Security Headers, CSP & Build/Deployment Integrity
 
    - Check index.html, meta tags, and deployment configurations (vercel.json, netlify.toml, _headers, Dockerfiles, GitHub Actions) for Content Security Policy (connect-src, img-src, default-src) that technically enforces zero outbound data exfiltration at the browser level.
-   - Check if the deployed production bundle can be reproducibly built from this repository without hidden injected scripts. The site publishes source maps next to every script; check that they match the repository, and remember that a source map alone proves nothing: compare file hashes (scripts/build-manifest.ts, build provenance via gh attestation verify, scripts/smoke.ts).
-   - Check whether connect-src 'self' lets code send data to the site's own origin, and whether the service worker (src/offline/precache.ts, route()) refuses every same-origin request that is not a file or source map of this build.
+   - Check if the deployed production bundle can be reproducibly built from this repository without hidden injected scripts. The site publishes no source maps (docs/adr/0022-no-published-source-maps.md): verify the deployed minified files by hash against a rebuild of the same commit (scripts/build-manifest.ts, build provenance via gh attestation verify, scripts/smoke.ts).
+   - Check which same-origin requests remain possible (img-src, script-src, font-src 'self' and the OCR worker's own CSP, workerCsp() in src/offline/precache.ts), whether any of them can carry data in its URL, and whether the service worker (src/offline/precache.ts, route()) refuses every same-origin request that is not a file of this build. Note the moments the service worker does not control the page (first visit, forced reload, worker disabled).
 
 5. Deliverable Format
 
    - Executive Verdict: Clear YES/NO on whether DNI/TIE images stay strictly local, with a confidence rating.
    - Data Flow Map: Step-by-step trace referencing exact file paths, functions, and line numbers.
-   - Findings & Risks: Any data leaks, persistent storage artifacts, third-party requests, or missing browser-level safeguards (e.g., a CSP connect-src that allows more than the site's own origin and the declared analytics endpoint).
+   - Findings & Risks: Any data leaks, persistent storage artifacts, third-party requests, or missing browser-level safeguards (e.g., a CSP connect-src that allows more than the declared analytics endpoint).
    - Hardening Recommendations: Concrete code or configuration changes to mathematically/technically guarantee zero exfiltration (such as strict CSP headers and memory cleanup).
 `

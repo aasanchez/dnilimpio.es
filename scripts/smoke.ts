@@ -10,8 +10,8 @@
 // - the entry script matches its SRI hash and was built from the expected commit;
 // - every file in the service worker's manifest (the whole app, OCR and the corner model) matches its
 //   SHA-384, so the site is one consistent build;
-// - with <dist dir> (the artifact CI built and deployed): every file of that build, sw.js and source
-//   maps included, is served byte for byte. A host that changed any file, even together with its
+// - with <dist dir> (the artifact CI built and deployed): every file of that build, sw.js included,
+//   is served byte for byte. A host that changed any file, even together with its
 //   hashes, fails here.
 //
 // GitHub Pages can serve the previous build for a short time after a deploy, so the check retries

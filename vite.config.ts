@@ -40,10 +40,11 @@ export default defineConfig({
     conditions: ['onnxruntime-web-use-extern-wasm', ...defaultClientConditions],
   },
   build: {
-    // Minified for load time. Source maps are published next to each file, so the shipped code
-    // can still be read and checked against the repository.
+    // Minified for load time. No source maps are published (ADR 0022): the developer tools would
+    // need connect-src 'self' to load them. The shipped code is checked by hash against a rebuild
+    // of the repository instead (reproducible build, provenance, scripts/smoke.ts).
     minify: true,
-    sourcemap: true,
+    sourcemap: false,
     target: 'es2022',
     // The polyfill injects an inline script, which the CSP forbids.
     modulePreload: { polyfill: false },

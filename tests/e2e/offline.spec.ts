@@ -87,35 +87,25 @@ test('the worker refuses every request that is not a file of this build (deny by
   await expect(page.locator('h1')).toBeVisible()
 })
 
-test('the worker serves this build\'s source maps for the developer tools, never caches them, and refuses any other .map', async ({ page, context }) => {
-  // DevTools load source maps under the page's connect-src (ADR 0016); a page fetch() is the same check.
+test('no source map is published, and the worker refuses any .map (ADR 0022)', async ({ page, context }) => {
   const leaked: string[] = []
-  await context.route(/leak|secret|evil/, async (route) => { leaked.push(route.request().url()); await route.fulfill({ status: 200, body: '' }) })
-  const violations: string[] = []
-  page.on('console', (m) => { if (/Content Security Policy|Trusted Type/i.test(m.text())) violations.push(m.text()) })
+  await context.route(/\.map(\?|$)|leak/, async (route) => { leaked.push(route.request().url()); await route.fulfill({ status: 200, body: '' }) })
   await page.goto('/')
-  await offlineReady(page)
-  const results = await page.evaluate(async () => {
-    const main = document.querySelector<HTMLScriptElement>('script[type=module][src]')?.src ?? ''
-    const get = async (url: string): Promise<string> => {
-      try {
-        const res = await fetch(url)
-        if (!res.ok) return `status ${String(res.status)}`
-        const map = await res.json() as { sources?: string[] }
-        return map.sources?.some((s) => s.includes('src/')) === true ? 'map' : 'other'
-      } catch { return 'blocked' }
-    }
-    return [
-      await get(`${main}.map`),
-      await get(`${main}.map?dni=12345678Z`),
-      await get('assets/secret-12345678Z.js.map'),
-      await get('leak?dni=12345678Z'),
-    ]
-  })
-  expect(results).toEqual(['map', 'blocked', 'blocked', 'blocked'])
+  const cached = await offlineReady(page)
+  expect(cached.some((p) => p.endsWith('.map'))).toBe(false)
+  // A script asking for a map the way the developer tools would: refused before the network.
+  const main = await page.locator('script[type=module][src]').first().evaluate((s) => (s as HTMLScriptElement).src)
+  const results = await page.evaluate(async (src) => {
+    const load = async (url: string): Promise<string> => await new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => { resolve('loaded') }
+      img.onerror = () => { resolve('blocked') }
+      img.src = url
+    })
+    return [await load(`${src}.map`), await load('ocr/worker.min.js.map'), await load(`${src}.map?dni=12345678Z`)]
+  }, main)
+  expect(results).toEqual(['blocked', 'blocked', 'blocked'])
   expect(leaked).toEqual([])
-  expect(violations).toEqual([])
-  expect((await offlineReady(page)).some((p) => p.endsWith('.map'))).toBe(false)
 })
 
 test('page loads from the worker carry the headers Pages cannot send; no page may frame the app', async ({ page, context, baseURL }) => {
