@@ -9,7 +9,6 @@ import { registerServiceWorker } from './offline/register.ts'
 import { watchForUpdates } from './offline/update.ts'
 import { watchInstall } from './offline/install.ts'
 import { installTrustedTypesPolicy } from './security/trusted-types.ts'
-import { loadAnalytics } from './analytics/cloudflare.ts'
 import { pickLang, t } from './i18n/index.ts'
 
 /** Inside another page's frame the app does not start: it only offers to open itself in a tab. */
@@ -40,11 +39,7 @@ else if (target) mount(App, { target })
 
 // Load the PDF code in the background once the page is idle: the first render does not wait for it,
 // and it is ready before the review step. A failure here is retried when the user downloads.
-// Anonymous visit counts (public site only, online only; src/analytics/cloudflare.ts) at the same time.
-const preload = (): void => {
-  void loadExport().catch(() => undefined)
-  if (import.meta.env.PROD) loadAnalytics()
-}
+const preload = (): void => { void loadExport().catch(() => undefined) }
 if ('requestIdleCallback' in window) window.requestIdleCallback(preload, { timeout: 5000 })
 else setTimeout(preload, 2000)
 

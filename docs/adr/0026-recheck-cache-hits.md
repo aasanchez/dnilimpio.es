@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-# 0024. The service worker hashes every cache hit again
+# 0026. The service worker hashes every cache hit again
 
 - Status: accepted
 - Date: 2026-11-26
@@ -12,7 +12,7 @@ the cache: at install, and on first use for the on-demand files (`ocr/`, `assets
 the worker answered cache hits as they were.
 
 Cache Storage is not private to the worker. Any script that runs on the page's origin (a compromised
-dependency, or the third-party analytics script while it shares the page) can call
+dependency, for example) can call
 `caches.open(...).put(...)` and replace an entry. The review showed that a rewritten `index.html` or
 OCR worker script stays in the cache and is served on every later visit, even offline. `index.html`
 has no SRI of its own, and the OCR worker is started with `new Worker(url)`, which takes no integrity.

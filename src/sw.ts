@@ -11,8 +11,8 @@
 //   can rewrite Cache Storage, so a hit counts only if its bytes still match the manifest. A mismatch
 //   is deleted and the same fixed URL is downloaded again with its integrity (or refused offline).
 //   Every other request from the page or its workers (OCR) is refused and never reaches the
-//   network: another origin, another path, a query string, a method other than GET (route()). The one
-//   exception is Cloudflare's analytics beacon and its page-view report (ADR 0015), left to the network.
+//   network: another origin, another path, a query string, a method other than GET (route()). There is
+//   no exception (ADR 0023).
 // - Activate: deletes the caches of older builds. A new build activates once no tab runs the old
 //   one, or earlier when the app's only tab is idle and asks for it ('activate' message), so no open
 //   page loses files it still needs.
@@ -33,7 +33,7 @@ interface BuildFile { readonly url: string; readonly integrity: string }
 // the request) is cached or downloaded.
 const ON_DEMAND = new Map(manifest.onDemand.map((f): [string, BuildFile] => [urlOf(f.path), { url: urlOf(f.path), integrity: f.integrity }]))
 const FILES = new Map(manifest.files.map((f): [string, BuildFile] => [urlOf(f.path), { url: urlOf(f.path), integrity: f.integrity }]))
-const KNOWN = { files: new Set(FILES.keys()), onDemand: new Set(ON_DEMAND.keys()), analytics: manifest.analytics }
+const KNOWN = { files: new Set(FILES.keys()), onDemand: new Set(ON_DEMAND.keys()) }
 const WORKERS = new Set(WORKER_SCRIPTS.map(urlOf))
 
 /**
@@ -184,8 +184,6 @@ sw.addEventListener('message', (event) => {
 sw.addEventListener('fetch', (event) => {
   const req = event.request
   const to = route(req.method, req.url, req.mode, sw.registration.scope, KNOWN)
-  // Not answered here: the browser sends it as if there were no worker. The CSP still applies.
-  if (to.kind === 'analytics') return
   event.respondWith((async () => {
     switch (to.kind) {
       case 'deny':
