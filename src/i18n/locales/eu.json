@@ -1,6 +1,10 @@
 {
   "appTitle": "NAN garbia",
   "sourceCode": "Iturburu-kodea",
+  "nagwaraVisit": "Bisitatu NagWara",
+  "nagwaraProduct": "NagWara produktu bat da hau,",
+  "nagwaraMachines": "Makinek exekutatzen dute,",
+  "nagwaraPeople": "pertsonek gidatzen dute.",
   "buildVersion": "Bertsioa",
   "buildDeployed": "zabaldua: {when}",
   "buildDev": "garapena",

@@ -1,6 +1,10 @@
 {
   "appTitle": "Schone DNI",
   "sourceCode": "Broncode",
+  "nagwaraVisit": "Bezoek NagWara",
+  "nagwaraProduct": "Dit is een NagWara-product,",
+  "nagwaraMachines": "Machines voeren uit,",
+  "nagwaraPeople": "mensen geven richting.",
   "buildVersion": "Versie",
   "buildDeployed": "uitgerold {when}",
   "buildDev": "ontwikkeling",

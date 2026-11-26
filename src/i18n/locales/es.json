@@ -1,6 +1,10 @@
 {
   "appTitle": "DNI limpio",
   "sourceCode": "Código fuente",
+  "nagwaraVisit": "Visitar NagWara",
+  "nagwaraProduct": "Esto es un producto NagWara,",
+  "nagwaraMachines": "Las máquinas ejecutan,",
+  "nagwaraPeople": "las personas lideran.",
   "buildVersion": "Versión",
   "buildDeployed": "desplegado {when}",
   "buildDev": "desarrollo",
