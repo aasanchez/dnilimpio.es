@@ -4,8 +4,7 @@
      (ADR 0023). Visits are counted by a sandboxed frame from another site that sets no cookies
      (ADR 0024; ADR 0015 records the legal reasoning).
      Closing it stores only the date (src/ui/notice-memory.ts), so it shows at most every 4 days.
-     The second paragraph says exactly what the browser keeps: the app's files and on-demand models
-     in Cache Storage (offline use) and that date. Photos are in memory only. -->
+     Kept short on purpose: the full list of what is sent and stored is in the README. -->
 <script lang="ts">
   import { t, type Lang } from '../i18n/index.ts'
   import AuditPrompt from './AuditPrompt.svelte'
@@ -20,7 +19,6 @@
   <p class="kicker text-[1.2rem]">{t(lang, 'privacyKicker')}</p>
   <h2 class="text-lg tracking-[-0.3px]" id="privacy-title">{t(lang, 'privacyTitle')}</h2>
   <p class="max-w-[72ch] text-sm text-muted">{t(lang, 'privacyBody')}</p>
-  <p class="max-w-[72ch] text-sm text-muted" id="privacy-stored">{t(lang, 'privacyStored')}</p>
   <AuditPrompt {lang} id="audit-notice" extra="mt-0.5 justify-self-start" />
-  <button type="button" class="button small col-start-2! row-span-4 row-start-2 self-end max-[30rem]:col-start-1! max-[30rem]:row-auto max-[30rem]:mt-1.5 max-[30rem]:justify-self-stretch" id="privacy-ok" onclick={onDismiss}>{t(lang, 'privacyOk')}</button>
+  <button type="button" class="button small col-start-2! row-span-3 row-start-2 self-end max-[30rem]:col-start-1! max-[30rem]:row-auto max-[30rem]:mt-1.5 max-[30rem]:justify-self-stretch" id="privacy-ok" onclick={onDismiss}>{t(lang, 'privacyOk')}</button>
 </aside>

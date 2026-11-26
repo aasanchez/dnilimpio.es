@@ -122,12 +122,10 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    - **What is on my card?**, the [card guide](#supported-documents).
    - The **no-cookies notice**, in the place where other sites put a cookie banner. It only informs:
      there is nothing to accept. English text: *"No cookies, no profiles, no data to sell. Your
-     document is processed on your device, and the app does not upload it. Cloudflare hosts the site
-     and counts visits with an isolated frame from another site, on this screen only. They see your
-     IP address, browser and load times, but not your photos. Every Eurocrat's dream: this banner
-     only exists to tell you it isn't needed."* A second paragraph says what the browser keeps:
-     *"Your browser keeps the app's files and AI models, for offline use, and the date you close
-     this notice. Your photos stay in memory only."* **I believe you** closes it; it comes back after 4 days at
+     document is processed on your device, and the app does not upload it. Visits are counted with
+     Cloudflare, in an isolated frame that cannot see your photos. Every Eurocrat's dream: this
+     banner only exists to tell you it isn't needed."* It stays short on purpose; this README lists
+     exactly what is sent and stored ([Privacy and security](#privacy-and-security)). **I believe you** closes it; it comes back after 4 days at
      the earliest.
    - In the footer: **Source code** (this repository, in a new tab), **Check it with your AI** (see
      [Audit it yourself](#audit-it-yourself)), the build version and deploy time, and the NagWara
@@ -268,7 +266,7 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
     ([`src/ui/notice-memory.ts`](src/ui/notice-memory.ts), the only file allowed to use storage). If
     the browser blocks storage, the notice simply shows on every visit.
 
-  The notice says both. To remove them, clear the site's data in the browser settings. A test
+  To remove them, clear the site's data in the browser settings. A test
   checks that cookies and storage hold nothing else after a whole workflow.
 - **Clear everything means everything.** **Clear everything** drops the photos and every choice, and
   stops the OCR worker, which keeps the last image it read. Leaving the page (another site, closing
@@ -597,7 +595,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, a real PDF decoded in the browser (hidden areas black, no metadata, no file name, no watermark text in the file), reset |
 | `share` | WhatsApp and email as share sheet or as plain links, and a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
-| `privacy-notice` | Exact privacy wording (processing on the device, hosting, visit-count frame, what the browser keeps), no accept step, 4-day memory, blocked storage, translations, audit prompt |
+| `privacy-notice` | Exact privacy wording (processing on the device, no upload, visit-count frame), no accept step, 4-day memory, blocked storage, translations, audit prompt |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, build SHA and relative deploy time (also offline) |
 

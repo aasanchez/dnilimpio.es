@@ -10,12 +10,9 @@ test('informs that there are no cookies, with no accept step', async ({ page }) 
   const notice = page.locator('#privacy-notice')
   await expect(notice).toBeVisible()
   await expect(notice.getByRole('heading')).toHaveText('Bruselas estaría orgullosa')
-  // Exact claims only (audit item 8): what the app does, and what the browser keeps.
+  // Exact claims only (audit item 8): processing on the device, no upload, the counter frame.
   await expect(notice).toContainText('Tu documento se procesa en tu dispositivo y la app no lo sube.')
-  await expect(notice).toContainText('Cloudflare aloja el sitio y cuenta las visitas con un marco aislado de otro sitio')
-  await expect(notice).toContainText('pero no tus fotos.')
-  await expect(notice.locator('#privacy-stored')).toContainText('los archivos y modelos de IA de la app')
-  await expect(notice.locator('#privacy-stored')).toContainText('la fecha en que cierras este aviso')
+  await expect(notice).toContainText('Las visitas se cuentan con Cloudflare, en un marco aislado que no ve tus fotos.')
   // No consent choice: one button closes it, the other opens the audit prompt.
   await expect(notice.getByRole('button')).toHaveText(['Compruébalo con tu IA →', 'Me lo creo'])
   await expect(page.getByRole('complementary', { name: 'Bruselas estaría orgullosa' })).toBeVisible()
