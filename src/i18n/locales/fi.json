@@ -23,6 +23,7 @@
   "dropHere": "Vedä kuva tähän",
   "chooseFile": "Valitse tiedosto",
   "localOnly": "Kuva luetaan tällä laitteella. Mitään ei lähetetä.",
+  "filterOff": "Ylimääräinen verkkosuodatin (service worker) ei ole käytössä tällä käynnillä. Sovellus toimii samoin eikä lähetä kuvaasi. Se käynnistyy yleensä, kun lataat sivun uudelleen.",
   "loaded": "Kuva ladattu.",
   "errNotImage": "Tiedosto ei ole kuva. Käytä JPEG-, PNG- tai HEIC-kuvaa.",
   "errHeic": "Tämä selain ei voi avata HEIC-kuvia. Ota kuvasta kuvakaappaus tai muunna se JPEG-muotoon laitteellasi.",

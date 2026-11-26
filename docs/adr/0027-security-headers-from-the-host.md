@@ -68,6 +68,8 @@ component, its `frame-src` exception and its tests. This supersedes ADR 0024.
   host's own statistics of the requests it serves: requests, unique visitors by IP address and
   countries.
 - The CSP has no `frame-src`, so `default-src 'none'` applies: the page can open no frame at all.
+  The photo step's second policy ([ADR 0025](0025-intake-lockdown.md)) keeps its own
+  `frame-src 'none'`.
 - The no-cookies notice no longer mentions visit counts. The README says that the host counts
   requests.
 - The counter page's repository (`aasanchez/dnitapado-stats`) and the Web Analytics site in

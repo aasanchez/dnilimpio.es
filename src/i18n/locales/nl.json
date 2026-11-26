@@ -23,6 +23,7 @@
   "dropHere": "Sleep de afbeelding hierheen",
   "chooseFile": "Kies een bestand",
   "localOnly": "De afbeelding wordt op dit apparaat gelezen. Er wordt niets geüpload.",
+  "filterOff": "Het extra netwerkfilter (service worker) is bij dit bezoek niet actief. De app werkt hetzelfde en verstuurt je foto niet. Meestal start het als je de pagina opnieuw laadt.",
   "loaded": "Afbeelding geladen.",
   "errNotImage": "Het bestand is geen afbeelding. Gebruik een JPEG-, PNG- of HEIC-foto.",
   "errHeic": "Deze browser kan geen HEIC-foto's openen. Maak een schermafbeelding van de foto of zet hem op je apparaat om naar JPEG.",

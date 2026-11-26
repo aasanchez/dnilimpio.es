@@ -248,6 +248,13 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). There is no exception. An end-to-end test runs a whole document workflow with
   fictional card values and checks that no request is sent and none carries those values
   ([`tests/e2e/privacy.spec.ts`](tests/e2e/privacy.spec.ts)).
+- **Tighter rules while photos are in the page.** Before the photo step opens, the app loads every
+  font it needs and adds a second, stricter CSP. From then on the page can load only this build's
+  scripts and workers, each by its exact address, and images only from memory (`blob:`, `data:`).
+  No font, stylesheet, manifest or frame, and no connection at all.
+  The policy stays until the page is reloaded, and a reload drops the photos. The photo step says
+  when the service worker's filter is not active on this visit; the app then works the same
+  ([ADR 0025](docs/adr/0025-intake-lockdown.md)).
 - **On-device AI only.** The corner finder is a small model (DocCornerNet from `scanic-ml`) that runs
   in the page with WebAssembly. The photo goes to it in memory, scaled to 224 × 224 pixels, and
   nowhere else. The CSP allows WebAssembly (`'wasm-unsafe-eval'`) but still no `eval()`
@@ -358,7 +365,14 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   `script-src`, `style-src`, `font-src`). On dnitapado.es the OCR worker has the host's CSP (its
   own origin only); on a host that sends no headers it runs without its own CSP. `connect-src` has no
   `'self'`, so page code cannot send a `fetch()`, a request body or custom headers there. The host
-  would see the address of an image or script request. Only this build's verified code runs, and it never makes one.
+  would see the address of an image or script request. Only this build's verified code runs, and it
+  never makes one. Once photos are in the
+  page, the stricter policy closes images, styles and fonts too; a script import of one of the
+  build's own files with a query string is the one load CSP alone cannot stop, because CSP ignores
+  query strings ([ADR 0025](docs/adr/0025-intake-lockdown.md)).
+- **The service worker does not protect against code already in the page.** Code running with the
+  page's privileges could unregister the worker, delete its caches or navigate away. The worker
+  stops a missing or foreign worker setup from going unnoticed, not a compromised page.
 - **No browser rule can stop a page from navigating to a URL.** The protection there is that only
   this build's verified code runs (CSP, SRI, the locked dependency list) and that the code never
   navigates with your data (enforced by the linter).
@@ -529,6 +543,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
 | No third-party script in the page with photos (ADR 0023) | Done |
 | No analytics code: no third-party script, frame or cookie; the host counts requests (ADR 0027) | Done |
+| Stricter CSP while photos are in the page; service worker check on the photo step | Done |
 | Custom domain `dnitapado.es`, HTTPS enforced; one host, the old address redirects | Done |
 | Security headers from the host (Cloudflare Workers): CSP with `frame-ancestors`, HSTS, Permissions-Policy, COOP, worker CSPs | Done in code; live once Cloudflare is set up ([Deployment](#deployment)) |
 | Languages: 31 in the specification | 13 today |
@@ -601,7 +616,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, manual box maths, every masked pixel opaque black |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages, images, no metadata, no text, deterministic output |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
-| Platform | `precache`, `headers`, `lockdown`, `build-info`, `i18n`, `guide`, `deps-report` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits), WebRTC removal and frame check, version and relative time, translation keys and no absolute privacy claims in es/en, guide citations, dependency report |
+| Platform | `precache`, `headers`, `lockdown`, `intake-lockdown`, `build-info`, `i18n`, `guide`, `deps-report` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal and frame check, the photo step's policy and the service worker check, version and relative time, translation keys and no absolute privacy claims in es/en, guide citations, dependency report |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off:
 
@@ -611,6 +626,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused by the host and, without headers, by the page, photos dropped on `pagehide` |
 | `headers` | The host's headers: page CSP equal to the `<meta>` CSP plus `frame-ancestors`, the worker CSPs, HSTS, Permissions-Policy (camera on; microphone, location, clipboard reading off), no COEP |
 | `cleanup` | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
+| `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
 | `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers added next to the host's CSP, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
 | `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; the page opens no frame, the CSP has no `frame-src` and refuses a frame to another site; the start screen sends nothing to another site, also offline or under GPC |
 | `update` | An idle single tab switches to a new build; a tab with photos, or a second tab, holds it back |
@@ -854,6 +870,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0022](docs/adr/0022-no-published-source-maps.md): no published source maps and no `'self'` in `connect-src`, so page code cannot send requests to its own origin (review finding PRIV-003).
 - [0023](docs/adr/0023-no-third-party-script-with-photos.md): no third-party script in the page that holds the photos; the Cloudflare beacon is removed and `connect-src` is `'none'`.
 - [0024](docs/adr/0024-visit-counter-in-isolated-frame.md): visit counts from a sandboxed frame on another site, on the start screen only. Superseded by 0027: the frame is removed.
+- [0025](docs/adr/0025-intake-lockdown.md): a second, stricter CSP from the photo step on: exact build scripts, images only from memory, no fonts, styles or connections; a service worker check with a calm note when it is missing.
 - [0026](docs/adr/0026-recheck-cache-hits.md): the service worker hashes every cache hit again before it answers; a rewritten entry is deleted and downloaded again, or refused offline.
 - [0027](docs/adr/0027-security-headers-from-the-host.md): security headers from the host; dnitapado.es on Cloudflare Workers with a generated `_headers` file, the only host, no COEP; no analytics code, the host counts requests; nothing deployed to GitHub Pages.
 

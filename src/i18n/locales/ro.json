@@ -23,6 +23,7 @@
   "dropHere": "Trage imaginea aici",
   "chooseFile": "Alege un fișier",
   "localOnly": "Imaginea este citită pe acest dispozitiv. Nu se încarcă nimic.",
+  "filterOff": "Filtrul de rețea suplimentar (service worker) nu este activ la această vizită. Aplicația funcționează la fel și nu trimite fotografia ta. De obicei pornește când reîncarci pagina.",
   "loaded": "Imagine încărcată.",
   "errNotImage": "Fișierul nu este o imagine. Folosește o fotografie JPEG, PNG sau HEIC.",
   "errHeic": "Acest browser nu poate deschide fotografii HEIC. Fă o captură de ecran a fotografiei sau convertește-o în JPEG pe dispozitivul tău.",

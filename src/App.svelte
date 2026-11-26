@@ -20,6 +20,7 @@
   import { revokeDownloads } from './engine/downloads.ts'
   import { noticeDue, rememberNoticeClosed } from './ui/notice-memory.ts'
   import { setAppIdle } from './offline/update.ts'
+  import { lockIntake, prepareIntake } from './security/intake-lockdown.ts'
   import Editor from './components/Editor.svelte'
   import type CardGuideT from './components/CardGuide.svelte'
   import { emptyEditState, type Phase } from './ui/edit-state.ts'
@@ -119,6 +120,10 @@
   }
 
   function go (s: Step, side: Side = alignSide): void {
+    // Every screen after the start one can hold photos: the intake policy is in force there (ADR 0025).
+    // Start (below) loads the fonts first; this is the safety net for any other way in. Production
+    // builds only: the dev server has no CSP, no import map and needs its HMR connection.
+    if (s !== 'home' && import.meta.env.PROD) lockIntake()
     step = s
     alignSide = side
     if (s === 'edit') phase = 'edit'
@@ -135,6 +140,12 @@
 
   // Bumped by reset(): the capture step is rebuilt, which cancels photos it is still decoding.
   let session = $state(0)
+
+  /** Start: loads what the page still needs, locks the network channels, then opens the photo step. */
+  async function startCapture (): Promise<void> {
+    if (import.meta.env.PROD) await prepareIntake()
+    go('capture', 'front')
+  }
 
   /**
    * Spec §20: drop photos, straightened cards and every choice, and return to the start.
@@ -269,7 +280,7 @@
         <CaptureStep {lang} state={capture} {onLoaded} onContinue={() => { go('doc') }} />
       {/key}
     {:else}
-      <Home {lang} {notice} onGuide={() => { void openGuide() }} onNoticeDismiss={() => { notice = false; rememberNoticeClosed() }} onStart={() => { go('capture', 'front') }} />
+      <Home {lang} {notice} onGuide={() => { void openGuide() }} onNoticeDismiss={() => { notice = false; rememberNoticeClosed() }} onStart={() => { void startCapture() }} />
     {/if}
   </div>
   {#if CardGuide}<CardGuide {lang} id="guide" bind:this={guide} />{/if}

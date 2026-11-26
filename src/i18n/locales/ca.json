@@ -23,6 +23,7 @@
   "dropHere": "Arrossega la imatge aquí",
   "chooseFile": "Tria un fitxer",
   "localOnly": "La imatge es llegeix en aquest dispositiu. No es puja res.",
+  "filterOff": "El filtre extra de xarxa (service worker) no està actiu en aquesta visita. L'app funciona igual i no envia la teva foto. Sol activar-se en tornar a carregar la pàgina.",
   "loaded": "Imatge carregada.",
   "errNotImage": "El fitxer no és una imatge. Fes servir una foto JPEG, PNG o HEIC.",
   "errHeic": "Aquest navegador no pot obrir fotos HEIC. Fes una captura de pantalla de la foto o converteix-la a JPEG al teu dispositiu.",

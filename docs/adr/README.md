@@ -30,5 +30,6 @@ project specification on purpose).
 | [0022](0022-no-published-source-maps.md) | No published source maps; `connect-src` without `'self'` (PRIV-003) | accepted |
 | [0023](0023-no-third-party-script-with-photos.md) | No third-party script in the page that holds the photos: beacon removed, `connect-src 'none'` | accepted |
 | [0024](0024-visit-counter-in-isolated-frame.md) | Visit counts from a sandboxed frame on another site, start screen only; `frame-src` for that page only | superseded by 0027 |
+| [0025](0025-intake-lockdown.md) | Intake lockdown: a stricter CSP while photos are in the page (exact build scripts, images from memory only, no connection); service worker check | accepted |
 | [0026](0026-recheck-cache-hits.md) | The service worker hashes every cache hit again; a rewritten entry is deleted and downloaded again | accepted |
 | [0027](0027-security-headers-from-the-host.md) | Security headers from the host: dnitapado.es on Cloudflare Workers with a generated `_headers`; the only host, GitHub Pages no longer deployed; no COEP; no analytics code, the host counts requests | accepted |
