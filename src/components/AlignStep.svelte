@@ -112,26 +112,32 @@
   }
 </script>
 
-<section class="step">
-  <div>
-    <h2>{t(lang, side === 'front' ? 'alignFront' : 'alignBack')}</h2>
-    <p class="lead">{t(lang, 'alignLead')}</p>
+<section class="step split flex-1">
+  <div class="area-head flex flex-col gap-4">
+    <div>
+      <h2>{t(lang, side === 'front' ? 'alignFront' : 'alignBack')}</h2>
+      <p class="lead">{t(lang, 'alignLead')}</p>
+    </div>
+    <div class="segmented" role="group" aria-label={t(lang, 'sides')}>
+      {#each SIDES as s (s)}
+        <button type="button" id="align-tab-{s}" aria-pressed={s === side} onclick={() => { if (s !== side) onSide(s) }}>
+          {#if aligned[s]}<span class="font-bold text-accent" aria-hidden="true">✓</span>{/if}{sideName(s)}
+        </button>
+      {/each}
+    </div>
   </div>
-  <div class="segmented" role="group" aria-label={t(lang, 'sides')}>
-    {#each SIDES as s (s)}
-      <button type="button" id="align-tab-{s}" aria-pressed={s === side} onclick={() => { if (s !== side) onSide(s) }}>
-        {#if aligned[s]}<span class="tick" aria-hidden="true">✓</span>{/if}{sideName(s)}
-      </button>
-    {/each}
+  <div class="area-stage flex flex-col gap-3">
+    <div class="win">
+      <div class="winbar"><i></i><i></i><i></i><span class="title">{sideName(side).toLowerCase()}.jpg</span></div>
+      <!-- data-corners / data-source: current corners in photo pixels and who placed them, for e2e tests. -->
+      <div {@attach mountEditor} data-source={source} data-corners={quad.map((p) => `${String(Math.round(p.x))},${String(Math.round(p.y))}`).join(' ')}></div>
+    </div>
+    <p class="font-mono text-[0.6875rem] text-muted" id="align-auto" role="status">{auto === 'searching' ? t(lang, 'cornersSearching') : auto === 'found' ? t(lang, 'cornersFound') : missed ? t(lang, 'cornersMissed') : ''}</p>
   </div>
-  <div class="win">
-    <div class="winbar"><i></i><i></i><i></i><span class="title">{sideName(side).toLowerCase()}.jpg</span></div>
-    <!-- data-corners / data-source: current corners in photo pixels and who placed them, for e2e tests. -->
-    <div {@attach mountEditor} data-source={source} data-corners={quad.map((p) => `${String(Math.round(p.x))},${String(Math.round(p.y))}`).join(' ')}></div>
+  <div class="area-side flex flex-col gap-4">
+    <p class="hint">{t(lang, 'alignHint')}</p>
+    <p class="notice-warn" id="align-status" role={valid ? 'status' : 'alert'} hidden={valid}>{valid ? '' : t(lang, 'cornersInvalid')}</p>
   </div>
-  <p class="status" id="align-auto" role="status">{auto === 'searching' ? t(lang, 'cornersSearching') : auto === 'found' ? t(lang, 'cornersFound') : missed ? t(lang, 'cornersMissed') : ''}</p>
-  <p class="hint">{t(lang, 'alignHint')}</p>
-  <p class="warning" id="align-status" role={valid ? 'status' : 'alert'} hidden={valid}>{valid ? '' : t(lang, 'cornersInvalid')}</p>
 
   <div class="actionbar">
     <div class="row">

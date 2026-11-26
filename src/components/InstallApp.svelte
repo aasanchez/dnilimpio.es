@@ -19,9 +19,9 @@
 </script>
 
 {#if offer !== 'none'}
-  <button type="button" class="link-btn" id="install" onclick={click}
+  <button type="button" class="link-btn mx-auto flex min-h-8 text-xs" id="install" onclick={click}
     aria-expanded={offer === 'ios' ? help : undefined} aria-controls={offer === 'ios' ? 'install-help' : undefined}>{t(lang, 'installApp')}</button>
   {#if offer === 'ios' && help}
-    <p class="install-help" id="install-help">{t(lang, 'installIos')}</p>
+    <p class="mx-auto mb-3 max-w-96 text-muted" id="install-help">{t(lang, 'installIos')}</p>
   {/if}
 {/if}

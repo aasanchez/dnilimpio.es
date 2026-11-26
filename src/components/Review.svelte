@@ -86,28 +86,32 @@
 </script>
 
 {#if phase === 'review'}
-  <section class="step review">
-    <div>
+  <section class="step review split flex-1">
+    <div class="area-head">
       <p class="kicker">{t(lang, 'reviewKicker')}</p>
       <h2 id="review-title">{t(lang, 'reviewTitle')}</h2>
       <p class="lead">{t(lang, 'reviewLead')}</p>
     </div>
-    {#each SIDES as s (s)}
-      <figure class="win result">
-        <figcaption class="winbar"><i></i><i></i><i></i><span class="title">{sideName(s)}</span></figcaption>
-        <div class="winbody"><canvas class="card-result" id="review-{s}" {@attach copyOf(s)}></canvas></div>
-      </figure>
-    {/each}
-    <ul class="term" id="review-summary">
-      <li><span class="p">✓</span> {tf(lang, 'summaryHidden', { n: hiddenCount })}</li>
-      <li><span class="p">✓</span> {tf(lang, 'summaryBoxes', { n: boxCount })}</li>
-      <li><span class="p">✓</span> {mark === '' ? t(lang, 'summaryNoWatermark') : tf(lang, 'summaryWatermark', { text: mark })}</li>
-      <li><span class="p">✓</span> {t(lang, greyscale ? 'summaryGreyscale' : 'summaryColour')}</li>
-    </ul>
-    <p class="warning" id="review-warning">{t(lang, 'reviewWarning')}</p>
-    <label class="confirm"><input type="checkbox" id="review-confirm" bind:checked={confirmed} /> {t(lang, 'reviewConfirm')}</label>
-    <p class="error" id="download-status" role={status === 'error' ? 'alert' : 'status'}>{status === 'error' ? t(lang, 'errExport') : ''}</p>
-    <button type="button" class="link-button" id="reset-review" onclick={onReset}>{t(lang, 'reset')}</button>
+    <div class="area-stage flex flex-col gap-4">
+      {#each SIDES as s (s)}
+        <figure class="win m-0">
+          <figcaption class="winbar"><i></i><i></i><i></i><span class="title">{sideName(s)}</span></figcaption>
+          <div class="winbody"><canvas class="block h-auto w-full rounded-md" id="review-{s}" {@attach copyOf(s)}></canvas></div>
+        </figure>
+      {/each}
+    </div>
+    <div class="area-side flex flex-col gap-4">
+      <ul class="term" id="review-summary">
+        <li><span class="p">✓</span> {tf(lang, 'summaryHidden', { n: hiddenCount })}</li>
+        <li><span class="p">✓</span> {tf(lang, 'summaryBoxes', { n: boxCount })}</li>
+        <li><span class="p">✓</span> {mark === '' ? t(lang, 'summaryNoWatermark') : tf(lang, 'summaryWatermark', { text: mark })}</li>
+        <li><span class="p">✓</span> {t(lang, greyscale ? 'summaryGreyscale' : 'summaryColour')}</li>
+      </ul>
+      <p class="notice-warn" id="review-warning">{t(lang, 'reviewWarning')}</p>
+      <label class="flex min-h-14.5 items-center gap-3 rounded-lg border-2 border-ink bg-surface px-3.5 py-2.5 has-checked:bg-sunk"><input type="checkbox" class="check" id="review-confirm" bind:checked={confirmed} /> {t(lang, 'reviewConfirm')}</label>
+      <p class="notice-warn" id="download-status" role={status === 'error' ? 'alert' : 'status'}>{status === 'error' ? t(lang, 'errExport') : ''}</p>
+      <button type="button" class="link-button" id="reset-review" onclick={onReset}>{t(lang, 'reset')}</button>
+    </div>
 
     <div class="actionbar">
       <button type="button" class="button primary" id="download" disabled={!confirmed || busy} onclick={download}>
@@ -117,32 +121,34 @@
     </div>
   </section>
 {:else}
-  <section class="step done">
-    <div>
+  <section class="step done split flex-1">
+    <div class="area-head">
       <p class="kicker">{t(lang, 'doneKicker')}</p>
-      <h2>{t(lang, 'doneTitle')}</h2>
+      <h2 class="text-[2rem] font-extrabold tracking-[-1px]">{t(lang, 'doneTitle')}</h2>
     </div>
-    <div class="win">
+    <div class="win area-stage">
       <div class="winbar"><i></i><i></i><i></i><span class="title">export.log</span></div>
       <p class="term" aria-hidden="true"><span class="p">$</span> dt.es export<br />→ protected-document.pdf · 2 pp · ok<br />→ {t(lang, 'logSent')}<br /><span class="p">_</span></p>
     </div>
-    <p class="lead" id="download-status" role="status">{status === 'done' ? t(lang, 'downloaded') : ''}</p>
+    <div class="area-side flex flex-col gap-4">
+      <p class="lead" id="download-status" role="status">{status === 'done' ? t(lang, 'downloaded') : ''}</p>
 
-    <section class="send" aria-labelledby="send-title">
-      <h3 id="send-title">{t(lang, 'sendTitle')}</h3>
-      <p class="hint" id="send-lead">{t(lang, shareable ? 'sendLeadShare' : 'sendLeadManual')}</p>
-      <div class="send-actions">
-        {#if shareable}
-          <button type="button" class="button" id="share-whatsapp" onclick={share}>{@render whatsappIcon()}{t(lang, 'shareWhatsApp')}</button>
-          <button type="button" class="button" id="share-email" onclick={share}>{@render mailIcon()}{t(lang, 'shareEmail')}</button>
-        {:else}
-          <a class="button" id="share-whatsapp" href={whatsappHref} target="_blank" rel="noopener noreferrer">{@render whatsappIcon()}{t(lang, 'shareWhatsApp')}</a>
-          <a class="button" id="share-email" href={mailHref}>{@render mailIcon()}{t(lang, 'shareEmail')}</a>
-        {/if}
-      </div>
-      {#if shareStatus === 'error'}<p class="error" role="alert">{t(lang, 'errShare')}</p>{/if}
-    </section>
-    <p class="hint">{t(lang, 'doneHint')}</p>
+      <section class="send grid gap-2.5 rounded-lg border-2 border-ink bg-surface p-3.5" aria-labelledby="send-title">
+        <h3 class="text-lg font-extrabold" id="send-title">{t(lang, 'sendTitle')}</h3>
+        <p class="hint" id="send-lead">{t(lang, shareable ? 'sendLeadShare' : 'sendLeadManual')}</p>
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2.5">
+          {#if shareable}
+            <button type="button" class="button" id="share-whatsapp" onclick={share}>{@render whatsappIcon()}{t(lang, 'shareWhatsApp')}</button>
+            <button type="button" class="button" id="share-email" onclick={share}>{@render mailIcon()}{t(lang, 'shareEmail')}</button>
+          {:else}
+            <a class="button" id="share-whatsapp" href={whatsappHref} target="_blank" rel="noopener noreferrer">{@render whatsappIcon()}{t(lang, 'shareWhatsApp')}</a>
+            <a class="button" id="share-email" href={mailHref}>{@render mailIcon()}{t(lang, 'shareEmail')}</a>
+          {/if}
+        </div>
+        {#if shareStatus === 'error'}<p class="notice-warn" role="alert">{t(lang, 'errShare')}</p>{/if}
+      </section>
+      <p class="hint">{t(lang, 'doneHint')}</p>
+    </div>
 
     <div class="actionbar">
       <button type="button" class="button primary" id="reset-done" onclick={onReset}>

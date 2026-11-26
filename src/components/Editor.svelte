@@ -387,154 +387,160 @@
 </script>
 
 {#if phase === 'edit'}
-  <section class="step">
-    <div class="heading-row">
-      <h2>{t(lang, 'hideTitle')}</h2>
-      <span class="count" id="hidden-count">{tf(lang, 'hiddenCount', { hidden: hidden.size, total: fields.length })}</span>
-    </div>
-    <div class="segmented" role="group" aria-label={t(lang, 'sides')}>
-      {#each SIDES as s (s)}
-        <button type="button" id="tab-{s}" aria-pressed={side === s} onclick={() => { side = s; selected = null; selectedZone = null }}>{sideName(s)}</button>
-      {/each}
-    </div>
-
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="win" onkeydown={onEditorKey}>
-      <div class="winbar">
-        <i></i><i></i><i></i><span class="title">{sideName(side).toLowerCase()}.jpg</span>
-        <label class="chip"><input type="checkbox" id="final-preview" class="visually-hidden" bind:checked={finalPreview} />{finalPreview ? '◉' : '○'} {t(lang, 'finalPreview')}</label>
-        <button type="button" class="chip" id="adjust-{side}" onclick={() => { onAdjust(side) }}>{t(lang, 'adjust')}</button>
+  <section class="step split flex-1">
+    <div class="area-head flex flex-col gap-4">
+      <div class="flex flex-wrap items-end justify-between gap-2">
+        <h2>{t(lang, 'hideTitle')}</h2>
+        <span class="count font-mono text-xs text-muted" id="hidden-count">{tf(lang, 'hiddenCount', { hidden: hidden.size, total: fields.length })}</span>
       </div>
-      <div class="winbody">
-        <!-- role=application: the canvas is a pointer- and keyboard-operable editor (keys described in #box-hint). -->
-        <!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
-        <canvas id="preview" class="card-result box-editor" class:is-drawing={drawMode} bind:this={display} tabindex="0" role="application"
-          aria-label={tf(lang, 'previewLabel', { side: sideName(side) })}
-          aria-describedby={adjusting ? 'adjust-hint' : 'box-hint'}
-          onpointerdown={onPointerDown} onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp}
-          onkeydown={onKeyDown}></canvas>
-      </div>
-    </div>
-    <p class="legend"><span class="legend-swatch" aria-hidden="true"></span>{t(lang, adjusting ? 'legendAdjust' : 'legendVisible')}</p>
-
-    <div class="tools" role="tablist" aria-label={t(lang, 'tools')}>
-      {#each TOOLS as tl (tl.id)}
-        <button type="button" role="tab" id="tool-{tl.id}" aria-selected={tool === tl.id} aria-controls="panel-{tl.id}" onclick={() => { pickTool(tl.id) }}>{t(lang, tl.key)}</button>
-      {/each}
-    </div>
-
-    <div class="panel" id="panel-fields" role="tabpanel" aria-labelledby="tool-fields" hidden={tool !== 'fields'}>
-      <div class="chips scroll" role="group" aria-label={t(lang, 'presets')}>
-        <button type="button" class="chip" id="preset-recommended" aria-pressed={sameSet(edit.hidden, recommended)} onclick={() => { edit.hidden = [...recommended] }}>{t(lang, 'presetRecommended')}</button>
-        <button type="button" class="chip" id="hide-all" aria-pressed={hidden.size === fields.length} onclick={() => { edit.hidden = fields.map((f) => f.id) }}>{t(lang, 'hideAll')}</button>
-        <button type="button" class="chip" id="restore-all" aria-pressed={hidden.size === 0} onclick={() => { edit.hidden = [] }}>{t(lang, 'restoreAll')}</button>
-      </div>
-      <ul class="fields" aria-label={t(lang, 'fieldsToHide')}>
-        {#each sideFields as f (f.id)}
-          <li>
-            <label class="toggle">
-              <span class="toggle-text">
-                <span class="toggle-label">{t(lang, fieldKey(f.id))}</span>
-                {#if f.sides.length > 1}<span class="toggle-note">{t(lang, 'bothSides')}</span>{/if}
-              </span>
-              <span class="toggle-state" class:is-on={hidden.has(f.id)} aria-hidden="true">{t(lang, hidden.has(f.id) ? 'stateHidden' : 'stateVisible')}</span>
-              <input type="checkbox" role="switch" class="switch" id="field-{f.id}" checked={hidden.has(f.id)}
-                onchange={(e) => { toggle(f.id, e.currentTarget.checked) }} />
-            </label>
-            <!-- Outside the label, so it never toggles the field. -->
-            <button type="button" class="icon-btn guide-info" id="about-{f.id}" aria-label={tf(lang, 'guideAbout', { field: t(lang, fieldKey(f.id)) })} onclick={() => { onGuide(f.id) }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.5" /></svg>
-            </button>
-          </li>
+      <div class="segmented" role="group" aria-label={t(lang, 'sides')}>
+        {#each SIDES as s (s)}
+          <button type="button" id="tab-{s}" aria-pressed={side === s} onclick={() => { side = s; selected = null; selectedZone = null }}>{sideName(s)}</button>
         {/each}
-      </ul>
-      <div aria-live="polite" class="panel">
-        {#if hasField(model, 'can') && !hidden.has('can')}<p class="warning" id="can-warning">{t(lang, 'canWarning')}</p>{/if}
-        {#if mrzLeaks(model, hidden)}<p class="warning" id="mrz-warning">{t(lang, 'mrzWarning')}</p>{/if}
-      </div>
-      <p class="hint">{tf(lang, 'positionsHint', { doc: docName })}</p>
-      <!-- Adjust: move or resize the field boxes by hand when the template sits a little off the card. -->
-      <div class="box">
-        <div class="box-actions">
-          <button type="button" class="button small" id="adjust-zones" aria-pressed={adjusting} disabled={finalPreview} onclick={() => { setAdjusting(!adjusting) }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" /></svg>
-            {t(lang, 'adjustZones')}
-          </button>
-          <button type="button" class="button small" id="reset-zones" disabled={!moved} onclick={resetPlacement}>{t(lang, 'resetZones')}</button>
-        </div>
-        {#if adjusting}
-          <p class="hint" id="adjust-hint">{t(lang, 'adjustHint')}</p>
-          <p class="count" id="zone-position" aria-live="polite">
-            {#if selectedPlaced}
-              {@const r = zoneDraft?.key === selectedPlaced.key ? zoneDraft.rect : selectedPlaced.rect}
-              {tf(lang, 'zonePosition', { field: t(lang, fieldKey(selectedPlaced.id)), x: share.format(r.x), y: share.format(r.y), w: share.format(r.w), h: share.format(r.h) })}
-            {/if}
-          </p>
-        {/if}
-      </div>
-      <SmartFind {lang} {cards} onFound={addFound} />
-    </div>
-
-    <div class="panel" id="panel-boxes" role="tabpanel" aria-labelledby="tool-boxes" hidden={tool !== 'boxes'}>
-      <div class="box">
-        <p class="hint" id="box-hint">{t(lang, 'boxHint')}</p>
-        <div class="box-actions" role="group" aria-label={t(lang, 'boxesLabel')}>
-          <button type="button" class="button small" id="draw-box" aria-pressed={drawMode} disabled={finalPreview} onclick={() => { drawMode = !drawMode }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="1" /><path d="M12 9v6M9 12h6" /></svg>
-            {t(lang, 'drawBox')}
-          </button>
-          <button type="button" class="button small" id="add-box" disabled={finalPreview} onclick={addBox}>{t(lang, 'addBox')}</button>
-          <span class="spacer"></span>
-          <button type="button" class="icon-btn" id="delete-box" aria-label={t(lang, 'deleteBox')} disabled={selected === null || finalPreview} onclick={deleteBox}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
-          </button>
-          <button type="button" class="icon-btn" id="undo" aria-label={t(lang, 'undo')} disabled={!canUndo(edit.boxes)} onclick={() => { history('undo') }}>
-            <svg class="flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 010 12h-3" /></svg>
-          </button>
-          <button type="button" class="icon-btn" id="redo" aria-label={t(lang, 'redo')} disabled={!canRedo(edit.boxes)} onclick={() => { history('redo') }}>
-            <svg class="flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5" /><path d="M20 9H10a6 6 0 000 12h3" /></svg>
-          </button>
-        </div>
-        <p class="count">{tf(lang, 'boxCount', { n: boxes.length })}</p>
       </div>
     </div>
 
-    <div class="panel" id="panel-mark" role="tabpanel" aria-labelledby="tool-mark" hidden={tool !== 'mark'}>
-      <div class="box">
-        <label class="field" for="watermark">{t(lang, 'watermarkLabel')}</label>
-        <input type="text" id="watermark" class="text" bind:value={edit.watermark} maxlength="200" autocomplete="off" spellcheck="false" aria-describedby="watermark-hint" />
-        <div class="chips scroll" role="group" aria-label={t(lang, 'suggestions')}>
-          {#each [t(lang, 'wmRental'), t(lang, 'wmBank'), tf(lang, 'wmDated', { date: today })] as s (s)}
-            <button type="button" class="chip" onclick={() => { edit.watermark = s }}>{s}</button>
+    <div class="area-stage flex flex-col gap-3">
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="win" onkeydown={onEditorKey}>
+        <div class="winbar">
+          <i></i><i></i><i></i><span class="title">{sideName(side).toLowerCase()}.jpg</span>
+          <label class="chip"><input type="checkbox" id="final-preview" class="sr-only" bind:checked={finalPreview} />{finalPreview ? '◉' : '○'} {t(lang, 'finalPreview')}</label>
+          <button type="button" class="chip" id="adjust-{side}" onclick={() => { onAdjust(side) }}>{t(lang, 'adjust')}</button>
+        </div>
+        <div class="winbody">
+          <!-- role=application: the canvas is a pointer- and keyboard-operable editor (keys described in #box-hint). -->
+          <!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
+          <canvas id="preview" class="block h-auto w-full cursor-pointer touch-none rounded-md select-none [&.is-drawing]:cursor-crosshair" class:is-drawing={drawMode} bind:this={display} tabindex="0" role="application"
+            aria-label={tf(lang, 'previewLabel', { side: sideName(side) })}
+            aria-describedby={adjusting ? 'adjust-hint' : 'box-hint'}
+            onpointerdown={onPointerDown} onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp}
+            onkeydown={onKeyDown}></canvas>
+        </div>
+      </div>
+      <p class="flex items-center gap-2 text-sm text-muted"><span class="inline-block h-2.75 w-4.5 flex-none rounded-xs border-2 border-dashed border-accent" aria-hidden="true"></span>{t(lang, adjusting ? 'legendAdjust' : 'legendVisible')}</p>
+    </div>
+
+    <div class="area-side flex flex-col gap-4">
+      <div class="tabs" role="tablist" aria-label={t(lang, 'tools')}>
+        {#each TOOLS as tl (tl.id)}
+          <button type="button" role="tab" id="tool-{tl.id}" aria-selected={tool === tl.id} aria-controls="panel-{tl.id}" onclick={() => { pickTool(tl.id) }}>{t(lang, tl.key)}</button>
+        {/each}
+      </div>
+
+      <div class="flex flex-col gap-3" id="panel-fields" role="tabpanel" aria-labelledby="tool-fields" hidden={tool !== 'fields'}>
+        <div class="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none]" role="group" aria-label={t(lang, 'presets')}>
+          <button type="button" class="chip" id="preset-recommended" aria-pressed={sameSet(edit.hidden, recommended)} onclick={() => { edit.hidden = [...recommended] }}>{t(lang, 'presetRecommended')}</button>
+          <button type="button" class="chip" id="hide-all" aria-pressed={hidden.size === fields.length} onclick={() => { edit.hidden = fields.map((f) => f.id) }}>{t(lang, 'hideAll')}</button>
+          <button type="button" class="chip" id="restore-all" aria-pressed={hidden.size === 0} onclick={() => { edit.hidden = [] }}>{t(lang, 'restoreAll')}</button>
+        </div>
+        <ul class="rows" aria-label={t(lang, 'fieldsToHide')}>
+          {#each sideFields as f (f.id)}
+            <li class="flex items-center">
+              <label class="toggle min-w-0 flex-1">
+                <span class="toggle-text">
+                  <span class="toggle-label">{t(lang, fieldKey(f.id))}</span>
+                  {#if f.sides.length > 1}<span class="toggle-note">{t(lang, 'bothSides')}</span>{/if}
+                </span>
+                <span class="min-w-[4.5em] text-end font-mono text-[0.6875rem] font-bold {hidden.has(f.id) ? 'text-ink' : 'text-accent-text'}" aria-hidden="true">{t(lang, hidden.has(f.id) ? 'stateHidden' : 'stateVisible')}</span>
+                <input type="checkbox" role="switch" class="switch" id="field-{f.id}" checked={hidden.has(f.id)}
+                  onchange={(e) => { toggle(f.id, e.currentTarget.checked) }} />
+              </label>
+              <!-- Outside the label, so it never toggles the field. -->
+              <button type="button" class="icon-btn me-1.5 flex-none text-muted" id="about-{f.id}" aria-label={tf(lang, 'guideAbout', { field: t(lang, fieldKey(f.id)) })} onclick={() => { onGuide(f.id) }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.5" /></svg>
+              </button>
+            </li>
           {/each}
+        </ul>
+        <div aria-live="polite" class="flex flex-col gap-3 empty:hidden">
+          {#if hasField(model, 'can') && !hidden.has('can')}<p class="notice-warn" id="can-warning">{t(lang, 'canWarning')}</p>{/if}
+          {#if mrzLeaks(model, hidden)}<p class="notice-warn" id="mrz-warning">{t(lang, 'mrzWarning')}</p>{/if}
         </div>
-        <p class="hint" id="watermark-hint">{t(lang, 'watermarkHint')}</p>
-        <!-- Size and opacity: applied live to the preview; disabled until there is text to draw. -->
-        <div class="slider">
-          <label class="field" for="watermark-size">{t(lang, 'watermarkSize')}</label>
-          <output for="watermark-size" id="watermark-size-value">{percent.format(edit.watermarkScale)}</output>
-          <input type="range" id="watermark-size" class="range" disabled={!hasMark}
-            min={WATERMARK_SCALE.min} max={WATERMARK_SCALE.max} step={WATERMARK_SCALE.step}
-            bind:value={edit.watermarkScale} aria-valuetext={percent.format(edit.watermarkScale)} />
+        <p class="hint">{tf(lang, 'positionsHint', { doc: docName })}</p>
+        <!-- Adjust: move or resize the field boxes by hand when the template sits a little off the card. -->
+        <div class="panel-box">
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="button small" id="adjust-zones" aria-pressed={adjusting} disabled={finalPreview} onclick={() => { setAdjusting(!adjusting) }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" /></svg>
+              {t(lang, 'adjustZones')}
+            </button>
+            <button type="button" class="button small" id="reset-zones" disabled={!moved} onclick={resetPlacement}>{t(lang, 'resetZones')}</button>
+          </div>
+          {#if adjusting}
+            <p class="hint" id="adjust-hint">{t(lang, 'adjustHint')}</p>
+            <p class="font-mono text-xs text-muted" id="zone-position" aria-live="polite">
+              {#if selectedPlaced}
+                {@const r = zoneDraft?.key === selectedPlaced.key ? zoneDraft.rect : selectedPlaced.rect}
+                {tf(lang, 'zonePosition', { field: t(lang, fieldKey(selectedPlaced.id)), x: share.format(r.x), y: share.format(r.y), w: share.format(r.w), h: share.format(r.h) })}
+              {/if}
+            </p>
+          {/if}
         </div>
-        <div class="slider">
-          <label class="field" for="watermark-opacity">{t(lang, 'watermarkOpacity')}</label>
-          <output for="watermark-opacity" id="watermark-opacity-value">{percent.format(edit.watermarkOpacity)}</output>
-          <input type="range" id="watermark-opacity" class="range" disabled={!hasMark}
-            min={WATERMARK_OPACITY.min} max={WATERMARK_OPACITY.max} step={WATERMARK_OPACITY.step}
-            bind:value={edit.watermarkOpacity} aria-valuetext={percent.format(edit.watermarkOpacity)} />
-        </div>
-        <label class="toggle">
-          <span class="toggle-text">
-            <span class="toggle-label">{t(lang, 'greyscale')}</span>
-            <span class="toggle-note">{t(lang, 'greyscaleHint')}</span>
-          </span>
-          <input type="checkbox" role="switch" class="switch" id="greyscale" bind:checked={edit.greyscale} />
-        </label>
+        <SmartFind {lang} {cards} onFound={addFound} />
       </div>
-    </div>
 
-    <button type="button" class="link-button" id="reset" onclick={onReset}>{t(lang, 'reset')}</button>
+      <div class="flex flex-col gap-3" id="panel-boxes" role="tabpanel" aria-labelledby="tool-boxes" hidden={tool !== 'boxes'}>
+        <div class="panel-box">
+          <p class="hint" id="box-hint">{t(lang, 'boxHint')}</p>
+          <div class="flex flex-wrap items-center gap-2" role="group" aria-label={t(lang, 'boxesLabel')}>
+            <button type="button" class="button small" id="draw-box" aria-pressed={drawMode} disabled={finalPreview} onclick={() => { drawMode = !drawMode }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="1" /><path d="M12 9v6M9 12h6" /></svg>
+              {t(lang, 'drawBox')}
+            </button>
+            <button type="button" class="button small" id="add-box" disabled={finalPreview} onclick={addBox}>{t(lang, 'addBox')}</button>
+            <span class="flex-1"></span>
+            <button type="button" class="icon-btn" id="delete-box" aria-label={t(lang, 'deleteBox')} disabled={selected === null || finalPreview} onclick={deleteBox}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
+            </button>
+            <button type="button" class="icon-btn" id="undo" aria-label={t(lang, 'undo')} disabled={!canUndo(edit.boxes)} onclick={() => { history('undo') }}>
+              <svg class="flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 010 12h-3" /></svg>
+            </button>
+            <button type="button" class="icon-btn" id="redo" aria-label={t(lang, 'redo')} disabled={!canRedo(edit.boxes)} onclick={() => { history('redo') }}>
+              <svg class="flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5" /><path d="M20 9H10a6 6 0 000 12h3" /></svg>
+            </button>
+          </div>
+          <p class="count font-mono text-xs text-muted">{tf(lang, 'boxCount', { n: boxes.length })}</p>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3" id="panel-mark" role="tabpanel" aria-labelledby="tool-mark" hidden={tool !== 'mark'}>
+        <div class="panel-box">
+          <label class="font-bold" for="watermark">{t(lang, 'watermarkLabel')}</label>
+          <input type="text" id="watermark" class="min-h-12 w-full rounded-md border-2 border-ink bg-paper px-3 text-base" bind:value={edit.watermark} maxlength="200" autocomplete="off" spellcheck="false" aria-describedby="watermark-hint" />
+          <div class="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none]" role="group" aria-label={t(lang, 'suggestions')}>
+            {#each [t(lang, 'wmRental'), t(lang, 'wmBank'), tf(lang, 'wmDated', { date: today })] as s (s)}
+              <button type="button" class="chip" onclick={() => { edit.watermark = s }}>{s}</button>
+            {/each}
+          </div>
+          <p class="hint" id="watermark-hint">{t(lang, 'watermarkHint')}</p>
+          <!-- Size and opacity: applied live to the preview; disabled until there is text to draw. -->
+          <div class="group grid grid-cols-[1fr_auto] items-baseline gap-x-3 gap-y-1">
+            <label class="font-bold group-has-[:disabled]:text-muted" for="watermark-size">{t(lang, 'watermarkSize')}</label>
+            <output class="font-mono text-[0.8125rem] font-bold group-has-[:disabled]:text-muted" for="watermark-size" id="watermark-size-value">{percent.format(edit.watermarkScale)}</output>
+            <input type="range" id="watermark-size" class="range" disabled={!hasMark}
+              min={WATERMARK_SCALE.min} max={WATERMARK_SCALE.max} step={WATERMARK_SCALE.step}
+              bind:value={edit.watermarkScale} aria-valuetext={percent.format(edit.watermarkScale)} />
+          </div>
+          <div class="group grid grid-cols-[1fr_auto] items-baseline gap-x-3 gap-y-1">
+            <label class="font-bold group-has-[:disabled]:text-muted" for="watermark-opacity">{t(lang, 'watermarkOpacity')}</label>
+            <output class="font-mono text-[0.8125rem] font-bold group-has-[:disabled]:text-muted" for="watermark-opacity" id="watermark-opacity-value">{percent.format(edit.watermarkOpacity)}</output>
+            <input type="range" id="watermark-opacity" class="range" disabled={!hasMark}
+              min={WATERMARK_OPACITY.min} max={WATERMARK_OPACITY.max} step={WATERMARK_OPACITY.step}
+              bind:value={edit.watermarkOpacity} aria-valuetext={percent.format(edit.watermarkOpacity)} />
+          </div>
+          <label class="toggle">
+            <span class="toggle-text">
+              <span class="toggle-label">{t(lang, 'greyscale')}</span>
+              <span class="toggle-note">{t(lang, 'greyscaleHint')}</span>
+            </span>
+            <input type="checkbox" role="switch" class="switch" id="greyscale" bind:checked={edit.greyscale} />
+          </label>
+        </div>
+      </div>
+
+      <button type="button" class="link-button" id="reset" onclick={onReset}>{t(lang, 'reset')}</button>
+    </div>
 
     <div class="actionbar">
       <button type="button" class="button primary" id="review" onclick={() => { setPhase('review') }}>{t(lang, 'review')} <span class="flip" aria-hidden="true">→</span></button>

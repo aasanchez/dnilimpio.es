@@ -200,8 +200,8 @@
   }
 </script>
 
-<div class="app" bind:this={root}>
-  <header class="topbar">
+<div class="app mx-auto flex min-h-dvh max-w-[40rem] flex-col lg:max-w-6xl" bind:this={root}>
+  <header class="sticky top-0 z-5 flex min-h-[58px] items-center gap-2 border-b border-hair bg-paper px-3 lg:px-6">
     {#if step !== 'home'}
       <button type="button" class="icon-btn" id="back" aria-label={t(lang, 'goBack')} onclick={back}>
         <svg class="flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
@@ -209,20 +209,21 @@
     {/if}
     <!-- The logo returns to the start screen. Photos and choices stay, as with Back; Reset clears them.
          preventDefault: following href would reload the page, and pagehide drops the photos. -->
-    <a class="brand" id="brand" href="./" aria-current={step === 'home' ? 'page' : undefined}
-      onclick={(e: MouseEvent) => { e.preventDefault(); if (step !== 'home') go('home') }}><span class="brand-mark" aria-hidden="true">DT.es</span>{BRAND}</a>
+    <a class="brand flex min-h-11 flex-1 items-center lg:me-auto lg:flex-none gap-2 text-lg font-bold tracking-[-0.3px] text-inherit no-underline hover:underline hover:underline-offset-3" id="brand" href="./" aria-current={step === 'home' ? 'page' : undefined}
+      onclick={(e: MouseEvent) => { e.preventDefault(); if (step !== 'home') go('home') }}><span class="brand-mark inline-flex h-6 items-center justify-center rounded-sm border-2 border-ink bg-accent px-1.25 font-mono text-xs font-bold text-on-accent" aria-hidden="true">DT.es</span>{BRAND}</a>
     <LanguageSelect bind:lang />
   </header>
 
   {#if step !== 'home'}
-    <ol class="progress" aria-label={t(lang, 'progress')}>
+    <!-- Phones: a row under the top bar. Wide screens: in the top bar itself, centred, and as sticky. -->
+    <ol class="progress grid grid-cols-4 gap-1.5 px-4 pt-3 pb-2 lg:pointer-events-none lg:sticky lg:top-0 lg:z-6 lg:mx-auto lg:-mt-[58px] lg:h-[58px] lg:w-[26rem] lg:content-center lg:py-0 xl:w-[32rem]" aria-label={t(lang, 'progress')}>
       {#each STEPS as s, i (s.key)}
         <li class:done={i < current} aria-current={i === current ? 'step' : undefined}>0{i + 1} {t(lang, s.key)}</li>
       {/each}
     </ol>
   {/if}
 
-  <div class="content">
+  <div class="content flex flex-1 flex-col gap-4 px-4 pt-3 pb-6 lg:px-6 lg:pt-8 lg:pb-10">
     {#if step === 'align' && alignBitmap}
       {@const bitmap = alignBitmap}
       {#key alignSide}

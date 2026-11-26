@@ -159,20 +159,20 @@
   })
 </script>
 
-<dialog class="live" bind:this={dialog} aria-labelledby="live-title"
+<dialog class="live m-0 h-dvh max-h-none w-full max-w-none border-0 bg-coal p-0 text-cream backdrop:bg-coal open:flex open:flex-col" bind:this={dialog} aria-labelledby="live-title"
   oncancel={(e) => { e.preventDefault(); onClose() }}>
-  <div class="live-bar">
-    <h2 id="live-title" class="visually-hidden">{t(lang, side === 'front' ? 'captureFront' : 'captureBack')}</h2>
-    <div class="live-title" aria-hidden="true">{#key side}<SideBadge {lang} {side} id="live-side" />{/key}</div>
-    <button type="button" class="icon-btn live-close" id="live-close" aria-label={t(lang, 'liveClose')} onclick={onClose}>
+  <div class="flex items-center gap-2 border-b-2 border-cream py-2 ps-4 pe-2">
+    <h2 id="live-title" class="sr-only">{t(lang, side === 'front' ? 'captureFront' : 'captureBack')}</h2>
+    <div class="min-w-0 flex-1 overflow-hidden" aria-hidden="true">{#key side}<SideBadge {lang} {side} id="live-side" live />{/key}</div>
+    <button type="button" class="icon-btn text-cream" id="live-close" aria-label={t(lang, 'liveClose')} onclick={onClose}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
     </button>
   </div>
-  <div class="live-view" class:flash>
-    <video bind:this={video} muted playsinline autoplay disablepictureinpicture aria-hidden="true"></video>
+  <div class="relative min-h-0 flex-1 [&.flash]:after:absolute [&.flash]:after:inset-0 [&.flash]:after:bg-white [&.flash]:after:opacity-70 [&.flash]:after:content-[''] motion-reduce:[&.flash]:after:hidden" class:flash>
+    <video class="absolute inset-0 size-full bg-black object-contain" bind:this={video} muted playsinline autoplay disablepictureinpicture aria-hidden="true"></video>
     {#if size && guide}
       <!-- Same box and fit as the video, so the guide sits exactly where the coach looks. -->
-      <svg class="live-guide" viewBox="0 0 {size.w} {size.h}" aria-hidden="true">
+      <svg class="live-guide absolute inset-0 size-full" viewBox="0 0 {size.w} {size.h}" aria-hidden="true">
         <!-- Faint drawing of the side to show; it fades once the card sits in the frame. -->
         <GhostCard {side} rect={guide} dim={tip !== null && tip !== 'frame' && tip !== 'closer'} />
         <rect class="frame" x={guide.x} y={guide.y} width={guide.w} height={guide.h} rx={guide.w * 0.04} class:ok={tip === 'ready'} />
@@ -181,13 +181,13 @@
   </div>
   {#if notice === 'liveFlip'}
     <!-- Big, short-lived banner when the camera moves on to the back. -->
-    <p class="live-flip" aria-hidden="true"><span>{t(lang, side === 'front' ? 'tabFront' : 'tabBack')}</span></p>
+    <p class="live-flip pointer-events-none absolute inset-0 m-0 grid animate-live-flip place-items-center motion-reduce:animate-none" aria-hidden="true"><span class="rounded-lg border-3 border-coal bg-orange px-5 py-2 text-4xl font-extrabold text-coal uppercase shadow-[6px_6px_0_var(--color-coal)]">{t(lang, side === 'front' ? 'tabFront' : 'tabBack')}</span></p>
   {/if}
-  <p class="live-tip" class:ok={tip === 'ready' && !notice} id="live-tip" role="status">{message}</p>
-  <div class="live-actions">
-    <button type="button" class="chip live-auto" id="live-auto" aria-pressed={auto} onclick={() => { auto = !auto }}>{t(lang, 'liveAuto')}</button>
-    <button type="button" class="shutter" id="live-shutter" disabled={!size || busy} onclick={() => { void shoot() }}>
-      <span class="visually-hidden">{t(lang, 'liveShutter')}</span>
+  <p class="mx-4 mt-3 min-h-11 rounded-md border-2 border-cream px-3 py-2 text-center font-mono text-sm [&.ok]:border-ok [&.ok]:text-ok" class:ok={tip === 'ready' && !notice} id="live-tip" role="status">{message}</p>
+  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+    <button type="button" class="chip col-start-1 row-start-1 min-h-11 justify-self-start border-cream text-center whitespace-normal text-cream aria-pressed:bg-cream aria-pressed:text-coal" id="live-auto" aria-pressed={auto} onclick={() => { auto = !auto }}>{t(lang, 'liveAuto')}</button>
+    <button type="button" class="col-start-2 row-start-1 size-18 rounded-full border-4 border-cream bg-orange shadow-[inset_0_0_0_3px_var(--color-coal)] focus-visible:outline-cream disabled:cursor-not-allowed disabled:opacity-40" id="live-shutter" disabled={!size || busy} onclick={() => { void shoot() }}>
+      <span class="sr-only">{t(lang, 'liveShutter')}</span>
     </button>
   </div>
 </dialog>

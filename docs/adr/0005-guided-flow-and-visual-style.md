@@ -44,6 +44,7 @@ to system fonts. The fonts are under the SIL Open Font Licence 1.1 (`LICENSES/OF
 
 No inline styles: the CSP has no `'unsafe-inline'` for styles, so all styling is in
 `src/ui/styles.css` and the decorative card on the start screen is positioned with classes.
+Since ADR 0017 the styles are written with Tailwind CSS utilities, still compiled to one static file.
 
 ## Consequences
 
