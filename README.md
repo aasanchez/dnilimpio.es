@@ -439,7 +439,8 @@ browser and can be changed from the selector at the top. The card guide has its 
 language ([`src/guide/locales/`](src/guide/locales/)).
 
 Translations other than Spanish and English are machine-assisted drafts. Corrections are welcome:
-edit one file in [`src/i18n/locales/`](src/i18n/locales/) and open a pull request. Spanish
+edit one file in [`src/i18n/locales/`](src/i18n/locales/) and open a pull request. The step-by-step
+guide is in [CONTRIBUTING.md](CONTRIBUTING.md#help-with-translations). Spanish
 (`es.json`) defines the keys. Translations can also be managed with Crowdin through its GitHub
 integration ([`crowdin.yml`](crowdin.yml)); the app itself never contacts Crowdin.
 
@@ -758,7 +759,9 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 
 ## Contributing
 
-Issues and pull requests are welcome. Before you open a pull request:
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains the setup, the
+pull request workflow, the privacy and CSP rules, and how to help with translations. In short, before
+you open a pull request:
 
 1. Run `pnpm verify`; it must pass.
 2. Add or update tests for what you change.
