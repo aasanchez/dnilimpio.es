@@ -10,6 +10,7 @@ import { watchForUpdates } from './offline/update.ts'
 import { watchInstall } from './offline/install.ts'
 import { installTrustedTypesPolicy } from './security/trusted-types.ts'
 import { loadAnalytics } from './analytics/cloudflare.ts'
+import { loadAllFonts } from './security/intake-lockdown.ts'
 import { pickLang, t } from './i18n/index.ts'
 
 /** Inside another page's frame the app does not start: it only offers to open itself in a tab. */
@@ -43,6 +44,8 @@ else if (target) mount(App, { target })
 // Anonymous visit counts (public site only, online only; src/analytics/cloudflare.ts) at the same time.
 const preload = (): void => {
   void loadExport().catch(() => undefined)
+  // Every font face, before the photo step's policy allows none (ADR 0025), so Start does not wait.
+  void loadAllFonts().catch(() => undefined)
   if (import.meta.env.PROD) loadAnalytics()
 }
 if ('requestIdleCallback' in window) window.requestIdleCallback(preload, { timeout: 5000 })

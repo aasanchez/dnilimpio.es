@@ -23,6 +23,7 @@
   "dropHere": "Arrastatu irudia hona",
   "chooseFile": "Aukeratu fitxategi bat",
   "localOnly": "Irudia gailu honetan irakurtzen da. Ez da ezer igotzen.",
+  "filterOff": "Sareko iragazki gehigarria (service worker) ez dago aktibo bisita honetan. Aplikazioak berdin funtzionatzen du eta ez du zure argazkia bidaltzen. Normalean orria berriro kargatzean aktibatzen da.",
   "loaded": "Irudia kargatu da.",
   "errNotImage": "Fitxategia ez da irudi bat. Erabili JPEG, PNG edo HEIC argazki bat.",
   "errHeic": "Nabigatzaile honek ezin ditu HEIC argazkiak ireki. Egin argazkiaren pantaila-argazki bat edo bihurtu JPEG formatura zure gailuan.",

@@ -12,6 +12,7 @@
   import LiveCamera from './LiveCamera.svelte'
   import SideBadge from './SideBadge.svelte'
   import GhostCard from './GhostCard.svelte'
+  import { watchFilter } from '../offline/verify.ts'
 
   const { lang, state: photos, onLoaded, onContinue }: {
     lang: Lang
@@ -93,6 +94,14 @@
     })
   }
 
+  // The service worker's filter (ADR 0025): null until checked, so the note does not flash.
+  let filterOn = $state<boolean | null>(null)
+  $effect(() => {
+    const ac = new AbortController()
+    watchFilter((on) => { filterOn = on }, ac.signal)
+    return () => { ac.abort() }
+  })
+
   // Paste fills the first empty side; if both are set, it replaces the side on screen.
   $effect(() => {
     const ac = new AbortController()
@@ -152,6 +161,10 @@
       <svg class="size-3.5 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
       {t(lang, 'localOnly')}
     </p>
+    {#if filterOn === false}
+      <!-- Without the service worker the app works the same; only its extra network filter is off. -->
+      <p class="m-0 font-mono text-xs text-muted" id="filter-note" role="status">{t(lang, 'filterOff')}</p>
+    {/if}
   </div>
 
   <div class="area-side flex flex-col gap-4">

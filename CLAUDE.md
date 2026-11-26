@@ -75,8 +75,10 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 3. **Strict CSP, single source.** The policy lives in `scripts/csp.ts`; the e2e test asserts the
    built page carries exactly that value. No inline scripts or styles, no `style` attributes with
    dynamic values, no `eval`/`new Function`, no `innerHTML` or `{@html}`. The only Trusted Types
-   policy is `default` (`src/security/trusted-types.ts`). Any CSP change needs an ADR and Alexis's
-   approval.
+   policy is `default` (`src/security/trusted-types.ts`). From the photo step on, a second, stricter
+   policy is added (`src/security/intake-lockdown.ts`, ADR 0025): after the start screen the page
+   cannot load any image except `blob:`/`data:`, any font, stylesheet or connection. Load such files
+   before intake. Any CSP change needs an ADR and Alexis's approval.
 4. **Self-hosted assets with integrity.** Every script, style, font, model and WebAssembly file is
    bundled and served from this site, checked by SHA-384 (`scripts/vite-plugins.ts`). No CDNs, no
    Google Fonts, no runtime downloads from third parties. The only third-party script is the
@@ -137,8 +139,8 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 | `src/zones/` | Field positions per document; `documents.ts` lists the documents |
 | `src/engine/` | Fields, masks, secure raster, watermark, JPEG filter, PDF export, undo history |
 | `src/guide/` | Card guide: sources, cited entries, text per language |
-| `src/offline/`, `src/sw.ts` | Service worker, precache manifest and `route()`, update of idle tabs |
-| `src/security/` | Trusted Types policy, WebRTC and framing lockdown, audit prompt |
+| `src/offline/`, `src/sw.ts` | Service worker, precache manifest and `route()`, update of idle tabs, worker check |
+| `src/security/` | Trusted Types policy, WebRTC and framing lockdown, photo-step CSP (intake lockdown), audit prompt |
 | `src/i18n/` | Dictionaries, language choice |
 | `scripts/` | CSP, Vite plugins (SRI, import map, SW manifest), smoke test, size, icons, fixtures |
 | `tests/unit/`, `tests/e2e/` | Vitest and Playwright; the README lists what each file checks |
