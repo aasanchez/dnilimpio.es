@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-# 0023. The service worker hashes every cache hit again
+# 0024. The service worker hashes every cache hit again
 
 - Status: accepted
 - Date: 2026-11-26

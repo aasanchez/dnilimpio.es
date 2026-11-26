@@ -271,7 +271,7 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
   Each file is checked again every time the worker serves it from the cache; a copy that was changed
-  is deleted and downloaded again, or refused offline ([ADR 0023](docs/adr/0023-recheck-cache-hits.md)).
+  is deleted and downloaded again, or refused offline ([ADR 0024](docs/adr/0024-recheck-cache-hits.md)).
   The corner model (about 2.6 MB) is not part of that first copy: it is stored the first time you use
   it online. Offline before that, classic edge detection places the corners, or you place them by
   hand.
@@ -770,7 +770,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0020](docs/adr/0020-fit-boxes-to-text.md): fit to the text; ticked field boxes grow to cover the words OCR finds, never shrink.
 - [0021](docs/adr/0021-one-dni-choice.md): one "DNI" choice; the version is detected, the DNI 4.0 is the fallback, and the editor has an Older DNI (3.0) switch.
 - [0022](docs/adr/0022-no-published-source-maps.md): no published source maps and no `'self'` in `connect-src`, so page code cannot send requests to its own origin (review finding PRIV-003).
-- [0023](docs/adr/0023-recheck-cache-hits.md): the service worker hashes every cache hit again before it answers; a rewritten entry is deleted and downloaded again, or refused offline.
+- [0024](docs/adr/0024-recheck-cache-hits.md): the service worker hashes every cache hit again before it answers; a rewritten entry is deleted and downloaded again, or refused offline.
 
 ## Contributing
 
