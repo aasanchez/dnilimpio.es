@@ -77,6 +77,8 @@ test('offers an audit prompt to copy into an AI coding agent, from the notice an
   await page.locator('#audit-notice-copy').click()
   await expect(dialog.getByRole('status')).toHaveText('Copiado')
   expect(await page.evaluate(async () => await navigator.clipboard.readText())).toContain("connect-src https://cloudflareinsights.com only, without 'self'")
+  // It asks the agent to check the live site too, not only the repository.
+  expect(await page.evaluate(async () => await navigator.clipboard.readText())).toContain('5. Live Site Verification (https://dnitapado.es/)')
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
 

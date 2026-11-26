@@ -411,8 +411,10 @@ hashes differ from the deployed build.
 no-cookies notice) opens a ready-made audit prompt to copy into an AI coding agent. It asks for a
 deep review of this repository's privacy claim: image lifecycle, every network primitive, the
 declared analytics exception, dependencies, CSP, the service worker and reproducibility, with a
-YES/NO verdict and file and line references. Copying uses the clipboard only; nothing is sent. The
-text is in [`src/security/audit-prompt.ts`](src/security/audit-prompt.ts).
+YES/NO verdict and file and line references. It also asks the agent to check the live site at
+<https://dnitapado.es/>: its headers, its CSP against [`scripts/csp.ts`](scripts/csp.ts), the hash of
+every file it serves, and a rebuild of the commit shown in the footer. Copying uses the clipboard
+only; nothing is sent. The text is in [`src/security/audit-prompt.ts`](src/security/audit-prompt.ts).
 
 **Check that the live files are the ones built from this repository**
 
