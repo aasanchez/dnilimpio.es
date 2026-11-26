@@ -1,6 +1,6 @@
 # 0009. On-device OCR with Tesseract.js
 
-- Status: accepted
+- Status: accepted; engine replaced by [0017](0017-ppocr-and-text-detection.md) (the rest stands)
 - Date: 2026-11-25
 - Decided by: Alexis ("Detection now, OCR as next PR"; AI libraries acceptable if images never leave the device)
 

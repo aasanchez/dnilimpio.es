@@ -87,7 +87,10 @@ and you always confirm it ([ADR 0011](docs/adr/0011-document-detection.md)):
   for a permanent DNI (holder 70 or over), the app says it is a DNI and asks you to choose the version.
 - Nothing is preselected until detection answers or you choose: **Continue** waits for a document,
   so a TIE is never handled with DNI positions by mistake.
-- Detection needs OCR. Online, the first time, it downloads the OCR files by itself (about 8 MB; the
+- When the MRZ cannot settle it (no MRZ read, or dates that fit both DNI versions), the app also reads
+  the printed text of the front, such as "PERMISO DE RESIDENCIA" or "REINO DE ESPAÑA", and where the
+  DNI number sits ([ADR 0017](docs/adr/0017-ppocr-and-text-detection.md)). The MRZ wins when both answer.
+- Detection needs OCR. Online, the first time, it downloads the OCR files by itself (about 9 MB; the
   status line says so). After that it also runs offline. When OCR cannot run (offline before the
   first download, no service worker, an old browser), a note says so and you choose by hand. A
   choice you make yourself is never changed.
@@ -179,7 +182,7 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
        DNI/NIE number or a date counts only when its check letter or calendar date is valid. The
        boxes it adds are ordinary boxes: check them in **Boxes**, move or delete them, or undo them
        all in one step ([ADR 0010](docs/adr/0010-smart-field-finding.md)). The first use downloads
-       about 8 MB. If finding cannot run (offline before that download, or a browser without a
+       about 9 MB. If finding cannot run (offline before that download, or a browser without a
        service worker), the button is disabled with a short note and you hide the data by hand.
    - **Boxes:** extra black boxes for anything the list does not cover. Turn on **Draw black box**
      and drag on the card. Select a box to move it, or drag its corners to resize it. **Undo** and
@@ -246,11 +249,12 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   the tab, a reload) does the same, so the browser's back-forward cache keeps no document. Links that
   leave the app (source code, card guide sources, NagWara) open in a new tab for that reason.
 - **Text recognition (OCR) on the device.** When OCR is used, the image is read by a Web Worker in
-  your browser. The OCR engine and Spanish language data (about 8 MB) come from this site, never from
+  your browser. The OCR engine (PP-OCRv6 tiny on ONNX Runtime, about 9 MB) comes from this site, never from
   a third party, are downloaded only the first time OCR is used, and are checked against their hash
   before use. The worker runs under its own strict CSP: it can read its own files in `ocr/` and
   cannot send requests anywhere. If OCR cannot run (offline before the first download, or no service
-  worker), it is switched off and you choose by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
+  worker), it is switched off and you choose by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md),
+  [ADR 0017](docs/adr/0017-ppocr-and-text-detection.md)).
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
@@ -439,6 +443,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | Fields to hide, live preview, hand-adjustable cover boxes | Done |
 | Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
 | Smart field finding with on-device OCR (Tesseract.js, self-hosted, loaded on first use) | Done |
+| OCR engine PP-OCRv6 tiny; document detection from the front's printed text | Done |
 | Watermark with size and opacity controls; black and white | Done |
 | PDF export: A4, one side per page, metadata-free | Done |
 | Share via WhatsApp, email or the system share sheet | Done |
@@ -488,8 +493,8 @@ Runtime dependencies, all bundled and served from this site:
 |---|---|---|
 | `@cantoo/pdf-lib` | PDF export ([ADR 0001](docs/adr/0001-pdf-library.md)) | In the background after the page appears |
 | `scanic-ml`, `onnxruntime-web` | Corner model and its WebAssembly runtime ([ADR 0007](docs/adr/0007-corner-model.md)) | On first use |
-| `tesseract.js`, `@tesseract.js-data/spa` | OCR engine and Spanish data ([ADR 0009](docs/adr/0009-on-device-ocr.md)) | On first use |
-| `wasm-feature-detect` | Picks the OCR core the browser supports | With OCR |
+| `paddleocr`, `onnxruntime-web` | OCR engine (paddleocr.js) and its WebAssembly runtime, in the OCR worker ([ADR 0017](docs/adr/0017-ppocr-and-text-detection.md)) | On first use |
+| `@arcships/light-ocr-model-ppocrv6-tiny` | PP-OCRv6 tiny models, checked at build time against PaddlePaddle's published SHA-256 | On first use |
 
 **Rules the code follows**
 
@@ -688,7 +693,7 @@ src/
   geometry/          homography, perspective warp, corner editing (pure TypeScript)
   detect/            corner finding (on-device model, classic edge detection, edge snapping), upright check,
                      automatic straightening, document type from the MRZ
-  ocr/               on-device OCR (Tesseract.js, loaded on demand), MRZ reader, smart field finding
+  ocr/               on-device OCR (PP-OCRv6 tiny in a worker, loaded on demand), MRZ reader, smart field finding
   zones/             field positions and size per document, from official specimens; documents.ts lists them
   redact/            normalised zones to pixels
   engine/            fields, masks, secure raster, watermark, JPEG filter, PDF export, undo history
@@ -725,6 +730,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0014](docs/adr/0014-card-guide.md): card guide; every element explained with official citations, nothing guessed.
 - [0015](docs/adr/0015-cookieless-analytics.md): cookieless visit counts with Cloudflare Web Analytics, on the public site only.
 - [0016](docs/adr/0016-source-maps-in-devtools.md): source maps readable in the developer tools (`connect-src 'self'`); the service worker serves only this build's maps, checked by hash.
+- [0017](docs/adr/0017-ppocr-and-text-detection.md): PP-OCRv6 tiny replaces Tesseract; the front's printed text helps detect the document.
 
 ## Contributing
 
@@ -760,5 +766,5 @@ Exceptions:
 - **Fonts.** The bundled fonts (Bricolage Grotesque, JetBrains Mono, Caveat) are under the
   [SIL Open Font Licence 1.1](LICENSES/OFL-1.1.txt).
 - **Libraries.** Third-party libraries keep their own licences: `@cantoo/pdf-lib`, `onnxruntime-web`
-  and the `scanic-ml` model and runtime are MIT; Tesseract.js, its core and language data, and
-  `wasm-feature-detect` are Apache-2.0.
+  the `scanic-ml` model and runtime, and `paddleocr` are MIT; the PP-OCRv6 models are Apache-2.0.
+  Their licence texts are published next to the OCR files in `ocr/`.

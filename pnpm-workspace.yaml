@@ -6,7 +6,5 @@ strictDepBuilds: true
 onlyBuiltDependencies: []
 # Install scripts that are not needed, kept off:
 # - protobufjs (pulled in by onnxruntime-web, unused by the browser bundle) only prints a version notice;
-# - tesseract.js only runs `opencollective-postinstall` (a funding message).
 allowBuilds:
   protobufjs: false
-  tesseract.js: false

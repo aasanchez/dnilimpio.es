@@ -111,3 +111,58 @@ test('offline without the OCR files: a note, and the manual choice', async ({ pa
   await page.locator('#doc-continue').click()
   await expect(page.locator('h2')).toHaveText('Elige qué tapar')
 })
+
+/** A 1600 × 1200 photo of a card front on a dark table, with the given lines of printed text. */
+async function front (page: Page, lines: ReadonlyArray<readonly [string, number, number, number]>): Promise<{ name: string; mimeType: string; buffer: Buffer }> {
+  const url = await page.evaluate((text) => {
+    const c = document.createElement('canvas')
+    c.width = 1600
+    c.height = 1200
+    const ctx = c.getContext('2d')
+    if (!ctx) throw new Error('no 2d')
+    ctx.fillStyle = '#292a33'
+    ctx.fillRect(0, 0, 1600, 1200)
+    ctx.fillStyle = '#f4f4f0'
+    ctx.fillRect(200, 222, 1200, 756)
+    ctx.fillStyle = '#555'
+    ctx.fillRect(250, 400, 280, 380)
+    ctx.fillStyle = '#000'
+    for (const [t, x, y, size] of text) {
+      ctx.font = `${String(size)}px sans-serif`
+      ctx.fillText(t, x, y)
+    }
+    return c.toDataURL('image/png')
+  }, lines)
+  return { name: 'front.png', mimeType: 'image/png', buffer: Buffer.from(url.split(',')[1] ?? '', 'base64') }
+}
+
+test('without an MRZ, the printed text of the front tells a TIE', async ({ page }) => {
+  test.setTimeout(180_000)
+  await controlled(page)
+  await openCapture(page)
+  await page.locator('#file-front').setInputFiles(await front(page, [
+    ['PERMISO DE RESIDENCIA', 560, 300, 40],
+    ['TIPO DE PERMISO / TYPE OF PERMIT', 560, 560, 24],
+    ['RESIDENCE PERMIT / TITRE DE SEJOUR', 560, 930, 28],
+  ]))
+  await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
+  await page.locator('#capture-continue').click()
+  await expect(page.locator('#detect-status')).toHaveText('Documento detectado: TIE (tarjeta de extranjero). Compruébalo antes de continuar.', { timeout: 120_000 })
+  await expect(page.locator('#doc-tie')).toBeChecked()
+})
+
+test('when the MRZ dates allow both DNI versions, the front tells the version', async ({ page }) => {
+  test.setTimeout(180_000)
+  await controlled(page)
+  await openCapture(page)
+  // Issued between December 2020 and December 2021: either version.
+  await page.locator('#file-front').setInputFiles(await front(page, [
+    ['REINO DE ESPAÑA', 600, 290, 48],
+    ['DOCUMENTO NACIONAL DE IDENTIDAD', 600, 330, 24],
+    ['NATIONAL IDENTITY CARD / DOCUMENTO NACIONAL IDENTIDAD', 560, 950, 22],
+  ]))
+  await page.locator('#file-back').setInputFiles(await back(page, mrz('ID', '800101', '311201')))
+  await page.locator('#capture-continue').click()
+  await expect(page.locator('#detect-status')).toHaveText('Documento detectado: DNI 4.0. Compruébalo antes de continuar.', { timeout: 120_000 })
+  await expect(page.locator('[id="doc-dni-4.0"]')).toBeChecked()
+})

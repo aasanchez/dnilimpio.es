@@ -64,6 +64,13 @@ export default tseslint.config(
     rules: { 'no-restricted-globals': 'off' },
   },
   {
+    // The OCR worker reads its own model files from ocr/ with fetch(). Its CSP (workerCsp() in
+    // src/offline/precache.ts) allows connections to ocr/ only, and the service worker answers only
+    // this build's files, so nothing can leave the device from it.
+    files: ['src/ocr/worker.ts'],
+    rules: { 'no-restricted-globals': ['error', ...['localStorage', 'sessionStorage', 'indexedDB', 'openDatabase', 'caches', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'WebTransport', 'RTCPeerConnection', 'webkitRTCPeerConnection'].map((name) => ({ name, message: 'Only fetch() of ocr/ files is allowed here.' }))] },
+  },
+  {
     // The one exception to "nothing persists": the date the no-cookies notice was last closed
     // (one key, no personal data), so it shows at most every 4 days. Nothing else may use storage.
     files: ['src/ui/notice-memory.ts'],

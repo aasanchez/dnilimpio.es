@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Detects the document type from the photos, on the device: find the card (edge detection),
-// straighten it, read the MRZ with OCR, then classify (doc-type.ts).
+// straighten it, read the MRZ with OCR, then classify (doc-type.ts). When the MRZ leaves the answer
+// open (no MRZ read, or a DNI whose version the dates cannot tell), the printed text of the front is
+// read too (doc-text.ts). The text read stays in memory and is dropped once classified.
 //
 // Rule (online first, offline optional): this never throws to the screen. When OCR cannot run, the
 // status says why and the person picks the document by hand, as before.
 
 import { loadOcr } from '../ocr/load-ocr.ts'
 import type { Mrz } from '../ocr/mrz.ts'
-import type { OcrStatus } from '../ocr/ocr.ts'
+import type { OcrLine, OcrStatus } from '../ocr/ocr.ts'
 import { CARD_PX } from '../geometry/warp.ts'
 import type { Quad } from '../geometry/homography.ts'
 import { landscape } from '../geometry/quad-edit.ts'
 import { warpBitmap } from '../ui/warp-bitmap.ts'
 import { detectCard, ID1_ASPECT } from './edges.ts'
 import { classify, type DocGuess } from './doc-type.ts'
+import { classifyText, combine } from './doc-text.ts'
 
 /** Long side of the copy given to edge detection (it works at 400 px itself). */
 const FIND_PX = 800
@@ -119,7 +122,48 @@ async function mrzOf (bitmap: ImageBitmap, readMrz: (c: HTMLCanvasElement) => Pr
   }
 }
 
+type Recognise = (image: HTMLCanvasElement) => Promise<{ lines: OcrLine[] }>
+
+/**
+ * Reads the printed text of one photo and guesses the document from it: the straightened card, then
+ * the card upside down. Without a card outline, the whole photo is read, and the layout (where the
+ * number sits) is not used.
+ */
+async function textOf (bitmap: ImageBitmap, recognise: Recognise): Promise<DocGuess | null> {
+  const quad = findCard(bitmap)
+  const src: CanvasImageSource & { width: number; height: number } = quad ? warpBitmap(bitmap, quad, CARD_PX) : bitmap
+  const s = quad ? 1 : Math.min(1, WHOLE_PX / Math.max(bitmap.width, bitmap.height))
+  try {
+    for (const turn of [false, true]) {
+      const c = strip(src, 0, src.height, turn, s)
+      try {
+        const { lines } = await recognise(c)
+        const h = c.height
+        const guess = classifyText(lines.map((l) => ({ text: l.text, y: quad ? (l.bbox.y0 + l.bbox.y1) / 2 / h : undefined })))
+        if (guess) return guess
+      } finally {
+        drop(c)
+      }
+    }
+    return null
+  } finally {
+    if (src instanceof HTMLCanvasElement) drop(src)
+  }
+}
+
 const cache = new WeakMap<ImageBitmap, Promise<Mrz | null>>()
+const textCache = new WeakMap<ImageBitmap, Promise<DocGuess | null>>()
+
+/** Runs `read` once per photo, keeping the promise (never the text) until the photo is dropped. */
+function once<T> (map: WeakMap<ImageBitmap, Promise<T>>, bitmap: ImageBitmap, read: () => Promise<T>): Promise<T> {
+  let pending = map.get(bitmap)
+  if (!pending) {
+    pending = read()
+    map.set(bitmap, pending)
+    pending.catch(() => { map.delete(bitmap) })
+  }
+  return pending
+}
 
 /** Today in the device's time zone, as YYYY-MM-DD. */
 const today = (): string => {
@@ -128,22 +172,27 @@ const today = (): string => {
 }
 
 /**
- * Guesses the document from the photos: the back first, then the front (in case the photos were
- * swapped). Returns null when no MRZ was read. Results are kept per photo, so going back and
- * forth does not read the same photo twice. Throws only if OCR itself fails to start.
+ * Guesses the document from the photos: the MRZ of the back first, then of the front (in case the
+ * photos were swapped). When that leaves the answer open, the printed text of the front, then of
+ * the back, fills it in. Returns null when nothing was recognised. Results are kept per photo, so
+ * going back and forth does not read the same photo twice. Throws only if OCR itself fails to start.
  */
 export async function detectDocument (photos: { readonly front: ImageBitmap | null; readonly back: ImageBitmap | null }): Promise<DocGuess | null> {
-  const { readMrz } = await loadOcr()
+  const { readMrz, recognise } = await loadOcr()
+  let fromMrz: DocGuess | null = null
   for (const bitmap of [photos.back, photos.front]) {
     if (!bitmap) continue
-    let pending = cache.get(bitmap)
-    if (!pending) {
-      pending = mrzOf(bitmap, readMrz)
-      cache.set(bitmap, pending)
-      pending.catch(() => { cache.delete(bitmap) })
+    const m = await once(cache, bitmap, async () => await mrzOf(bitmap, readMrz))
+    if (m) {
+      fromMrz = classify(m, today())
+      break
     }
-    const m = await pending
-    if (m) return classify(m, today())
   }
-  return null
+  if (fromMrz?.model) return fromMrz
+  for (const bitmap of [photos.front, photos.back]) {
+    if (!bitmap) continue
+    const t = await once(textCache, bitmap, async () => await textOf(bitmap, recognise))
+    if (t) return combine(fromMrz, t)
+  }
+  return fromMrz
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// On-device OCR (Tesseract.js, self-hosted under ocr/, loaded on demand). The interface does not use it
-// yet, so the tests load the OCR module the way the app will: by its URL from the import map.
+// On-device OCR (PP-OCRv6 tiny in a Web Worker, self-hosted under ocr/, loaded on demand). The tests
+// load the OCR module the way the app does: by its URL from the import map.
 import { expect, test, type Page } from '@playwright/test'
 import { checkDigit } from '../../src/ocr/mrz.ts'
 
@@ -55,7 +55,7 @@ test('reads a DNI MRZ on the device, then works offline from the cache', async (
     return { before, code: m?.documentCode, number: m?.documentNumber, valid: m?.valid }
   }, [chunk, lines] as const)
 
-  // Two jobs at once with different settings: each must get its own (they run one after the other).
+  // Two jobs at once: each must get its own answer (they run one after the other).
   const both = await page.evaluate(async ([path, text]) => {
     const ocr = await import(path) as typeof import('../../src/ocr/ocr.ts')
     const draw = (t: string[]): OffscreenCanvas => {
@@ -70,12 +70,12 @@ test('reads a DNI MRZ on the device, then works offline from the cache', async (
       return c
     }
     const before = (await ocr.ocrStatus()).state
-    const [mrzRead, digitsOnly] = await Promise.all([ocr.readMrz(draw(text)), ocr.recognise(draw(['ABC 123']), { whitelist: '0123456789' })])
-    return { before, valid: mrzRead?.valid, digits: digitsOnly.text.replace(/\s/g, '') }
+    const [mrzRead, digitsOnly] = await Promise.all([ocr.readMrz(draw(text)), ocr.recognise(draw(['ABC 123']))])
+    return { before, valid: mrzRead?.valid, text: digitsOnly.text.replace(/\s/g, '') }
   }, [chunk, lines] as const)
   expect(both.before).toBe('download')
   expect(both.valid).toBe(true)
-  expect(both.digits).not.toMatch(/[A-Z]/)
+  expect(both.text).toBe('ABC123')
 
   const first = await run()
   expect(first.before).toBe('ready') // downloaded by the parallel jobs above
@@ -110,7 +110,7 @@ test.describe('without a service worker', () => {
 
 test('a tampered OCR file is refused and nothing is cached', async ({ page, context }) => {
   test.setTimeout(30_000)
-  await context.route('**/ocr/spa.traineddata', async (route) => {
+  await context.route('**/ocr/ppocrv6-tiny-rec.onnx', async (route) => {
     const res = await route.fetch()
     await route.fulfill({ response: res, body: Buffer.concat([await res.body(), Buffer.from('x')]) })
   })
@@ -122,7 +122,7 @@ test('a tampered OCR file is refused and nothing is cached', async ({ page, cont
     try { await ocr.readMrz(c); return 'read' } catch { return 'refused' } finally { await ocr.stopOcr() }
   }, chunk)
   expect(result).toBe('refused')
-  expect(await page.evaluate(async () => await caches.match(new URL('ocr/spa.traineddata', document.baseURI).href) !== undefined)).toBe(false)
+  expect(await page.evaluate(async () => await caches.match(new URL('ocr/ppocrv6-tiny-rec.onnx', document.baseURI).href) !== undefined)).toBe(false)
 })
 
 test('the OCR worker runs under its own strict CSP: it can read ocr/ and nothing else', async ({ page }) => {
@@ -142,7 +142,7 @@ test('the OCR worker runs under its own strict CSP: it can read ocr/ and nothing
   const tryFetch = async (url: string): Promise<string> => await (worker?.evaluate(async (u) => {
     try { await fetch(u); return 'sent' } catch { return 'blocked' }
   }, url) ?? 'no worker')
-  expect(await tryFetch('/ocr/spa.traineddata')).toBe('sent') // its own data
+  expect(await tryFetch('/ocr/ppocrv6-tiny-rec.onnx')).toBe('sent') // its own data
   expect(await tryFetch('/index.html')).toBe('blocked') // a file the service worker would serve
   expect(await tryFetch('https://example.org/?dni=12345678Z')).toBe('blocked')
 })
