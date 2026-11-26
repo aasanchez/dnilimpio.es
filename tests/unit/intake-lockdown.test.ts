@@ -49,6 +49,7 @@ describe('intakePolicy', () => {
       'style-src': ["'none'"],
       'manifest-src': ["'none'"],
       'connect-src': ["'none'"],
+      'frame-src': ["'none'"],
       'script-src': ['https://dnitapado.es/assets/a.js', "'wasm-unsafe-eval'"],
       'worker-src': ['https://dnitapado.es/ocr/worker.min.js'],
     })

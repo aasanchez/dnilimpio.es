@@ -12,7 +12,7 @@
 // - scripts and workers of this build, each by its exact address (no other path, no other site);
 // - images from blob: and data: (the photos, the canvases, the CSS icons), never from a server;
 // - no font, no stylesheet, no manifest: they are all loaded before;
-// - no connection at all (fetch, XHR, sendBeacon, WebSocket, the analytics beacon).
+// - no connection at all (fetch, XHR, sendBeacon, WebSocket) and no frame.
 //
 // Limits, stated plainly:
 // - CSP compares addresses without their query string. A script import of a build file with a query
@@ -31,6 +31,8 @@ const FIXED: readonly string[] = [
   "style-src 'none'",
   "manifest-src 'none'",
   "connect-src 'none'",
+  // No frame: the visit counter frame (ADR 0024) shows on the start screen only, before this policy.
+  "frame-src 'none'",
 ]
 
 /** Marks the <meta> element of the intake policy, so it is added once. */
@@ -81,8 +83,8 @@ export function buildScripts (base: string, srcs: readonly string[], importMap: 
       // A broken import map loads nothing either; the policy just lists fewer files.
     }
   }
-  // Only files inside the app's own folder: never another site's script, such as the analytics
-  // beacon, which may already be in the page when Start is pressed.
+  // Only files inside the app's own folder: never another site's script that may already be in
+  // the page when Start is pressed (the old analytics beacon, before ADR 0023, or an extension's).
   const scope = new URL('./', base).href
   return hrefs.map((h) => exactSource(h, base)).filter((s): s is string => s !== null && s.startsWith(scope))
 }

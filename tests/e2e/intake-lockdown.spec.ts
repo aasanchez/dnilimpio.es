@@ -148,6 +148,7 @@ test('the photo step\'s policy lists exact build files, no origin, no analytics,
   const policy = await page.locator('meta[data-intake-lockdown]').getAttribute('content') ?? ''
   const d: Record<string, string[]> = Object.fromEntries(policy.split('; ').map((x) => [x.split(' ')[0] ?? '', x.split(' ').slice(1)]))
   expect(d['connect-src']).toEqual(["'none'"])
+  expect(d['frame-src']).toEqual(["'none'"])
   expect(d['img-src']).toEqual(['blob:', 'data:'])
   expect(d['font-src']).toEqual(["'none'"])
   expect(d['style-src']).toEqual(["'none'"])

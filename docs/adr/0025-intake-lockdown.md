@@ -9,13 +9,15 @@
 
 The page's Content Security Policy (`scripts/csp.ts`) is written for the whole visit. The start
 screen must load the app's images, fonts, styles and scripts from the site's own origin, and the
-analytics beacon (ADR 0015). So the same rules stay in force while photos are in the page:
+visit counter frame (ADR 0024). So the same rules stay in force while photos are in the page:
 
 - `img-src 'self'`, `font-src 'self'`, `style-src 'self'` and `script-src 'self'` allow a load of
   any path on the site's own origin. A script in the page could put data in the address of such a
   load (`./icon.png?data`). The service worker refuses that (`route()`, ADR 0004), but it does not
   control the page on a first visit, after a forced reload, or where service workers are off.
-- `connect-src` still lists the analytics report address.
+- `frame-src` allows the visit counter page on another site.
+
+ADR 0023 already removed every third-party script and set `connect-src 'none'`.
 
 The review asked to load what the page needs before photo intake, then run with a tighter policy,
 to narrow image sources to `blob:` and `data:`, to use exact files instead of origins, and to say
@@ -37,7 +39,8 @@ reloaded, and a reload drops the photos (`pagehide`). The second policy is:
 | `worker-src` | `sw.js` and `ocr/worker.min.js` by exact address | The only workers the app starts |
 | `img-src` | `blob: data:` | Photos, canvases and CSS icons are in memory; no image comes from a server |
 | `font-src`, `style-src`, `manifest-src` | `'none'` | Loaded before; nothing more is needed |
-| `connect-src` | `'none'` | No `fetch`, XHR, `sendBeacon`, WebSocket or analytics report |
+| `frame-src` | `'none'` | The counter frame shows on the start screen only, once per page load (ADR 0024) |
+| `connect-src` | `'none'` | No `fetch`, XHR, `sendBeacon` or WebSocket (as in the first policy since ADR 0023) |
 
 **Large AI files stay on demand.** The corner model (`assets/ml/`) and OCR (`ocr/`) are not loaded
 before intake: CLAUDE.md rule 5 keeps them on demand, and offline users without them must still be
@@ -70,9 +73,12 @@ and a reload usually starts it. The app never blocks on it (rule 5).
   the service worker, delete its caches, or fake the worker check. The check guards against a
   missing or foreign worker, not against a compromised page. What keeps such code out is that only
   this build's verified code runs (CSP, SRI, the locked dependency list).
+- The counter frame (ADR 0024) can no longer appear beside a photo at all: a frame added after
+  Start is refused by `frame-src 'none'`. `tests/e2e/third-party.spec.ts` now checks that refusal
+  instead of the frame's isolation next to a photo.
 - Production builds only. The dev server has no CSP, no import map and needs its HMR connection,
   so `pnpm dev` never adds the second policy. Check it with `pnpm build` and the e2e tests.
 - The script list holds only files inside the app's own folder. Another site's script that is
-  already in the page (the analytics beacon, while ADR 0015 holds) is never listed.
+  already in the page (such as a script added by a browser extension) is never listed.
 - The policy only gets stricter: a bug in it can break a feature, never open a channel. Firefox and
   Safari apply a `<meta>` policy added by script in the same way; the tests run in Chromium.

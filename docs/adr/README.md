@@ -20,7 +20,7 @@ project specification on purpose).
 | [0012](0012-automatic-straightening.md) | Automatic straightening: find, turn (sideways, upside down) and straighten both photos; corner screen only on request | accepted |
 | [0013](0013-ci-pipeline.md) | CI split into small single-purpose jobs in logical stages; one required check | accepted |
 | [0014](0014-card-guide.md) | Card guide: every element explained with official citations; no source, no claim | accepted |
-| [0015](0015-cookieless-analytics.md) | Cookieless visit counts with Cloudflare Web Analytics, public site only | accepted |
+| [0015](0015-cookieless-analytics.md) | Cookieless visit counts with Cloudflare Web Analytics, public site only | superseded by 0023 |
 | [0016](0016-source-maps-in-devtools.md) | Source maps readable in the developer tools: `connect-src 'self'`; the service worker serves only this build's maps | superseded by 0022 |
 | [0017](0017-tailwind-css.md) | Styles with Tailwind CSS v4 (build time only, palette as theme); two-column layout on wide screens | accepted |
 | [0018](0018-installable-app.md) | Installable app: relative manifest, maskable and Apple icons, install link only where the browser supports it | accepted |
@@ -28,4 +28,6 @@ project specification on purpose).
 | [0020](0020-fit-boxes-to-text.md) | Fit to the text: ticked field boxes grow to cover the words OCR finds; never shrink | accepted |
 | [0021](0021-one-dni-choice.md) | One "DNI" choice: the version is detected, 4.0 as fallback, Older DNI (3.0) switch in the editor | accepted |
 | [0022](0022-no-published-source-maps.md) | No published source maps; `connect-src` without `'self'` (PRIV-003) | accepted |
+| [0023](0023-no-third-party-script-with-photos.md) | No third-party script in the page that holds the photos: beacon removed, `connect-src 'none'` | accepted |
+| [0024](0024-visit-counter-in-isolated-frame.md) | Visit counts from a sandboxed frame on another site, start screen only; `frame-src` for that page only | accepted |
 | [0025](0025-intake-lockdown.md) | Intake lockdown: a stricter CSP while photos are in the page (exact build scripts, images from memory only, no connection); service worker check | accepted |
