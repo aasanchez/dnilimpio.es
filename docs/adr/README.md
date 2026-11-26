@@ -23,3 +23,4 @@ project specification on purpose).
 | [0015](0015-cookieless-analytics.md) | Cookieless visit counts with Cloudflare Web Analytics, public site only | accepted |
 | [0016](0016-source-maps-in-devtools.md) | Source maps readable in the developer tools: `connect-src 'self'`; the service worker serves only this build's maps | accepted |
 | [0017](0017-ppocr-and-text-detection.md) | PP-OCRv6 tiny replaces Tesseract; the front's printed text helps detect the document | accepted |
+| [0019](0019-fit-boxes-to-text.md) | Fit to the text: ticked field boxes grow to cover the words OCR finds; never shrink | accepted |

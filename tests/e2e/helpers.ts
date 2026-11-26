@@ -177,10 +177,11 @@ export const MONO = '40px monospace'
 
 /**
  * Loads two synthetic cards with printed text (a fictional DNI) and goes to the editor. The corner
- * model is blocked unless `model` is true (edge detection finds these cards).
+ * model is blocked unless `model` is true (edge detection finds these cards). `frontLines` replaces
+ * the text of the front.
  */
-export async function toEditorWithText (page: Page, { model = false } = {}): Promise<void> {
-  const front = await cardPhoto(page, [
+export async function toEditorWithText (page: Page, { model = false, frontLines }: { model?: boolean; frontLines?: ReadonlyArray<readonly [string, number, number, string]> } = {}): Promise<void> {
+  const front = await cardPhoto(page, frontLines ?? [
     ['DNI 99999999R', 640, 300, SANS],
     ['APELLIDOS', 640, 380, SANS],
     ['ESPANOLA', 640, 430, SANS],

@@ -175,6 +175,10 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
        little off the card. While you adjust, you see the photo uncovered; the copy stays covered.
        With a keyboard, <kbd>N</kbd> selects the next box, arrow keys move it and
        <kbd>Shift</kbd>+arrows resize it. **Back to original position** undoes the adjustments.
+     - **Fit to the text** reads both sides with OCR on your device and makes the boxes of the
+       fields you hide bigger where the printed text runs past them. A box never gets smaller, never
+       grows over a field you leave visible, and **Back to original position** undoes it. Only the
+       positions of the words are used; the text read is not kept.
      - **Find automatically** reads both sides with OCR on your device and adds a black box over each
        piece of data you pick: name and surnames, DNI/NIE number, dates, support number, CAN and MRZ
        lines. Dates, support number, CAN and MRZ are picked to start with; name and number are not.
@@ -442,8 +446,9 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | Secure raster engine: greyscale, opaque masks with margin, self-check | Done |
 | Fields to hide, live preview, hand-adjustable cover boxes | Done |
 | Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
-| Smart field finding with on-device OCR (Tesseract.js, self-hosted, loaded on first use) | Done |
+| Smart field finding with on-device OCR (self-hosted, loaded on first use) | Done |
 | OCR engine PP-OCRv6 tiny; document detection from the front's printed text | Done |
+| Fit to the text: cover boxes of the ticked fields grow to the words OCR finds | Done |
 | Watermark with size and opacity controls; black and white | Done |
 | PDF export: A4, one side per page, metadata-free | Done |
 | Share via WhatsApp, email or the system share sheet | Done |
@@ -537,6 +542,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, offline note |
 | `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases; smart field finding |
+| `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
 | `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, a real PDF decoded in the browser (hidden areas black, no metadata, no file name, no watermark text in the file), reset |
 | `share` | WhatsApp and email as share sheet or as plain links, and a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
@@ -731,6 +737,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0015](docs/adr/0015-cookieless-analytics.md): cookieless visit counts with Cloudflare Web Analytics, on the public site only.
 - [0016](docs/adr/0016-source-maps-in-devtools.md): source maps readable in the developer tools (`connect-src 'self'`); the service worker serves only this build's maps, checked by hash.
 - [0017](docs/adr/0017-ppocr-and-text-detection.md): PP-OCRv6 tiny replaces Tesseract; the front's printed text helps detect the document.
+- [0019](docs/adr/0019-fit-boxes-to-text.md): fit to the text; ticked field boxes grow to cover the words OCR finds, never shrink.
 
 ## Contributing
 

@@ -11,7 +11,7 @@
 //
 // This module is loaded on demand (its own chunk): the first page load does not include the engine.
 
-import { findSensitive, namesFromText, type Found } from './find.ts'
+import { MIN_WORD_CONFIDENCE, findSensitive, namesFromText, type Found, type Rect } from './find.ts'
 import { fromWire, type OcrLine } from './lines.ts'
 import { parseMrz, type Mrz } from './mrz.ts'
 import { MODEL_FILES, type Reply, type Request } from './protocol.ts'
@@ -191,6 +191,25 @@ export async function findOnCard<S extends string> (sides: ReadonlyArray<readonl
   }
   const names = namesFromText(read.map((r) => r.text).join('\n'))
   return read.map((r) => ({ side: r.side, found: findSensitive(r.lines, r.size, names) }))
+}
+
+/**
+ * Where the text is on each straightened side, for fitting the field boxes (src/engine/snap.ts):
+ * word boxes only, in normalised card coordinates. The text itself is dropped here.
+ */
+export async function wordBoxesOnCard<S extends string> (sides: ReadonlyArray<readonly [S, HTMLCanvasElement | OffscreenCanvas]>): Promise<Array<{ side: S; words: Rect[] }>> {
+  const out = []
+  for (const [side, image] of sides) {
+    // Size taken before reading: the boxes are normalised to the image that was read.
+    const w = image.width
+    const h = image.height
+    const { lines } = await recognise(image)
+    const words = lines.flatMap((l) => l.words)
+      .filter((x) => x.confidence >= MIN_WORD_CONFIDENCE)
+      .map((x) => ({ x: x.bbox.x0 / w, y: x.bbox.y0 / h, w: (x.bbox.x1 - x.bbox.x0) / w, h: (x.bbox.y1 - x.bbox.y0) / h }))
+    out.push({ side, words })
+  }
+  return out
 }
 
 /**
