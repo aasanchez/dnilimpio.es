@@ -9,6 +9,7 @@ import { gunzipSync } from 'node:zlib'
 import { dirname, join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, cspWithScriptHashes } from './csp.ts'
+import { BEACON_ENDPOINT, BEACON_SCRIPT } from '../src/analytics/endpoints.ts'
 import { SW_FILE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 
 export function securityHeaders (): Plugin {
@@ -112,7 +113,7 @@ function writePrecacheManifest (outDir: string): void {
     .update(all.map((f) => `${f.path} ${f.integrity}`).join('\n'))
     .update(`\nsw.js ${sri(sw)}`)
     .digest('hex').slice(0, 16)
-  const json = JSON.stringify({ version, files, onDemand })
+  const json = JSON.stringify({ version, files, onDemand, analytics: { script: BEACON_SCRIPT, endpoint: BEACON_ENDPOINT } })
   parseManifest(json) // same checks as the worker runs
   writeFileSync(swPath, sw.replace(PLACEHOLDER, () => JSON.stringify(json)))
 }

@@ -57,22 +57,24 @@ Whether a recipient accepts a redacted copy is up to them.
 
 **In short.** Your document never leaves your device. Detection, text recognition (OCR), redaction,
 the watermark and the PDF all run in your browser. The site sends no photo, file name or data read
-from the card to any server, and uses no analytics or trackers. It downloads only its own files; once
-they are on your device you can go offline. The PDF leaves the app only when you download or share it.
+from the card to any server. It uses no cookies, trackers or profiles; the public site counts visits
+anonymously with Cloudflare Web Analytics (see [Visit counts](#visit-counts)). Apart from that, it
+downloads only its own files; once they are on your device you can go offline. The PDF leaves the app only when you download or share it.
 An external security and privacy audit (25 November 2026) reviewed this; its findings are fixed and
 covered by tests (see [Security reviews](#security-reviews)).
 
 ### What the tool guarantees
 
 - **No upload.** Photos are processed in the browser with the Canvas API. The page has no server side.
-- **No network access from the page.** The Content Security Policy sets `connect-src 'none'`: the page
-  cannot send requests with `fetch`, `XMLHttpRequest`, WebSocket or beacons. It loads scripts, styles
-  and images only from its own origin. WebRTC, which no CSP rule covers, is removed before any code
-  runs.
+- **Almost no network access from the page.** The Content Security Policy allows the page to send
+  requests to one address only: `connect-src https://cloudflareinsights.com`, where the visit counter
+  reports. It loads styles and images only from its own origin, and scripts from its own origin plus
+  the counter's exact URL. WebRTC, which no CSP rule covers, is removed before any code runs.
 - **Deny by default.** After the first visit, the service worker answers only the exact files of this
   build. Any other request from the page or its workers (another address, a query string, another
   method) is refused and never reaches the network, so even a same-origin request cannot carry data
-  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). An end-to-end test runs a whole document
+  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). The one exception is the visit
+  counter's script and report, at their exact addresses. An end-to-end test runs a whole document
   workflow with fictional card values and checks that no request is sent and none carries those
   values (`tests/e2e/privacy.spec.ts`).
 - **On-device AI only.** The corner finder is a small model that runs in the page with WebAssembly.
@@ -107,7 +109,8 @@ covered by tests (see [Security reviews](#security-reviews)).
 - **Camera stays on the device.** The live camera (capture coach) is analysed frame by frame in
   memory. No frame is stored or sent, and the camera turns off when you close the view, finish both
   sides or leave the tab.
-- **No tracking.** No analytics, telemetry, cookies, fonts or scripts from third parties.
+- **No tracking.** No cookies, profiles, telemetry, fonts or third-party scripts, except the
+  anonymous visit counter described below.
 - **No framing.** Inside another site's frame the app does not start; it only offers to open itself
   in its own tab. No page can overlay it with invisible controls.
 - **Real redaction.** Hidden areas are painted as opaque black pixels on a new image, with a margin
@@ -146,10 +149,33 @@ covered by tests (see [Security reviews](#security-reviews)).
 - **A watermark discourages reuse but cannot prevent identity fraud.**
 - **Greyscale is not a security measure.**
 
+### Visit counts
+
+The public site (`aasanchez.github.io`, `dnitapado.es`) counts visits with
+[Cloudflare Web Analytics](https://www.cloudflare.com/web-analytics/)
+([ADR 0015](docs/adr/0015-cookieless-analytics.md)):
+
+- **What is sent.** Cloudflare's beacon reports the page load: the page address, the referring site,
+  load timings and the browser. Cloudflare sees your IP address, as any server does, and derives a
+  country from it. The app gives the beacon only the site token. Photos, fields, file names and your
+  progress live in memory and never in the address, so no report can contain them.
+- **What is not.** No cookies, no `localStorage`, no fingerprinting, no profile across sites. A test
+  checks that cookies and storage stay empty.
+- **When it does not run.** Offline, on any other host (local builds, tests, forks), and when your
+  browser sends Global Privacy Control or Do Not Track. If Cloudflare cannot be reached, the app works
+  the same.
+- **The limits.** The beacon is the only third-party script and the only script without an SRI hash
+  (Cloudflare does not publish versioned copies). Like any script in a page it could read the page.
+  The CSP, Trusted Types and the service worker let it load from its exact URL and send only to
+  `cloudflareinsights.com`. If you prefer not to load it, enable Global Privacy Control, use a content
+  blocker, or go offline before you select a photo.
+
 ### Check it yourself
 
 1. Open the browser's developer tools, **Network** tab, before you select a photo.
-2. Use the tool to the end. The only requests are the page's own files, all from the same origin.
+2. Use the tool to the end. The only requests are the page's own files, all from the same origin,
+   and on the public site the visit counter (`static.cloudflareinsights.com/beacon.min.js` and one
+   report to `cloudflareinsights.com`), which carry nothing from your document.
    The first time you select a photo, the page also downloads the corner model (`assets/ml/`) from
    the same origin; these are plain downloads of the app's files and carry nothing from you.
 3. For the strongest check, load the page, then disconnect from the Internet (airplane mode) before you
@@ -359,10 +385,12 @@ Rules the code follows:
 
 - No HTML strings: no `innerHTML` and no `{@html}`. Svelte builds DOM nodes directly
   (`fragments: 'tree'`). The CSP allows one Trusted Types policy, `default`, which only accepts
-  two script URLs: the service worker and the OCR worker ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
+  three script URLs: the service worker, the OCR worker ([ADR 0009](docs/adr/0009-on-device-ocr.md)) and
+  the visit counter ([ADR 0015](docs/adr/0015-cookieless-analytics.md)).
 - No `eval`, `new Function`, inline scripts or inline styles. WebAssembly is allowed only for the
   corner model's runtime ([ADR 0007](docs/adr/0007-corner-model.md)).
-- No runtime requests and no persistent storage, except the notice's closing date (`src/ui/notice-memory.ts`).
+- No runtime requests and no persistent storage, except the visit counter on the public site
+  (`src/analytics/`) and the notice's closing date (`src/ui/notice-memory.ts`).
 - Test images are synthetic or official specimens. Never commit a photo of a real person's document.
 
 ## Tests
@@ -387,7 +415,9 @@ upright, front and back), corner alignment from **Adjust corners**, the corner m
   the language, same version after an offline reload), and
   security checks on the built page: exact CSP, referrer policy, SRI on every asset, no inline code, no CSP violations and no
   request outside the page's origin, every on-demand chunk listed in the import map with the right
-  hash, a tampered PDF chunk refused by the browser, and offline mode (reload and full flow to the
+  hash, a tampered PDF chunk refused by the browser, the visit counter served as the public site
+  (one script and one report with only the token, no cookies, other addresses refused, the service
+  worker's pass-through, nothing offline, under GPC or DNT, or on other hosts), and offline mode (reload and full flow to the
   PDF with the network off; a tampered file stops the service worker install).
 
 ## Continuous integration
@@ -577,6 +607,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0012](docs/adr/0012-automatic-straightening.md): automatic straightening (find, turn, straighten); the corner screen only on request.
 - [0013](docs/adr/0013-ci-pipeline.md): CI split into small, single-purpose jobs in logical stages, with one required check.
 - [0014](docs/adr/0014-card-guide.md): card guide; every element explained with official citations, nothing guessed.
+- [0015](docs/adr/0015-cookieless-analytics.md): cookieless visit counts with Cloudflare Web Analytics, on the public site only.
 
 ## Contributing
 

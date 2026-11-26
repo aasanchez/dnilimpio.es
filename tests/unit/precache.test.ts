@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
 import { WORKER_SCRIPTS, cacheName, isOnDemand, isPrecached, parseManifest, route, workerCsp } from '../../src/offline/precache.ts'
+import { BEACON_ENDPOINT, BEACON_SCRIPT } from '../../src/analytics/endpoints.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
 const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }], onDemand: [{ path: 'ocr/spa.traineddata', integrity: HASH }] }
@@ -35,6 +36,14 @@ describe('parseManifest', () => {
     }
     expect(() => parseManifest(JSON.stringify({ ...ok, files: [{ path: 'index.html', integrity: 'sha256-abc' }] }))).toThrow(/integrity/)
   })
+  it('keeps the analytics addresses only when they are plain https URLs', () => {
+    const analytics = { script: BEACON_SCRIPT, endpoint: BEACON_ENDPOINT }
+    expect(parseManifest(JSON.stringify({ ...ok, analytics })).analytics).toEqual(analytics)
+    expect(parseManifest(JSON.stringify(ok)).analytics).toBeUndefined()
+    for (const bad of ['http://cloudflareinsights.com/cdn-cgi/rum', `${BEACON_ENDPOINT}?x=1`, `${BEACON_ENDPOINT}#x`, 'https://u:p@cloudflareinsights.com/', 'not a url', 42]) {
+      expect(() => parseManifest(JSON.stringify({ ...ok, analytics: { ...analytics, endpoint: bad } }))).toThrow(/analytics/)
+    }
+  })
 })
 
 describe('route (deny by default)', () => {
@@ -62,6 +71,22 @@ describe('route (deny by default)', () => {
     expect(get('https://evil.example/app/assets/a.js')).toBe('deny') // another origin
     expect(get('https://evil.example/', 'navigate')).toBe('deny')
     for (const method of ['POST', 'PUT', 'HEAD', 'DELETE']) expect(route(method, `${scope}assets/a.js`, 'cors', scope, known).kind).toBe('deny')
+  })
+  it('lets only the analytics beacon and its report through, and only when the manifest lists them', () => {
+    const withAnalytics = { ...known, analytics: { script: BEACON_SCRIPT, endpoint: BEACON_ENDPOINT } }
+    const to = (method: string, url: string): string => route(method, url, 'cors', scope, withAnalytics).kind
+    expect(to('GET', BEACON_SCRIPT)).toBe('analytics')
+    expect(to('POST', BEACON_ENDPOINT)).toBe('analytics')
+    expect(to('POST', `${BEACON_ENDPOINT}?v=1`)).toBe('analytics')
+    expect(to('GET', `${BEACON_SCRIPT}?d=12345678Z`)).toBe('deny') // data in the script's query string
+    expect(to('POST', BEACON_SCRIPT)).toBe('deny')
+    expect(to('PUT', BEACON_ENDPOINT)).toBe('deny')
+    expect(to('GET', 'https://static.cloudflareinsights.com/other.js')).toBe('deny')
+    expect(to('POST', 'https://cloudflareinsights.com/other')).toBe('deny')
+    expect(to('POST', 'https://cloudflareinsights.com.evil.example/cdn-cgi/rum')).toBe('deny')
+    // Without the manifest entry, the worker refuses them like any other origin.
+    expect(get(BEACON_SCRIPT)).toBe('deny')
+    expect(route('POST', BEACON_ENDPOINT, 'cors', scope, known).kind).toBe('deny')
   })
 })
 
