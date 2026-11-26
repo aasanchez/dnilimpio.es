@@ -1,5 +1,4 @@
 {
-  "appTitle": "DNI limpo",
   "sourceCode": "Código fonte",
   "buildVersion": "Versión",
   "buildDeployed": "despregado {when}",
@@ -165,8 +164,8 @@
   "doneHint": "Cando o envíes, preme Borrar todo. Pechar a lapela tamén o borra.",
   "errShare": "Non se puido compartir. O PDF segue no cartafol de descargas.",
   "sendTitle": "Envíao ti",
-  "sendLeadShare": "DNI Limpio non envía nada. Ábrese o menú de compartir do teu dispositivo: escolles ti a app e a persoa.",
-  "sendLeadManual": "DNI Limpio non envía nada. Estas ligazóns abren WhatsApp ou o teu correo cunha mensaxe; achega ti o PDF desde o cartafol de descargas.",
+  "sendLeadShare": "DNI Tapado.es non envía nada. Ábrese o menú de compartir do teu dispositivo: escolles ti a app e a persoa.",
+  "sendLeadManual": "DNI Tapado.es non envía nada. Estas ligazóns abren WhatsApp ou o teu correo cunha mensaxe; achega ti o PDF desde o cartafol de descargas.",
   "shareWhatsApp": "Compartir por WhatsApp",
   "shareEmail": "Compartir por correo",
   "shareSubject": "Documento con datos protexidos",

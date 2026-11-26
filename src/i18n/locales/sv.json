@@ -1,5 +1,4 @@
 {
-  "appTitle": "Ren DNI",
   "sourceCode": "Källkod",
   "buildVersion": "Version",
   "buildDeployed": "publicerad {when}",
@@ -165,8 +164,8 @@
   "doneHint": "Tryck på Rensa allt när du har skickat den. Att stänga fliken rensar också allt.",
   "errShare": "Det gick inte att dela. Pdf:en finns kvar i mappen Hämtade filer.",
   "sendTitle": "Skicka det själv",
-  "sendLeadShare": "DNI Limpio skickar ingenting. Enhetens delningsmeny öppnas: du väljer appen och mottagaren.",
-  "sendLeadManual": "DNI Limpio skickar ingenting. Länkarna öppnar WhatsApp eller din e-post med ett meddelande; bifoga pdf-filen själv från mappen Hämtade filer.",
+  "sendLeadShare": "DNI Tapado.es skickar ingenting. Enhetens delningsmeny öppnas: du väljer appen och mottagaren.",
+  "sendLeadManual": "DNI Tapado.es skickar ingenting. Länkarna öppnar WhatsApp eller din e-post med ett meddelande; bifoga pdf-filen själv från mappen Hämtade filer.",
   "shareWhatsApp": "Dela via WhatsApp",
   "shareEmail": "Dela via e-post",
   "shareSubject": "Dokument med skyddade uppgifter",

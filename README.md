@@ -1,9 +1,9 @@
-# DNI limpio
+# DNI Tapado.es
 
 Hide the sensitive data on a photo of your Spanish identity document before you share a copy.
 Everything runs in your browser, on your device. Nothing is uploaded.
 
-**Use it:** <https://aasanchez.github.io/dnilimpio.es/> (planned move to `dnilimpio.es`).
+**Use it:** <https://aasanchez.github.io/dnilimpio.es/> (planned move to `dnitapado.es`). The GitHub repository keeps the name `dnilimpio.es` for now.
 
 > [!IMPORTANT]
 > **Work in progress.** The full flow works for the DNI 4.0, DNI 3.0 and TIE: select both sides, confirm the document
@@ -508,7 +508,7 @@ Do not re-run the old **pages build and deployment** workflow if it appears in t
 publishes the raw, unbuilt source of an old commit over the real site.
 
 The build uses relative paths, so `dist/` works at a domain root, under a subpath and on any static
-server (Nginx, Caddy, Cloudflare Pages). Moving to the `dnilimpio.es` domain needs no code change:
+server (Nginx, Caddy, Cloudflare Pages). Moving to the `dnitapado.es` domain needs no code change:
 set the custom domain in the repository's Pages settings and point DNS at GitHub Pages.
 
 ### Version shown in the app

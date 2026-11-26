@@ -124,7 +124,7 @@
     </div>
     <div class="win">
       <div class="winbar"><i></i><i></i><i></i><span class="title">export.log</span></div>
-      <p class="term" aria-hidden="true"><span class="p">$</span> dni-limpio export<br />→ protected-document.pdf · 2 pp · ok<br />→ {t(lang, 'logSent')}<br /><span class="p">_</span></p>
+      <p class="term" aria-hidden="true"><span class="p">$</span> dt.es export<br />→ protected-document.pdf · 2 pp · ok<br />→ {t(lang, 'logSent')}<br /><span class="p">_</span></p>
     </div>
     <p class="lead" id="download-status" role="status">{status === 'done' ? t(lang, 'downloaded') : ''}</p>
 
