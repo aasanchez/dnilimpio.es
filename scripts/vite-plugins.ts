@@ -10,7 +10,7 @@ import { dirname, join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, cspWithScriptHashes } from './csp.ts'
 import { BEACON_ENDPOINT, BEACON_SCRIPT } from '../src/analytics/endpoints.ts'
-import { SW_FILE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
+import { SW_FILE, isOnDemand, isPrecached, isSourceMap, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 
 export function securityHeaders (): Plugin {
   return {
@@ -107,22 +107,27 @@ function writePrecacheManifest (outDir: string): void {
   const all: PrecacheFile[] = listFiles(outDir).filter(isPrecached).map((path) => ({ path, integrity: sri(readFileSync(join(outDir, path))) }))
   const files = all.filter((f) => !isOnDemand(f.path))
   const onDemand = all.filter((f) => isOnDemand(f.path))
+  // Source maps of the files above, so the worker can serve them to the developer tools (ADR 0016).
+  const described = new Set(all.map((f) => `${f.path}.map`))
+  const sourceMaps: PrecacheFile[] = listFiles(outDir).filter((p) => isSourceMap(p) && described.has(p)).map((path) => ({ path, integrity: sri(readFileSync(join(outDir, path))) }))
   // The worker's own code is part of the version: a worker-only change still gets a new cache name,
   // so a failed install can never delete the cache the active worker is using.
   const version = createHash('sha256')
     .update(all.map((f) => `${f.path} ${f.integrity}`).join('\n'))
+    .update(sourceMaps.map((f) => `\n${f.path} ${f.integrity}`).join(''))
     .update(`\nsw.js ${sri(sw)}`)
     .digest('hex').slice(0, 16)
-  const json = JSON.stringify({ version, files, onDemand, analytics: { script: BEACON_SCRIPT, endpoint: BEACON_ENDPOINT } })
+  const json = JSON.stringify({ version, files, onDemand, sourceMaps, analytics: { script: BEACON_SCRIPT, endpoint: BEACON_ENDPOINT } })
   parseManifest(json) // same checks as the worker runs
   writeFileSync(swPath, sw.replace(PLACEHOLDER, () => JSON.stringify(json)))
 }
 
 /**
  * `import data from './file.bin?base64'` gives the file's bytes as a base64 string inside a
- * JavaScript module. The corner model and its WebAssembly runtime are loaded this way because the
- * CSP has `connect-src 'none'`: the page cannot fetch() anything, but it can import() a script from
- * its own origin, and the import map checks that script's integrity.
+ * JavaScript module. The corner model and its WebAssembly runtime are loaded this way so that the
+ * page never needs fetch() for them: it import()s a script from its own origin, and the import map
+ * checks that script's integrity. (connect-src allows 'self' only so the developer tools can read
+ * the source maps, ADR 0016; the app itself fetches nothing.)
  */
 export function base64Import (): Plugin {
   const SUFFIX = '?base64'

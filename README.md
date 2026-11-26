@@ -67,14 +67,18 @@ covered by tests (see [Security reviews](#security-reviews)).
 
 - **No upload.** Photos are processed in the browser with the Canvas API. The page has no server side.
 - **Almost no network access from the page.** The Content Security Policy allows the page to send
-  requests to one address only: `connect-src https://cloudflareinsights.com`, where the visit counter
-  reports. It loads styles and images only from its own origin, and scripts from its own origin plus
-  the counter's exact URL. WebRTC, which no CSP rule covers, is removed before any code runs.
+  requests to one other address only: `connect-src 'self' https://cloudflareinsights.com`, where the
+  visit counter reports. `'self'` is there so the browser's developer tools can load the published
+  source maps (see **Verifiable code** below and [ADR 0016](docs/adr/0016-source-maps-in-devtools.md));
+  the app itself never calls `fetch()`. It loads styles and images only from its own origin, and
+  scripts from its own origin plus the counter's exact URL. WebRTC, which no CSP rule covers, is
+  removed before any code runs.
 - **Deny by default.** After the first visit, the service worker answers only the exact files of this
   build. Any other request from the page or its workers (another address, a query string, another
   method) is refused and never reaches the network, so even a same-origin request cannot carry data
-  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). The one exception is the visit
-  counter's script and report, at their exact addresses. An end-to-end test runs a whole document
+  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). The exceptions are the visit
+  counter's script and report, at their exact addresses, and this build's own source maps, each
+  checked against its hash and never cached. An end-to-end test runs a whole document
   workflow with fictional card values and checks that no request is sent and none carries those
   values (`tests/e2e/privacy.spec.ts`).
 - **On-device AI only.** The corner finder is a small model that runs in the page with WebAssembly.
@@ -119,7 +123,9 @@ covered by tests (see [Security reviews](#security-reviews)).
   no EXIF, GPS, camera model, thumbnail or comments. The PDF has no metadata, no text, no
   annotations, no scripts and no attachments. Tests check this object by object.
 - **Verifiable code.** The production build is minified but ships source maps (`.map` files) that
-  map every line back to the source in this repository. Every script and stylesheet has a
+  map every line back to the source in this repository. The browser's developer tools show the
+  original source under **Sources**. A map on its own proves nothing, because the same build
+  produces it; the proof is in the hashes below, which cover the maps too. Every script and stylesheet has a
   Subresource Integrity hash, including the PDF code that loads in the background after the page
   appears (its hash is in an import map, allowed by the CSP through its own SHA-256 hash). A changed
   file is refused by the browser, both when the page loads it and when it is saved for offline use.
@@ -136,7 +142,10 @@ covered by tests (see [Security reviews](#security-reviews)).
   browser, time and which of the app's files were downloaded (for example, that the OCR files were
   fetched the first time you used OCR). It never receives your photos or data.
 - **The first visit and a forced reload are not covered by the service worker.** The CSP still
-  applies; the deny-by-default rule starts once the service worker controls the page.
+  applies; the deny-by-default rule starts once the service worker controls the page. In that window
+  the CSP allows requests to the site's own origin (`img-src`, `script-src` and, for the source
+  maps, `connect-src 'self'`). GitHub Pages stores nothing it receives, but GitHub would see the
+  address of such a request. Only this build's verified code runs, and it never makes one.
 - **No browser rule can stop a page from navigating to a URL.** The protection there is that only
   this build's verified code runs (CSP, SRI, the locked dependency list) and that the code never
   navigates with your data (enforced by the linter).
@@ -183,7 +192,9 @@ The public site (`aasanchez.github.io`, `dnitapado.es`) counts visits with
 4. Read the policy in the page source: `<meta http-equiv="Content-Security-Policy">`.
 5. Check which code you run: the start screen's footer shows the short commit SHA of the build, linked
    to that commit on GitHub (see [Deployment](#deployment)).
-6. Check that a file is the one CI built from this repository:
+6. Read the running code as source: developer tools, **Sources** tab. The source maps map the
+   minified files back to `src/` in this repository.
+7. Check that a file is the one CI built from this repository, source maps included:
    `gh attestation verify <file> --repo aasanchez/dnilimpio.es`, or rebuild it yourself and compare
    (see [Continuous integration](#continuous-integration)).
 

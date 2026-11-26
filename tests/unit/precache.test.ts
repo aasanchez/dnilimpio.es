@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { WORKER_SCRIPTS, cacheName, isOnDemand, isPrecached, parseManifest, route, workerCsp } from '../../src/offline/precache.ts'
+import { WORKER_SCRIPTS, cacheName, isOnDemand, isPrecached, isSourceMap, parseManifest, route, workerCsp } from '../../src/offline/precache.ts'
 import { BEACON_ENDPOINT, BEACON_SCRIPT } from '../../src/analytics/endpoints.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
@@ -35,6 +35,16 @@ describe('parseManifest', () => {
       expect(() => parseManifest(JSON.stringify({ ...ok, files: [{ path, integrity: HASH }] }))).toThrow(/path/)
     }
     expect(() => parseManifest(JSON.stringify({ ...ok, files: [{ path: 'index.html', integrity: 'sha256-abc' }] }))).toThrow(/integrity/)
+  })
+  it('keeps source maps only for files of this build', () => {
+    const sourceMaps = [{ path: 'assets/index-x.js.map', integrity: HASH }]
+    expect(parseManifest(JSON.stringify({ ...ok, sourceMaps })).sourceMaps).toEqual(sourceMaps)
+    expect(parseManifest(JSON.stringify(ok)).sourceMaps).toBeUndefined()
+    for (const path of ['assets/other.js.map', 'sw.js.map', 'assets/index-x.js', '../assets/index-x.js.map', '/assets/index-x.js.map']) {
+      expect(() => parseManifest(JSON.stringify({ ...ok, sourceMaps: [{ path, integrity: HASH }] }))).toThrow(/path/)
+    }
+    expect(() => parseManifest(JSON.stringify({ ...ok, sourceMaps: [{ path: 'assets/index-x.js.map', integrity: 'x' }] }))).toThrow(/integrity/)
+    expect(() => parseManifest(JSON.stringify({ ...ok, sourceMaps: {} }))).toThrow(/source map/)
   })
   it('keeps the analytics addresses only when they are plain https URLs', () => {
     const analytics = { script: BEACON_SCRIPT, endpoint: BEACON_ENDPOINT }
@@ -72,6 +82,17 @@ describe('route (deny by default)', () => {
     expect(get('https://evil.example/', 'navigate')).toBe('deny')
     for (const method of ['POST', 'PUT', 'HEAD', 'DELETE']) expect(route(method, `${scope}assets/a.js`, 'cors', scope, known).kind).toBe('deny')
   })
+  it('answers the source map of a file of this build, and no other .map', () => {
+    const withMaps = { ...known, sourceMaps: new Set([`${scope}assets/a.js.map`]) }
+    const to = (method: string, url: string): string => route(method, url, 'cors', scope, withMaps).kind
+    expect(route('GET', `${scope}assets/a.js.map`, 'cors', scope, withMaps)).toEqual({ kind: 'source-map', url: `${scope}assets/a.js.map` })
+    expect(to('GET', `${scope}assets/a.js.map#x`)).toBe('source-map')
+    expect(to('GET', `${scope}assets/a.js.map?d=12345678Z`)).toBe('deny') // data in a query string
+    expect(to('GET', `${scope}assets/b.js.map`)).toBe('deny') // not in the manifest
+    expect(to('GET', 'https://evil.example/app/assets/a.js.map')).toBe('deny')
+    expect(to('POST', `${scope}assets/a.js.map`)).toBe('deny')
+    expect(get(`${scope}assets/a.js.map`)).toBe('deny') // without the manifest entry
+  })
   it('lets only the analytics beacon and its report through, and only when the manifest lists them', () => {
     const withAnalytics = { ...known, analytics: { script: BEACON_SCRIPT, endpoint: BEACON_ENDPOINT } }
     const to = (method: string, url: string): string => route(method, url, 'cors', scope, withAnalytics).kind
@@ -92,6 +113,16 @@ describe('route (deny by default)', () => {
 
 it('names caches by build version', () => {
   expect(cacheName('0123456789abcdef')).toBe('dnilimpio-0123456789abcdef')
+})
+
+describe('isSourceMap', () => {
+  it('matches .map files, not the worker map or dotfiles', () => {
+    expect(isSourceMap('assets/index-x.js.map')).toBe(true)
+    expect(isSourceMap('ocr/worker.min.js.map')).toBe(true)
+    expect(isSourceMap('assets/index-x.js')).toBe(false)
+    expect(isSourceMap('sw.js.map')).toBe(false)
+    expect(isSourceMap('.x.map')).toBe(false)
+  })
 })
 
 describe('isOnDemand', () => {
