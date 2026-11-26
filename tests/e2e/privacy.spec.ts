@@ -90,8 +90,8 @@ test('nothing about the document is stored in the browser', async ({ page }) => 
       local: localStorage.length, // eslint-disable-line no-restricted-properties
       session: sessionStorage.length, // eslint-disable-line no-restricted-properties
       databases: (await indexedDB.databases()).map((d) => d.name), // eslint-disable-line no-restricted-properties
-      // Only the app's own files (and its install manifest and icons, ADR 0018): no blob:, no photo, no PDF.
-      foreign: cached.filter((p) => !/^\/(index\.html|manifest\.webmanifest|icons\/[\w-]+\.png|assets\/.+|ocr\/.+)$/.test(p)),
+      // Only the app's own files (and its install manifest, icons and favicon, ADR 0018): no blob:, no photo, no PDF.
+      foreign: cached.filter((p) => !/^\/(index\.html|manifest\.webmanifest|favicon\.ico|icons\/[\w-]+\.(png|svg)|assets\/.+|ocr\/.+)$/.test(p)),
     }
   })
   expect(stored).toEqual({ cookies: '', local: 0, session: 0, databases: [], foreign: [] })
