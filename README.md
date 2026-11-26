@@ -337,8 +337,10 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   Subresource Integrity hash, including the PDF code that loads in the background after the page
   appears (its hash is in an import map, allowed by the CSP through its own SHA-256 hash). A changed
   file is refused by the browser, both when the page loads it and when it is saved for offline use.
-  The build is reproducible, every deployed file has signed build provenance, and after each deploy
-  CI checks that the live site serves exactly the files it built. See
+  The build is reproducible, and CI rebuilds the release commit itself before it deploys. Every
+  deployed file has signed build provenance, which CI then checks with a pinned identity, and the
+  SHA-384 of every file of each release is kept as signed evidence. After each deploy CI checks that
+  the live site serves exactly the files it built. See
   [Audit it yourself](#audit-it-yourself).
 
 ### What it cannot guarantee
@@ -470,11 +472,26 @@ only; nothing is sent. The text is in [`src/security/audit-prompt.ts`](src/secur
 
 **Check that the live files are the ones built from this repository**
 
-- **Provenance.** Every deployed file has signed build provenance:
+- **Provenance.** Every deployed file has signed build provenance. Check a folder of files (for
+  example files saved from the live site, or the `dist` artifact of a CI run) against the commit in
+  the footer:
 
   ```sh
-  gh attestation verify <file> --repo aasanchez/dnilimpio.es
+  node scripts/verify-release.ts <folder> <full commit SHA>
   ```
+
+  It runs `gh attestation verify` on each file and accepts only provenance signed for this
+  repository, the CI workflow on `master`, that exact commit and a GitHub-hosted runner. For one file:
+
+  ```sh
+  gh attestation verify <file> --repo aasanchez/dnilimpio.es \
+    --signer-workflow aasanchez/dnilimpio.es/.github/workflows/ci.yml \
+    --source-ref refs/heads/master --source-digest <full commit SHA>
+  ```
+
+- **Release evidence.** Each release run keeps a `release-evidence` artifact for 90 days: the
+  SHA-384 of every deployed file (`files.sha384.txt`), the commit and the SBOM. These files are
+  attested too, so their signed provenance stays with GitHub after the artifact expires.
 
 - **Rebuild.** The build is reproducible: the same commit gives the same bytes.
 
@@ -608,18 +625,18 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, manual box maths, every masked pixel opaque black |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages, images, no metadata, no text, deterministic output |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
-| Platform | `precache`, `lockdown`, `intake-lockdown`, `stats-frame`, `build-info`, `i18n`, `guide`, `deps-report` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, the photo step's policy and the service worker check, counter frame hosts, sandbox and CSP, version and relative time, translation keys and no absolute privacy claims in es/en, guide citations, dependency report |
+| Platform | `precache`, `lockdown`, `intake-lockdown`, `stats-frame`, `build-info`, `i18n`, `guide`, `deps-report`, `verify-release` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, the photo step's policy and the service worker check, counter frame hosts, sandbox and CSP, version and relative time, translation keys and no absolute privacy claims in es/en, guide citations, dependency report, pinned provenance identity |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP):
 
 | Spec | What is checked |
 |---|---|
-| `privacy` | A whole workflow with fictional card values sends no request and stores nothing |
+| `privacy` | A whole workflow sends no request and stores nothing. Canaries from the card text (OCR), the photos' file names and the watermark never appear in any request's address, headers or body, from the first visit on, nor as text in the PDF |
 | `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused, photos dropped on `pagehide` |
 | `cleanup` | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
 | `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
 | `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
-| `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; the counter frame is cross-site, sandboxed, given nothing, gone before any photo, not shown offline, under GPC or DNT, or on other hosts |
+| `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; page code that gathers the canary file names, OCR text and watermark cannot send them by beacon, fetch, image, style sheet, font, frame or form; the counter frame is cross-site, sandboxed, given nothing, gone before any photo, not shown offline, under GPC or DNT, or on other hosts |
 | `update` | An idle single tab switches to a new build; a tab with photos, or a second tab, holds it back |
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks |
 | `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, offline note |
@@ -660,20 +677,20 @@ changes ─ install ─┬─ build ──────┬─ e2e (2 shards) ─�
 reuse · audit · dependency-review · workflow-lint ───┘
 
 master (push, or a manual run of CI)
-changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke ─ lighthouse-live
-                                            └─ attest (build provenance)
+changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ smoke ─ lighthouse-live
+                                                          └─ attest ─ verify-provenance
 ```
 
 | Stage | Job | What it does | Runs on | Fails the pipeline |
 |---|---|---|---|---|
 | changes | `changes` | Decides what the run does: release on `master`; on a pull request, whether it touches code. A change to only Markdown, `docs/` or `LICENSES/` skips the code jobs | Both | No |
 | setup | `install` | `pnpm install --frozen-lockfile`. Saves the `node_modules` and pnpm store caches that every later job restores | Both | Yes |
-| build | `build` | `pnpm build` with `SOURCE_DATE_EPOCH` set to the commit time, so the build is reproducible. Uploads `dist/` once; every later job tests or deploys that same build. Also uploads a CycloneDX SBOM of the runtime dependencies (`sbom` artifact, from `pnpm sbom`) | Both | Yes |
+| build | `build` | `pnpm build` with `SOURCE_DATE_EPOCH` set to the commit time, so the build is reproducible. Uploads `dist/` once; every later job tests or deploys that same build. Also uploads a CycloneDX SBOM of the runtime dependencies (`sbom` artifact, from `pnpm sbom`) and the `release-evidence` artifact (SHA-384 of every file, commit, SBOM; kept 90 days) | Both | Yes |
 | build | `typecheck` | `pnpm typecheck` (svelte-check, strict TypeScript) | PR | Yes |
 | build | `lint` | `pnpm lint` (ESLint) | PR | Yes |
 | build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. No threshold yet | PR | Yes |
 | test | `e2e (1/2)`, `e2e (2/2)` | `pnpm test:e2e`, split in two shards, against the built `dist/` | PR | Yes |
-| test | `reproducible` | Builds the same commit again on a fresh runner and compares the SHA-384 of every file with the `dist/` artifact ([`scripts/build-manifest.ts`](scripts/build-manifest.ts)). Any difference fails | PR | Yes |
+| test | `reproducible` | Builds the same commit again on a fresh runner and compares the SHA-384 of every file with the `dist/` artifact ([`scripts/build-manifest.ts`](scripts/build-manifest.ts)). Any difference fails. Also runs on the release commit, because the squash merge makes a new commit; `deploy` waits for it | Both | Yes |
 | test | `bundle-size` | `pnpm size`: gzip size of the start page, PDF chunk, corner model and OCR files against budgets in [`scripts/bundle-size.ts`](scripts/bundle-size.ts) | PR | No, warns (`--strict` makes it fail) |
 | code analysis | `reuse` | Every file has copyright and licence information ([REUSE](https://reuse.software)) | PR | Yes |
 | code analysis | `audit` | `pnpm audit --prod --audit-level high`: known high or critical vulnerabilities in the code that ships | PR | Yes |
@@ -683,7 +700,8 @@ changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke ─ lighthous
 | gate | `ci-ok` | Passes when every job above passed or was skipped on purpose | Both | Yes |
 | deploy | `deploy` | Publishes the built `dist/` to GitHub Pages. Only a push or manual run on `master`, never a pull request or another branch. A running deploy is never cancelled | `master` | Yes |
 | post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte. Retries for up to 5 minutes while Pages updates | `master` | Yes |
-| post-deploy | `attest` | Signed build provenance for every deployed file ([artifact attestations](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)). Check a file with `gh attestation verify <file> --repo aasanchez/dnilimpio.es` | `master` | Yes |
+| post-deploy | `attest` | Signed build provenance for every deployed file and the release evidence ([artifact attestations](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)) | `master` | Yes |
+| post-deploy | `verify-provenance` | Checks those signatures as a third party would, with [`scripts/verify-release.ts`](scripts/verify-release.ts): every file must carry provenance for this repository, `ci.yml` on `master`, this commit and a GitHub-hosted runner. Also checks the evidence lists exactly the deployed files | `master` | Yes |
 | post-deploy | `lighthouse-live` | Lighthouse on the live site, with real hosting (compression, cache headers). Thresholds in [`lighthouserc.live.json`](lighthouserc.live.json) | `master` | No, warns |
 
 **Caching.** Each job starts from caches instead of downloading again:
@@ -734,7 +752,8 @@ tools that are not npm packages (REUSE, actionlint, zizmor) can be run with `pip
 
 On `master`, the `deploy` job publishes the freshly built `dist/` to GitHub Pages (the same code
 that passed every check on its pull request). `smoke` then checks that the live site serves it,
-`attest` signs its provenance, and `lighthouse-live` measures it. To redeploy without a new commit,
+`attest` signs its provenance, `verify-provenance` checks those signatures, and `lighthouse-live`
+measures it. To redeploy without a new commit,
 run the **CI** workflow on `master` from the Actions tab.
 
 Do not re-run the old **pages build and deployment** workflow if it appears in the Actions tab. It
