@@ -117,7 +117,7 @@ test('page loads from the worker keep the host\'s headers and add the ones Pages
   expect(res?.fromServiceWorker()).toBe(true)
   const h = res?.headers() ?? {}
   // The worker adds its frame-ancestors policy next to the host's full CSP, never in its place
-  // (addPageHeaders(), ADR 0025): the browser enforces both.
+  // (addPageHeaders(), ADR 0027): the browser enforces both.
   expect([h['content-security-policy'], h['x-frame-options'], h['x-content-type-options'], h['referrer-policy']])
     .toEqual([`${hostCsp}, frame-ancestors 'none'`, 'DENY', 'nosniff', 'no-referrer'])
   expect(h['permissions-policy']).toContain('camera=(self)')

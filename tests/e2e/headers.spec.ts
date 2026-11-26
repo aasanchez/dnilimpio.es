@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// HTTP security headers of the host (scripts/headers.ts, ADR 0025). `vite preview` sends the same
+// HTTP security headers of the host (scripts/headers.ts, ADR 0027). `vite preview` sends the same
 // headers as Cloudflare, so these tests fail if a header is dropped, loosened or drifts from the CSP.
 import { expect, test } from '@playwright/test'
 import { COMMON_HEADERS, HOST_WORKER_CSP, SERVICE_WORKER_CSP, pageCsp } from '../../scripts/headers.ts'
@@ -37,7 +37,7 @@ test('Permissions-Policy leaves the camera on and turns microphone, location and
   expect(allowed).toEqual({ camera: true, microphone: false, geolocation: false, 'clipboard-read': false, payment: false, usb: false })
 })
 
-test('the page is not cross-origin isolated: COEP is not set (ADR 0025)', async ({ page }) => {
+test('the page is not cross-origin isolated: COEP is not set (ADR 0027)', async ({ page }) => {
   const res = await page.goto('/')
   expect(res?.headers()['cross-origin-embedder-policy']).toBeUndefined()
   expect(await page.evaluate(() => window.crossOriginIsolated)).toBe(false)

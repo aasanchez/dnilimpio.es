@@ -121,7 +121,7 @@ function writePrecacheManifest (outDir: string): void {
 }
 
 /**
- * `vite preview` sends the same HTTP headers as the Cloudflare host (scripts/headers.ts, ADR 0025), so
+ * `vite preview` sends the same HTTP headers as the Cloudflare host (scripts/headers.ts, ADR 0027), so
  * the e2e tests run under the host's CSP, Permissions-Policy and framing rules, not only the <meta> CSP.
  * Set PREVIEW_HOST_HEADERS=0 to preview the build as GitHub Pages serves it (no headers).
  */

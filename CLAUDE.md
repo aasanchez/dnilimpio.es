@@ -12,7 +12,7 @@ document (DNI or TIE) and exports a redacted PDF. Everything runs in the browser
 The promise to users is: **your photos never leave your device, no cookies, nothing stored.**
 Every rule below protects that promise.
 
-- Live site: <https://dnitapado.es> (Cloudflare Workers static assets, `wrangler.jsonc`, ADR 0025).
+- Live site: <https://dnitapado.es> (Cloudflare Workers static assets, `wrangler.jsonc`, ADR 0027).
   GitHub Pages serves the same build at the old address <https://aasanchez.github.io/dnilimpio.es/>;
   keep both working (see rule 6).
 - The repository is still named `aasanchez/dnilimpio.es`. Do not rename repository URLs, the cache

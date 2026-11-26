@@ -20,7 +20,7 @@
 #                                     └─ deploy-cloudflare (dnitapado.es) ─ smoke-cloudflare
 #
 # dnitapado.es is served by Cloudflare Workers, which sends the HTTP security headers of
-# scripts/headers.ts (ADR 0025). The same build also goes to GitHub Pages, which sends no headers and
+# scripts/headers.ts (ADR 0027). The same build also goes to GitHub Pages, which sends no headers and
 # keeps the old address https://aasanchez.github.io/dnilimpio.es/ working.
 #
 # ci-ok is the one status check that branch protection requires. CodeQL runs in codeql.yml.
@@ -376,7 +376,7 @@ jobs:
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
   # The same tested build, with the `_headers` file of scripts/headers.ts, to Cloudflare Workers
-  # (wrangler.jsonc, ADR 0025). wrangler comes from deploy/pnpm-lock.yaml, installed without install
+  # (wrangler.jsonc, ADR 0027). wrangler comes from deploy/pnpm-lock.yaml, installed without install
   # scripts. The API token lives in the `cloudflare` environment, which only master may use.
   deploy-cloudflare:
     if: ${{ !cancelled() && github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.changes.outputs.release == 'true' && needs.ci-ok.result == 'success' && needs.build.result == 'success' }}

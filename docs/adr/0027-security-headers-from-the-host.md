@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-# 0025. Security headers from the host: dnitapado.es on Cloudflare Workers
+# 0027. Security headers from the host: dnitapado.es on Cloudflare Workers
 
 - Status: accepted
 - Date: 2026-11-26

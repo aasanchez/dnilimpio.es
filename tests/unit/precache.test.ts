@@ -116,7 +116,7 @@ describe('workerCsp', () => {
 })
 
 describe('addPageHeaders', () => {
-  it('adds frame-ancestors as one more policy, never in place of the host CSP (ADR 0025)', () => {
+  it('adds frame-ancestors as one more policy, never in place of the host CSP (ADR 0027)', () => {
     const host = new Headers({ 'Content-Security-Policy': "default-src 'none'", 'X-Frame-Options': 'SAMEORIGIN' })
     const h = addPageHeaders(host)
     expect(h.get('content-security-policy')).toBe("default-src 'none', frame-ancestors 'none'")

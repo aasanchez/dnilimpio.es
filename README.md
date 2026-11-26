@@ -8,7 +8,7 @@ copy. Everything runs in your browser, on your device. Your photos are never upl
 > [!NOTE]
 > **Names and addresses.** The product was called *dnilimpio.es* and is now **DNI Tapado.es** (short
 > mark **DT.es**). The site is served from **<https://dnitapado.es>** by Cloudflare Workers, with
-> HTTP security headers ([ADR 0025](docs/adr/0025-security-headers-from-the-host.md)). GitHub Pages
+> HTTP security headers ([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)). GitHub Pages
 > still serves the same build at the earlier address <https://aasanchez.github.io/dnilimpio.es/>.
 > The GitHub repository keeps the
 > name `aasanchez/dnilimpio.es` for now, so every link to the source, the CI and the provenance
@@ -294,7 +294,7 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   writing and sharing, `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy`. The service
   worker and the OCR worker get their own CSP. The headers are generated from
   [`scripts/csp.ts`](scripts/csp.ts) by [`scripts/headers.ts`](scripts/headers.ts)
-  ([ADR 0025](docs/adr/0025-security-headers-from-the-host.md)). The `<meta>` CSP stays as a fallback.
+  ([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)). The `<meta>` CSP stays as a fallback.
 - **No framing.** The host refuses to show the app inside another site's frame. On the GitHub Pages
   address, which sends no headers, the app does not start in a frame; it only offers to open itself
   in its own tab. Page loads answered by the service worker add `frame-ancestors 'none'`,
@@ -397,7 +397,7 @@ isolated frame on another site ([ADR 0024](docs/adr/0024-visit-counter-in-isolat
 
 Headers that need a server for every response (HSTS, Permissions-Policy, COOP) cannot be set on
 GitHub Pages, so dnitapado.es moved to Cloudflare Workers, which sends them
-([ADR 0025](docs/adr/0025-security-headers-from-the-host.md)). COEP is not set yet: it would block
+([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)). COEP is not set yet: it would block
 the visit counter's frame, and the app does not need cross-origin isolation today.
 
 ## Audit it yourself
@@ -816,7 +816,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0022](docs/adr/0022-no-published-source-maps.md): no published source maps and no `'self'` in `connect-src`, so page code cannot send requests to its own origin (review finding PRIV-003).
 - [0023](docs/adr/0023-no-third-party-script-with-photos.md): no third-party script in the page that holds the photos; the Cloudflare beacon is removed and `connect-src` is `'none'`.
 - [0024](docs/adr/0024-visit-counter-in-isolated-frame.md): visit counts from a sandboxed frame on another site, on the start screen only.
-- [0025](docs/adr/0025-security-headers-from-the-host.md): security headers from the host; dnitapado.es on Cloudflare Workers with a generated `_headers` file, GitHub Pages kept as the old address, no COEP yet.
+- [0027](docs/adr/0027-security-headers-from-the-host.md): security headers from the host; dnitapado.es on Cloudflare Workers with a generated `_headers` file, GitHub Pages kept as the old address, no COEP yet.
 
 ## Contributing
 

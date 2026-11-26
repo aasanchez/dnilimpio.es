@@ -76,7 +76,7 @@ test('offers an audit prompt to copy into an AI coding agent, from the notice an
   await expect(dialog.locator('textarea')).toHaveValue(/^Perform a deep security and privacy audit of the codebase at https:\/\/github\.com\/aasanchez\/dnilimpio\.es/)
   await page.locator('#audit-notice-copy').click()
   await expect(dialog.getByRole('status')).toHaveText('Copiado')
-  // The app's Permissions-Policy forbids clipboard-read (ADR 0025), so the test reads the clipboard
+  // The app's Permissions-Policy forbids clipboard-read (ADR 0027), so the test reads the clipboard
   // from a blank page of the same origin that the host's headers do not reach.
   const reader = await context.newPage()
   await reader.route('**/__clipboard', async (route) => { await route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }) })

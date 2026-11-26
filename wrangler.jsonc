@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Cloudflare Workers hosting of dnitapado.es (ADR 0025): static files only, no Worker code.
+// Cloudflare Workers hosting of dnitapado.es (ADR 0027): static files only, no Worker code.
 // CI deploys the tested `dist` artifact with the `_headers` file of scripts/headers.ts added.
 {
   "$schema": "./deploy/node_modules/wrangler/config-schema.json",

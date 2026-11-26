@@ -40,7 +40,7 @@ describe('hostHeaderRules', () => {
       expect(csp).not.toMatch(/https?:|'unsafe-|\*/)
     }
   })
-  it('has no preload in HSTS and no COEP (ADR 0025)', () => {
+  it('has no preload in HSTS and no COEP (ADR 0027)', () => {
     expect(COMMON_HEADERS['Strict-Transport-Security']).not.toMatch(/preload/)
     expect(Object.keys(COMMON_HEADERS)).not.toContain('Cross-Origin-Embedder-Policy')
   })

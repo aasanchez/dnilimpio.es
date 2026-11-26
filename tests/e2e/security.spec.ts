@@ -163,7 +163,7 @@ test.describe('hardening (security audit of 2026-11-25)', () => {
     }))).toEqual({ peer: 'undefined', webkit: 'undefined', channel: 'undefined', camera: 'function' })
   })
 
-  test('the host refuses to show the app inside another page\'s frame (frame-ancestors, ADR 0025)', async ({ page, baseURL }) => {
+  test('the host refuses to show the app inside another page\'s frame (frame-ancestors, ADR 0027)', async ({ page, baseURL }) => {
     await page.setContent(`<iframe src="${baseURL ?? ''}" width="800" height="600"></iframe>`)
     await expect.poll(() => page.frames()[1]?.url()).toMatch(/^chrome-error:/)
     await expect(page.frameLocator('iframe').locator('h1')).toHaveCount(0)

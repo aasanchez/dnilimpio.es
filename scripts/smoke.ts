@@ -4,7 +4,7 @@
 //
 //   node scripts/smoke.ts <site URL> <expected commit SHA> [<dist dir>]
 //
-// With SMOKE_HOST_HEADERS=1 (the Cloudflare host, ADR 0025) it also checks that the page, the service
+// With SMOKE_HOST_HEADERS=1 (the Cloudflare host, ADR 0027) it also checks that the page, the service
 // worker and the OCR worker are served with exactly the HTTP headers of scripts/headers.ts.
 //
 // It checks, on the live site:
