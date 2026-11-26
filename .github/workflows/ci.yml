@@ -15,8 +15,13 @@
 # that branch protection requires to be up to date), so it is not validated again. Build, deploy, and
 # check the live site:
 #
-#   changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke ─ lighthouse-live
-#                                               └─ attest (build provenance)
+#                                     ┌─ deploy (GitHub Pages) ─┬─ smoke ─ lighthouse-live
+#   changes ─ install ─ build ─ ci-ok ─┤                         └─ attest (build provenance)
+#                                     └─ deploy-cloudflare (dnitapado.es) ─ smoke-cloudflare
+#
+# dnitapado.es is served by Cloudflare Workers, which sends the HTTP security headers of
+# scripts/headers.ts (ADR 0025). The same build also goes to GitHub Pages, which sends no headers and
+# keeps the old address https://aasanchez.github.io/dnilimpio.es/ working.
 #
 # ci-ok is the one status check that branch protection requires. CodeQL runs in codeql.yml.
 # Never re-run the legacy "pages build and deployment" workflow: it publishes unbuilt source.
@@ -370,6 +375,45 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
+  # The same tested build, with the `_headers` file of scripts/headers.ts, to Cloudflare Workers
+  # (wrangler.jsonc, ADR 0025). wrangler comes from deploy/pnpm-lock.yaml, installed without install
+  # scripts. The API token lives in the `cloudflare` environment, which only master may use.
+  deploy-cloudflare:
+    if: ${{ !cancelled() && github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.changes.outputs.release == 'true' && needs.ci-ok.result == 'success' && needs.build.result == 'success' }}
+    needs: [changes, ci-ok, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: cloudflare
+      url: https://dnitapado.es/
+    concurrency:
+      group: cloudflare
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Install pnpm
+        run: npm install --global --ignore-scripts "$(node -p "require('./package.json').packageManager")"
+      - name: Install the deploy tool
+        working-directory: deploy
+        run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - name: Write the host headers
+        run: node scripts/headers.ts dist
+      - name: Deploy
+        run: deploy/node_modules/.bin/wrangler deploy --config wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: 'false'
+
   # Signed build provenance (SLSA, via GitHub's attestation service) for every deployed file: anyone can
   # check that a file came from this repository, this workflow and this commit, with
   # `gh attestation verify <file> --repo aasanchez/dnilimpio.es`.
@@ -413,6 +457,27 @@ jobs:
       - run: node scripts/smoke.ts "$PAGE_URL" "$GITHUB_SHA" dist
         env:
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+
+  # dnitapado.es must serve exactly this build, and the exact HTTP headers of scripts/headers.ts.
+  smoke-cloudflare:
+    if: ${{ !cancelled() && needs.deploy-cloudflare.result == 'success' }}
+    needs: deploy-cloudflare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - run: node scripts/smoke.ts https://dnitapado.es/ "$GITHUB_SHA" dist
+        env:
+          SMOKE_HOST_HEADERS: '1'
 
   # Lighthouse on the live site, once smoke has confirmed it serves this build. Real hosting (GitHub
   # Pages: compression, cache headers, HTTP/2). Thresholds in lighthouserc.live.json, warnings only.

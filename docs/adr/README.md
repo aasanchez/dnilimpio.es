@@ -28,3 +28,4 @@ project specification on purpose).
 | [0020](0020-fit-boxes-to-text.md) | Fit to the text: ticked field boxes grow to cover the words OCR finds; never shrink | accepted |
 | [0021](0021-one-dni-choice.md) | One "DNI" choice: the version is detected, 4.0 as fallback, Older DNI (3.0) switch in the editor | accepted |
 | [0022](0022-no-published-source-maps.md) | No published source maps; `connect-src` without `'self'` (PRIV-003) | accepted |
+| [0025](0025-security-headers-from-the-host.md) | Security headers from the host: dnitapado.es on Cloudflare Workers with a generated `_headers`; GitHub Pages stays as a mirror; no COEP yet | accepted |

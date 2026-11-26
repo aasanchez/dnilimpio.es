@@ -77,6 +77,34 @@ function checkFiles (list: unknown[]): PrecacheFile[] {
   })
 }
 
+/**
+ * Headers added to every page load the service worker answers. GitHub Pages sends none of them, and
+ * frame-ancestors only works as a header (a <meta> CSP ignores it): no same-site page may show the app
+ * in a frame. A frame on another site gets its own, partitioned worker registration, so it never sees
+ * these headers; there the host's headers (ADR 0025) or the page's own check (src/security/lockdown.ts)
+ * refuse it.
+ */
+export const PAGE_HEADERS: Readonly<Record<string, string>> = {
+  'Content-Security-Policy': "frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'no-referrer',
+}
+
+/**
+ * The response headers of index.html plus PAGE_HEADERS. The CSP is added as one more policy, never
+ * in place of the host's: a browser enforces every policy it gets, so the host's full CSP (ADR 0025)
+ * stays in force.
+ */
+export function addPageHeaders (from: Headers): Headers {
+  const headers = new Headers(from)
+  for (const [k, v] of Object.entries(PAGE_HEADERS)) {
+    if (k === 'Content-Security-Policy') headers.append(k, v)
+    else headers.set(k, v)
+  }
+  return headers
+}
+
 /** Scripts the app starts as Web Workers (see workerCsp()). */
 export const WORKER_SCRIPTS: readonly string[] = [`${ON_DEMAND_DIR}worker.min.js`]
 

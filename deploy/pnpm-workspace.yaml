@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# The deploy tool's own pnpm project, apart from the app's: only the CI deploy job installs it.
+# Versions pinned exactly; no dependency may run install scripts.
+savePrefix: ""
+strictDepBuilds: true
+onlyBuiltDependencies: []
+# Install scripts that are not needed, kept off: `wrangler deploy` uploads files and runs no local
+# runtime, so neither esbuild's nor workerd's binary check is needed.
+allowBuilds:
+  esbuild: false
+  workerd: false

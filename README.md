@@ -7,8 +7,9 @@ copy. Everything runs in your browser, on your device. Your photos are never upl
 
 > [!NOTE]
 > **Names and addresses.** The product was called *dnilimpio.es* and is now **DNI Tapado.es** (short
-> mark **DT.es**). The site is served from **<https://dnitapado.es>** (`www.dnitapado.es` redirects
-> to it). GitHub Pages sends the earlier address <https://aasanchez.github.io/dnilimpio.es/> there too.
+> mark **DT.es**). The site is served from **<https://dnitapado.es>** by Cloudflare Workers, with
+> HTTP security headers ([ADR 0025](docs/adr/0025-security-headers-from-the-host.md)). GitHub Pages
+> still serves the same build at the earlier address <https://aasanchez.github.io/dnilimpio.es/>.
 > The GitHub repository keeps the
 > name `aasanchez/dnilimpio.es` for now, so every link to the source, the CI and the provenance
 > check below uses that name.
@@ -287,10 +288,18 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   sides or leave the tab.
 - **No tracking.** No cookies, profiles, telemetry, external fonts or third-party scripts, except the
   anonymous visit counter described below. Fonts and icons are self-hosted or inline.
-- **No framing.** Inside another site's frame the app does not start; it only offers to open itself
-  in its own tab. Page loads answered by the service worker also carry the headers GitHub Pages
-  cannot send: `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`,
-  `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`.
+- **Security headers from the host.** dnitapado.es sends the full CSP as a header, with
+  `frame-ancestors 'none'`, plus HSTS, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: no-referrer`, a `Permissions-Policy` that allows only the camera, clipboard
+  writing and sharing, `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy`. The service
+  worker and the OCR worker get their own CSP. The headers are generated from
+  [`scripts/csp.ts`](scripts/csp.ts) by [`scripts/headers.ts`](scripts/headers.ts)
+  ([ADR 0025](docs/adr/0025-security-headers-from-the-host.md)). The `<meta>` CSP stays as a fallback.
+- **No framing.** The host refuses to show the app inside another site's frame. On the GitHub Pages
+  address, which sends no headers, the app does not start in a frame; it only offers to open itself
+  in its own tab. Page loads answered by the service worker add `frame-ancestors 'none'`,
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer` on
+  both addresses.
 - **One Trusted Types policy.** The page never turns strings into HTML (no `innerHTML`, no
   `{@html}`). Trusted Types are required, and the only policy, `default`, accepts three script URLs:
   the service worker, the OCR worker and the visit counter.
@@ -315,16 +324,17 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **The browser, extensions and operating system are outside the tool's control.** A malicious
   extension or a compromised device can read what the page shows. Swap files, crash reports and GPU
   memory are managed by the system.
-- **The host sees that you visited.** Like any website, GitHub Pages receives your IP address,
+- **The host sees that you visited.** Like any website, the host (Cloudflare for dnitapado.es,
+  GitHub Pages for the old address) receives your IP address,
   browser, time and which of the app's files were downloaded (for example, that the OCR files were
   fetched the first time you used OCR). It never receives your photos or data.
 - **The first visit and a forced reload are not covered by the service worker.** The CSP still
   applies; the deny-by-default rule starts once the service worker controls the page. In that window
   the CSP still allows images, scripts, styles and fonts from the site's own origin (`img-src`,
-  `script-src`, `style-src`, `font-src`), and the OCR worker runs without its own CSP. `connect-src`
-  has no `'self'`, so page code cannot send a `fetch()`, a request body or custom headers there.
-  GitHub Pages stores nothing it receives, but GitHub would see the address of an image or script
-  request. Only this build's verified code runs, and it never makes one.
+  `script-src`, `style-src`, `font-src`). On dnitapado.es the OCR worker has the host's CSP (its
+  own origin only); on the GitHub Pages address it runs without its own CSP. `connect-src` has no
+  `'self'`, so page code cannot send a `fetch()`, a request body or custom headers there. The host
+  would see the address of an image or script request. Only this build's verified code runs, and it never makes one.
 - **No browser rule can stop a page from navigating to a URL.** The protection there is that only
   this build's verified code runs (CSP, SRI, the locked dependency list) and that the code never
   navigates with your data (enforced by the linter).
@@ -381,7 +391,9 @@ the service worker controls the page. The maps are no longer published and `'sel
 `connect-src` ([ADR 0022](docs/adr/0022-no-published-source-maps.md)).
 
 Headers that need a server for every response (HSTS, Permissions-Policy, COOP) cannot be set on
-GitHub Pages; `github.io` is on the HSTS preload list.
+GitHub Pages, so dnitapado.es moved to Cloudflare Workers, which sends them
+([ADR 0025](docs/adr/0025-security-headers-from-the-host.md)). COEP is not set yet: it would block
+the visit counter, and the app does not need cross-origin isolation today.
 
 ## Audit it yourself
 
@@ -482,6 +494,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
 | Cookieless visit counts (Cloudflare Web Analytics) | Done |
 | Custom domain `dnitapado.es`, HTTPS enforced | Done |
+| Security headers from the host (Cloudflare Workers): CSP with `frame-ancestors`, HSTS, Permissions-Policy, COOP, worker CSPs | Done in code; live once Cloudflare is set up ([Deployment](#deployment)) |
 | Languages: 31 in the specification | 13 today |
 
 ## Development
@@ -551,15 +564,16 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
 | Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, manual box maths, every masked pixel opaque black |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages, images, no metadata, no text, deterministic output |
-| Platform | `precache`, `lockdown`, `analytics`, `build-info`, `i18n`, `guide`, `deps-report` | Service worker manifest, WebRTC removal and frame check, analytics host and GPC/DNT rules, version and relative time, translation keys, guide citations, dependency report |
+| Platform | `precache`, `headers`, `lockdown`, `analytics`, `build-info`, `i18n`, `guide`, `deps-report` | Service worker manifest and page headers, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits), WebRTC removal and frame check, analytics host and GPC/DNT rules, version and relative time, translation keys, guide citations, dependency report |
 
-**End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP):
+**End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off:
 
 | Spec | What is checked |
 |---|---|
 | `privacy` | A whole workflow with fictional card values sends no request and stores nothing |
-| `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused, photos dropped on `pagehide` |
-| `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers, a tampered file stops the install, corner model cached after first use |
+| `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused by the host and, without headers, by the page, photos dropped on `pagehide` |
+| `headers` | The host's headers: page CSP equal to the `<meta>` CSP plus `frame-ancestors`, the worker CSPs, HSTS, Permissions-Policy (camera on; microphone, location, clipboard reading off), no COEP |
+| `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers added next to the host's CSP, a tampered file stops the install, corner model cached after first use |
 | `analytics` | The beacon on the public site only: one script, one report with only the token, nothing offline, under GPC or DNT, or on other hosts |
 | `update` | An idle single tab switches to a new build; a tab with photos, or a second tab, holds it back |
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks |
@@ -622,8 +636,10 @@ changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke ─ lighthous
 | code analysis | `workflow-lint` | [actionlint](https://github.com/rhysd/actionlint) and [zizmor](https://docs.zizmor.sh) on the workflows (syntax, script injection, permissions, pinning). Rules turned off are explained in [`.github/zizmor.yml`](.github/zizmor.yml) | PR | Yes |
 | acceptance | `lighthouse` | Lighthouse on the built site (performance, accessibility, best practices, SEO), thresholds in [`lighthouserc.json`](lighthouserc.json). Reports are a workflow artifact; nothing is uploaded elsewhere | PR | No, warns |
 | gate | `ci-ok` | Passes when every job above passed or was skipped on purpose | Both | Yes |
-| deploy | `deploy` | Publishes the built `dist/` to GitHub Pages. Only a push or manual run on `master`, never a pull request or another branch. A running deploy is never cancelled | `master` | Yes |
+| deploy | `deploy` | Publishes the built `dist/` to GitHub Pages (the old address). Only a push or manual run on `master`, never a pull request or another branch. A running deploy is never cancelled | `master` | Yes |
+| deploy | `deploy-cloudflare` | Adds the `_headers` file ([`scripts/headers.ts`](scripts/headers.ts)) to the same `dist/` and publishes it to Cloudflare Workers for dnitapado.es ([`wrangler.jsonc`](wrangler.jsonc)). `wrangler` comes from [`deploy/pnpm-lock.yaml`](deploy/pnpm-lock.yaml), installed without install scripts. Same rules as `deploy` | `master` | Yes |
 | post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte. Retries for up to 5 minutes while Pages updates | `master` | Yes |
+| post-deploy | `smoke-cloudflare` | The same smoke test on <https://dnitapado.es/>, plus the exact HTTP headers of [`scripts/headers.ts`](scripts/headers.ts) on the page, `sw.js` and the OCR worker (`SMOKE_HOST_HEADERS=1`) | `master` | Yes |
 | post-deploy | `attest` | Signed build provenance for every deployed file ([artifact attestations](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)). Check a file with `gh attestation verify <file> --repo aasanchez/dnilimpio.es` | `master` | Yes |
 | post-deploy | `lighthouse-live` | Lighthouse on the live site, with real hosting (compression, cache headers). Thresholds in [`lighthouserc.live.json`](lighthouserc.live.json) | `master` | No, warns |
 
@@ -646,14 +662,15 @@ changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke ─ lighthous
 
   | Job | Command | Scope | Fails |
   |---|---|---|---|
-  | `audit` | `pnpm audit --json` | Whole tree (direct and transitive), runtime and dev. Each advisory names the direct dependency to update | At high or critical (manual run: level of your choice) |
+  | `audit` | `pnpm audit --json`, for the app and for the deploy tool in `deploy/` | Whole tree (direct and transitive), runtime and dev. Each advisory names the direct dependency to update | At high or critical (manual run: level of your choice) |
   | `outdated` | `pnpm outdated --format json` | Direct dependencies only, runtime and dev | Never; deprecated packages get a warning |
 
 **Rules the workflows follow**
 
 - Actions are pinned to full commit SHAs; the comment gives the release tag.
 - Every job has read-only permissions, except `deploy` (Pages), `attest` (signing the provenance) and
-  CodeQL (code scanning results).
+  CodeQL (code scanning results). `deploy-cloudflare` reads the Cloudflare API token from the
+  `cloudflare` environment; no other job can.
 - Checkout never keeps the token (`persist-credentials: false`).
 - Node, pnpm and Playwright versions come from `.nvmrc`, `package.json` and `pnpm-lock.yaml`, set up
   by one shared action ([`.github/actions/setup`](.github/actions/setup/action.yml)).
@@ -665,7 +682,7 @@ changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke ─ lighthous
 - Require status checks: only `ci-ok`. It covers every other job, so adding or renaming a job does
   not need a settings change.
 - Require branches to be up to date before merging, so the merged tree is the tested tree.
-- Environment `github-pages`: deployment branches limited to `master`.
+- Environments `github-pages` and `cloudflare`: deployment branches limited to `master`.
 
 To run the same checks locally: `pnpm verify`, then `pnpm size` and `pnpm test:coverage`. The CI
 tools that are not npm packages (REUSE, actionlint, zizmor) can be run with `pipx run reuse lint`,
@@ -673,23 +690,42 @@ tools that are not npm packages (REUSE, actionlint, zizmor) can be run with `pip
 
 ## Deployment
 
-On `master`, the `deploy` job publishes the freshly built `dist/` to GitHub Pages (the same code
-that passed every check on its pull request). `smoke` then checks that the live site serves it,
-`attest` signs its provenance, and `lighthouse-live` measures it. To redeploy without a new commit,
-run the **CI** workflow on `master` from the Actions tab.
+On `master`, CI publishes the freshly built `dist/` (the same code that passed every check on its
+pull request) to two hosts:
+
+- `deploy-cloudflare` publishes it to **Cloudflare Workers** for <https://dnitapado.es> and
+  `www.dnitapado.es`, with the `_headers` file of [`scripts/headers.ts`](scripts/headers.ts).
+  [`wrangler.jsonc`](wrangler.jsonc) sets the host: static files only, no Worker code, no redirects,
+  no `workers.dev` address. `smoke-cloudflare` then checks the files and the headers.
+- `deploy` publishes it to **GitHub Pages**, which keeps the old address
+  <https://aasanchez.github.io/dnilimpio.es/> working (`<meta>` CSP only). `smoke` checks it, `attest`
+  signs the provenance of every file, and `lighthouse-live` measures it.
+
+To redeploy without a new commit, run the **CI** workflow on `master` from the Actions tab.
 
 Do not re-run the old **pages build and deployment** workflow if it appears in the Actions tab. It
 publishes the raw, unbuilt source of an old commit over the real site.
 
 The build uses relative paths (`base: './'`), so `dist/` works at a domain root, under a subpath and
-on any static server (Nginx, Caddy, Cloudflare Pages).
+on any static server (Nginx, Caddy, Cloudflare).
 
-**Custom domain.** The site is live at <https://dnitapado.es>: the custom domain is set in the
-repository's Pages settings, HTTPS is enforced, and `www.dnitapado.es` redirects to it. It needed
-no code change, because the build uses relative paths and the analytics host list already included
-it. GitHub Pages redirects the earlier address <https://aasanchez.github.io/dnilimpio.es/> to it. The
-service worker, its cache and the notice's storage key are per origin, so the first visit on the new
-domain downloads the app again.
+**Cloudflare setup** (once, by the owner of the Cloudflare account):
+
+1. Create an API token from the **Edit Cloudflare Workers** template, limited to this account and the
+   `dnitapado.es` zone. In the repository settings, create the environment `cloudflare` (deployment
+   branches: `master` only) and add the secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+2. In the `dnitapado.es` zone, delete the DNS records that point to GitHub Pages (the `A`/`AAAA`
+   records of `dnitapado.es` and the `CNAME` of `www`). The first deploy attaches both names to the
+   Worker and creates their records and certificate. The site is down between the deletion and the
+   end of that deploy.
+3. In the zone, keep off every feature that rewrites pages: Rocket Loader, Email Obfuscation and the
+   automatic injection of Web Analytics. Leave Cloudflare's own HSTS setting off; the `_headers` file
+   sends HSTS. `smoke-cloudflare` fails if a feature changes a file or a header.
+4. In the repository's Pages settings, remove the custom domain, so GitHub Pages serves the old
+   address itself instead of redirecting it.
+
+The service worker, its cache and the notice's storage key are per origin, so the first visit on a
+new address downloads the app again.
 
 ### Version shown in the app
 
@@ -735,8 +771,10 @@ src/
   version/           commit SHA and build time shown in the footer, relative time
   i18n/              dictionaries, one JSON file per language
   ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state, notice memory
-scripts/             CSP, build plugins (CSP, SRI, import map, offline file list), build manifest, smoke test,
+scripts/             CSP, host headers, build plugins (CSP, SRI, import map, offline file list), build manifest, smoke test,
                      bundle size, dependency report, test fixture generator
+deploy/              the deploy tool (wrangler) with its own lockfile, installed only by the CI deploy job
+wrangler.jsonc       Cloudflare Workers host: static files, custom domains, no workers.dev address
 tests/               unit, e2e and synthetic fixtures
 docs/                plan, zone measurement method, guide sources, decision records, images
 LICENSES/            licence texts (REUSE)
@@ -768,6 +806,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0020](docs/adr/0020-fit-boxes-to-text.md): fit to the text; ticked field boxes grow to cover the words OCR finds, never shrink.
 - [0021](docs/adr/0021-one-dni-choice.md): one "DNI" choice; the version is detected, the DNI 4.0 is the fallback, and the editor has an Older DNI (3.0) switch.
 - [0022](docs/adr/0022-no-published-source-maps.md): no published source maps and no `'self'` in `connect-src`, so page code cannot send requests to its own origin (review finding PRIV-003).
+- [0025](docs/adr/0025-security-headers-from-the-host.md): security headers from the host; dnitapado.es on Cloudflare Workers with a generated `_headers` file, GitHub Pages kept as the old address, no COEP yet.
 
 ## Contributing
 

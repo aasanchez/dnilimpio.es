@@ -4,6 +4,9 @@
 //
 //   node scripts/smoke.ts <site URL> <expected commit SHA> [<dist dir>]
 //
+// With SMOKE_HOST_HEADERS=1 (the Cloudflare host, ADR 0025) it also checks that the page, the service
+// worker and the OCR worker are served with exactly the HTTP headers of scripts/headers.ts.
+//
 // It checks, on the live site:
 // - index.html carries exactly the CSP of scripts/csp.ts (with the hash of its own import map) and
 //   the no-referrer policy;
@@ -20,7 +23,8 @@ import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { cspWithScriptHashes } from './csp.ts'
-import { SW_FILE, parseManifest } from '../src/offline/precache.ts'
+import { HEADERS_FILE, headersFor, hostHeaderRules } from './headers.ts'
+import { SW_FILE, WORKER_SCRIPTS, parseManifest } from '../src/offline/precache.ts'
 
 const [siteArg = '', expectedSha = '', distDir] = process.argv.slice(2)
 if (siteArg === '' || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(expectedSha)) {
@@ -33,11 +37,27 @@ const delayMs = 15_000
 
 const sha384 = (bytes: Buffer): string => `sha384-${createHash('sha384').update(bytes).digest('base64')}`
 
-async function get (url: URL): Promise<{ text: string, bytes: Buffer }> {
+const checkHostHeaders = process.env['SMOKE_HOST_HEADERS'] === '1'
+
+async function get (url: URL): Promise<{ text: string, bytes: Buffer, headers: Headers }> {
   const res = await fetch(url, { headers: { 'cache-control': 'no-cache' } })
   if (!res.ok) throw new Error(`${url.href}: HTTP ${String(res.status)}`)
   const bytes = Buffer.from(await res.arrayBuffer())
-  return { text: bytes.toString('utf8'), bytes }
+  return { text: bytes.toString('utf8'), bytes, headers: res.headers }
+}
+
+/** Every header of scripts/headers.ts must be served with exactly its value. Others are ignored. */
+async function checkServedHeaders (html: string, first: Headers): Promise<void> {
+  const rules = hostHeaderRules(html)
+  const pages: Array<[string, Headers]> = [['/', first]]
+  for (const p of [SW_FILE, ...WORKER_SCRIPTS]) pages.push([`/${p}`, (await get(fresh(p))).headers])
+  const wrong: string[] = []
+  for (const [path, served] of pages) {
+    for (const [k, v] of Object.entries(headersFor(rules, path))) {
+      if (served.get(k) !== v) wrong.push(`${path} ${k}:\n    served:   ${served.get(k) ?? '(none)'}\n    expected: ${v}`)
+    }
+  }
+  if (wrong.length > 0) throw new Error(`host headers differ from scripts/headers.ts:\n  ${wrong.join('\n  ')}`)
 }
 
 /** The query string bypasses the CDN's cached copy of files whose names carry no content hash. */
@@ -75,6 +95,7 @@ function checkHeadPolicies (html: string): void {
 async function check (): Promise<string> {
   const html = await get(fresh(''))
   checkHeadPolicies(html.text)
+  if (checkHostHeaders) await checkServedHeaders(html.text, html.headers)
 
   const tag = html.text.match(/<script type="module"[^>]*\bsrc="([^"]+)"[^>]*>/)?.[0]
   const src = tag?.match(/\bsrc="([^"]+)"/)?.[1]
@@ -98,7 +119,8 @@ async function check (): Promise<string> {
 
   // Byte for byte against the artifact CI built.
   if (distDir !== undefined) {
-    const paths = listFiles(distDir).filter((p) => !p.startsWith('.'))
+    // `_headers` is read by the host, never served (scripts/headers.ts).
+    const paths = listFiles(distDir).filter((p) => !p.startsWith('.') && p !== HEADERS_FILE)
     const diff = await each(paths, async (p) => {
       const served = p === 'index.html' ? html.bytes : (await get(p === SW_FILE ? fresh(p) : new URL(p, site))).bytes
       if (sha384(served) !== sha384(readFileSync(join(distDir, p)))) throw new Error(`${p}: differs from the CI build`)
@@ -113,7 +135,7 @@ const start = Date.now()
 for (;;) {
   try {
     const what = await check()
-    console.log(`Smoke test passed: ${site.href} serves the build of ${expectedSha} (${what}). CSP and referrer policy are exact.`)
+    console.log(`Smoke test passed: ${site.href} serves the build of ${expectedSha} (${what}). CSP and referrer policy are exact${checkHostHeaders ? '; host headers are exact' : ''}.`)
     break
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err)

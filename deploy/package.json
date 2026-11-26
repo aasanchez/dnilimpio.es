@@ -1,0 +1,11 @@
+{
+  "name": "dnitapado-deploy",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Deploy tool for the Cloudflare host (ADR 0025). Installed only by the CI deploy job, never by the app.",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "devDependencies": {
+    "wrangler": "4.156.2"
+  }
+}

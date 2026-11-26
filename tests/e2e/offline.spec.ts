@@ -108,19 +108,23 @@ test('no source map is published, and the worker refuses any .map (ADR 0022)', a
   expect(leaked).toEqual([])
 })
 
-test('page loads from the worker carry the headers Pages cannot send; no page may frame the app', async ({ page, context, baseURL }) => {
-  await page.goto('/')
+test('page loads from the worker keep the host\'s headers and add the ones Pages cannot send', async ({ page, context, baseURL }) => {
+  const first = await page.goto('/')
   await offlineReady(page)
+  const hostCsp = first?.headers()['content-security-policy'] ?? ''
+  expect(hostCsp).toContain("frame-ancestors 'none'")
   const res = await page.reload()
   expect(res?.fromServiceWorker()).toBe(true)
   const h = res?.headers() ?? {}
+  // The worker adds its frame-ancestors policy next to the host's full CSP, never in its place
+  // (addPageHeaders(), ADR 0025): the browser enforces both.
   expect([h['content-security-policy'], h['x-frame-options'], h['x-content-type-options'], h['referrer-policy']])
-    .toEqual(["frame-ancestors 'none'", 'DENY', 'nosniff', 'no-referrer'])
-  // Another site that frames the app. Its frame gets a partitioned (empty) worker registration, so
-  // the header does not reach it; the page's own check does: the app does not start there.
+    .toEqual([`${hostCsp}, frame-ancestors 'none'`, 'DENY', 'nosniff', 'no-referrer'])
+  expect(h['permissions-policy']).toContain('camera=(self)')
+  // Another site that frames the app: the host's frame-ancestors refuses it, so nothing of the app runs.
   const framer = await context.newPage()
   await framer.setContent(`<iframe src="${baseURL ?? ''}"></iframe>`)
-  await expect(framer.frameLocator('iframe').locator('#app a[target="_blank"]')).toBeVisible()
+  await expect.poll(() => framer.frames()[1]?.url()).toMatch(/^chrome-error:/)
   await expect(framer.frameLocator('iframe').locator('h1')).toHaveCount(0)
 })
 

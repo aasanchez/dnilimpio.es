@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { WORKER_SCRIPTS, cacheName, isOnDemand, isPrecached, parseManifest, route, workerCsp } from '../../src/offline/precache.ts'
+import { PAGE_HEADERS, WORKER_SCRIPTS, addPageHeaders, cacheName, isOnDemand, isPrecached, parseManifest, route, workerCsp } from '../../src/offline/precache.ts'
 import { BEACON_ENDPOINT, BEACON_SCRIPT } from '../../src/analytics/endpoints.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
@@ -124,5 +124,19 @@ describe('workerCsp', () => {
   it('applies to the OCR worker script, an on-demand file', () => {
     expect(WORKER_SCRIPTS).toEqual(['ocr/worker.min.js'])
     expect(WORKER_SCRIPTS.every(isOnDemand)).toBe(true)
+  })
+})
+
+describe('addPageHeaders', () => {
+  it('adds frame-ancestors as one more policy, never in place of the host CSP (ADR 0025)', () => {
+    const host = new Headers({ 'Content-Security-Policy': "default-src 'none'", 'X-Frame-Options': 'SAMEORIGIN' })
+    const h = addPageHeaders(host)
+    expect(h.get('content-security-policy')).toBe("default-src 'none', frame-ancestors 'none'")
+    expect(h.get('x-frame-options')).toBe('DENY')
+    expect(h.get('referrer-policy')).toBe('no-referrer')
+    expect(host.get('content-security-policy')).toBe("default-src 'none'") // the cached copy is untouched
+  })
+  it('on a host without headers (GitHub Pages) sends exactly PAGE_HEADERS', () => {
+    expect(Object.fromEntries(addPageHeaders(new Headers()))).toEqual(Object.fromEntries(Object.entries(PAGE_HEADERS).map(([k, v]) => [k.toLowerCase(), v])))
   })
 })

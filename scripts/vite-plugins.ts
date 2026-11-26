@@ -8,6 +8,7 @@ import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, cspWithScriptHashes } from './csp.ts'
+import { headersFor, hostHeaderRules, type HeaderRule } from './headers.ts'
 import { BEACON_ENDPOINT, BEACON_SCRIPT } from '../src/analytics/endpoints.ts'
 import { SW_FILE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 
@@ -118,6 +119,28 @@ function writePrecacheManifest (outDir: string): void {
   const json = JSON.stringify({ version, files, onDemand, analytics: { script: BEACON_SCRIPT, endpoint: BEACON_ENDPOINT } })
   parseManifest(json) // same checks as the worker runs
   writeFileSync(swPath, sw.replace(PLACEHOLDER, () => JSON.stringify(json)))
+}
+
+/**
+ * `vite preview` sends the same HTTP headers as the Cloudflare host (scripts/headers.ts, ADR 0025), so
+ * the e2e tests run under the host's CSP, Permissions-Policy and framing rules, not only the <meta> CSP.
+ * Set PREVIEW_HOST_HEADERS=0 to preview the build as GitHub Pages serves it (no headers).
+ */
+export function hostHeadersInPreview (): Plugin {
+  return {
+    name: 'dni-redactor:host-headers-preview',
+    apply: (_config, env) => env.isPreview === true && process.env['PREVIEW_HOST_HEADERS'] !== '0',
+    configurePreviewServer (server) {
+      let rules: HeaderRule[] | undefined
+      const outDir = resolve(server.config.root, server.config.build.outDir)
+      server.middlewares.use((req, res, next) => {
+        rules ??= hostHeaderRules(readFileSync(join(outDir, 'index.html'), 'utf8'))
+        const path = new URL(req.url ?? '/', 'http://preview').pathname
+        for (const [k, v] of Object.entries(headersFor(rules, path))) res.setHeader(k, v)
+        next()
+      })
+    },
+  }
 }
 
 /**

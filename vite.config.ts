@@ -4,7 +4,7 @@ import { defaultClientConditions, defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
 import { normalizeSha } from './src/version/build-info.ts'
-import { base64Import, ocrAssets, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
+import { base64Import, hostHeadersInPreview, ocrAssets, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
 
 // Override with REPO_URL for forks.
 const REPO_URL = process.env['REPO_URL'] ?? 'https://github.com/aasanchez/dnilimpio.es'
@@ -63,5 +63,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [base64Import(), tailwindcss(), svelte(), securityHeaders(), ocrAssets(), subresourceIntegrity()],
+  plugins: [base64Import(), tailwindcss(), svelte(), securityHeaders(), ocrAssets(), subresourceIntegrity(), hostHeadersInPreview()],
 })

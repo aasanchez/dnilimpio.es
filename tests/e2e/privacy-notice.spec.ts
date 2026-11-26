@@ -76,9 +76,16 @@ test('offers an audit prompt to copy into an AI coding agent, from the notice an
   await expect(dialog.locator('textarea')).toHaveValue(/^Perform a deep security and privacy audit of the codebase at https:\/\/github\.com\/aasanchez\/dnilimpio\.es/)
   await page.locator('#audit-notice-copy').click()
   await expect(dialog.getByRole('status')).toHaveText('Copiado')
-  expect(await page.evaluate(async () => await navigator.clipboard.readText())).toContain("connect-src https://cloudflareinsights.com only, without 'self'")
+  // The app's Permissions-Policy forbids clipboard-read (ADR 0025), so the test reads the clipboard
+  // from a blank page of the same origin that the host's headers do not reach.
+  const reader = await context.newPage()
+  await reader.route('**/__clipboard', async (route) => { await route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }) })
+  await reader.goto('/__clipboard')
+  const copied = await reader.evaluate(async () => await navigator.clipboard.readText())
+  await reader.close()
+  expect(copied).toContain("connect-src https://cloudflareinsights.com only, without 'self'")
   // It asks the agent to check the live site too, not only the repository.
-  expect(await page.evaluate(async () => await navigator.clipboard.readText())).toContain('5. Live Site Verification (https://dnitapado.es/)')
+  expect(copied).toContain('5. Live Site Verification (https://dnitapado.es/)')
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
 

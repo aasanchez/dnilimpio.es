@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Cloudflare Workers hosting of dnitapado.es (ADR 0025): static files only, no Worker code.
+// CI deploys the tested `dist` artifact with the `_headers` file of scripts/headers.ts added.
+{
+  "$schema": "./deploy/node_modules/wrangler/config-schema.json",
+  "name": "dnitapado",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    // Every file at its own path, with no redirect: the service worker downloads `index.html` by name,
+    // and a page load must never be answered with a redirected response.
+    "html_handling": "none",
+    // `/` (and any unknown path) answers with index.html, as GitHub Pages does for `/`.
+    "not_found_handling": "single-page-application"
+  },
+  // Only the custom domains below serve the app: no second copy at a workers.dev address.
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "dnitapado.es", "custom_domain": true },
+    { "pattern": "www.dnitapado.es", "custom_domain": true }
+  ]
+}
