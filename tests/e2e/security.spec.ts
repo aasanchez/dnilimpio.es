@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, test, type Page } from '@playwright/test'
 import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { cspWithScriptHashes } from '../../scripts/csp.ts'
 import { fixture, openCapture, toEditor } from './helpers.ts'
 
@@ -46,6 +46,56 @@ test('app renders with no CSP violations and no requests outside its origin', as
   await expect(page.locator('h1')).toBeVisible()
   expect(foreign).toEqual([])
   expect(violations).toEqual([])
+})
+
+test('without the service worker, the CSP alone stops every same-origin connection (ADR 0022)', async ({ page, context }) => {
+  // Service workers are blocked in this spec: this is the first visit, a forced reload, or a browser
+  // without service workers. connect-src has no 'self', so none of these leaves the page.
+  const reached: string[] = []
+  await context.route(/leak/, async (route) => { reached.push(`${route.request().method()} ${route.request().url()}`); await route.fulfill({ status: 200, body: '' }) })
+  const violations: string[] = []
+  page.on('console', (m) => { if (/connect-src/i.test(m.text())) violations.push(m.text()) })
+  await page.goto('/')
+  await expect(page.locator('h1')).toBeVisible()
+  const results = await page.evaluate(async () => {
+    const data = 'dni=12345678Z'
+    const tryFetch = async (init?: RequestInit): Promise<string> => { try { await fetch(`leak?${data}`, init); return 'sent' } catch { return 'blocked' } }
+    const xhr = async (): Promise<string> => await new Promise((resolve) => {
+      const x = new XMLHttpRequest()
+      x.onload = () => { resolve('sent') }
+      x.onerror = () => { resolve('blocked') }
+      try { x.open('POST', 'leak'); x.send(data) } catch { resolve('blocked') }
+    })
+    const source = async (): Promise<string> => await new Promise((resolve) => {
+      const es = new EventSource(`leak/events?${data}`)
+      es.onopen = () => { es.close(); resolve('sent') }
+      es.onerror = () => { es.close(); resolve('blocked') }
+    })
+    return {
+      get: await tryFetch(),
+      post: await tryFetch({ method: 'POST', body: data }),
+      header: await tryFetch({ headers: { 'x-data': data } }),
+      xhr: await xhr(),
+      eventSource: await source(),
+      // sendBeacon() may answer true and be stopped later: only `reached` below tells.
+      // eslint-disable-next-line no-restricted-properties -- this test checks that the CSP blocks it
+      beacon: String(navigator.sendBeacon(`leak/beacon?${data}`, data)),
+    }
+  })
+  expect(results).toEqual({ get: 'blocked', post: 'blocked', header: 'blocked', xhr: 'blocked', eventSource: 'blocked', beacon: results.beacon })
+  // Give a beacon time to go out, if one had been queued.
+  await page.waitForTimeout(500)
+  expect(reached).toEqual([])
+  expect(violations.length).toBeGreaterThan(0)
+})
+
+test('the build publishes no source maps and no script points to one (ADR 0022)', () => {
+  const dist = new URL('../../dist/', import.meta.url)
+  const files = readdirSync(dist, { recursive: true, encoding: 'utf8' })
+  expect(files.filter((f) => f.endsWith('.map'))).toEqual([])
+  const scripts = files.filter((f) => /\.(m?js)$/.test(f))
+  expect(scripts.length).toBeGreaterThan(0)
+  for (const f of scripts) expect(readFileSync(new URL(f, dist), 'utf8'), f).not.toMatch(/[#@] sourceMappingURL=/)
 })
 
 test('Trusted Types: HTML strings are rejected and no other policy can be created', async ({ page }) => {

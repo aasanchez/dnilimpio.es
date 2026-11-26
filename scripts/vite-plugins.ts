@@ -9,7 +9,7 @@ import { dirname, join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, cspWithScriptHashes } from './csp.ts'
 import { BEACON_ENDPOINT, BEACON_SCRIPT } from '../src/analytics/endpoints.ts'
-import { SW_FILE, isOnDemand, isPrecached, isSourceMap, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
+import { SW_FILE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 
 export function securityHeaders (): Plugin {
   return {
@@ -103,30 +103,29 @@ function writePrecacheManifest (outDir: string): void {
   const sw = readFileSync(swPath, 'utf8')
   if (!PLACEHOLDER.test(sw)) throw new Error('dist/sw.js has no precache manifest placeholder')
   if (/^\s*import\b|\bimport\s*\(/m.test(sw)) throw new Error('dist/sw.js must not import other chunks')
+  // No source maps are published (ADR 0022): a .map in dist/ means a build setting changed.
+  const maps = listFiles(outDir).filter((p) => p.endsWith('.map'))
+  if (maps.length > 0) throw new Error(`dist/ must not contain source maps (ADR 0022): ${maps.join(', ')}`)
   const all: PrecacheFile[] = listFiles(outDir).filter(isPrecached).map((path) => ({ path, integrity: sri(readFileSync(join(outDir, path))) }))
   const files = all.filter((f) => !isOnDemand(f.path))
   const onDemand = all.filter((f) => isOnDemand(f.path))
-  // Source maps of the files above, so the worker can serve them to the developer tools (ADR 0016).
-  const described = new Set(all.map((f) => `${f.path}.map`))
-  const sourceMaps: PrecacheFile[] = listFiles(outDir).filter((p) => isSourceMap(p) && described.has(p)).map((path) => ({ path, integrity: sri(readFileSync(join(outDir, path))) }))
   // The worker's own code is part of the version: a worker-only change still gets a new cache name,
   // so a failed install can never delete the cache the active worker is using.
   const version = createHash('sha256')
     .update(all.map((f) => `${f.path} ${f.integrity}`).join('\n'))
-    .update(sourceMaps.map((f) => `\n${f.path} ${f.integrity}`).join(''))
     .update(`\nsw.js ${sri(sw)}`)
     .digest('hex').slice(0, 16)
-  const json = JSON.stringify({ version, files, onDemand, sourceMaps, analytics: { script: BEACON_SCRIPT, endpoint: BEACON_ENDPOINT } })
+  const json = JSON.stringify({ version, files, onDemand, analytics: { script: BEACON_SCRIPT, endpoint: BEACON_ENDPOINT } })
   parseManifest(json) // same checks as the worker runs
   writeFileSync(swPath, sw.replace(PLACEHOLDER, () => JSON.stringify(json)))
 }
 
 /**
  * `import data from './file.bin?base64'` gives the file's bytes as a base64 string inside a
- * JavaScript module. The corner model and its WebAssembly runtime are loaded this way so that the
- * page never needs fetch() for them: it import()s a script from its own origin, and the import map
- * checks that script's integrity. (connect-src allows 'self' only so the developer tools can read
- * the source maps, ADR 0016; the app itself fetches nothing.)
+ * JavaScript module. The corner model and its WebAssembly runtime are loaded this way because the
+ * page's CSP allows no connection to its own origin (connect-src has no 'self', ADR 0022): the page
+ * cannot fetch() anything there, but it can import() a script from its own origin, and the import map
+ * checks that script's integrity.
  */
 export function base64Import (): Plugin {
   const SUFFIX = '?base64'
@@ -211,12 +210,11 @@ export function ocrAssets (): Plugin {
         resolve: { conditionNames: ['onnxruntime-web-use-extern-wasm', 'browser', 'import', 'default'] },
         logLevel: 'silent',
       })
-      const { output } = await build.generate({ format: 'iife', minify: true, sourcemap: true, sourcemapExcludeSources: false })
+      const { output } = await build.generate({ format: 'iife', minify: true, sourcemap: false })
       await build.close()
       const chunk = output.find((o) => o.type === 'chunk')
       if (!chunk || output.filter((o) => o.type === 'chunk').length !== 1) throw new Error('OCR worker must bundle to one file')
-      this.emitFile({ type: 'asset', fileName: 'ocr/worker.min.js', source: `${chunk.code}\n//# sourceMappingURL=worker.min.js.map\n` })
-      if (chunk.map) this.emitFile({ type: 'asset', fileName: 'ocr/worker.min.js.map', source: chunk.map.toString() })
+      this.emitFile({ type: 'asset', fileName: 'ocr/worker.min.js', source: chunk.code })
       const files: Record<string, Buffer | string> = {
         'ocr/ort-wasm-simd-threaded.mjs': readFileSync(join(ortDist, 'ort-wasm-simd-threaded.mjs')),
         'ocr/ort-wasm-simd-threaded.wasm': readFileSync(join(ortDist, 'ort-wasm-simd-threaded.wasm')),

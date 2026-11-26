@@ -21,9 +21,10 @@ project specification on purpose).
 | [0013](0013-ci-pipeline.md) | CI split into small single-purpose jobs in logical stages; one required check | accepted |
 | [0014](0014-card-guide.md) | Card guide: every element explained with official citations; no source, no claim | accepted |
 | [0015](0015-cookieless-analytics.md) | Cookieless visit counts with Cloudflare Web Analytics, public site only | accepted |
-| [0016](0016-source-maps-in-devtools.md) | Source maps readable in the developer tools: `connect-src 'self'`; the service worker serves only this build's maps | accepted |
+| [0016](0016-source-maps-in-devtools.md) | Source maps readable in the developer tools: `connect-src 'self'`; the service worker serves only this build's maps | superseded by 0022 |
 | [0017](0017-tailwind-css.md) | Styles with Tailwind CSS v4 (build time only, palette as theme); two-column layout on wide screens | accepted |
 | [0018](0018-installable-app.md) | Installable app: relative manifest, maskable and Apple icons, install link only where the browser supports it | accepted |
 | [0019](0019-ppocr-and-text-detection.md) | PP-OCRv6 tiny replaces Tesseract; the front's printed text helps detect the document | accepted |
 | [0020](0020-fit-boxes-to-text.md) | Fit to the text: ticked field boxes grow to cover the words OCR finds; never shrink | accepted |
 | [0021](0021-one-dni-choice.md) | One "DNI" choice: the version is detected, 4.0 as fallback, Older DNI (3.0) switch in the editor | accepted |
+| [0022](0022-no-published-source-maps.md) | No published source maps; `connect-src` without `'self'` (PRIV-003) | accepted |

@@ -229,18 +229,18 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   no server side.
 - **Almost no network access from the page.** The Content Security Policy
   ([`scripts/csp.ts`](scripts/csp.ts)) is `default-src 'none'` and lets the page send requests to
-  one other address only: `connect-src 'self' https://cloudflareinsights.com`, where the visit
-  counter reports. `'self'` is there so the browser's developer tools can load the published source
-  maps ([ADR 0016](docs/adr/0016-source-maps-in-devtools.md)); the app itself never calls `fetch()`.
+  one address only: `connect-src https://cloudflareinsights.com`, where the visit counter reports.
+  There is no `'self'`: page code cannot send a request to the site's own origin either, even before
+  the service worker is in place ([ADR 0022](docs/adr/0022-no-published-source-maps.md)). The app
+  itself never calls `fetch()`.
   It loads styles, fonts and images only from its own origin, and scripts from its own origin plus
   the counter's exact URL. `form-action`, `base-uri` and `object-src` are `'none'`. WebRTC, which no
   CSP rule covers, is removed before any code runs.
 - **Deny by default.** After the first visit, the service worker answers only the exact files of this
   build. Any other request from the page or its workers (another address, a query string, another
   method) is refused and never reaches the network, so even a same-origin request cannot carry data
-  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). The exceptions are the visit counter's
-  script and report, at their exact addresses, and this build's own source maps, each checked
-  against its hash and never cached. An end-to-end test runs a whole document workflow with
+  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). The one exception is the visit counter's
+  script and report, at their exact addresses. An end-to-end test runs a whole document workflow with
   fictional card values and checks that no request is sent and none carries those values
   ([`tests/e2e/privacy.spec.ts`](tests/e2e/privacy.spec.ts)).
 - **On-device AI only.** The corner finder is a small model (DocCornerNet from `scanic-ml`) that runs
@@ -299,8 +299,9 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **Clean PDF.** Each image is re-encoded, and the JPEG is rebuilt with only the data a decoder needs:
   no EXIF, GPS, camera model, thumbnail or comments. The PDF has no metadata, no text, no
   annotations, no scripts and no attachments. Tests check this object by object.
-- **Verifiable code.** The production build is minified but ships source maps (`.map` files) that
-  map every line back to the source in this repository. Every script and stylesheet has a
+- **Verifiable code.** The production build is minified and publishes no source maps
+  ([ADR 0022](docs/adr/0022-no-published-source-maps.md)); you check it by rebuilding the same commit
+  and comparing hashes. Every script and stylesheet has a
   Subresource Integrity hash, including the PDF code that loads in the background after the page
   appears (its hash is in an import map, allowed by the CSP through its own SHA-256 hash). A changed
   file is refused by the browser, both when the page loads it and when it is saved for offline use.
@@ -319,9 +320,11 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   fetched the first time you used OCR). It never receives your photos or data.
 - **The first visit and a forced reload are not covered by the service worker.** The CSP still
   applies; the deny-by-default rule starts once the service worker controls the page. In that window
-  the CSP allows requests to the site's own origin (`img-src`, `script-src` and, for the source
-  maps, `connect-src 'self'`). GitHub Pages stores nothing it receives, but GitHub would see the
-  address of such a request. Only this build's verified code runs, and it never makes one.
+  the CSP still allows images, scripts, styles and fonts from the site's own origin (`img-src`,
+  `script-src`, `style-src`, `font-src`), and the OCR worker runs without its own CSP. `connect-src`
+  has no `'self'`, so page code cannot send a `fetch()`, a request body or custom headers there.
+  GitHub Pages stores nothing it receives, but GitHub would see the address of an image or script
+  request. Only this build's verified code runs, and it never makes one.
 - **No browser rule can stop a page from navigating to a URL.** The protection there is that only
   this build's verified code runs (CSP, SRI, the locked dependency list) and that the code never
   navigates with your data (enforced by the linter).
@@ -372,6 +375,11 @@ described above. The others were fixed in separate pull requests with tests:
 - WebRTC, framing and `pagehide` ([#36](https://github.com/aasanchez/dnilimpio.es/pull/36));
 - buffer clearing and wider lint rules ([#38](https://github.com/aasanchez/dnilimpio.es/pull/38)).
 
+A later review (26 November 2026, finding PRIV-003) noted that `connect-src 'self'`, added to load
+source maps in the developer tools, let page code send requests to the site's own origin before
+the service worker controls the page. The maps are no longer published and `'self'` is gone from
+`connect-src` ([ADR 0022](docs/adr/0022-no-published-source-maps.md)).
+
 Headers that need a server for every response (HSTS, Permissions-Policy, COOP) cannot be set on
 GitHub Pages; `github.io` is on the HSTS preload list.
 
@@ -393,22 +401,24 @@ You do not have to trust the claims above. Each one can be checked.
 4. Read the policy in the page source: `<meta http-equiv="Content-Security-Policy">`.
 5. Check which code you run: the start screen's footer shows the short commit SHA of the build,
    linked to that commit on GitHub (see [Version shown in the app](#version-shown-in-the-app)).
-6. Read the running code as source: developer tools, **Sources** tab. The source maps map the
-   minified files back to `src/` in this repository.
 
-A source map on its own proves nothing, because the same build produces it. The proof is in the
-hashes below, which cover the maps too.
+The site publishes no source maps ([ADR 0022](docs/adr/0022-no-published-source-maps.md)). To check the
+running code, rebuild that commit (below) and compare the hashes; the source is `src/` at that
+commit. A local build with `build.sourcemap` turned on is for reading only: its file names and
+hashes differ from the deployed build.
 
 **With an AI coding agent.** **Check it with your AI** on the start screen (in the footer and in the
 no-cookies notice) opens a ready-made audit prompt to copy into an AI coding agent. It asks for a
 deep review of this repository's privacy claim: image lifecycle, every network primitive, the
 declared analytics exception, dependencies, CSP, the service worker and reproducibility, with a
-YES/NO verdict and file and line references. Copying uses the clipboard only; nothing is sent. The
-text is in [`src/security/audit-prompt.ts`](src/security/audit-prompt.ts).
+YES/NO verdict and file and line references. It also asks the agent to check the live site at
+<https://dnitapado.es/>: its headers, its CSP against [`scripts/csp.ts`](scripts/csp.ts), the hash of
+every file it serves, and a rebuild of the commit shown in the footer. Copying uses the clipboard
+only; nothing is sent. The text is in [`src/security/audit-prompt.ts`](src/security/audit-prompt.ts).
 
 **Check that the live files are the ones built from this repository**
 
-- **Provenance.** Every deployed file, source maps included, has signed build provenance:
+- **Provenance.** Every deployed file has signed build provenance:
 
   ```sh
   gh attestation verify <file> --repo aasanchez/dnilimpio.es
@@ -471,7 +481,6 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | Installable app: manifest, maskable and Apple icons, install link and iOS steps | Done |
 | No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
 | Cookieless visit counts (Cloudflare Web Analytics) | Done |
-| Published source maps, verified by hash | Done |
 | Custom domain `dnitapado.es`, HTTPS enforced | Done |
 | Languages: 31 in the specification | 13 today |
 
@@ -614,7 +623,7 @@ changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke ─ lighthous
 | acceptance | `lighthouse` | Lighthouse on the built site (performance, accessibility, best practices, SEO), thresholds in [`lighthouserc.json`](lighthouserc.json). Reports are a workflow artifact; nothing is uploaded elsewhere | PR | No, warns |
 | gate | `ci-ok` | Passes when every job above passed or was skipped on purpose | Both | Yes |
 | deploy | `deploy` | Publishes the built `dist/` to GitHub Pages. Only a push or manual run on `master`, never a pull request or another branch. A running deploy is never cancelled | `master` | Yes |
-| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte, source maps included. Retries for up to 5 minutes while Pages updates | `master` | Yes |
+| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte. Retries for up to 5 minutes while Pages updates | `master` | Yes |
 | post-deploy | `attest` | Signed build provenance for every deployed file ([artifact attestations](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)). Check a file with `gh attestation verify <file> --repo aasanchez/dnilimpio.es` | `master` | Yes |
 | post-deploy | `lighthouse-live` | Lighthouse on the live site, with real hosting (compression, cache headers). Thresholds in [`lighthouserc.live.json`](lighthouserc.live.json) | `master` | No, warns |
 
@@ -752,12 +761,13 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0013](docs/adr/0013-ci-pipeline.md): CI split into small, single-purpose jobs in logical stages, with one required check.
 - [0014](docs/adr/0014-card-guide.md): card guide; every element explained with official citations, nothing guessed.
 - [0015](docs/adr/0015-cookieless-analytics.md): cookieless visit counts with Cloudflare Web Analytics, on the public site only.
-- [0016](docs/adr/0016-source-maps-in-devtools.md): source maps readable in the developer tools (`connect-src 'self'`); the service worker serves only this build's maps, checked by hash.
+- [0016](docs/adr/0016-source-maps-in-devtools.md): source maps readable in the developer tools (`connect-src 'self'`). Superseded by 0022.
 - [0017](docs/adr/0017-tailwind-css.md): styles with Tailwind CSS v4, compiled at build time; two-column layout on wide screens.
 - [0018](docs/adr/0018-installable-app.md): installable app; relative manifest, maskable and Apple icons, install link only where the browser supports it.
 - [0019](docs/adr/0019-ppocr-and-text-detection.md): PP-OCRv6 tiny replaces Tesseract; the front's printed text helps detect the document.
 - [0020](docs/adr/0020-fit-boxes-to-text.md): fit to the text; ticked field boxes grow to cover the words OCR finds, never shrink.
 - [0021](docs/adr/0021-one-dni-choice.md): one "DNI" choice; the version is detected, the DNI 4.0 is the fallback, and the editor has an Older DNI (3.0) switch.
+- [0022](docs/adr/0022-no-published-source-maps.md): no published source maps and no `'self'` in `connect-src`, so page code cannot send requests to its own origin (review finding PRIV-003).
 
 ## Contributing
 
