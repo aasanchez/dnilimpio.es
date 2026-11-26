@@ -53,6 +53,17 @@ function checkFiles (list: unknown[]): PrecacheFile[] {
   })
 }
 
+/**
+ * SHA-384 of some bytes, as an SRI string (`sha384-…`), the form the manifest records. Web Crypto, so
+ * the service worker and the unit tests in Node use the same code.
+ */
+export async function sriOf (bytes: ArrayBuffer): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-384', bytes))
+  let bin = ''
+  for (const b of digest) bin += String.fromCharCode(b)
+  return `sha384-${btoa(bin)}`
+}
+
 /** Scripts the app starts as Web Workers (see workerCsp()). */
 export const WORKER_SCRIPTS: readonly string[] = [`${ON_DEMAND_DIR}worker.min.js`]
 

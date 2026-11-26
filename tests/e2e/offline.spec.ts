@@ -213,3 +213,78 @@ test('a tampered model file is refused and classic edge detection takes over', a
   expect((await cachedPaths(page)).some((p) => p.startsWith('/assets/ml/model-'))).toBe(false)
   expect(errors).toEqual([])
 })
+
+/**
+ * Writes a forged entry into the app's cache, as any same-origin script could. The body is a marker
+ * that shows whether it ever ran: a page with #poisoned, or a worker that posts on a BroadcastChannel.
+ */
+async function poison (page: Page, path: string, body: string, type: string): Promise<void> {
+  await page.evaluate(async ({ path, body, type }) => {
+    const key = (await caches.keys()).find((k) => k.startsWith('dnilimpio-')) ?? ''
+    await (await caches.open(key)).put(new URL(path, document.baseURI).href, new Response(body, { headers: { 'Content-Type': type } }))
+  }, { path, body, type })
+}
+
+/** The text of one cache entry of the app ('' when it is missing). */
+async function cachedText (page: Page, path: string): Promise<string> {
+  return await page.evaluate(async (path) => {
+    const res = await caches.match(new URL(path, document.baseURI).href)
+    return res ? await res.text() : ''
+  }, path)
+}
+
+const POISONED_PAGE = '<!doctype html><title>poisoned</title><p id="poisoned">poisoned</p>'
+const POISONED_WORKER = "new BroadcastChannel('poisoned').postMessage('ran')"
+
+/** Starts the OCR worker the way the app does, and reports whether the forged one ran. */
+async function startWorker (page: Page): Promise<{ ran: boolean; failed: boolean }> {
+  return await page.evaluate(async () => await new Promise((resolve) => {
+    const channel = new BroadcastChannel('poisoned')
+    const state = { ran: false, failed: false }
+    channel.onmessage = () => { state.ran = true }
+    const w = new Worker(new URL('ocr/worker.min.js', document.baseURI).href)
+    w.onerror = () => { state.failed = true }
+    setTimeout(() => { w.terminate(); channel.close(); resolve(state) }, 3000)
+  }))
+}
+
+test('a rewritten cached index.html is never served: the worker refetches the real one', async ({ page }) => {
+  await page.goto('/')
+  await offlineReady(page)
+  const real = await cachedText(page, 'index.html')
+  await poison(page, 'index.html', POISONED_PAGE, 'text/html')
+  await page.reload()
+  await expect(page.locator('#guide-open')).toBeVisible()
+  await expect(page.locator('#poisoned')).toHaveCount(0)
+  // The forged entry is gone and the cache holds the build's bytes again.
+  expect(await cachedText(page, 'index.html')).toBe(real)
+})
+
+test('offline, a rewritten cached index.html is refused, never shown', async ({ page, context }) => {
+  await page.goto('/')
+  await offlineReady(page)
+  await poison(page, 'index.html', POISONED_PAGE, 'text/html')
+  await context.setOffline(true)
+  // No verified copy and no network: a network error instead of the forged page.
+  const failed = await page.reload().then(() => false, () => true)
+  expect(failed).toBe(true)
+  await expect(page.locator('#poisoned')).toHaveCount(0)
+  await context.setOffline(false)
+  await page.goto('/')
+  await expect(page.locator('#guide-open')).toBeVisible()
+  expect(await cachedText(page, 'index.html')).not.toContain('poisoned')
+})
+
+test('a rewritten cached OCR worker never runs: online it is replaced, offline it is refused', async ({ page, context }) => {
+  await page.goto('/')
+  await offlineReady(page)
+  await poison(page, 'ocr/worker.min.js', POISONED_WORKER, 'text/javascript')
+  expect(await startWorker(page)).toEqual({ ran: false, failed: false })
+  // The real worker, downloaded again with its integrity, replaced the forged entry.
+  expect(await cachedText(page, 'ocr/worker.min.js')).not.toContain('poisoned')
+
+  await poison(page, 'ocr/worker.min.js', POISONED_WORKER, 'text/javascript')
+  await context.setOffline(true)
+  expect(await startWorker(page)).toEqual({ ran: false, failed: true })
+  expect(await cachedText(page, 'ocr/worker.min.js')).toBe('')
+})

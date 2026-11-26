@@ -291,6 +291,8 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
+  Each file is checked again every time the worker serves it from the cache; a copy that was changed
+  is deleted and downloaded again, or refused offline ([ADR 0026](docs/adr/0026-recheck-cache-hits.md)).
   The corner model (about 2.6 MB) is not part of that first copy: it is stored the first time you use
   it online. Offline before that, classic edge detection places the corners, or you place them by
   hand.
@@ -601,7 +603,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `privacy` | A whole workflow with fictional card values sends no request and stores nothing |
 | `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused, photos dropped on `pagehide` |
 | `cleanup` | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
-| `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers, a tampered file stops the install, corner model cached after first use |
+| `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
 | `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; the counter frame is cross-site, sandboxed, given nothing, gone before any photo, not shown offline, under GPC or DNT, or on other hosts |
 | `update` | An idle single tab switches to a new build; a tab with photos, or a second tab, holds it back |
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks |
@@ -811,6 +813,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0022](docs/adr/0022-no-published-source-maps.md): no published source maps and no `'self'` in `connect-src`, so page code cannot send requests to its own origin (review finding PRIV-003).
 - [0023](docs/adr/0023-no-third-party-script-with-photos.md): no third-party script in the page that holds the photos; the Cloudflare beacon is removed and `connect-src` is `'none'`.
 - [0024](docs/adr/0024-visit-counter-in-isolated-frame.md): visit counts from a sandboxed frame on another site, on the start screen only.
+- [0026](docs/adr/0026-recheck-cache-hits.md): the service worker hashes every cache hit again before it answers; a rewritten entry is deleted and downloaded again, or refused offline.
 
 ## Contributing
 
