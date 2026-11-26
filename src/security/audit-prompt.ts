@@ -5,7 +5,7 @@
 /** The live site the prompt asks the agent to check against the repository. */
 export const LIVE_SITE = 'https://dnitapado.es/'
 
-export const AUDIT_PROMPT = `Perform a deep security and privacy audit of the codebase at https://github.com/aasanchez/dnilimpio.es and of the live site built from it at ${LIVE_SITE} to verify its core privacy claim: that Spanish DNI/TIE document images are processed 100% locally in the browser and never transmitted to any external server.
+export const AUDIT_PROMPT = `Perform a deep security and privacy audit of the codebase at https://github.com/aasanchez/dnilimpio.es and of the live site built from it at ${LIVE_SITE} to verify its core privacy claim: that processing of Spanish DNI/TIE documents runs on the device, in the browser, and that the app does not send the images, file names, text read from the card or watermark text to any server.
 
 Execute the audit across the following areas:
 
@@ -13,6 +13,7 @@ Execute the audit across the following areas:
 
    - Trace the exact data flow from the moment a user selects or drops a DNI/TIE image (File, Blob, ArrayBuffer, DataURL, ObjectURL) through canvas rendering, watermarking, text overlay, compression, and final download/export.
    - Verify whether any temporary objects, IndexedDB entries, localStorage/sessionStorage, or Service Worker caches persist the image or extracted metadata after processing or tab closure.
+   - Check that the public wording is exactly true, no more and no less: the start-screen notice (privacyBody in src/i18n/locales/en.json and es.json, short on purpose) and the "Privacy and security" section of README.md, which lists what the browser keeps: the app's files and AI models in Cache Storage and the date the notice was closed (localStorage key dnilimpio.noticeDismissedAt). Flag any claim the code does not support, and anything stored or sent that the README leaves out.
 
 2. Network & Outbound Traffic Audit
 

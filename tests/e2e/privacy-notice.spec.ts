@@ -10,7 +10,9 @@ test('informs that there are no cookies, with no accept step', async ({ page }) 
   const notice = page.locator('#privacy-notice')
   await expect(notice).toBeVisible()
   await expect(notice.getByRole('heading')).toHaveText('Bruselas estaría orgullosa')
-  await expect(notice).toContainText('Tus fotos no salen de tu dispositivo')
+  // Exact claims only (audit item 8): processing on the device, no upload, the counter frame.
+  await expect(notice).toContainText('Tu documento se procesa en tu dispositivo y la app no lo sube.')
+  await expect(notice).toContainText('Las visitas se cuentan en un marco aislado que no ve tus fotos.')
   // No consent choice: one button closes it, the other opens the audit prompt.
   await expect(notice.getByRole('button')).toHaveText(['Compruébalo con tu IA →', 'Me lo creo'])
   await expect(page.getByRole('complementary', { name: 'Bruselas estaría orgullosa' })).toBeVisible()
