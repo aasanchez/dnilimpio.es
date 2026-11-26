@@ -15,6 +15,7 @@ Execute the audit across the following areas:
 
    - Search the entire codebase and dependencies for network primitives (fetch, XMLHttpRequest, navigator.sendBeacon, WebSocket, EventSource, WebRTC, form action attributes, dynamic <img>/<script> beacons).
    - Check if any telemetry, analytics (e.g., Google Analytics, Plausible, Sentry, PostHog), error reporting, or third-party font/CDN requests leak document data, filenames, or usage payloads.
+   - The site declares one exception: on its public host only, it loads Cloudflare Web Analytics (cookieless visit counts; src/analytics/, docs/adr/0015-cookieless-analytics.md). Verify that the beacon is handed nothing but its site token, that it is skipped offline, off the public host and under Global Privacy Control or Do Not Track, that it sets no cookies or storage, and that the CSP (script-src by exact URL, connect-src https://cloudflareinsights.com only), Trusted Types and the service worker let nothing else out. Assess what a third-party script running in the page could technically reach, and whether those limits contain it.
    - Inspect any server-side code, API routes, serverless functions, or backend configurations (e.g., Next.js API routes, Cloudflare Workers, Nginx/Vercel configs) to confirm whether endpoints exist that could receive uploads.
 
 3. Dependency & Supply Chain Verification
@@ -30,6 +31,6 @@ Execute the audit across the following areas:
 
    - Executive Verdict: Clear YES/NO on whether DNI/TIE images stay strictly local, with a confidence rating.
    - Data Flow Map: Step-by-step trace referencing exact file paths, functions, and line numbers.
-   - Findings & Risks: Any data leaks, persistent storage artifacts, third-party requests, or missing browser-level safeguards (e.g., lack of strict CSP connect-src 'none').
+   - Findings & Risks: Any data leaks, persistent storage artifacts, third-party requests, or missing browser-level safeguards (e.g., a CSP connect-src that allows more than the declared analytics endpoint).
    - Hardening Recommendations: Concrete code or configuration changes to mathematically/technically guarantee zero exfiltration (such as strict CSP headers and memory cleanup).
 `

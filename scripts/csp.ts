@@ -2,24 +2,28 @@
 // Single source of truth for the Content-Security-Policy (spec §5.1).
 // The build injects it as a <meta> tag; the e2e test asserts the built page carries exactly this value.
 
+import { BEACON_ORIGIN, BEACON_SCRIPT } from '../src/analytics/endpoints.ts'
+
 export const CSP_DIRECTIVES: readonly string[] = [
   "default-src 'none'",
   // 'wasm-unsafe-eval' lets the page compile WebAssembly (the corner model's runtime, ADR 0007).
   // It does not allow eval() or new Function(), and the WebAssembly bytes come from a script checked
   // by its integrity hash.
-  "script-src 'self' 'wasm-unsafe-eval'",
+  // The one third-party script: Cloudflare's analytics beacon, by its exact path (ADR 0015).
+  `script-src 'self' 'wasm-unsafe-eval' ${BEACON_SCRIPT}`,
   "style-src 'self'",
   "img-src 'self' blob: data:",
   "font-src 'self'",
   "manifest-src 'self'",
   "worker-src 'self'",
-  "connect-src 'none'",
+  // The page can send nothing except the beacon's anonymous page-view report to Cloudflare (ADR 0015).
+  `connect-src ${BEACON_ORIGIN}`,
   "form-action 'none'",
   "base-uri 'none'",
   "object-src 'none'",
   "require-trusted-types-for 'script'",
   // One Trusted Types policy only, 'default' (src/security/trusted-types.ts): it accepts the service
-  // worker and OCR worker URLs and nothing else. The app never turns strings into HTML (Svelte uses
+  // worker, OCR worker and analytics beacon URLs and nothing else. The app never turns strings into HTML (Svelte uses
   // fragments: 'tree'), so no other policy may exist.
   'trusted-types default',
 ]
