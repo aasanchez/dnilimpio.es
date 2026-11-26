@@ -7,7 +7,10 @@
 // - Fetch: deny by default. It answers only the files listed in its manifest, from the cache, and page
 //   loads inside its scope, with the cached index.html. On-demand files (ocr/, assets/ml/) are
 //   downloaded with their integrity on first use (or when the page asks with a 'prepare' message) and
-//   then kept. Every other request from the page or its workers (OCR) is refused and never reaches the
+//   then kept. Every cache hit is hashed again before it is answered: page code shares the origin and
+//   can rewrite Cache Storage, so a hit counts only if its bytes still match the manifest. A mismatch
+//   is deleted and the same fixed URL is downloaded again with its integrity (or refused offline).
+//   Every other request from the page or its workers (OCR) is refused and never reaches the
 //   network: another origin, another path, a query string, a method other than GET (route()). The one
 //   exception is Cloudflare's analytics beacon and its page-view report (ADR 0015), left to the network.
 // - Activate: deletes the caches of older builds. A new build activates once no tab runs the old
@@ -16,7 +19,7 @@
 // It never stores user data: images and PDFs live in memory and blob: URLs, which never reach it.
 // The build (scripts/vite-plugins.ts) replaces the manifest placeholder below with the file list.
 
-import { CACHE_PREFIX, WORKER_SCRIPTS, cacheName, parseManifest, route, workerCsp } from './offline/precache.ts'
+import { CACHE_PREFIX, WORKER_SCRIPTS, cacheName, parseManifest, route, sriOf, workerCsp } from './offline/precache.ts'
 
 const sw = self as unknown as ServiceWorkerGlobalScope
 
@@ -60,12 +63,33 @@ function withWorkerCsp (url: string, res: Response): Response {
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers })
 }
 
-/** SHA-384 of a response body, as an SRI string. */
-async function sri (res: Response): Promise<string> {
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-384', await res.arrayBuffer()))
-  let bin = ''
-  for (const b of digest) bin += String.fromCharCode(b)
-  return `sha384-${btoa(bin)}`
+/**
+ * A cache entry, only if its bytes still match the build's hash. Any same-origin script can rewrite
+ * Cache Storage (caches.open(...).put(...)), so a hit is checked every time it is answered, not once:
+ * a check kept in memory would not see a rewrite made after it. A mismatch is deleted at once. The
+ * answer is a new response made from the checked bytes, so what runs is exactly what was hashed. It
+ * keeps only the entry's Content-Type: no other header of a rewritten entry reaches the page.
+ */
+async function verifiedHit (cache: Cache, url: string, integrity: string): Promise<Response | undefined> {
+  const hit = await cache.match(url)
+  if (!hit) return undefined
+  const body = hit.ok ? await hit.arrayBuffer() : undefined
+  if (!body || await sriOf(body) !== integrity) {
+    await cache.delete(url)
+    return undefined
+  }
+  const headers = new Headers()
+  const type = hit.headers.get('Content-Type')
+  if (type !== null) headers.set('Content-Type', type)
+  return new Response(body, { status: 200, headers })
+}
+
+/** Downloads one file of this build from its fixed URL, checked by the browser against its hash, and caches it. */
+async function download (cache: Cache, url: string, integrity: string): Promise<Response> {
+  const res = await fetch(url, { integrity, cache: 'reload', credentials: 'omit' })
+  if (!res.ok) throw new Error(`Download failed: ${url} (${String(res.status)})`)
+  await cache.put(url, res.clone())
+  return res
 }
 
 sw.addEventListener('install', (event) => {
@@ -81,7 +105,7 @@ sw.addEventListener('install', (event) => {
       // Keep optional files the user already downloaded, if this build ships the same bytes.
       for (const [url, integrity] of ON_DEMAND) {
         const old = await caches.match(url)
-        if (old && await sri(old.clone()) === integrity) await cache.put(url, old)
+        if (old?.ok && await sriOf(await old.clone().arrayBuffer()) === integrity) await cache.put(url, old)
       }
     } catch (e) {
       // Never leave a partial cache behind: the install fails and the app keeps working online.
@@ -105,18 +129,12 @@ sw.addEventListener('activate', (event) => {
   })())
 })
 
-/** Downloads (if needed) and caches one on-demand file, checked against its hash. */
+/** One on-demand file: from the cache if its bytes still match, else downloaded again with its integrity. */
 async function ensureOnDemand (url: string): Promise<Response> {
-  const cache = await caches.open(CACHE)
-  const hit = await cache.match(url)
-  if (hit) return hit
   const integrity = ON_DEMAND.get(url)
   if (integrity === undefined) throw new Error(`Not an on-demand file: ${url}`)
-  // The browser checks the bytes against the build's hash before we keep them.
-  const res = await fetch(url, { integrity, cache: 'reload', credentials: 'omit' })
-  if (!res.ok) throw new Error(`Download failed: ${url} (${String(res.status)})`)
-  await cache.put(url, res.clone())
-  return res
+  const cache = await caches.open(CACHE)
+  return await verifiedHit(cache, url, integrity) ?? await download(cache, url, integrity)
 }
 
 // The page asks for optional files before using them ({ type: 'prepare', paths }), so a missing
@@ -138,10 +156,16 @@ sw.addEventListener('message', (event) => {
   const urls = (msg.paths as unknown[]).filter((p): p is string => typeof p === 'string').map(urlOf)
   event.waitUntil((async () => {
     if (msg.type === 'status') {
-      // Only this build's cache counts: files of another build may not match this worker's hashes.
+      // Only this build's cache counts, and only entries whose bytes still match this worker's hashes
+      // (a rewritten entry is deleted): "ready" must mean OCR really works offline. One file at a
+      // time, so only one large file is held in memory.
       const cache = await caches.open(CACHE)
-      const cached = await Promise.all(urls.map(async (u) => await cache.match(u) !== undefined))
-      port.postMessage({ ok: true, cached: cached.every(Boolean) })
+      let cached = true
+      for (const url of urls) {
+        const integrity = ON_DEMAND.get(url)
+        if (integrity === undefined || await verifiedHit(cache, url, integrity) === undefined) { cached = false; break }
+      }
+      port.postMessage({ ok: true, cached })
       return
     }
     try {
@@ -168,10 +192,12 @@ sw.addEventListener('fetch', (event) => {
       case 'index':
       case 'file': {
         const url = to.kind === 'index' ? INDEX : to.url
-        const hit = await (await caches.open(CACHE)).match(url)
-        // Not expected (install saved every file), but if the cache was cleared under us: the same
-        // file again, checked against its hash.
-        const res = hit ?? await fetch(url, { integrity: FILES.get(url) ?? '', credentials: 'omit' })
+        const integrity = FILES.get(url)
+        if (integrity === undefined) return Response.error()
+        // A missing or rewritten entry (install saved every file): the same fixed URL again, checked
+        // against its hash. Offline, that fails, and the request gets a network error.
+        const cache = await caches.open(CACHE)
+        const res = await verifiedHit(cache, url, integrity) ?? await download(cache, url, integrity)
         return to.kind === 'index' ? withPageHeaders(res) : res
       }
     }

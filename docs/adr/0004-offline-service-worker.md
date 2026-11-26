@@ -1,6 +1,6 @@
 # 0004. Offline mode with a verified service worker
 
-- Status: accepted; the Trusted Types policy is now `default` ([ADR 0009](0009-on-device-ocr.md))
+- Status: accepted; the Trusted Types policy is now `default` ([ADR 0009](0009-on-device-ocr.md)); cache hits are hashed again before use ([ADR 0023](0023-recheck-cache-hits.md))
 - Date: 2026-11-25
 
 ## Context
