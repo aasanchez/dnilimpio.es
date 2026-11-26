@@ -120,8 +120,9 @@
 
   function go (s: Step, side: Side = alignSide): void {
     // Every screen after the start one can hold photos: the intake policy is in force there (ADR 0025).
-    // Start (below) loads the fonts first; this is the safety net for any other way in.
-    if (s !== 'home') lockIntake()
+    // Start (below) loads the fonts first; this is the safety net for any other way in. Production
+    // builds only: the dev server has no CSP, no import map and needs its HMR connection.
+    if (s !== 'home' && import.meta.env.PROD) lockIntake()
     step = s
     alignSide = side
     if (s === 'edit') phase = 'edit'
@@ -141,7 +142,7 @@
 
   /** Start: loads what the page still needs, locks the network channels, then opens the photo step. */
   async function startCapture (): Promise<void> {
-    await prepareIntake()
+    if (import.meta.env.PROD) await prepareIntake()
     go('capture', 'front')
   }
 

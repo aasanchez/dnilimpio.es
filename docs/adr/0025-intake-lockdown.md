@@ -70,5 +70,9 @@ and a reload usually starts it. The app never blocks on it (rule 5).
   the service worker, delete its caches, or fake the worker check. The check guards against a
   missing or foreign worker, not against a compromised page. What keeps such code out is that only
   this build's verified code runs (CSP, SRI, the locked dependency list).
+- Production builds only. The dev server has no CSP, no import map and needs its HMR connection,
+  so `pnpm dev` never adds the second policy. Check it with `pnpm build` and the e2e tests.
+- The script list holds only files inside the app's own folder. Another site's script that is
+  already in the page (the analytics beacon, while ADR 0015 holds) is never listed.
 - The policy only gets stricter: a bug in it can break a feature, never open a channel. Firefox and
   Safari apply a `<meta>` policy added by script in the same way; the tests run in Chromium.

@@ -27,6 +27,10 @@ describe('buildScripts', () => {
       'https://dnitapado.es/assets/ml/b.mjs',
     ])
   })
+  it('never lists another site\'s script (such as the analytics beacon) or a file outside the app\'s folder', () => {
+    const srcs = ['https://static.cloudflareinsights.com/beacon.min.js', 'https://aasanchez.github.io/other/x.js', './assets/index.js']
+    expect(buildScripts(SUB, srcs, null)).toEqual(['https://aasanchez.github.io/dnilimpio.es/assets/index.js'])
+  })
   it('survives a missing or broken import map', () => {
     expect(buildScripts(BASE, ['./assets/index.js'], null)).toEqual(['https://dnitapado.es/assets/index.js'])
     expect(buildScripts(BASE, [], '{')).toEqual([])

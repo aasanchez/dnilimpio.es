@@ -81,7 +81,10 @@ export function buildScripts (base: string, srcs: readonly string[], importMap: 
       // A broken import map loads nothing either; the policy just lists fewer files.
     }
   }
-  return hrefs.map((h) => exactSource(h, base)).filter((s): s is string => s !== null)
+  // Only files inside the app's own folder: never another site's script, such as the analytics
+  // beacon, which may already be in the page when Start is pressed.
+  const scope = new URL('./', base).href
+  return hrefs.map((h) => exactSource(h, base)).filter((s): s is string => s !== null && s.startsWith(scope))
 }
 
 /** Scripts the page starts as workers: the service worker and the OCR worker (src/ocr/ocr.ts). */
