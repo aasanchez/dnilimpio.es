@@ -10,27 +10,14 @@
 // in the exported PDF.
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page, type Request } from '@playwright/test'
+import { MARK, NAMES, WATERMARK, canariesIn } from './canaries.ts'
 import { controlled, toEditorWithText } from './helpers.ts'
 
 test.use({ locale: 'es-ES', serviceWorkers: 'allow' })
 
-/** Values printed on the synthetic cards (OCR reads them): none may ever appear in a request. */
-const CARD_CANARIES = ['99999999R', 'CARMEN', 'ESPANOLA', 'BAA000589', 'CAA000000', '987654', 'CALLE MAYOR']
-/** File names of the two photos. */
-const NAMES = ['canary-name-front-q7k2.png', 'canary-name-back-x4m9.png'] as const
-/** A word that appears only in the watermark the user types. */
-const MARK = 'CANARYMARKZ8V3'
-const CANARIES = [...CARD_CANARIES, MARK, ...NAMES.map((n) => n.replace(/\.png$/, '').toUpperCase())]
-
 /** Every canary that a request carries in its address, headers or body, in plain or URL-encoded form. */
 function leaks (r: Request): string[] {
-  const raw = [r.url(), JSON.stringify(r.headers()), r.postData() ?? ''].join('\n')
-  const text = [raw, safeDecode(raw)].join('\n').toUpperCase()
-  return CANARIES.filter((c) => text.includes(c)).map((c) => `${c} in ${r.method()} ${r.url()}`)
-}
-
-function safeDecode (s: string): string {
-  try { return decodeURIComponent(s.replace(/\+/g, ' ')) } catch { return s }
+  return canariesIn(r.url(), JSON.stringify(r.headers()), r.postData() ?? '').map((c) => `${c} in ${r.method()} ${r.url()}`)
 }
 
 /** Which on-demand files (OCR engine and data, corner model) the service worker has cached. */
@@ -55,7 +42,7 @@ async function finishDocument (page: Page): Promise<string> {
   await page.locator('#find-run').click()
   await expect(page.locator('#find-status')).toContainText(/Se han añadido \d+ recuadros/, { timeout: 150_000 })
   await page.locator('#tool-mark').click()
-  await page.locator('#watermark').fill(`Solo para el alquiler ${MARK} 99999999R`)
+  await page.locator('#watermark').fill(WATERMARK)
   await page.locator('#greyscale').check()
   await page.locator('#review').click()
   await page.locator('#review-confirm').check()
@@ -69,8 +56,7 @@ async function finishDocument (page: Page): Promise<string> {
 
 /** Canaries found as text in the exported PDF (masks and watermark are pixels, so there must be none). */
 function pdfLeaks (path: string): string[] {
-  const text = readFileSync(path).toString('latin1').toUpperCase()
-  return CANARIES.filter((c) => text.includes(c))
+  return canariesIn(readFileSync(path).toString('latin1'))
 }
 
 test('after the first visit, a whole document workflow sends no request at all', async ({ page, context }) => {
