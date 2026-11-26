@@ -8,8 +8,8 @@
 //   loads inside its scope, with the cached index.html. On-demand files (ocr/, assets/ml/) are
 //   downloaded with their integrity on first use (or when the page asks with a 'prepare' message) and
 //   then kept. Every other request from the page or its workers (OCR) is refused and never reaches the
-//   network: another origin, another path, a query string, a method other than GET (route()). The one
-//   exception is Cloudflare's analytics beacon and its page-view report (ADR 0015), left to the network.
+//   network: another origin, another path, a query string, a method other than GET (route()). There is
+//   no exception (ADR 0023).
 // - Activate: deletes the caches of older builds. A new build activates once no tab runs the old
 //   one, or earlier when the app's only tab is idle and asks for it ('activate' message), so no open
 //   page loses files it still needs.
@@ -26,7 +26,7 @@ const INDEX = new URL('index.html', sw.location.href).href
 const urlOf = (path: string): string => new URL(path, sw.location.href).href
 const ON_DEMAND = new Map(manifest.onDemand.map((f) => [urlOf(f.path), f.integrity]))
 const FILES = new Map(manifest.files.map((f) => [urlOf(f.path), f.integrity]))
-const KNOWN = { files: new Set(FILES.keys()), onDemand: new Set(ON_DEMAND.keys()), analytics: manifest.analytics }
+const KNOWN = { files: new Set(FILES.keys()), onDemand: new Set(ON_DEMAND.keys()) }
 const WORKERS = new Set(WORKER_SCRIPTS.map(urlOf))
 
 /** index.html with PAGE_HEADERS added to the host's headers (addPageHeaders()). */
@@ -142,8 +142,6 @@ sw.addEventListener('message', (event) => {
 sw.addEventListener('fetch', (event) => {
   const req = event.request
   const to = route(req.method, req.url, req.mode, sw.registration.scope, KNOWN)
-  // Not answered here: the browser sends it as if there were no worker. The CSP still applies.
-  if (to.kind === 'analytics') return
   event.respondWith((async () => {
     switch (to.kind) {
       case 'deny':

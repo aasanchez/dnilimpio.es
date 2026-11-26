@@ -19,8 +19,9 @@ plus a few headers that the service worker adds once it controls the page. This 
 - A Web Worker takes its CSP from its own script's response. Before the service worker controls the
   page, the OCR worker ran with no CSP at all.
 
-The domain's DNS is already on Cloudflare (records in "DNS only" mode), and the visit counter is
-Cloudflare Web Analytics ([ADR 0015](0015-cookieless-analytics.md)).
+The domain's DNS is already on Cloudflare (records in "DNS only" mode). Visits are counted by
+Cloudflare Web Analytics in a sandboxed frame on another site
+([ADR 0024](0024-visit-counter-in-isolated-frame.md)).
 
 ## Decision
 
@@ -55,9 +56,9 @@ Serve <https://dnitapado.es> from **Cloudflare Workers static assets**, with no 
 
 **HSTS preload** is not requested: leaving the preload list takes months.
 
-**COEP is not set.** `require-corp` would block the visit counter's script unless Cloudflare sends
-`Cross-Origin-Resource-Policy` for it, and it would block a cross-origin analytics frame unless that
-frame sends COEP too. `credentialless` is not available in Safari. Cross-origin isolation would only
+**COEP is not set.** `require-corp` would block the visit counter's frame
+([ADR 0024](0024-visit-counter-in-isolated-frame.md)) unless that page, on GitHub Pages, sent COEP and
+CORP too, and GitHub Pages cannot send headers. `credentialless` is not available in Safari. Cross-origin isolation would only
 enable `SharedArrayBuffer`, for multithreaded OCR, which the app does not need today. A later ADR can
 add it, with a test.
 
@@ -79,7 +80,7 @@ add it, with a test.
   that the host changes.
 - Cloudflare features that rewrite HTML (Rocket Loader, Email Obfuscation, automatic Web Analytics
   injection) must stay off for the zone. The smoke test fails if any of them changes a file.
-- Cloudflare can count visits on the server side, so the client beacon could be removed later
+- Cloudflare can count visits on the server side, so the counter frame could be removed later
   without losing visit counts.
 - A wrong header can break the app for everyone. The e2e suite runs under the same headers, and
   `pnpm test:e2e` was also run against `wrangler dev` (Cloudflare's local runtime).

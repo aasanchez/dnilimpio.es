@@ -2,19 +2,12 @@
 // Pure helpers shared by the service worker and the build: no DOM, no worker globals, tested in Node.
 
 export interface PrecacheFile { readonly path: string; readonly integrity: string }
-/**
- * Cloudflare's analytics beacon and the address it reports to (ADR 0015). The build writes them into
- * the manifest from src/analytics/endpoints.ts, so the worker shares no code chunk with the page.
- */
-export interface AnalyticsUrls { readonly script: string; readonly endpoint: string }
 export interface PrecacheManifest {
   readonly version: string
   /** Saved at install: the app itself. */
   readonly files: readonly PrecacheFile[]
   /** Saved on first use only (large optional parts: OCR, corner model), still checked against their hash. */
   readonly onDemand: readonly PrecacheFile[]
-  /** Absent: the worker lets nothing through to another origin. */
-  readonly analytics?: AnalyticsUrls
 }
 
 export const CACHE_PREFIX = 'dnilimpio-'
@@ -42,30 +35,13 @@ export const isOnDemand = (path: string): boolean => path.startsWith(ON_DEMAND_D
 
 /** Parses and checks the manifest the build inlines into the worker. Throws on anything unexpected. */
 export function parseManifest (json: string): PrecacheManifest {
-  const m = JSON.parse(json) as { version?: unknown; files?: unknown; onDemand?: unknown; analytics?: unknown }
+  const m = JSON.parse(json) as { version?: unknown; files?: unknown; onDemand?: unknown }
   if (typeof m.version !== 'string' || !/^[0-9a-f]{16,}$/.test(m.version)) throw new Error('Bad precache version')
   if (!Array.isArray(m.files) || m.files.length === 0) throw new Error('Empty precache manifest')
   const files = checkFiles(m.files as unknown[])
   const onDemand = checkFiles(Array.isArray(m.onDemand) ? m.onDemand as unknown[] : [])
   if (files.some((f) => isOnDemand(f.path)) || onDemand.some((f) => !isOnDemand(f.path))) throw new Error('Bad precache path')
-  if (m.analytics === undefined) return { version: m.version, files, onDemand }
-  return { version: m.version, files, onDemand, analytics: checkAnalytics(m.analytics) }
-}
-
-/** Two plain https addresses: no query string, no fragment, no credentials. */
-function checkAnalytics (a: unknown): AnalyticsUrls {
-  const { script, endpoint } = (a ?? {}) as { script?: unknown; endpoint?: unknown }
-  const plain = (u: unknown): u is string => {
-    if (typeof u !== 'string') return false
-    try {
-      const url = new URL(u)
-      return url.protocol === 'https:' && url.href === u && url.search === '' && url.hash === '' && url.username === '' && url.password === ''
-    } catch {
-      return false
-    }
-  }
-  if (!plain(script) || !plain(endpoint)) throw new Error('Bad analytics URL')
-  return { script, endpoint }
+  return { version: m.version, files, onDemand }
 }
 
 function checkFiles (list: unknown[]): PrecacheFile[] {
@@ -133,11 +109,6 @@ export type Route =
   | { readonly kind: 'file'; readonly url: string }
   /** A file of this build that is saved on first use (OCR, corner model). */
   | { readonly kind: 'on-demand'; readonly url: string }
-  /**
-   * Cloudflare's analytics beacon and its page-view report (ADR 0015): left to the browser, which
-   * sends it to the network as usual (and fails quietly offline). Nothing else is.
-   */
-  | { readonly kind: 'analytics' }
   /** Anything else: refused, it never reaches the network. */
   | { readonly kind: 'deny' }
 
@@ -146,8 +117,6 @@ export interface KnownFiles {
   readonly files: ReadonlySet<string>
   /** Absolute URLs of the files saved on first use. */
   readonly onDemand: ReadonlySet<string>
-  /** The analytics beacon and its report address, left to the network (ADR 0015). */
-  readonly analytics?: AnalyticsUrls | undefined
 }
 
 /**
@@ -157,7 +126,6 @@ export interface KnownFiles {
  * can send data out by encoding it in a request, even a same-origin one.
  */
 export function route (method: string, url: string, mode: string, scope: string, known: KnownFiles): Route {
-  if (known.analytics && isAnalytics(method, url, known.analytics)) return { kind: 'analytics' }
   if (method !== 'GET' || !url.startsWith(scope)) return { kind: 'deny' }
   const key = url.split('#')[0] ?? url
   // A page load may carry a query string or a path of its own: it always gets index.html.
@@ -165,15 +133,4 @@ export function route (method: string, url: string, mode: string, scope: string,
   if (known.files.has(key)) return { kind: 'file', url: key }
   if (known.onDemand.has(key)) return { kind: 'on-demand', url: key }
   return { kind: 'deny' }
-}
-
-/**
- * The only requests outside the app's own files that the service worker lets through: GET of the
- * beacon script at its exact address, and the beacon's report (POST, or GET for old browsers) to its
- * exact path. A query string is refused on the script, allowed on the report.
- */
-export function isAnalytics (method: string, url: string, analytics: AnalyticsUrls): boolean {
-  if (method === 'GET' && url === analytics.script) return true
-  if (method !== 'POST' && method !== 'GET') return false
-  return url.split(/[?#]/)[0] === analytics.endpoint
 }

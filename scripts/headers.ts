@@ -78,7 +78,7 @@ export const HOST_WORKER_CSP = [
 
 /**
  * CSP of the service worker script. It downloads only this build's files from its own origin and
- * loads no script. The analytics beacon passes it untouched (the page's CSP governs that request).
+ * loads no script.
  */
 export const SERVICE_WORKER_CSP = [
   "default-src 'none'",

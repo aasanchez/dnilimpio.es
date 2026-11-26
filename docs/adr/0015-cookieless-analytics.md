@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0015. Cookieless visit counts with Cloudflare Web Analytics
 
-- Status: accepted
+- Status: superseded by [ADR 0023](0023-no-third-party-script-with-photos.md)
 - Date: 2026-11-26
 
 ## Context
