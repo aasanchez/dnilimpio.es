@@ -107,8 +107,8 @@ promise. CI tests these rules, and a review rejects changes that break them.
 
 **Privacy**
 
-- No new network requests at runtime. The only request is the cookieless visit counter on the
-  public site ([ADR 0015](docs/adr/0015-cookieless-analytics.md)). Do not add analytics, fonts,
+- No network requests at runtime, and no third-party script in the page that holds the photos
+  ([ADR 0023](docs/adr/0023-no-third-party-script-with-photos.md)). Do not add analytics, fonts,
   scripts or images from other servers.
 - No new persistent storage: no cookies, no `localStorage` keys, no IndexedDB. The only stored value
   is the date the privacy notice was closed (`src/ui/notice-memory.ts`).

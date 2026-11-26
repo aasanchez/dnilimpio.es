@@ -1,8 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Privacy notice in the place where sites put their cookie banner. It informs only: no cookies,
-     no storage for analytics and no personal data, so there is no "accept" step. The public site
-     counts visits anonymously with Cloudflare Web Analytics, which sets no cookies and stores nothing
-     (ADR 0015 records the legal reasoning).
+     no analytics, no third-party scripts and no personal data, so there is no "accept" step
+     (ADR 0023).
      Closing it stores only the date (src/ui/notice-memory.ts), so it shows at most every 4 days. -->
 <script lang="ts">
   import { t, type Lang } from '../i18n/index.ts'

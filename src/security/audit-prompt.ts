@@ -18,7 +18,7 @@ Execute the audit across the following areas:
 
    - Search the entire codebase and dependencies for network primitives (fetch, XMLHttpRequest, navigator.sendBeacon, WebSocket, EventSource, WebRTC, form action attributes, dynamic <img>/<script> beacons).
    - Check if any telemetry, analytics (e.g., Google Analytics, Plausible, Sentry, PostHog), error reporting, or third-party font/CDN requests leak document data, filenames, or usage payloads.
-   - The site declares one exception: on its public host only, it loads Cloudflare Web Analytics (cookieless visit counts; src/analytics/, docs/adr/0015-cookieless-analytics.md). Verify that the beacon is handed nothing but its site token, that it is skipped offline, off the public host and under Global Privacy Control or Do Not Track, that it sets no cookies or storage, and that the CSP (script-src by exact URL, connect-src https://cloudflareinsights.com only, without 'self', so the page cannot send requests to its own origin either; docs/adr/0022-no-published-source-maps.md), Trusted Types and the service worker let nothing else out. Assess what a third-party script running in the page could technically reach, and whether those limits contain it.
+   - The site declares no exception: no third-party script runs in the page that holds the photos (docs/adr/0023-no-third-party-script-with-photos.md). Verify that the CSP has script-src 'self' only (plus 'wasm-unsafe-eval' and the import map's hash) and connect-src 'none', without 'self', so the page cannot send requests to any origin, its own included (docs/adr/0022-no-published-source-maps.md); that the Trusted Types policy accepts only the service worker and OCR worker URLs; and that the service worker refuses every request to another origin. Assess what any script running in the page could technically reach, and whether those limits contain it.
    - Inspect any server-side code, API routes, serverless functions, or backend configurations (e.g., Next.js API routes, Cloudflare Workers, Nginx/Vercel configs) to confirm whether endpoints exist that could receive uploads.
 
 3. Dependency & Supply Chain Verification
@@ -35,7 +35,7 @@ Execute the audit across the following areas:
 
    - Fetch ${LIVE_SITE} and record the HTTP status, every response header and any redirect (www.dnitapado.es and the earlier address https://aasanchez.github.io/dnilimpio.es/ should redirect to it).
    - Extract the <meta http-equiv="Content-Security-Policy"> from the served index.html and compare it, directive by directive, with scripts/csp.ts. The only expected difference is one extra script-src hash, which must be the SHA-256 of the inline import map. Flag any other source, especially in connect-src.
-   - For every script, stylesheet and import-map entry the page references, download the file, compute its SHA-384 and compare it with the integrity value in the page. Flag any file without SRI and any third-party host other than the declared analytics beacon.
+   - For every script, stylesheet and import-map entry the page references, download the file, compute its SHA-384 and compare it with the integrity value in the page. Flag any file without SRI and any third-party host.
    - Download sw.js and check that every file in its inlined manifest matches its listed SHA-384 on the live site. Request a few .map URLs (for example the entry script's URL plus .map) and confirm none is served.
    - Read the commit SHA shown in the page footer (and in the entry script), check out that commit, rebuild it as the README describes (SOURCE_DATE_EPOCH, GITHUB_SHA) and compare the live files with dist/ byte for byte. Where available, run gh attestation verify on a downloaded file.
    - If you cannot fetch the live site from your environment, say so explicitly and mark these checks as not done. Do not infer their result from the source.
@@ -45,6 +45,6 @@ Execute the audit across the following areas:
    - Executive Verdict: Clear YES/NO on whether DNI/TIE images stay strictly local, with a confidence rating.
    - Data Flow Map: Step-by-step trace referencing exact file paths, functions, and line numbers.
    - Live Site Match: Whether the files and CSP served at ${LIVE_SITE} match this repository at the commit shown in the footer, with the hashes you compared.
-   - Findings & Risks: Any data leaks, persistent storage artifacts, third-party requests, or missing browser-level safeguards (e.g., a CSP connect-src that allows more than the declared analytics endpoint).
+   - Findings & Risks: Any data leaks, persistent storage artifacts, third-party requests, or missing browser-level safeguards (e.g., a CSP connect-src other than 'none', or any third-party script).
    - Hardening Recommendations: Concrete code or configuration changes to mathematically/technically guarantee zero exfiltration (such as strict CSP headers and memory cleanup).
 `

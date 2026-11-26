@@ -67,9 +67,9 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 
 1. **Photos and card data never leave the device.** Add no network request, upload, telemetry or
    remote API. ESLint bans `fetch`, `XMLHttpRequest`, `WebSocket`, `RTCPeerConnection` and storage
-   APIs outside the service worker; do not disable those rules. The only outside request is the
-   Cloudflare Web Analytics beacon (`src/analytics/`, ADR 0015), on public hosts only. Never add
-   Google Analytics, GTM or any cookie-based tool.
+   APIs outside the service worker; do not disable those rules. No third-party script may run in the
+   page that holds the photos (ADR 0023): `connect-src` is `'none'` and `tests/e2e/third-party.spec.ts`
+   fails otherwise. Never add Google Analytics, GTM or any cookie-based tool.
 2. **Nothing persists.** No cookies, no `localStorage`/`sessionStorage`/IndexedDB, except the
    notice's closing date in `src/ui/notice-memory.ts`. Photos are cleared on `pagehide`.
 3. **Strict CSP, single source.** The policy lives in `scripts/csp.ts`; the e2e test asserts the
@@ -79,8 +79,7 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
    approval.
 4. **Self-hosted assets with integrity.** Every script, style, font, model and WebAssembly file is
    bundled and served from this site, checked by SHA-384 (`scripts/vite-plugins.ts`). No CDNs, no
-   Google Fonts, no runtime downloads from third parties. The only third-party script is the
-   Cloudflare beacon.
+   Google Fonts, no runtime downloads from third parties, no third-party scripts.
 5. **Online first, offline optional.** Every feature works in both modes. When an AI feature cannot
    run (offline before its files are cached, an old browser, a model error), disable it visibly and
    fall back to the manual path. Never show a random error and never block the flow. Large AI
@@ -129,7 +128,7 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 
 | Path | What |
 |---|---|
-| `src/App.svelte`, `src/main.ts` | Screen flow and brand; boot, lockdown, SW registration, analytics loader |
+| `src/App.svelte`, `src/main.ts` | Screen flow and brand; boot, lockdown, SW registration |
 | `src/components/` | One Svelte component per screen or control |
 | `src/capture/` | File input, drag and drop, paste, decoding, live camera, capture coach |
 | `src/detect/` | Corner model, classic edge detection, straightening, document type detection |
