@@ -2,6 +2,7 @@
 import { execFileSync } from 'node:child_process'
 import { defaultClientConditions, defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import tailwindcss from '@tailwindcss/vite'
 import { normalizeSha } from './src/version/build-info.ts'
 import { base64Import, ocrAssets, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
 
@@ -61,5 +62,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [base64Import(), svelte(), securityHeaders(), ocrAssets(), subresourceIntegrity()],
+  plugins: [base64Import(), tailwindcss(), svelte(), securityHeaders(), ocrAssets(), subresourceIntegrity()],
 })

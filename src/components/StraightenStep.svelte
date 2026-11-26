@@ -58,7 +58,7 @@
   })())
 </script>
 
-<section class="step">
+<section class="step flex flex-1 flex-col gap-4 lg:mx-auto lg:w-full lg:max-w-2xl">
   <div>
     <h2>{t(lang, 'straightenTitle')}</h2>
     <p class="lead" role="status" id="straighten-status">{t(lang, 'straightenLead')}</p>

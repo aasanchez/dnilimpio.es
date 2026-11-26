@@ -5,7 +5,8 @@
   import { t, type Lang } from '../i18n/index.ts'
   import { AUDIT_PROMPT } from '../security/audit-prompt.ts'
 
-  const { lang, id }: { lang: Lang; id: string } = $props()
+  /** `extra`: classes for where the link sits. */
+  const { lang, id, extra = '' }: { lang: Lang; id: string; extra?: string } = $props()
 
   let dialog: HTMLDialogElement | undefined = $state()
   let text: HTMLTextAreaElement | undefined = $state()
@@ -32,16 +33,16 @@
   }
 </script>
 
-<button type="button" class="link-btn" {id} onclick={open}>{t(lang, 'auditOpen')} <span class="flip" aria-hidden="true">→</span></button>
+<button type="button" class="link-btn {extra}" {id} onclick={open}>{t(lang, 'auditOpen')} <span class="flip" aria-hidden="true">→</span></button>
 
-<dialog class="audit" bind:this={dialog} aria-labelledby="{id}-title">
+<dialog class="audit dialog-win" bind:this={dialog} aria-labelledby="{id}-title">
   <div class="winbar"><i></i><i></i><i></i><span class="title">audit.prompt</span></div>
-  <div class="audit-body">
+  <div class="flex flex-col gap-2.5 p-4 text-start font-sans text-base leading-normal">
     <p class="kicker">{t(lang, 'auditKicker')}</p>
     <h2 id="{id}-title">{t(lang, 'auditTitle')}</h2>
-    <p class="audit-lead">{t(lang, 'auditLead')}</p>
-    <textarea bind:this={text} class="audit-text" readonly rows="10" dir="ltr" lang="en" aria-label={t(lang, 'auditTitle')}>{AUDIT_PROMPT}</textarea>
-    <p class="audit-status" role="status">{copied === 'done' ? t(lang, 'auditCopied') : copied === 'failed' ? t(lang, 'auditCopyFailed') : ''}</p>
+    <p class="text-sm text-muted">{t(lang, 'auditLead')}</p>
+    <textarea bind:this={text} class="min-h-48 w-full resize-y rounded-md border-0 bg-term-bg p-3 [font-family:'JetBrains_Mono',ui-monospace,monospace] text-xs leading-normal text-term-fg" readonly rows="10" dir="ltr" lang="en" aria-label={t(lang, 'auditTitle')}>{AUDIT_PROMPT}</textarea>
+    <p class="text-sm text-muted empty:hidden" role="status">{copied === 'done' ? t(lang, 'auditCopied') : copied === 'failed' ? t(lang, 'auditCopyFailed') : ''}</p>
     <div class="row">
       <button type="button" class="button" id="{id}-close" onclick={() => { dialog?.close() }}>{t(lang, 'auditClose')}</button>
       <button type="button" class="button primary" id="{id}-copy" bind:this={copyBtn} onclick={copy}>{t(lang, 'auditCopy')}</button>

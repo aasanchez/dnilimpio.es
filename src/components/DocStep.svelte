@@ -76,19 +76,19 @@
   })
 </script>
 
-<section class="step">
+<section class="step flex flex-1 flex-col gap-4 lg:mx-auto lg:w-full lg:max-w-2xl">
   <div>
     <h2 id="doc-title">{t(lang, 'docTitle')}</h2>
     <p class="lead">{t(lang, 'docLead')}</p>
   </div>
 
-  <p class="hint" class:busy={auto.s === 'reading'} id="detect-status" role="status" data-state={auto.s}>{message}</p>
+  <p class="hint empty:hidden [&.busy]:before:content-['◌_']" class:busy={auto.s === 'reading'} id="detect-status" role="status" data-state={auto.s}>{message}</p>
 
-  <ul class="fields doc-list" role="radiogroup" aria-labelledby="doc-title">
+  <ul class="rows" role="radiogroup" aria-labelledby="doc-title">
     {#each DOCUMENTS as d (d.model)}
       <li>
         <label class="toggle">
-          <span class="doc-shape" aria-hidden="true"></span>
+          <span class="h-6.75 w-10.5 flex-none rounded-sm border-[1.5px] border-ink bg-sunk" aria-hidden="true"></span>
           <span class="toggle-text">
             <span class="toggle-label">{t(lang, `doc_${d.model}`)}</span>
             <span class="toggle-note">{t(lang, `docHint_${d.model}`)}</span>

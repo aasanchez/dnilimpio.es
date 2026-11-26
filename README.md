@@ -479,7 +479,7 @@ pnpm dev                                     # http://localhost:5173 (no CSP in 
 | `pnpm verify` | Type check, lint, unit tests, build and end-to-end tests, as CI runs them |
 
 **Stack.** [Svelte 5](https://svelte.dev) with runes for the interface, Vite, strict TypeScript,
-native CSS and the Canvas API ([ADR 0003](docs/adr/0003-svelte-vite-pnpm.md)). Image, geometry,
+Tailwind CSS v4 (build time only, [ADR 0017](docs/adr/0017-tailwind-css.md)) and the Canvas API ([ADR 0003](docs/adr/0003-svelte-vite-pnpm.md)). Image, geometry,
 redaction and PDF logic are plain TypeScript modules that do not depend on Svelte.
 
 Runtime dependencies, all bundled and served from this site:
@@ -725,6 +725,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0014](docs/adr/0014-card-guide.md): card guide; every element explained with official citations, nothing guessed.
 - [0015](docs/adr/0015-cookieless-analytics.md): cookieless visit counts with Cloudflare Web Analytics, on the public site only.
 - [0016](docs/adr/0016-source-maps-in-devtools.md): source maps readable in the developer tools (`connect-src 'self'`); the service worker serves only this build's maps, checked by hash.
+- [0017](docs/adr/0017-tailwind-css.md): styles with Tailwind CSS v4, compiled at build time; two-column layout on wide screens.
 
 ## Contributing
 
