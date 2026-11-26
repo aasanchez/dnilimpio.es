@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Live camera for the capture coach. The stream stays in this tab: frames are drawn to canvases
-// in memory and never sent anywhere (connect-src 'none' would block it anyway).
+// in memory and never sent anywhere.
 // Every failure is reported as a reason, never thrown, so the UI can fall back to the plain
 // camera and gallery buttons without an error screen.
 

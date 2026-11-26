@@ -13,6 +13,11 @@ export interface PrecacheManifest {
   readonly files: readonly PrecacheFile[]
   /** Saved on first use only (large optional parts: OCR, corner model), still checked against their hash. */
   readonly onDemand: readonly PrecacheFile[]
+  /**
+   * Source maps of the files above (ADR 0016): fetched from the network for DevTools when asked,
+   * checked against their hash, never cached. Absent: the worker refuses every .map request.
+   */
+  readonly sourceMaps?: readonly PrecacheFile[]
   /** Absent: the worker lets nothing through to another origin. */
   readonly analytics?: AnalyticsUrls
 }
@@ -33,19 +38,31 @@ export function isPrecached (path: string): boolean {
   return path !== SW_FILE && !path.endsWith('.map') && !path.startsWith('.')
 }
 
+/** A published source map (ADR 0016): `<file>.map`, next to the file it describes. */
+export const isSourceMap = (path: string): boolean => path.endsWith('.map') && !path.startsWith('.') && path !== `${SW_FILE}.map`
+
 /** Cached on first use instead of at install. */
 export const isOnDemand = (path: string): boolean => path.startsWith(ON_DEMAND_DIR) || path.startsWith(MODEL_DIR)
 
 /** Parses and checks the manifest the build inlines into the worker. Throws on anything unexpected. */
 export function parseManifest (json: string): PrecacheManifest {
-  const m = JSON.parse(json) as { version?: unknown; files?: unknown; onDemand?: unknown; analytics?: unknown }
+  const m = JSON.parse(json) as { version?: unknown; files?: unknown; onDemand?: unknown; sourceMaps?: unknown; analytics?: unknown }
   if (typeof m.version !== 'string' || !/^[0-9a-f]{16,}$/.test(m.version)) throw new Error('Bad precache version')
   if (!Array.isArray(m.files) || m.files.length === 0) throw new Error('Empty precache manifest')
   const files = checkFiles(m.files as unknown[])
   const onDemand = checkFiles(Array.isArray(m.onDemand) ? m.onDemand as unknown[] : [])
   if (files.some((f) => isOnDemand(f.path)) || onDemand.some((f) => !isOnDemand(f.path))) throw new Error('Bad precache path')
-  if (m.analytics === undefined) return { version: m.version, files, onDemand }
-  return { version: m.version, files, onDemand, analytics: checkAnalytics(m.analytics) }
+  const out: PrecacheManifest = { version: m.version, files, onDemand }
+  if (m.sourceMaps !== undefined) {
+    if (!Array.isArray(m.sourceMaps)) throw new Error('Bad source map list')
+    // Only the map of a file of this build: `<path>.map` for a listed path.
+    const described = new Set([...files, ...onDemand].map((f) => `${f.path}.map`))
+    const sourceMaps = checkFiles(m.sourceMaps as unknown[], isSourceMap)
+    if (sourceMaps.some((f) => !described.has(f.path))) throw new Error('Bad source map path')
+    Object.assign(out, { sourceMaps })
+  }
+  if (m.analytics !== undefined) Object.assign(out, { analytics: checkAnalytics(m.analytics) })
+  return out
 }
 
 /** Two plain https addresses: no query string, no fragment, no credentials. */
@@ -64,10 +81,10 @@ function checkAnalytics (a: unknown): AnalyticsUrls {
   return { script, endpoint }
 }
 
-function checkFiles (list: unknown[]): PrecacheFile[] {
+function checkFiles (list: unknown[], allowed: (path: string) => boolean = isPrecached): PrecacheFile[] {
   return list.map((f): PrecacheFile => {
     const { path, integrity } = (f ?? {}) as { path?: unknown; integrity?: unknown }
-    if (typeof path !== 'string' || !isPrecached(path) || path.startsWith('/') || path.includes('..')) throw new Error('Bad precache path')
+    if (typeof path !== 'string' || !allowed(path) || path.startsWith('/') || path.includes('..')) throw new Error('Bad precache path')
     if (typeof integrity !== 'string' || !/^sha384-[A-Za-z0-9+/]{64}$/.test(integrity)) throw new Error('Bad precache integrity')
     return { path, integrity }
   })
@@ -102,6 +119,11 @@ export type Route =
   /** A file of this build that is saved on first use (OCR, corner model). */
   | { readonly kind: 'on-demand'; readonly url: string }
   /**
+   * The source map of a file of this build (ADR 0016), for the browser's developer tools: fetched
+   * from the network with its hash, never cached. A query string or any other .map is refused.
+   */
+  | { readonly kind: 'source-map'; readonly url: string }
+  /**
    * Cloudflare's analytics beacon and its page-view report (ADR 0015): left to the browser, which
    * sends it to the network as usual (and fails quietly offline). Nothing else is.
    */
@@ -114,6 +136,8 @@ export interface KnownFiles {
   readonly files: ReadonlySet<string>
   /** Absolute URLs of the files saved on first use. */
   readonly onDemand: ReadonlySet<string>
+  /** Absolute URLs of the published source maps (ADR 0016). */
+  readonly sourceMaps?: ReadonlySet<string> | undefined
   /** The analytics beacon and its report address, left to the network (ADR 0015). */
   readonly analytics?: AnalyticsUrls | undefined
 }
@@ -132,6 +156,7 @@ export function route (method: string, url: string, mode: string, scope: string,
   if (mode === 'navigate') return { kind: 'index' }
   if (known.files.has(key)) return { kind: 'file', url: key }
   if (known.onDemand.has(key)) return { kind: 'on-demand', url: key }
+  if (known.sourceMaps?.has(key) === true) return { kind: 'source-map', url: key }
   return { kind: 'deny' }
 }
 

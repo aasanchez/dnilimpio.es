@@ -87,6 +87,37 @@ test('the worker refuses every request that is not a file of this build (deny by
   await expect(page.locator('h1')).toBeVisible()
 })
 
+test('the worker serves this build\'s source maps for the developer tools, never caches them, and refuses any other .map', async ({ page, context }) => {
+  // DevTools load source maps under the page's connect-src (ADR 0016); a page fetch() is the same check.
+  const leaked: string[] = []
+  await context.route(/leak|secret|evil/, async (route) => { leaked.push(route.request().url()); await route.fulfill({ status: 200, body: '' }) })
+  const violations: string[] = []
+  page.on('console', (m) => { if (/Content Security Policy|Trusted Type/i.test(m.text())) violations.push(m.text()) })
+  await page.goto('/')
+  await offlineReady(page)
+  const results = await page.evaluate(async () => {
+    const main = document.querySelector<HTMLScriptElement>('script[type=module][src]')?.src ?? ''
+    const get = async (url: string): Promise<string> => {
+      try {
+        const res = await fetch(url)
+        if (!res.ok) return `status ${String(res.status)}`
+        const map = await res.json() as { sources?: string[] }
+        return map.sources?.some((s) => s.includes('src/')) === true ? 'map' : 'other'
+      } catch { return 'blocked' }
+    }
+    return [
+      await get(`${main}.map`),
+      await get(`${main}.map?dni=12345678Z`),
+      await get('assets/secret-12345678Z.js.map'),
+      await get('leak?dni=12345678Z'),
+    ]
+  })
+  expect(results).toEqual(['map', 'blocked', 'blocked', 'blocked'])
+  expect(leaked).toEqual([])
+  expect(violations).toEqual([])
+  expect((await offlineReady(page)).some((p) => p.endsWith('.map'))).toBe(false)
+})
+
 test('page loads from the worker carry the headers Pages cannot send; no page may frame the app', async ({ page, context, baseURL }) => {
   await page.goto('/')
   await offlineReady(page)

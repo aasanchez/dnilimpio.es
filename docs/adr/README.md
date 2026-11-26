@@ -21,3 +21,4 @@ project specification on purpose).
 | [0013](0013-ci-pipeline.md) | CI split into small single-purpose jobs in logical stages; one required check | accepted |
 | [0014](0014-card-guide.md) | Card guide: every element explained with official citations; no source, no claim | accepted |
 | [0015](0015-cookieless-analytics.md) | Cookieless visit counts with Cloudflare Web Analytics, public site only | accepted |
+| [0016](0016-source-maps-in-devtools.md) | Source maps readable in the developer tools: `connect-src 'self'`; the service worker serves only this build's maps | accepted |

@@ -28,7 +28,7 @@ describe('shouldLoadAnalytics', () => {
 describe('Cloudflare addresses', () => {
   it('are the only third-party entries in the CSP, by exact script path and one connect origin', () => {
     expect(CSP_DIRECTIVES).toContain(`script-src 'self' 'wasm-unsafe-eval' ${BEACON_SCRIPT}`)
-    expect(CSP_DIRECTIVES).toContain(`connect-src ${BEACON_ORIGIN}`)
+    expect(CSP_DIRECTIVES).toContain(`connect-src 'self' ${BEACON_ORIGIN}`)
     const thirdParty = CSP_DIRECTIVES.flatMap((d) => d.split(' ')).filter((t) => t.startsWith('https:') || t.startsWith('http:'))
     expect(thirdParty.sort()).toEqual([BEACON_ORIGIN, BEACON_SCRIPT].sort())
   })

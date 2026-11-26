@@ -8,8 +8,9 @@
 // 1.27.0 (MIT) with scanic-ml's minimal WebAssembly build, which holds only this model's operators.
 //
 // Privacy: the photo is scaled to 224 × 224 in memory and given to WebAssembly in this page. Nothing
-// is sent anywhere; the CSP blocks every connection (connect-src 'none'). The model and runtime arrive
-// as script modules checked by the import map's integrity hashes, because fetch() is blocked too.
+// is sent anywhere: the app never calls fetch(), and the service worker refuses every request that is
+// not a file of this build. The model and runtime arrive as script modules checked by the import
+// map's integrity hashes.
 
 import * as ort from 'onnxruntime-web/wasm'
 import loaderUrl from 'scanic-ml/dist/ort-wasm-simd-threaded.mjs?url'

@@ -8,8 +8,9 @@
 //   loads inside its scope, with the cached index.html. On-demand files (ocr/, assets/ml/) are
 //   downloaded with their integrity on first use (or when the page asks with a 'prepare' message) and
 //   then kept. Every other request from the page or its workers (OCR) is refused and never reaches the
-//   network: another origin, another path, a query string, a method other than GET (route()). The one
-//   exception is Cloudflare's analytics beacon and its page-view report (ADR 0015), left to the network.
+//   network: another origin, another path, a query string, a method other than GET (route()). The
+//   exceptions are Cloudflare's analytics beacon and its page-view report (ADR 0015), left to the
+//   network, and the build's own source maps (ADR 0016), fetched with their hash and never cached.
 // - Activate: deletes the caches of older builds. A new build activates once no tab runs the old
 //   one, or earlier when the app's only tab is idle and asks for it ('activate' message), so no open
 //   page loses files it still needs.
@@ -26,7 +27,8 @@ const INDEX = new URL('index.html', sw.location.href).href
 const urlOf = (path: string): string => new URL(path, sw.location.href).href
 const ON_DEMAND = new Map(manifest.onDemand.map((f) => [urlOf(f.path), f.integrity]))
 const FILES = new Map(manifest.files.map((f) => [urlOf(f.path), f.integrity]))
-const KNOWN = { files: new Set(FILES.keys()), onDemand: new Set(ON_DEMAND.keys()), analytics: manifest.analytics }
+const SOURCE_MAPS = new Map((manifest.sourceMaps ?? []).map((f) => [urlOf(f.path), f.integrity]))
+const KNOWN = { files: new Set(FILES.keys()), onDemand: new Set(ON_DEMAND.keys()), sourceMaps: new Set(SOURCE_MAPS.keys()), analytics: manifest.analytics }
 const WORKERS = new Set(WORKER_SCRIPTS.map(urlOf))
 
 /**
@@ -165,6 +167,9 @@ sw.addEventListener('fetch', (event) => {
         return Response.error()
       case 'on-demand':
         return withWorkerCsp(to.url, await ensureOnDemand(to.url))
+      case 'source-map':
+        // For the developer tools (ADR 0016). Not cached: offline the map is simply unavailable.
+        return await fetch(to.url, { integrity: SOURCE_MAPS.get(to.url) ?? '', cache: 'no-store', credentials: 'omit' })
       case 'index':
       case 'file': {
         const url = to.kind === 'index' ? INDEX : to.url

@@ -16,8 +16,12 @@ export const CSP_DIRECTIVES: readonly string[] = [
   "font-src 'self'",
   "manifest-src 'self'",
   "worker-src 'self'",
-  // The page can send nothing except the beacon's anonymous page-view report to Cloudflare (ADR 0015).
-  `connect-src ${BEACON_ORIGIN}`,
+  // The page can send nothing to another origin except the beacon's anonymous page-view report to
+  // Cloudflare (ADR 0015). 'self' is there so the browser's developer tools can load the published
+  // source maps, which they fetch under the page's connect-src (ADR 0016). The app itself fetches
+  // nothing; once the service worker controls the page, it refuses every same-origin request that is
+  // not a file or source map of this build.
+  `connect-src 'self' ${BEACON_ORIGIN}`,
   "form-action 'none'",
   "base-uri 'none'",
   "object-src 'none'",

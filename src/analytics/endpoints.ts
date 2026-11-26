@@ -5,7 +5,7 @@
 /** The beacon script, loaded from Cloudflare. Allowed by exact path in script-src and Trusted Types. */
 export const BEACON_SCRIPT = 'https://static.cloudflareinsights.com/beacon.min.js'
 
-/** Where the beacon reports page views. The only origin in connect-src. */
+/** Where the beacon reports page views. The only other origin in connect-src, next to 'self' (ADR 0016). */
 export const BEACON_ORIGIN = 'https://cloudflareinsights.com'
 export const BEACON_ENDPOINT = `${BEACON_ORIGIN}/cdn-cgi/rum`
 
