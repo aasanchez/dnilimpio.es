@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Issue form for translation fixes and new languages. Guide: CONTRIBUTING.md, "Help with translations".
+name: Translation
+description: Report a wrong translation or offer a new language.
+title: "i18n: "
+labels: ["translation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping with the translations. You can also fix the text yourself in a pull request: see [Help with translations](https://github.com/aasanchez/dnilimpio.es/blob/master/CONTRIBUTING.md#help-with-translations).
+        Brand names "DNI Tapado.es" and "NagWara" are never translated. Card guide texts must stay faithful to the cited official sources.
+        Do not attach a photo of a real identity document. Screenshots made with the synthetic test images are fine.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is this about?
+      options:
+        - A wrong or unnatural translation
+        - A new language
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - Arabic (ar)
+        - Basque (eu)
+        - Catalan (ca)
+        - Dutch (nl)
+        - English (en)
+        - Finnish (fi)
+        - French (fr)
+        - Galician (gl)
+        - Romanian (ro)
+        - Spanish (es)
+        - Swedish (sv)
+        - Ukrainian (uk)
+        - Valencian (ca-ES-valencia)
+        - Another language (write it below)
+    validations:
+      required: true
+  - type: dropdown
+    id: part
+    attributes:
+      label: Where does the text appear?
+      options:
+        - App interface
+        - Card guide
+        - Both, or not sure
+  - type: textarea
+    id: current
+    attributes:
+      label: Current text
+      description: Copy the text as the app shows it, and say on which screen. If you know the key in the JSON file, add it.
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed text
+      description: Your correction, or for a new language, the language name and its BCP 47 tag (for example "Português, pt").
+    validations:
+      required: true
+  - type: checkboxes
+    id: speaker
+    attributes:
+      label: About you
+      options:
+        - label: I am a native or fluent speaker of this language.
+        - label: I can open a pull request myself.
