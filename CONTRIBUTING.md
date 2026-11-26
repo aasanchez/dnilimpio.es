@@ -108,8 +108,9 @@ promise. CI tests these rules, and a review rejects changes that break them.
 **Privacy**
 
 - No network requests at runtime, and no third-party script in the page that holds the photos
-  ([ADR 0023](docs/adr/0023-no-third-party-script-with-photos.md)). Do not add analytics, fonts,
-  scripts or images from other servers.
+  ([ADR 0023](docs/adr/0023-no-third-party-script-with-photos.md)). The only exception is the
+  sandboxed visit counter frame on another site ([ADR 0024](docs/adr/0024-visit-counter-in-isolated-frame.md)).
+  Do not add analytics, fonts, scripts or images from other servers.
 - No new persistent storage: no cookies, no `localStorage` keys, no IndexedDB. The only stored value
   is the date the privacy notice was closed (`src/ui/notice-memory.ts`).
 - Photos stay in memory and never leave the page.

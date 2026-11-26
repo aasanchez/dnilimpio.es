@@ -34,13 +34,13 @@ Options considered:
   terminate TLS and could change any file it serves, and GitHub's certificate renewal fails behind
   the proxy. Left for later, as an infrastructure decision.
 - **A counter in a cross-origin, sandboxed frame.** The browser's same-origin policy keeps the frame
-  out of the app's DOM and canvas. The owner chose this to keep basic visit counts. It comes in a
-  separate change with its own ADR, because it needs a second site and a `frame-src` rule.
+  out of the app's DOM and canvas. The owner chose this to keep basic visit counts
+  ([ADR 0024](0024-visit-counter-in-isolated-frame.md)).
 
 ## Decision
 
 - **No third-party script runs in the page that holds the photos.** The beacon, its loader
-  (`src/analytics/`) and its constants are removed.
+  (`src/analytics/cloudflare.ts`) and its constants (`src/analytics/endpoints.ts`) are removed.
 - **CSP:** `script-src 'self' 'wasm-unsafe-eval'` (plus the import map's hash) and
   `connect-src 'none'`. Every other directive is unchanged. The OCR worker keeps its own CSP
   (`workerCsp()` in `src/offline/precache.ts`).
@@ -58,8 +58,9 @@ Options considered:
 
 ## Consequences
 
-- There are no visit counts until the cross-origin counter is added.
-- The page can send nothing to anyone. The only requests are the site's own files.
-- The notice, the README and the AI audit prompt no longer describe an analytics exception.
+- Visit counts come only from the isolated frame of [ADR 0024](0024-visit-counter-in-isolated-frame.md).
+- The page can send nothing to anyone. Its only requests are the site's own files.
+- The README and the AI audit prompt no longer describe an analytics exception in the app's page;
+  they describe the counter frame of ADR 0024 instead.
 - Adding any third-party script to the page again needs a new ADR and the owner's approval, and it
   breaks `tests/e2e/third-party.spec.ts`.

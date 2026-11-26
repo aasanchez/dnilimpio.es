@@ -217,8 +217,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 
 **In short.** Your document never leaves your device. Detection, text recognition (OCR), redaction,
 the watermark and the PDF all run in your browser. The site sends no photo, file name or data read
-from the card to any server. It uses no cookies, trackers, analytics or third-party scripts. It
-downloads only its own files; once they are on your device you can go offline. The PDF leaves the
+from the card to any server. It uses no cookies, trackers or profiles, and no third-party script
+runs in the page that holds your photos. The public site counts visits with a sandboxed frame from
+another site (see [Visit counts](#visit-counts)). Apart from that, the page downloads only its own files; once they are on your device you can go offline. The PDF leaves the
 app only when you download or share it. An external security and privacy audit (25 November 2026)
 reviewed this; its findings are fixed and covered by tests (see [Security reviews](#security-reviews)).
 
@@ -231,7 +232,8 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   cannot send a request to any address. There is no `'self'`: page code cannot send a request to the site's own origin either, even before
   the service worker is in place ([ADR 0022](docs/adr/0022-no-published-source-maps.md)). The app
   itself never calls `fetch()`.
-  It loads scripts, styles, fonts and images only from its own origin. `form-action`, `base-uri` and `object-src` are `'none'`. WebRTC, which no
+  It loads scripts, styles, fonts and images only from its own origin, and one frame, the visit
+  counter, from its exact address (`frame-src`). `form-action`, `base-uri` and `object-src` are `'none'`. WebRTC, which no
   CSP rule covers, is removed before any code runs.
 - **Deny by default.** After the first visit, the service worker answers only the exact files of this
   build. Any other request from the page or its workers (another address, a query string, another
@@ -281,10 +283,10 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **Camera stays on the device.** The live camera (capture coach) is analysed frame by frame in
   memory. No frame is stored or sent, and the camera turns off when you close the view, finish both
   sides or leave the tab.
-- **No tracking and no third-party scripts.** No cookies, profiles, analytics, telemetry or external
-  fonts. Only this site's own scripts run in the page that holds the photos
+- **No tracking and no third-party scripts beside your photos.** No cookies, profiles, telemetry or
+  external fonts. Only this site's own scripts run in the page that holds the photos
   ([ADR 0023](docs/adr/0023-no-third-party-script-with-photos.md)); a test fails if any other script
-  runs there. Fonts and icons are self-hosted or inline.
+  runs there. Visits are counted in an isolated frame, described below. Fonts and icons are self-hosted or inline.
 - **No framing.** Inside another site's frame the app does not start; it only offers to open itself
   in its own tab. Page loads answered by the service worker also carry the headers GitHub Pages
   cannot send: `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`,
@@ -335,6 +337,26 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **A watermark discourages reuse but cannot prevent identity fraud.**
 - **Greyscale is not a security measure.**
 
+### Visit counts
+
+The public site counts visits with [Cloudflare Web Analytics](https://www.cloudflare.com/web-analytics/),
+but never in the page that holds your photos
+([ADR 0024](docs/adr/0024-visit-counter-in-isolated-frame.md)).
+
+- **Where it runs.** The start screen embeds a hidden frame from another site,
+  <https://aasanchez.github.io/dnitapado-stats/> ([source](https://github.com/aasanchez/dnitapado-stats)).
+  That blank page loads Cloudflare's script. The frame is sandboxed (`allow-scripts` only), so the
+  browser keeps it out of the app's page: it cannot read the photos, the page or the canvas.
+- **What it gets.** Nothing from the app: no query string, no referrer, no message. Cloudflare sees
+  the counter page's address, load timings, the browser and your IP address, from which it derives a
+  country. No cookies and no storage.
+- **When.** Once per page load, on the start screen, before you choose a photo. Pressing **Start**
+  removes it, and it does not come back in that page load. It is not shown offline, on other hosts
+  (local builds, tests, forks), or when your browser sends Global Privacy Control or Do Not Track.
+- **Tests.** [`tests/e2e/third-party.spec.ts`](tests/e2e/third-party.spec.ts) runs a hostile script
+  inside the frame and checks that it reads nothing from the app, and that no frame exists while a
+  photo is loaded.
+
 ### Security reviews
 
 An external static review of the source (25 November 2026) found no upload or storage of documents
@@ -360,7 +382,8 @@ The same day, an audit showed that the Cloudflare Web Analytics beacon, which ra
 the photos without an SRI hash, could be replaced by a script that read the unredacted preview and
 sent it to Cloudflare's report address. The beacon is removed, `connect-src` is `'none'`, and a test
 fails if any third-party script runs in that page
-([ADR 0023](docs/adr/0023-no-third-party-script-with-photos.md)).
+([ADR 0023](docs/adr/0023-no-third-party-script-with-photos.md)). Visits are now counted from an
+isolated frame on another site ([ADR 0024](docs/adr/0024-visit-counter-in-isolated-frame.md)).
 
 Headers that need a server for every response (HSTS, Permissions-Policy, COOP) cannot be set on
 GitHub Pages; `github.io` is on the HSTS preload list.
@@ -373,7 +396,9 @@ You do not have to trust the claims above. Each one can be checked.
 
 1. Open the browser's developer tools, **Network** tab, before you select a photo.
 2. Use the tool to the end. The only requests are the page's own files, all from the same origin.
-   The first time you
+   On the public site the start screen also loads the counter frame
+   (`aasanchez.github.io/dnitapado-stats/`), which then loads Cloudflare's script and sends one
+   report; these come from the frame, not from the app's page. The first time you
    select a photo, the page also downloads the corner model (`assets/ml/`), and the first time OCR
    runs, the OCR files (`ocr/`), both from the same origin. These are plain downloads of the app's
    files and carry nothing from you.
@@ -391,7 +416,7 @@ hashes differ from the deployed build.
 **With an AI coding agent.** **Check it with your AI** on the start screen (in the footer and in the
 no-cookies notice) opens a ready-made audit prompt to copy into an AI coding agent. It asks for a
 deep review of this repository's privacy claim: image lifecycle, every network primitive, third-party
-scripts, dependencies, CSP, the service worker and reproducibility, with a
+scripts and the counter frame, dependencies, CSP, the service worker and reproducibility, with a
 YES/NO verdict and file and line references. It also asks the agent to check the live site at
 <https://dnitapado.es/>: its headers, its CSP against [`scripts/csp.ts`](scripts/csp.ts), the hash of
 every file it serves, and a rebuild of the commit shown in the footer. Copying uses the clipboard
@@ -461,7 +486,8 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | Offline mode with a verified service worker; automatic update of idle tabs | Done |
 | Installable app: manifest, maskable and Apple icons, install link and iOS steps | Done |
 | No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
-| No third-party script in the page with photos (Cloudflare Web Analytics removed, ADR 0023) | Done |
+| No third-party script in the page with photos (ADR 0023) | Done |
+| Visit counts from a sandboxed frame on another site (ADR 0024) | Done |
 | Custom domain `dnitapado.es`, HTTPS enforced | Done |
 | Languages: 31 in the specification | 13 today |
 
@@ -514,7 +540,8 @@ Runtime dependencies, all bundled and served from this site:
 - No `eval`, `new Function`, inline scripts or inline styles. WebAssembly is allowed only for the
   corner model's runtime and the OCR engine.
 - No runtime requests, no third-party scripts and no persistent storage, except the notice's closing
-  date (`src/ui/notice-memory.ts`).
+  date (`src/ui/notice-memory.ts`). The visit counter runs in a sandboxed frame on another site
+  (`src/analytics/stats-frame.ts`).
 - Links that leave the app open in a new tab, because leaving the page clears the photos.
 - Test images are synthetic or official specimens. Never commit a photo of a real person's document.
 
@@ -532,7 +559,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
 | Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, manual box maths, every masked pixel opaque black |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages, images, no metadata, no text, deterministic output |
-| Platform | `precache`, `lockdown`, `build-info`, `i18n`, `guide`, `deps-report` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, version and relative time, translation keys, guide citations, dependency report |
+| Platform | `precache`, `lockdown`, `stats-frame`, `build-info`, `i18n`, `guide`, `deps-report` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, counter frame hosts, sandbox and CSP, version and relative time, translation keys, guide citations, dependency report |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP):
 
@@ -541,7 +568,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `privacy` | A whole workflow with fictional card values sends no request and stores nothing |
 | `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused, photos dropped on `pagehide` |
 | `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers, a tampered file stops the install, corner model cached after first use |
-| `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview |
+| `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; the counter frame is cross-site, sandboxed, given nothing, gone before any photo, not shown offline, under GPC or DNT, or on other hosts |
 | `update` | An idle single tab switches to a new build; a tab with photos, or a second tab, holds it back |
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks |
 | `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, offline note |
@@ -700,6 +727,7 @@ src/
   sw.ts              service worker: verified offline cache, deny by default, page headers
   App.svelte         screen flow, brand, clearing on pagehide
   components/        Svelte components, one per screen or control (start screen, notice, audit prompt, footer, editor, review…)
+  analytics/         visit counter frame: address, sandbox, host rules
   capture/           file input, drag and drop, paste, decoding, live camera and capture coach
   geometry/          homography, perspective warp, corner editing (pure TypeScript)
   detect/            corner finding (on-device model, classic edge detection, edge snapping), upright check,
@@ -748,6 +776,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0021](docs/adr/0021-one-dni-choice.md): one "DNI" choice; the version is detected, the DNI 4.0 is the fallback, and the editor has an Older DNI (3.0) switch.
 - [0022](docs/adr/0022-no-published-source-maps.md): no published source maps and no `'self'` in `connect-src`, so page code cannot send requests to its own origin (review finding PRIV-003).
 - [0023](docs/adr/0023-no-third-party-script-with-photos.md): no third-party script in the page that holds the photos; the Cloudflare beacon is removed and `connect-src` is `'none'`.
+- [0024](docs/adr/0024-visit-counter-in-isolated-frame.md): visit counts from a sandboxed frame on another site, on the start screen only.
 
 ## Contributing
 
