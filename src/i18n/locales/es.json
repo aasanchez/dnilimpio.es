@@ -202,5 +202,7 @@
   "findOffline": "La búsqueda automática necesita una descarga única y no tienes conexión. Tapa los datos a mano.",
   "findUnsupported": "La búsqueda automática no está disponible en este navegador. Tapa los datos a mano.",
   "findFailed": "La búsqueda automática no ha funcionado esta vez. Tapa los datos a mano.",
-  "framed": "Por seguridad, esta herramienta solo funciona en su propia pestaña. Ábrela aquí."
+  "framed": "Por seguridad, esta herramienta solo funciona en su propia pestaña. Ábrela aquí.",
+  "guideOpen": "¿Qué hay en mi tarjeta?",
+  "guideAbout": "Qué es: {field}"
 }

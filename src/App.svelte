@@ -6,7 +6,7 @@
   import { tick } from 'svelte'
   import { dir, pickLang, t, type Key, type Lang } from './i18n/index.ts'
   import { emptyAlignState, resetSide } from './ui/align-state.ts'
-  import type { DocModel, Side } from './zones/types.ts'
+  import type { DocModel, Side, ZoneId } from './zones/types.ts'
   import { DEFAULT_DOC, documentOf, pixelSize } from './zones/documents.ts'
   import LanguageSelect from './components/LanguageSelect.svelte'
   import Home from './components/Home.svelte'
@@ -20,6 +20,7 @@
   import { noticeDue, rememberNoticeClosed } from './ui/notice-memory.ts'
   import { setAppIdle } from './offline/update.ts'
   import Editor from './components/Editor.svelte'
+  import type CardGuideT from './components/CardGuide.svelte'
   import { emptyEditState, type Phase } from './ui/edit-state.ts'
 
   type Step = 'home' | 'doc' | 'capture' | 'auto' | 'align' | 'edit'
@@ -51,6 +52,20 @@
   // Field choices, watermark and greyscale survive going back to adjust corners; Reset clears them.
   let edit = $state(emptyEditState(documentOf(DEFAULT_DOC)))
   let root: HTMLElement | undefined = $state()
+  let guide: { show: (model?: DocModel, field?: ZoneId) => Promise<void> } | undefined = $state()
+  /**
+   * The card guide is its own chunk, loaded the first time it opens (it is precached for offline use
+   * like the rest of the build), so the start page does not carry it.
+   */
+  let CardGuide = $state<typeof CardGuideT | null>(null)
+
+  async function openGuide (model?: DocModel, field?: ZoneId): Promise<void> {
+    if (!CardGuide) {
+      CardGuide = (await import('./components/CardGuide.svelte')).default
+      await tick()
+    }
+    await guide?.show(model, field)
+  }
   /** The no-cookies notice: shown on the start screen at most once every 4 days (see notice-memory.ts). */
   let notice = $state(noticeDue())
   const alignBitmap = $derived(capture[alignSide])
@@ -210,7 +225,8 @@
       {/key}
     {:else if step === 'edit' && align.warped.front && align.warped.back}
       {#key docModel}
-        <Editor {lang} {doc} {align} {edit} bind:phase onAdjust={(side: Side) => { go('align', side) }} onReset={reset} onPhase={focusHeading} />
+        <Editor {lang} {doc} {align} {edit} bind:phase onAdjust={(side: Side) => { go('align', side) }} onReset={reset} onPhase={focusHeading}
+          onGuide={(field: ZoneId) => { void openGuide(docModel, field) }} />
       {/key}
     {:else if step === 'auto'}
       <StraightenStep {lang} {doc} {size} photos={capture} {align} onDone={onStraightened} onManual={() => { missed = []; go('align', 'front') }} />
@@ -221,7 +237,8 @@
         <CaptureStep {lang} state={capture} {onLoaded} onContinue={() => { go('doc') }} />
       {/key}
     {:else}
-      <Home {lang} {notice} onNoticeDismiss={() => { notice = false; rememberNoticeClosed() }} onStart={() => { go('capture', 'front') }} />
+      <Home {lang} {notice} onGuide={() => { void openGuide() }} onNoticeDismiss={() => { notice = false; rememberNoticeClosed() }} onStart={() => { go('capture', 'front') }} />
     {/if}
   </div>
+  {#if CardGuide}<CardGuide {lang} id="guide" bind:this={guide} />{/if}
 </div>

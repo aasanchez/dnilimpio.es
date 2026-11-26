@@ -202,5 +202,7 @@
   "findOffline": "Automatisk sökning behöver en engångsnedladdning och du är offline. Dölj uppgifterna för hand.",
   "findUnsupported": "Automatisk sökning är inte tillgänglig i den här webbläsaren. Dölj uppgifterna för hand.",
   "findFailed": "Automatisk sökning fungerade inte den här gången. Dölj uppgifterna för hand.",
-  "framed": "Av säkerhetsskäl fungerar verktyget bara i en egen flik. Öppna det här."
+  "framed": "Av säkerhetsskäl fungerar verktyget bara i en egen flik. Öppna det här.",
+  "guideOpen": "Vad står det på mitt kort?",
+  "guideAbout": "Om: {field}"
 }

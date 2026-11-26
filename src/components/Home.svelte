@@ -7,7 +7,7 @@
   import AuditPrompt from './AuditPrompt.svelte'
   import GitHubMark from './GitHubMark.svelte'
 
-  const { lang, onStart, notice, onNoticeDismiss }: { lang: Lang; onStart: () => void; notice: boolean; onNoticeDismiss: () => void } = $props()
+  const { lang, onStart, notice, onNoticeDismiss, onGuide }: { lang: Lang; onStart: () => void; notice: boolean; onNoticeDismiss: () => void; onGuide: () => void } = $props()
 </script>
 
 <section class="step home">
@@ -17,6 +17,7 @@
     <svg class="squiggle" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true"><path d="M2 6c18-5 34 3 50-1s30-3 46 0" fill="none" stroke="#f36716" stroke-width="3.5" stroke-linecap="round" /></svg>
   </div>
   <p class="lead">{t(lang, 'homeLead')}</p>
+  <button type="button" class="link-btn" id="guide-open" onclick={onGuide}>{t(lang, 'guideOpen')} <span class="flip" aria-hidden="true">→</span></button>
 
   <div class="win" aria-hidden="true">
     <div class="winbar"><i></i><i></i><i></i><span class="title">copia.preview</span></div>

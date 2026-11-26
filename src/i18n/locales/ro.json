@@ -202,5 +202,7 @@
   "findOffline": "Căutarea automată are nevoie de o descărcare unică, iar tu ești offline. Acoperă datele manual.",
   "findUnsupported": "Căutarea automată nu este disponibilă în acest browser. Acoperă datele manual.",
   "findFailed": "Căutarea automată nu a funcționat de data aceasta. Acoperă datele manual.",
-  "framed": "Pentru siguranța ta, acest instrument funcționează doar în propria filă. Deschide-l aici."
+  "framed": "Pentru siguranța ta, acest instrument funcționează doar în propria filă. Deschide-l aici.",
+  "guideOpen": "Ce conține cardul meu?",
+  "guideAbout": "Despre: {field}"
 }

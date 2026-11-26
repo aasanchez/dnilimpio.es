@@ -184,6 +184,12 @@ Positions were measured on official specimens ([method and findings](docs/ZONES.
 photo and the DNI or NIE number stay visible by design; cover them with a black box if needed. Any
 other document can be redacted by hand with black boxes.
 
+**Card guide.** "What is on my card?" on the start screen, and the ⓘ beside each field in the
+editor, open a guide to every element of each card: what it is, how a copy of it can be misused, and
+what the app does with it. Every statement cites the official text that says it (BOE, EUR-Lex, ICAO
+Doc 9303, Policía Nacional, PRADO, AEPD, INCIBE), with links that open in a new tab. When no official
+source was found, the guide says so instead of guessing ([ADR 0014](docs/adr/0014-card-guide.md), [source notes](docs/GUIDE-SOURCES.md)).
+
 The document is detected from the machine-readable lines (MRZ) on the back, and you always confirm
 it ([ADR 0011](docs/adr/0011-document-detection.md)):
 
@@ -537,6 +543,7 @@ src/
   components/        Svelte components, one per screen or control
   capture/           file input, drag and drop, paste, decoding, live camera and capture coach
   geometry/          homography, perspective warp, corner editing (pure TypeScript)
+  guide/             card guide: official sources, cited entries per document, text per language
   zones/             field positions and size per document, from official specimens; documents.ts lists them
   redact/            normalised zones to pixels, opaque fills
   engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
@@ -569,6 +576,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0011](docs/adr/0011-document-detection.md): document type detected from the MRZ, after the photos; it only preselects.
 - [0012](docs/adr/0012-automatic-straightening.md): automatic straightening (find, turn, straighten); the corner screen only on request.
 - [0013](docs/adr/0013-ci-pipeline.md): CI split into small, single-purpose jobs in logical stages, with one required check.
+- [0014](docs/adr/0014-card-guide.md): card guide; every element explained with official citations, nothing guessed.
 
 ## Contributing
 
