@@ -13,6 +13,14 @@ describe('i18n', () => {
       expect(placeholders(t(lang, key))).toEqual(placeholders(es[key]))
     }
   })
+  // Audit item 8: the public wording states only what is exactly true. These absolute claims were
+  // replaced ("the app does not upload your document", "your browser keeps the app's files...").
+  it.each(['es', 'en'] as const)('%s makes no absolute privacy claim', (lang) => {
+    const all = (Object.keys(es) as Key[]).map((k) => t(lang, k)).join('\n')
+    for (const claim of [/never leave/i, /no salen/i, /nothing (is )?stored/i, /no se guarda nada/i, /^0 bytes sent$/m, /^0 bytes enviados$/m, /^no server$/im, /^sin servidor$/im]) {
+      expect(all).not.toMatch(claim)
+    }
+  })
   it('fills placeholders', () => {
     expect(tf('es', 'hiddenCount', { hidden: 3, total: 7 })).toBe('3 de 7')
   })

@@ -3,7 +3,8 @@
      no third-party scripts in the app's page and no personal data, so there is no "accept" step
      (ADR 0023). Visits are counted by a sandboxed frame from another site that sets no cookies
      (ADR 0024; ADR 0015 records the legal reasoning).
-     Closing it stores only the date (src/ui/notice-memory.ts), so it shows at most every 4 days. -->
+     Closing it stores only the date (src/ui/notice-memory.ts), so it shows at most every 4 days.
+     Kept short on purpose: the full list of what is sent and stored is in the README. -->
 <script lang="ts">
   import { t, type Lang } from '../i18n/index.ts'
   import AuditPrompt from './AuditPrompt.svelte'
