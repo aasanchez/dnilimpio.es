@@ -34,3 +34,5 @@ out by the owner's choice.
 ## Consequences
 
 - Adding a document means one zone file, two dictionary keys (`doc_<id>`, `docHint_<id>`) and tests.
+  Since [ADR 0021](0021-one-dni-choice.md) the picker shows choices (`DocChoice`): a new DNI
+  version joins the DNI choice and needs only `doc_<id>`.

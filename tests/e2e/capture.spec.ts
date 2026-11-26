@@ -18,14 +18,14 @@ test('the start screen leads to the photo step, front first, then to the documen
   await expect(page.locator('h2')).toHaveText('¿Qué documento vas a copiar?')
   await expect(page.locator('h2')).toBeFocused()
   await expect(page.locator('.progress [aria-current="step"]')).toContainText('Fotos')
-  // Three documents and no silent default: Continue waits for a choice.
-  await expect(page.locator('input[name="doc"]')).toHaveCount(3)
+  // Two choices (DNI, TIE) and no silent default: Continue waits for a choice.
+  await expect(page.locator('input[name="doc"]')).toHaveCount(2)
   await expect(page.locator('input[name="doc"]:checked')).toHaveCount(0)
   await expect(page.locator('#doc-continue')).toBeDisabled()
   await expect(page.locator('#doc-choose')).toHaveText('Elige el documento para continuar.')
   // No service worker here, so no OCR: detection says so and the manual choice works as before.
   await expect(page.locator('#detect-status')).toHaveText('La detección automática no está disponible en este navegador. Elige el documento.')
-  await page.locator('[id="doc-dni-4.0"]').check()
+  await page.locator('#doc-dni').check()
   await expect(page.locator('#doc-choose')).toHaveCount(0)
   await page.locator('#doc-continue').click()
   // Both photos are straightened by themselves: straight to the editor.

@@ -15,7 +15,8 @@ test('opens from the start screen, cites sources and makes no outside requests',
   const dialog = page.locator('dialog.guide')
   await expect(dialog).toBeVisible()
   await expect(page.locator('#guide-title')).toHaveText('¿Qué hay en tu tarjeta?')
-  await expect(page.locator('#guide-tab-dni-4\\.0')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('#guide-tab-dni')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('#guide-ver-dni-4\\.0')).toHaveAttribute('aria-pressed', 'true')
 
   // Every statement carries a citation; every source link opens in a new tab.
   await page.locator('#guide-mrz summary').click()
@@ -34,6 +35,15 @@ test('opens from the start screen, cites sources and makes no outside requests',
   await expect(page.locator('#guide-nie .guide-cites').first()).toContainText('¿Qué es el NIE?')
   await page.locator('#guide-issuePlace summary').click()
   await expect(page.locator('#guide-issuePlace .guide-none').first()).toHaveText(/Ninguna de las fuentes oficiales/)
+
+  // One DNI tab, with its two versions; the version shown is kept across tabs.
+  await expect(page.locator('#guide-ver-dni-3\\.0')).toHaveCount(0)
+  await page.locator('#guide-tab-dni').click()
+  await page.locator('#guide-ver-dni-3\\.0').click()
+  await expect(page.locator('#guide-ver-dni-3\\.0')).toHaveAttribute('aria-pressed', 'true')
+  await page.locator('#guide-tab-tie').click()
+  await page.locator('#guide-tab-dni').click()
+  await expect(page.locator('#guide-ver-dni-3\\.0')).toHaveAttribute('aria-pressed', 'true')
 
   await page.locator('#guide-close').click()
   await expect(dialog).toBeHidden()

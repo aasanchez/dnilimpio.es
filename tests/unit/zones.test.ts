@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { DNI_4_0, type ZoneId } from '../../src/zones/dni.ts'
 import { activeRects, fillRects, toPixels } from '../../src/redact/zones.ts'
-import { DEFAULT_DOC, DOCUMENTS, documentOf, pixelSize } from '../../src/zones/documents.ts'
+import { CHOICES, DEFAULT_DNI, DEFAULT_DOC, DNI_VERSIONS, DOCUMENTS, choiceOf, documentOf, isDni, pixelSize } from '../../src/zones/documents.ts'
 import type { ModelZones, Rect, Side } from '../../src/zones/types.ts'
 import en from '../../src/i18n/locales/en.json'
 
@@ -74,9 +74,10 @@ describe.each(DOCUMENTS.map((d) => [d.model, d] as const))('%s zone data', (_, d
     const rest = d.zones.filter((z) => z.id !== 'can' && z.side === 'front').flatMap((z) => z.rects)
     for (const c of can) for (const r of rest) expect(overlap(c, r)).toBe(false)
   })
-  it('has a name and a hint in the source dictionary', () => {
+  it('has a name, and its picker option a name and a hint, in the dictionary', () => {
     expect(en).toHaveProperty(`doc_${d.model}`)
-    expect(en).toHaveProperty(`docHint_${d.model}`)
+    expect(en).toHaveProperty(`doc_${choiceOf(d.model)}`)
+    expect(en).toHaveProperty(`docHint_${choiceOf(d.model)}`)
   })
 })
 
@@ -94,6 +95,19 @@ describe('documents', () => {
   it('gives every card a CAN and an MRZ', () => {
     const ids = (m: Parameters<typeof documentOf>[0]): string[] => documentOf(m).zones.map((z) => z.id)
     for (const m of ['dni-4.0', 'dni-3.0', 'tie'] as const) expect(ids(m)).toEqual(expect.arrayContaining(['can', 'mrz']))
+  })
+  it('offers one DNI choice for both DNI layouts, 4.0 when the version is unknown', () => {
+    expect(CHOICES).toEqual(['dni', 'tie'])
+    expect(DNI_VERSIONS).toEqual(['dni-4.0', 'dni-3.0'])
+    expect(DEFAULT_DNI).toBe('dni-4.0')
+    expect(DOCUMENTS.map((d) => choiceOf(d.model))).toEqual(['dni', 'dni', 'tie'])
+    expect(DOCUMENTS.filter((d) => isDni(d.model)).map((d) => d.model)).toEqual([...DNI_VERSIONS])
+  })
+  it('gives both DNI layouts the same card size and fields, so the version can change in the editor', () => {
+    const [v4, v3] = DNI_VERSIONS.map(documentOf)
+    expect(v3?.size).toEqual(v4?.size)
+    const ids = (d: typeof v4): string[] => [...new Set(d?.zones.map((z) => z.id))].sort()
+    expect(ids(v3)).toEqual(ids(v4))
   })
 })
 

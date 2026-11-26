@@ -12,6 +12,7 @@
   import type { AlignState } from '../ui/align-state.ts'
   import type { EditState, Phase } from '../ui/edit-state.ts'
   import type { ModelZones, Rect, Side, ZoneId } from '../zones/types.ts'
+  import { isDni, type DniVersion } from '../zones/documents.ts'
   import { overlap } from '../ocr/find.ts'
   import { WATERMARK_OPACITY, WATERMARK_SCALE, normaliseWatermark } from '../engine/watermark.ts'
   import Review from './Review.svelte'
@@ -19,10 +20,14 @@
   import FitZones from './FitZones.svelte'
   import { fitSide } from '../engine/snap.ts'
 
-  let { lang, doc, align, edit, phase = $bindable(), onAdjust, onReset, onPhase, onGuide }: {
+  let { lang, doc, align, edit, dniFound, phase = $bindable(), onDniVersion, onAdjust, onReset, onPhase, onGuide }: {
     lang: Lang
     /** The document's zone data. The editor is re-created when the document changes. */
     doc: ModelZones
+    /** For a DNI: false when its version could not be detected and the default layout (4.0) is in use. */
+    dniFound: boolean
+    /** Switches to the other DNI layout (the "Older DNI (3.0)" switch). */
+    onDniVersion: (version: DniVersion) => void
     align: AlignState
     edit: EditState
     phase: Phase
@@ -475,6 +480,22 @@
           {#if mrzLeaks(model, hidden)}<p class="notice-warn" id="mrz-warning">{t(lang, 'mrzWarning')}</p>{/if}
         </div>
         <p class="hint">{tf(lang, 'positionsHint', { doc: docName })}</p>
+        {#if isDni(model.model)}
+          <!-- One "DNI" in the picker: the version comes from detection, else 4.0. This switch fixes a wrong layout. -->
+          <ul class="rows">
+            <li>
+            <label class="toggle">
+              <span class="toggle-text">
+                <span class="toggle-label">{t(lang, 'dniOlder')}</span>
+                <span class="toggle-note">{t(lang, 'dniOlderHint')}</span>
+              </span>
+              <input type="checkbox" role="switch" class="switch" id="dni-older" checked={model.model === 'dni-3.0'}
+                onchange={(e) => { onDniVersion(e.currentTarget.checked ? 'dni-3.0' : 'dni-4.0') }} />
+            </label>
+            </li>
+          </ul>
+          {#if !dniFound}<p class="hint" id="dni-guessed">{t(lang, 'dniGuessed')}</p>{/if}
+        {/if}
         <!-- Adjust: move or resize the field boxes by hand when the template sits a little off the card. -->
         <div class="panel-box">
           <div class="flex flex-wrap items-center gap-2">

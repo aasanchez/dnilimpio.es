@@ -47,12 +47,25 @@ export async function loadBoth (page: Page, { model = false } = {}): Promise<voi
   await expect(page.locator('#capture-continue')).toBeEnabled()
 }
 
-/** From the photo step through the document picker; the photos are then straightened automatically. */
+/** The picker option of a layout: both DNI versions are one "DNI" option. */
+export const choiceOf = (doc: Doc): 'dni' | 'tie' => (doc === 'tie' ? 'tie' : 'dni')
+
+/**
+ * From the photo step through the document picker; the photos are then straightened automatically.
+ * The picker has one DNI option: the DNI 3.0 is set afterwards with the editor's "Older DNI" switch.
+ */
 export async function chooseDoc (page: Page, doc: Doc = 'dni-4.0'): Promise<void> {
   await page.locator('#capture-continue').click()
   await expect(page.locator('h2')).toHaveText(/documento|document/)
-  await page.locator(`[id="doc-${doc}"]`).check()
+  await page.locator(`#doc-${choiceOf(doc)}`).check()
   await page.locator('#doc-continue').click()
+}
+
+/** In the editor: sets the DNI layout with the "Older DNI (3.0)" switch. */
+export async function setDniVersion (page: Page, doc: 'dni-4.0' | 'dni-3.0'): Promise<void> {
+  const older = page.locator('#dni-older')
+  await older.setChecked(doc === 'dni-3.0')
+  await expect(page.locator('#dni-older')).toBeChecked({ checked: doc === 'dni-3.0' })
 }
 
 /**
@@ -63,6 +76,7 @@ export async function toAuto (page: Page, doc: Doc = 'dni-4.0', opts: { model?: 
   await loadBoth(page, opts)
   await chooseDoc(page, doc)
   await expect(page.locator('#preview')).toHaveJSProperty('width', DOC_PX[doc].w)
+  if (doc !== 'tie') await setDniVersion(page, doc)
 }
 
 /** Waits for the editor (straightening can take a while with the model), then opens the front's corners. */
@@ -202,7 +216,7 @@ export async function toEditorWithText (page: Page, { model = false, frontLines 
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
   await page.locator('#file-back').setInputFiles({ name: 'back.png', mimeType: 'image/png', buffer: back })
   await page.locator('#capture-continue').click()
-  await page.locator('[id="doc-dni-4.0"]').check()
+  await page.locator('#doc-dni').check()
   await page.locator('#doc-continue').click()
   // Found and straightened by themselves (edge detection; the model is not needed here).
   await expect(page.locator('#preview')).toHaveJSProperty('width', 1712)
