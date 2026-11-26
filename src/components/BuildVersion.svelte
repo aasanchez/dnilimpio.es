@@ -27,7 +27,7 @@
   const exact = $derived(new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeStyle: 'short' }).format(built))
 </script>
 
-<p class="build-version" id="build-version">
+<p class="build-version mt-1.5 text-[0.6875rem] text-muted" id="build-version">
   {t(lang, 'buildVersion')}
   {#if href}
     <a {href} rel="noopener noreferrer" translate="no" data-sha={sha}>{shortSha(sha)}</a>

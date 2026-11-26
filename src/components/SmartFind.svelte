@@ -86,18 +86,18 @@
   const unavailable = $derived(status?.state === 'unavailable' ? status.reason : null)
 </script>
 
-<section class="smart-find" aria-labelledby="find-title">
-  <h3 id="find-title">{t(lang, 'findTitle')}</h3>
+<section class="mt-4 grid gap-2 border-t border-dashed border-dash pt-4" aria-labelledby="find-title">
+  <h3 class="text-base" id="find-title">{t(lang, 'findTitle')}</h3>
   <p class="hint">{t(lang, 'findIntro')}</p>
-  <div class="chips" role="group" aria-label={t(lang, 'findKinds')}>
+  <div class="flex flex-wrap gap-2" role="group" aria-label={t(lang, 'findKinds')}>
     {#each FOUND_KINDS as k (k)}
       <label class="chip" class:is-on={kinds.includes(k)}>
-        <input type="checkbox" class="visually-hidden" id="find-kind-{k}" checked={kinds.includes(k)} disabled={running}
+        <input type="checkbox" class="sr-only" id="find-kind-{k}" checked={kinds.includes(k)} disabled={running}
           onchange={(e) => { toggleKind(k, e.currentTarget.checked) }} />{kinds.includes(k) ? '◉' : '○'} {t(lang, KIND_KEYS[k])}
       </label>
     {/each}
   </div>
-  <button type="button" class="button" id="find-run" disabled={status === null || unavailable !== null || running || kinds.length === 0 || cards.length === 0}
+  <button type="button" class="button justify-self-start" id="find-run" disabled={status === null || unavailable !== null || running || kinds.length === 0 || cards.length === 0}
     onclick={() => { void run() }}>{t(lang, 'findRun')}</button>
   <div aria-live="polite" id="find-status">
     {#if running}
@@ -107,7 +107,7 @@
     {:else if result?.kind === 'none'}
       <p class="hint">{t(lang, 'findNone')}</p>
     {:else if result?.kind === 'failed'}
-      <p class="warning">{t(lang, 'findFailed')}</p>
+      <p class="notice-warn">{t(lang, 'findFailed')}</p>
     {:else if unavailable === 'offline'}
       <p class="hint">{t(lang, 'findOffline')}</p>
     {:else if unavailable !== null}

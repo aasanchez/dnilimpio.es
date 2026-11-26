@@ -117,53 +117,57 @@
   })
 </script>
 
-<section class="step">
-  <div>
+<section class="step split flex-1">
+  <div class="area-head">
     <!-- The side to capture now, impossible to miss; it pops in again when the step moves on. -->
     {#key current}<SideBadge {lang} side={current} id="side-badge" />{/key}
     <h2>{t(lang, current === 'front' ? 'captureFront' : 'captureBack')}</h2>
     <p class="lead">{t(lang, 'captureHint')}</p>
   </div>
 
-  <div class="win">
-    <div class="winbar"><i></i><i></i><i></i><span class="title">{sideName(current).toLowerCase()}.jpg</span></div>
-    <div class="viewer" id="viewer" class:is-dragover={dragging}>
-      {#if bitmap}
-        <canvas bind:this={viewer} width="0" height="0" aria-hidden="true"></canvas>
-      {:else}
-        <div class="frame-guide">
-          <svg class="frame-ghost" viewBox="0 0 100 63.1" aria-hidden="true"><GhostCard side={current} rect={{ x: 0, y: 0, w: 100, h: 63.1 }} dim={false} /></svg>
-          {#if withCamera}
-            {t(lang, 'frameHint')}
-          {:else}
-            <!-- Desktop: a classic upload area. Drag a file here, or open the file chooser. -->
-            <span class="drop-title">{t(lang, 'dropHere')}</span>
-            <button type="button" class="button small drop-choose" id="drop-choose" onclick={() => inputs[current]?.click()}>{t(lang, 'chooseFile')}</button>
-          {/if}
-        </div>
-      {/if}
-      {#if dragging}
-        <div class="drop-overlay" aria-hidden="true"><span>{t(lang, 'dropHere')}</span></div>
-      {/if}
+  <div class="area-stage flex flex-col gap-3">
+    <div class="win">
+      <div class="winbar"><i></i><i></i><i></i><span class="title">{sideName(current).toLowerCase()}.jpg</span></div>
+      <div class="viewer relative flex min-h-52 items-center justify-center bg-coal lg:min-h-96" id="viewer" class:is-dragover={dragging}>
+        {#if bitmap}
+          <canvas class="block h-auto max-h-[50vh] max-w-full lg:max-h-[65vh]" bind:this={viewer} width="0" height="0" aria-hidden="true"></canvas>
+        {:else}
+          <div class="flex aspect-[1.585] w-4/5 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-accent p-2 text-center font-mono text-xs text-cream lg:w-3/5">
+            <svg class="h-auto w-[70%]" viewBox="0 0 100 63.1" aria-hidden="true"><GhostCard side={current} rect={{ x: 0, y: 0, w: 100, h: 63.1 }} dim={false} /></svg>
+            {#if withCamera}
+              {t(lang, 'frameHint')}
+            {:else}
+              <!-- Desktop: a classic upload area. Drag a file here, or open the file chooser. -->
+              <span class="font-sans text-[1.05rem] font-bold">{t(lang, 'dropHere')}</span>
+              <button type="button" class="button small border-cream bg-cream text-coal" id="drop-choose" onclick={() => inputs[current]?.click()}>{t(lang, 'chooseFile')}</button>
+            {/if}
+          </div>
+        {/if}
+        {#if dragging}
+          <div class="pointer-events-none absolute inset-0 grid place-items-center bg-coal/94 text-xl font-extrabold text-cream" aria-hidden="true"><span class="rounded-lg border-2 border-dashed border-accent px-4 py-2">{t(lang, 'dropHere')}</span></div>
+        {/if}
+      </div>
     </div>
+    <p class="m-0 flex items-center gap-1.5 font-mono text-xs text-muted" id="local-note">
+      <svg class="size-3.5 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+      {t(lang, 'localOnly')}
+    </p>
   </div>
-  <p class="local-note" id="local-note">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
-    {t(lang, 'localOnly')}
-  </p>
 
-  <div class="sides">
+  <div class="area-side flex flex-col gap-4">
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-1">
+      {#each SIDES as side (side)}
+        <CaptureSide {lang} {side} loaded={photos[side] !== null} isCurrent={side === current}
+          message={errors[side] ? t(lang, errors[side]) : photos[side] ? t(lang, 'loaded') : ''} isError={errors[side] !== null}
+          onSelect={() => { current = side }} bind:zone={zones[side]} />
+      {/each}
+    </div>
     {#each SIDES as side (side)}
-      <CaptureSide {lang} {side} loaded={photos[side] !== null} isCurrent={side === current}
-        message={errors[side] ? t(lang, errors[side]) : photos[side] ? t(lang, 'loaded') : ''} isError={errors[side] !== null}
-        onSelect={() => { current = side }} bind:zone={zones[side]} />
+      {#if errors[side]}<p class="notice-warn" id="error-{side}">{sideName(side)}: {t(lang, errors[side])}</p>{/if}
     {/each}
+    {#if !withCamera}<p class="hint">{t(lang, 'pasteHint')}</p>{/if}
+    {#if liveNote}<p class="hint" id="live-note" role="status">{t(lang, liveNote)}</p>{/if}
   </div>
-  {#each SIDES as side (side)}
-    {#if errors[side]}<p class="error" id="error-{side}">{sideName(side)}: {t(lang, errors[side])}</p>{/if}
-  {/each}
-  {#if !withCamera}<p class="hint">{t(lang, 'pasteHint')}</p>{/if}
-  {#if liveNote}<p class="hint" id="live-note" role="status">{t(lang, liveNote)}</p>{/if}
 
   {#if liveOpen}
     <LiveCamera {lang} side={current} {onShot} onClose={() => { liveOpen = false }} onFail={onLiveFail} />
@@ -187,13 +191,13 @@
           <label class="button" class:primary={!ready} hidden={useLive}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
             {t(lang, 'takePhoto')}
-            <input bind:this={cameras[side]} id="camera-{side}" class="visually-hidden" aria-describedby="status-{side}" />
+            <input bind:this={cameras[side]} id="camera-{side}" class="sr-only" aria-describedby="status-{side}" />
           </label>
         {/if}
         <label class="button" class:primary={!ready && !withCamera}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="9" cy="10" r="1.5" /><path d="M21 16l-5-5-8 8" /></svg>
           {t(lang, withCamera ? 'gallery' : 'choosePhoto')}
-          <input bind:this={inputs[side]} id="file-{side}" class="visually-hidden" aria-describedby="status-{side}" />
+          <input bind:this={inputs[side]} id="file-{side}" class="sr-only" aria-describedby="status-{side}" />
         </label>
       </div>
     {/each}

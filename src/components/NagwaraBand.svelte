@@ -8,11 +8,11 @@
   const { lang }: { lang: Lang } = $props()
 </script>
 
-<div class="nagwara">
+<div class="nagwara mt-5 grid justify-items-center gap-3 border-t-3 border-nagwara pt-4 text-center font-sans sm:grid-cols-[auto_1fr] sm:items-center sm:justify-items-start sm:gap-6 sm:text-start">
   <!-- New tab: leaving this page clears the photos (pagehide in App.svelte). -->
-  <a class="nagwara-brand" id="nagwara-link" href="https://www.nagwara.com/" target="_blank" rel="noopener noreferrer" aria-label={t(lang, 'nagwaraVisit')}><NagwaraMark /><span>NagWara</span></a>
+  <a class="nagwara-brand group inline-flex items-center gap-2.5 text-ink no-underline" id="nagwara-link" href="https://www.nagwara.com/" target="_blank" rel="noopener noreferrer" aria-label={t(lang, 'nagwaraVisit')}><NagwaraMark /><span class="text-[1.75rem] font-extrabold tracking-[-0.5px] group-hover:text-nagwara">NagWara</span></a>
   <div class="nagwara-claim">
-    <p class="nagwara-product">{t(lang, 'nagwaraProduct')}</p>
-    <p class="nagwara-tagline">{t(lang, 'nagwaraMachines')} <span>{t(lang, 'nagwaraPeople')}</span></p>
+    <p class="nagwara-product text-[0.9375rem] font-bold text-nagwara">{t(lang, 'nagwaraProduct')}</p>
+    <p class="nagwara-tagline text-xl leading-[1.2] font-extrabold tracking-[-0.3px] text-ink">{t(lang, 'nagwaraMachines')} <span class="text-nagwara">{t(lang, 'nagwaraPeople')}</span></p>
   </div>
 </div>
