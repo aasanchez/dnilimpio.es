@@ -28,10 +28,12 @@ test('opens from the start screen, cites sources and makes no outside requests',
     expect(await a.getAttribute('href')).toMatch(/^https:\/\//)
   }
 
-  // An element without an official source says so instead of guessing.
+  // The NIE cites its source; a part without an official source says so instead of guessing.
   await page.locator('#guide-tab-tie').click()
   await page.locator('#guide-nie summary').click()
-  await expect(page.locator('#guide-nie .guide-none').first()).toHaveText(/No hemos encontrado una fuente oficial/)
+  await expect(page.locator('#guide-nie .guide-cites').first()).toContainText('¿Qué es el NIE?')
+  await page.locator('#guide-issuePlace summary').click()
+  await expect(page.locator('#guide-issuePlace .guide-none').first()).toHaveText(/Ninguna de las fuentes oficiales/)
 
   await page.locator('#guide-close').click()
   await expect(dialog).toBeHidden()

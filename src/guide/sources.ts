@@ -12,7 +12,7 @@ export type SourceId =
   | 'rd255' | 'rd1553' | 'reg2025' | 'reg1030'
   | 'icao5' | 'icao3' | 'icaoTr'
   | 'dnie40' | 'dnieCard' | 'dnieChip3' | 'dnieNfc' | 'dnieDev' | 'dnieBasics' | 'prado30'
-  | 'aepdCopy' | 'aepdHotel' | 'incibeLoan'
+  | 'aepdCopy' | 'aepdHotel' | 'aepdDa7' | 'incibeLoan' | 'moncloaNie'
 
 export interface Source {
   readonly title: string
@@ -157,6 +157,22 @@ export const SOURCES: Readonly<Record<SourceId, Source>> = {
     url: 'https://www.aepd.es/prensa-y-comunicacion/notas-de-prensa/aepd-informa-de-que-no-esta-permitido-solicitar-copia-dni-o-pasaporte-en-hospedajes',
     lang: 'es',
     checked: '2026-11-25',
+  },
+  aepdDa7: {
+    title: 'La AEPD publica unas orientaciones para la publicación de actos administrativos por parte de las AAPP',
+    publisher: 'Agencia Española de Protección de Datos (AEPD), nota de prensa',
+    edition: '4 de marzo de 2019',
+    url: 'https://www.aepd.es/prensa-y-comunicacion/notas-de-prensa/la-aepd-publica-unas-orientaciones-para-la-publicacion-de',
+    lang: 'es',
+    checked: '2026-11-26',
+  },
+  moncloaNie: {
+    title: 'Diferencias entre DNI, NIE y NIF: ¿qué son y cómo obtenerlos?',
+    publisher: 'La Moncloa, Gobierno de España (nota de prensa del Ministerio del Interior)',
+    edition: '20 de diciembre de 2024',
+    url: 'https://www.lamoncloa.gob.es/serviciosdeprensa/notasprensa/interior/paginas/2024/201224-diferencias-dni-nie-nif.aspx',
+    lang: 'es',
+    checked: '2026-11-26',
   },
   incibeLoan: {
     title: 'Doble fraude al solicitar un préstamo y perder el dinero manteniendo la deuda',
