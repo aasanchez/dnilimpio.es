@@ -3,12 +3,13 @@
 Hide the sensitive data on a photo of your Spanish identity document (DNI or TIE) before you share a
 copy. Everything runs in your browser, on your device. Your photos are never uploaded.
 
-**Use it:** <https://aasanchez.github.io/dnilimpio.es/>
+**Use it:** <https://dnitapado.es>
 
 > [!NOTE]
 > **Names and addresses.** The product was called *dnilimpio.es* and is now **DNI Tapado.es** (short
-> mark **DT.es**). The custom domain **`dnitapado.es`** is being set up and is not live yet; until
-> then the site is served only from the GitHub Pages address above. The GitHub repository keeps the
+> mark **DT.es**). The site is served from **<https://dnitapado.es>** (`www.dnitapado.es` redirects
+> to it). GitHub Pages sends the earlier address <https://aasanchez.github.io/dnilimpio.es/> there too.
+> The GitHub repository keeps the
 > name `aasanchez/dnilimpio.es` for now, so every link to the source, the CI and the provenance
 > check below uses that name.
 
@@ -337,8 +338,8 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 
 The public site counts visits with [Cloudflare Web Analytics](https://www.cloudflare.com/web-analytics/)
 ([ADR 0015](docs/adr/0015-cookieless-analytics.md)). It runs only on the public host names listed in
-[`src/analytics/endpoints.ts`](src/analytics/endpoints.ts): `aasanchez.github.io`, the upcoming
-`dnitapado.es` (and `www.`), and the earlier name `dnilimpio.es` (and `www.`).
+[`src/analytics/endpoints.ts`](src/analytics/endpoints.ts): `dnitapado.es` (and `www.`),
+`aasanchez.github.io`, and the earlier name `dnilimpio.es` (and `www.`).
 
 - **What is sent.** Cloudflare's beacon reports the page load: the page address, the referring site,
   load timings and the browser. Cloudflare sees your IP address, as any server does, and derives a
@@ -439,7 +440,8 @@ browser and can be changed from the selector at the top. The card guide has its 
 language ([`src/guide/locales/`](src/guide/locales/)).
 
 Translations other than Spanish and English are machine-assisted drafts. Corrections are welcome:
-edit one file in [`src/i18n/locales/`](src/i18n/locales/) and open a pull request. Spanish
+edit one file in [`src/i18n/locales/`](src/i18n/locales/) and open a pull request. The step-by-step
+guide is in [CONTRIBUTING.md](CONTRIBUTING.md#help-with-translations). Spanish
 (`es.json`) defines the keys. Translations can also be managed with Crowdin through its GitHub
 integration ([`crowdin.yml`](crowdin.yml)); the app itself never contacts Crowdin.
 
@@ -470,7 +472,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
 | Cookieless visit counts (Cloudflare Web Analytics) | Done |
 | Published source maps, verified by hash | Done |
-| Custom domain `dnitapado.es` | DNS being set up |
+| Custom domain `dnitapado.es`, HTTPS enforced | Done |
 | Languages: 31 in the specification | 13 today |
 
 ## Development
@@ -673,11 +675,12 @@ publishes the raw, unbuilt source of an old commit over the real site.
 The build uses relative paths (`base: './'`), so `dist/` works at a domain root, under a subpath and
 on any static server (Nginx, Caddy, Cloudflare Pages).
 
-**Custom domain.** The move to `dnitapado.es` needs no code change: the analytics host list already
-includes it. What is left is outside the code: finish the DNS set-up, set the custom domain in the
-repository's Pages settings, and point the DNS records at GitHub Pages. The service worker, its
-cache and the notice's storage key are per origin, so on the new domain the first visit downloads
-the app again.
+**Custom domain.** The site is live at <https://dnitapado.es>: the custom domain is set in the
+repository's Pages settings, HTTPS is enforced, and `www.dnitapado.es` redirects to it. It needed
+no code change, because the build uses relative paths and the analytics host list already included
+it. GitHub Pages redirects the earlier address <https://aasanchez.github.io/dnilimpio.es/> to it. The
+service worker, its cache and the notice's storage key are per origin, so the first visit on the new
+domain downloads the app again.
 
 ### Version shown in the app
 
@@ -758,7 +761,9 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 
 ## Contributing
 
-Issues and pull requests are welcome. Before you open a pull request:
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains the setup, the
+pull request workflow, the privacy and CSP rules, and how to help with translations. In short, before
+you open a pull request:
 
 1. Run `pnpm verify`; it must pass.
 2. Add or update tests for what you change.
