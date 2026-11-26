@@ -2,7 +2,7 @@
   "id": "./",
   "name": "DNI Tapado.es",
   "short_name": "DT.es",
-  "description": "Tapa los datos de tu DNI o TIE antes de enviar una copia. Todo ocurre en tu dispositivo: las fotos no salen de él.",
+  "description": "Tapa los datos de tu DNI o TIE antes de enviar una copia. El documento se procesa en tu dispositivo y la app no lo sube.",
   "lang": "es",
   "dir": "ltr",
   "start_url": "./",
