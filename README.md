@@ -275,10 +275,19 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 
   To remove them, clear the site's data in the browser settings. A test
   checks that cookies and storage hold nothing else after a whole workflow.
-- **Clear everything means everything.** **Clear everything** drops the photos and every choice, and
-  stops the OCR worker, which keeps the last image it read. Leaving the page (another site, closing
-  the tab, a reload) does the same, so the browser's back-forward cache keeps no document. Links that
-  leave the app (source code, card guide sources, NagWara) open in a new tab for that reason.
+- **Clear everything means everything.** **Clear everything** drops the photos and every choice,
+  stops the OCR worker, which keeps the last image it read, and revokes the PDF's download link if
+  it is still open. Leaving the page (another site, closing the tab, a reload) does the same, so the
+  browser's back-forward cache keeps no document. Links that leave the app (source code, card guide
+  sources, NagWara) open in a new tab for that reason.
+- **Memory is cleared as far as a page can.** Each screen shrinks its canvases to 0 × 0 pixels when
+  it closes. Temporary copies of the photo (scaled copies, grey copies for the upside-down check and
+  edge detection, the model's input, camera frames) are overwritten with zeros right after use, also
+  when a step fails. The PDF kept for sharing is dropped when you leave the review, and its download
+  link is revoked after 10 seconds or at once by **Clear everything**. Work still running for old
+  photos (straightening, corner finding, OCR, the PDF) checks that its screen is still open, so a
+  late result never brings a cleared document back ([`src/engine/wipe.ts`](src/engine/wipe.ts),
+  [`tests/e2e/cleanup.spec.ts`](tests/e2e/cleanup.spec.ts)).
 - **Text recognition (OCR) on the device.** When OCR is used, the image is read by a Web Worker in
   your browser. The OCR engine (PP-OCRv6 tiny on ONNX Runtime, about 9 MB) comes from this site, never from
   a third party, are downloaded only the first time OCR is used, and are checked against their hash
@@ -289,6 +298,8 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
+  Each file is checked again every time the worker serves it from the cache; a copy that was changed
+  is deleted and downloaded again, or refused offline ([ADR 0026](docs/adr/0026-recheck-cache-hits.md)).
   The corner model (about 2.6 MB) is not part of that first copy: it is stored the first time you use
   it online. Offline before that, classic edge detection places the corners, or you place them by
   hand.
@@ -359,8 +370,13 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   you pick through the system share sheet; what that app does with it is outside the tool. Where the
   browser cannot share files, they are plain `wa.me` and `mailto:` links with a fixed message and no
   file, and you attach the PDF yourself. No link carries data from your document.
-- **Memory is released, not wiped.** The tool drops its references and clears canvases, but
-  JavaScript cannot force the browser or the operating system to erase memory securely.
+- **Memory is released, not securely erased.** JavaScript cannot erase memory securely. Zeroing a
+  buffer overwrites that buffer only; the browser, the graphics driver and the operating system may
+  keep other copies (the decoded photo, GPU textures, the file you chose, swap or a crash report).
+  Shrinking a canvas lets the browser free its pixels sooner, but does not overwrite them. Text read
+  by OCR lives in JavaScript strings, which cannot be overwritten at all. These steps shorten how long
+  your data stays in memory; they do not guarantee it is gone. To be sure, close the browser after
+  use.
 - **Cache Storage is not private storage.** The cached app files hold nothing from your document,
   but anyone with access to your browser profile can see that the site was used, and that its AI
   files were downloaded.
@@ -514,6 +530,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | Share via WhatsApp, email or the system share sheet | Done |
 | Card guide with official citations | Done |
 | Offline mode with a verified service worker; automatic update of idle tabs | Done |
+| Memory clean-up: canvases, temporary buffers, download links, late results after a reset | Done |
 | Installable app: manifest, maskable and Apple icons, install link and iOS steps | Done |
 | No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
 | No third-party script in the page with photos (ADR 0023) | Done |
@@ -590,6 +607,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
 | Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, manual box maths, every masked pixel opaque black |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages, images, no metadata, no text, deterministic output |
+| Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
 | Platform | `precache`, `lockdown`, `intake-lockdown`, `stats-frame`, `build-info`, `i18n`, `guide`, `deps-report` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, the photo step's policy and the service worker check, counter frame hosts, sandbox and CSP, version and relative time, translation keys and no absolute privacy claims in es/en, guide citations, dependency report |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP):
@@ -598,8 +616,9 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 |---|---|
 | `privacy` | A whole workflow with fictional card values sends no request and stores nothing |
 | `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused, photos dropped on `pagehide` |
+| `cleanup` | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
 | `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
-| `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers, a tampered file stops the install, corner model cached after first use |
+| `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
 | `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; the counter frame is cross-site, sandboxed, given nothing, gone before any photo, not shown offline, under GPC or DNT, or on other hosts |
 | `update` | An idle single tab switches to a new build; a tab with photos, or a second tab, holds it back |
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks |
@@ -810,6 +829,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0023](docs/adr/0023-no-third-party-script-with-photos.md): no third-party script in the page that holds the photos; the Cloudflare beacon is removed and `connect-src` is `'none'`.
 - [0024](docs/adr/0024-visit-counter-in-isolated-frame.md): visit counts from a sandboxed frame on another site, on the start screen only.
 - [0025](docs/adr/0025-intake-lockdown.md): a second, stricter CSP from the photo step on: exact build scripts, images only from memory, no fonts, styles or connections; a service worker check with a calm note when it is missing.
+- [0026](docs/adr/0026-recheck-cache-hits.md): the service worker hashes every cache hit again before it answers; a rewritten entry is deleted and downloaded again, or refused offline.
 
 ## Contributing
 

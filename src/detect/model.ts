@@ -60,16 +60,20 @@ function input (bitmap: ImageBitmap, r: Rect): Float32Array<ArrayBuffer> {
   ctx.imageSmoothingQuality = 'medium'
   ctx.drawImage(bitmap, r.x, r.y, r.w, r.h, 0, 0, SIZE, SIZE)
   const { data } = ctx.getImageData(0, 0, SIZE, SIZE)
-  const out = new Float32Array(SIZE * SIZE * 3)
-  for (let i = 0, j = 0; i < data.length; i += 4, j += 3) {
-    out[j] = (data[i]! / 255 - MEAN[0]) / STD[0]
-    out[j + 1] = (data[i + 1]! / 255 - MEAN[1]) / STD[1]
-    out[j + 2] = (data[i + 2]! / 255 - MEAN[2]) / STD[2]
+  try {
+    const out = new Float32Array(SIZE * SIZE * 3)
+    for (let i = 0, j = 0; i < data.length; i += 4, j += 3) {
+      out[j] = (data[i]! / 255 - MEAN[0]) / STD[0]
+      out[j + 1] = (data[i + 1]! / 255 - MEAN[1]) / STD[1]
+      out[j + 2] = (data[i + 2]! / 255 - MEAN[2]) / STD[2]
+    }
+    return out
+  } finally {
+    // The scaled copy of the photo is not needed any more: clear its pixels and free the canvas.
+    data.fill(0)
+    canvas.width = 0
+    canvas.height = 0
   }
-  // The scaled copy of the photo is not needed any more: clear its pixels and free the canvas.
-  data.fill(0)
-  canvas.width = 0
-  return out
 }
 
 /** Runs the model on one region of the photo; corners come back in photo pixels. */

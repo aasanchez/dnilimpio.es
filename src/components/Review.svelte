@@ -7,6 +7,7 @@
   import { saveFile } from '../engine/render.ts'
   import { loadExport } from '../engine/load-export.ts'
   import { normaliseWatermark } from '../engine/watermark.ts'
+  import { shrink } from '../engine/wipe.ts'
   import { t, tf, type Lang } from '../i18n/index.ts'
   import type { Side } from '../zones/dni.ts'
 
@@ -42,11 +43,17 @@
     node.width = src.width
     node.height = src.height
     node.getContext('2d')?.drawImage(src, 0, 0)
-    return () => {
-      node.width = 0
-      node.height = 0
-    }
+    return () => { shrink(node) }
   }
+
+  // Leaving the review (Reset, Back, leaving the page): drop the PDF kept for sharing. Download URLs
+  // still open are revoked by the shell's reset (downloads.ts).
+  let mounted = true
+  $effect(() => () => {
+    mounted = false
+    pdf = null
+    shareable = false
+  })
 
   async function download (): Promise<void> {
     if (!confirmed || busy) return
@@ -55,6 +62,8 @@
     try {
       const { exportPdf, PDF_FILE_NAME } = await loadExport()
       const blob = await exportPdf(SIDES.map((s) => secure[s]))
+      // Left meanwhile (Reset, leaving the page): the PDF is not saved and not kept.
+      if (!mounted) return
       saveFile(blob, PDF_FILE_NAME)
       pdf = new File([blob], PDF_FILE_NAME, { type: 'application/pdf' })
       shareable = canShareFiles(pdf)

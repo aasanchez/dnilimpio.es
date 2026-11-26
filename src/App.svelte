@@ -17,6 +17,7 @@
   import StraightenStep from './components/StraightenStep.svelte'
   import { prefetchCornerModel } from './detect/corners.ts'
   import { stopOcrIfLoaded } from './ocr/load-ocr.ts'
+  import { revokeDownloads } from './engine/downloads.ts'
   import { noticeDue, rememberNoticeClosed } from './ui/notice-memory.ts'
   import { setAppIdle } from './offline/update.ts'
   import { lockIntake, prepareIntake } from './security/intake-lockdown.ts'
@@ -154,7 +155,12 @@
     go('capture', 'front')
   }
 
-  /** Spec §20: drop photos, straightened cards and every choice, and return to the start. */
+  /**
+   * Spec §20: drop photos, straightened cards and every choice, and return to the start.
+   * Work still running for the old photos cannot bring them back: the screens that started it close
+   * (the capture step is re-created through `session`) and check that they are still open before
+   * they write, and OCR jobs end with OcrStopped. Memory is freed as far as a web page can (src/engine/wipe.ts).
+   */
   function reset (): void {
     session++
     for (const s of ['front', 'back'] as const) {
@@ -168,6 +174,8 @@
     dniFound = false
     // The OCR worker keeps the last card it read: stop it (a new one starts if OCR is used again).
     void stopOcrIfLoaded()
+    // The PDF's download link, if it is still open (downloads.ts).
+    revokeDownloads()
     go('capture', 'front')
   }
 

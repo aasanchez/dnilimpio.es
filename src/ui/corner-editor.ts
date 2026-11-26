@@ -7,6 +7,7 @@ import type { Point, Quad } from '../geometry/homography.ts'
 import { isConvex } from '../geometry/homography.ts'
 import { moveCorner, nearestCorner } from '../geometry/quad-edit.ts'
 import { el } from './dom.ts'
+import { shrink } from '../engine/wipe.ts'
 
 export interface CornerEditorOptions {
   readonly bitmap: ImageBitmap;
@@ -245,7 +246,11 @@ export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
   const ro = new ResizeObserver(layout)
   ro.observe(wrap)
   window.addEventListener('resize', layout, { signal })
-  signal.addEventListener('abort', () => { ro.disconnect() }, { once: true })
+  // Closed (next side, Reset, leaving the page): stop observing and drop the photo's pixels.
+  signal.addEventListener('abort', () => {
+    ro.disconnect()
+    shrink(canvas)
+  }, { once: true })
 
   return {
     element: wrap,
