@@ -10,7 +10,7 @@ const live = { hostname: 'aasanchez.github.io', onLine: true }
 describe('shouldLoadAnalytics', () => {
   it('loads on the public site only', () => {
     for (const hostname of ANALYTICS_HOSTS) expect(shouldLoadAnalytics({ ...live, hostname })).toBe(true)
-    for (const hostname of ['localhost', '127.0.0.1', 'someone.github.io', 'dnilimpio.es.evil.example', '']) {
+    for (const hostname of ['localhost', '127.0.0.1', 'someone.github.io', 'dnilimpio.es.evil.example', 'dnitapado.es.evil.example', '']) {
       expect(shouldLoadAnalytics({ ...live, hostname })).toBe(false)
     }
   })

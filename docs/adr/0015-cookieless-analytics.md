@@ -22,7 +22,7 @@ as the browser allows.
   the site token. The constants live in `src/analytics/endpoints.ts`; the loader is
   `src/analytics/cloudflare.ts`.
 - **Only where it belongs.** It loads only on the public host names (`aasanchez.github.io`,
-  `dnilimpio.es`, `www.dnilimpio.es`), only in production builds, only when the browser is online,
+  `dnitapado.es`, `www.dnitapado.es`, and the earlier name `dnilimpio.es`), only in production builds, only when the browser is online,
   and never when the browser sends Global Privacy Control or Do Not Track. Local builds, previews,
   tests and forks never load it.
 - **Nothing from the app.** The loader gives the beacon its site token and nothing else. The beacon
@@ -52,7 +52,7 @@ audience measurement that only produces anonymous statistics for the site owner,
 tracking or profiles. This has not been checked with a lawyer or against a specific AEPD ruling. Cloudflare states that Web Analytics does not use client-side
 state and does not fingerprint. The notice therefore informs and asks for no consent, and says
 plainly that visits are counted anonymously. If the owner wants zero client-side code later, moving
-`dnilimpio.es` behind Cloudflare's proxy gives server-side traffic statistics with no script at all.
+`dnitapado.es` behind Cloudflare's proxy gives server-side traffic statistics with no script at all.
 
 ## Alternatives
 

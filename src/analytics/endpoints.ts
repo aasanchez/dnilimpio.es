@@ -16,7 +16,8 @@ export const BEACON_ENDPOINT = `${BEACON_ORIGIN}/cdn-cgi/rum`
 export const BEACON_TOKEN = 'bf9884a30ab64669978eccd29b30a674'
 
 /**
- * Host names where the beacon runs: the public site only. A local build, `vite preview`, the tests
+ * Host names where the beacon runs: the public site only (dnitapado.es is the planned domain;
+ * dnilimpio.es stays listed in case it is kept as a redirect). A local build, `vite preview`, the tests
  * and forks on other hosts never load it.
  */
-export const ANALYTICS_HOSTS: readonly string[] = ['aasanchez.github.io', 'dnilimpio.es', 'www.dnilimpio.es']
+export const ANALYTICS_HOSTS: readonly string[] = ['aasanchez.github.io', 'dnitapado.es', 'www.dnitapado.es', 'dnilimpio.es', 'www.dnilimpio.es']

@@ -151,7 +151,7 @@ covered by tests (see [Security reviews](#security-reviews)).
 
 ### Visit counts
 
-The public site (`aasanchez.github.io`, `dnilimpio.es`) counts visits with
+The public site (`aasanchez.github.io`, `dnitapado.es`) counts visits with
 [Cloudflare Web Analytics](https://www.cloudflare.com/web-analytics/)
 ([ADR 0015](docs/adr/0015-cookieless-analytics.md)):
 
