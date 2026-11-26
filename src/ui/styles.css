@@ -289,6 +289,7 @@ span.chip { cursor: default; color: var(--muted); }
   text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
 }
 footer .link-btn { display: flex; margin: 0 auto; min-height: 32px; font-size: 0.75rem; }
+.install-help { max-width: 24rem; margin: 0 auto 0.75rem; color: var(--muted); }
 
 /* AI audit prompt dialog, styled as a window. */
 .audit {

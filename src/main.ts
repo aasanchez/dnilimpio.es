@@ -7,6 +7,7 @@ import { blockStrayDrops } from './capture/input.ts'
 import { loadExport } from './engine/load-export.ts'
 import { registerServiceWorker } from './offline/register.ts'
 import { watchForUpdates } from './offline/update.ts'
+import { watchInstall } from './offline/install.ts'
 import { installTrustedTypesPolicy } from './security/trusted-types.ts'
 import { loadAnalytics } from './analytics/cloudflare.ts'
 import { pickLang, t } from './i18n/index.ts'
@@ -29,6 +30,9 @@ installTrustedTypesPolicy()
 
 // A file dropped by mistake must never replace the app (and the user's work) in the tab.
 blockStrayDrops(window)
+
+// Before mounting: Chromium can offer installation as soon as the page loads (offline/install.ts).
+watchInstall()
 
 const target = document.getElementById('app')
 if (target && isFramed(window)) showFramed(target)

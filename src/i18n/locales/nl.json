@@ -1,5 +1,7 @@
 {
   "sourceCode": "Broncode",
+  "installApp": "App installeren",
+  "installIos": "Op iPhone of iPad: tik op Deel (het vierkant met een pijl omhoog; in iOS 26 staat het in het ···-menu), kies ‘Zet op beginscherm’ en tik op ‘Voeg toe’.",
   "nagwaraVisit": "Bezoek NagWara",
   "nagwaraProduct": "Dit is een NagWara-product,",
   "nagwaraMachines": "Machines voeren uit,",

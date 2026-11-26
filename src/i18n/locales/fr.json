@@ -1,5 +1,7 @@
 {
   "sourceCode": "Code source",
+  "installApp": "Installer l'app",
+  "installIos": "Sur iPhone ou iPad : touchez Partager (le carré avec une flèche vers le haut ; sous iOS 26, il se trouve dans le menu ···), choisissez « Sur l'écran d'accueil », puis touchez « Ajouter ».",
   "nagwaraVisit": "Visiter NagWara",
   "nagwaraProduct": "Ceci est un produit NagWara,",
   "nagwaraMachines": "Les machines exécutent,",

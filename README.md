@@ -102,7 +102,8 @@ source was found, the guide says so instead of guessing ([ADR 0014](docs/adr/001
 ## How to use it
 
 Open the site in a current browser (Chrome, Edge, Firefox, Safari; desktop or mobile). No account,
-no installation. The layout is built for a phone first: one step per screen, the main button always
+no installation needed. If you want it on your home screen or desktop, you can install it as an app
+(see **Install the app** below). The layout is built for a phone first: one step per screen, the main button always
 at the bottom within thumb reach, and a progress bar at the top (**Photos**, **Corners**, **Hide**,
 **Download**). The back arrow in the top bar returns to the previous step without losing work. The
 **DT.es** logo returns to the start screen without reloading the page; your photos are kept.
@@ -257,6 +258,11 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   The corner model (about 2.6 MB) is not part of that first copy: it is stored the first time you use
   it online. Offline before that, classic edge detection places the corners, or you place them by
   hand.
+- **Installable.** The tool can be installed as an app (Android, iPhone and iPad, desktop Chrome and
+  Edge). It is the same build in its own window: the manifest and icons are static files of the
+  build, cached and checked like the rest, and installing sends nothing anywhere. The start screen
+  shows **Install the app** only where it works: it opens the browser's own dialog, or, on iPhone and
+  iPad, shows the steps in the Share menu ([ADR 0018](docs/adr/0018-installable-app.md)).
 - **Updates never interrupt work.** A new version reaches an open tab by itself: when the tab is on
   the start screen with no photos, and it is the only tab of the tool, it switches to the new version
   and reloads once. A tab with photos keeps its version until it returns to the start screen
@@ -444,6 +450,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | Share via WhatsApp, email or the system share sheet | Done |
 | Card guide with official citations | Done |
 | Offline mode with a verified service worker; automatic update of idle tabs | Done |
+| Installable app: manifest, maskable and Apple icons, install link and iOS steps | Done |
 | No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
 | Cookieless visit counts (Cloudflare Web Analytics) | Done |
 | Published source maps, verified by hash | Done |
@@ -536,6 +543,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `share` | WhatsApp and email as share sheet or as plain links, and a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `privacy-notice` | No accept step, 4-day memory, blocked storage, translations, audit prompt |
+| `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, build SHA and relative deploy time (also offline) |
 
 ## Continuous integration
