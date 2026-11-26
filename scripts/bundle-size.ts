@@ -26,8 +26,8 @@ const BUDGETS: readonly Budget[] = [
   { name: 'Start page CSS', match: /^assets\/index-[\w-]+\.css$/, limitKb: 12, measure: 'gzip' },
   { name: 'PDF export chunk', match: /^assets\/export-[\w-]+\.js$/, limitKb: 275, measure: 'gzip' },
   { name: 'Corner model (on demand)', match: /^assets\/ml\/.+\.js$/, limitKb: 2850, measure: 'gzip' },
-  { name: 'OCR worker and data (on demand)', match: /^ocr\//, limitKb: 7300, measure: 'gzip' },
-  { name: 'Whole dist/ folder', match: /^(?!.*\.map$)/, limitKb: 23500, measure: 'raw' },
+  { name: 'OCR worker and data (on demand)', match: /^ocr\//, limitKb: 9600, measure: 'gzip' }, // PP-OCRv6 tiny and its runtime (ADR 0019)
+  { name: 'Whole dist/ folder', match: /^(?!.*\.map$)/, limitKb: 28000, measure: 'raw' },
 ]
 
 const DIST = 'dist'

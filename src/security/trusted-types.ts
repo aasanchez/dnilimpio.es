@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The only Trusted Types policy the CSP allows ('trusted-types default'). The CSP enforces Trusted
 // Types for scripts, so every script URL handed to the browser as a string (service worker
-// registration, the OCR worker that Tesseract.js starts, Cloudflare's analytics beacon) passes
+// registration, the OCR worker, Cloudflare's analytics beacon) passes
 // through this policy. It accepts exactly those three URLs and nothing else; it defines no createHTML or createScript, so HTML
 // and script strings stay blocked. Created once at start-up: after that, no code can create another.
 

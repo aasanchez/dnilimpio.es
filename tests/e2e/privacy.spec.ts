@@ -20,8 +20,8 @@ async function cachedOnDemand (page: Page): Promise<Record<'worker' | 'core' | '
     }
     return {
       worker: paths.includes('/ocr/worker.min.js'),
-      core: paths.some((p) => /^\/ocr\/tesseract-core-.*\.wasm\.js$/.test(p)),
-      lang: paths.includes('/ocr/spa.traineddata'),
+      core: paths.includes('/ocr/ort-wasm-simd-threaded.wasm'),
+      lang: paths.includes('/ocr/ppocrv6-tiny-rec.onnx'),
       model: paths.some((p) => p.startsWith('/assets/ml/')),
     }
   })

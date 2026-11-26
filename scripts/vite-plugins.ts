@@ -5,7 +5,6 @@
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { gunzipSync } from 'node:zlib'
 import { dirname, join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, cspWithScriptHashes } from './csp.ts'
@@ -149,34 +148,94 @@ export function base64Import (): Plugin {
 }
 
 /**
- * OCR engine files, served from our own origin under ocr/ (never from a CDN): the Tesseract.js worker,
- * the WebAssembly core (three builds; the worker picks the one the browser supports, LSTM only) and
- * the Spanish language data. The service worker downloads them on first use and checks each against
- * its SHA-384 (see src/offline/precache.ts, ON_DEMAND_DIR).
+ * OCR engine files, served from our own origin under ocr/ (never from a CDN; ADR 0019):
+ * - worker.min.js: src/ocr/worker.ts bundled on its own (paddleocr.js and ONNX Runtime Web), so the
+ *   worker loads nothing from outside ocr/;
+ * - the ONNX Runtime WebAssembly build (SIMD, one thread) and its loader;
+ * - the PP-OCRv6 tiny detection and recognition models, checked here against the SHA-256 that
+ *   PaddlePaddle publishes on Hugging Face, and the recognition dictionary as JSON.
+ * The service worker downloads them on first use and checks each against its SHA-384 (see
+ * src/offline/precache.ts, ON_DEMAND_DIR).
  */
+export const PPOCR_SHA256 = {
+  // huggingface.co/PaddlePaddle/PP-OCRv6_tiny_det_onnx, inference.onnx (1 780 590 bytes)
+  det: '193bab7a04fca699a6c82e6abb5b81bdb28177f0abd4062552b04908dafb19f8',
+  // huggingface.co/PaddlePaddle/PP-OCRv6_tiny_rec_onnx, inference.onnx (4 462 639 bytes)
+  rec: '9ef676d6ed3c88256a2d92c640c44f25b0c40947e111b14b8be8f594091563e6',
+} as const
+
+/** The character list of a PaddleOCR recognition config (inference.yml, PostProcess.character_dict). */
+export function parseCharacterDict (yml: string): string[] {
+  const start = yml.indexOf('character_dict:')
+  if (start < 0) throw new Error('OCR dictionary: no character_dict')
+  const chars: string[] = []
+  for (const line of yml.slice(start).split('\n').slice(1)) {
+    const item = /^\s*-\s+(.*)$/.exec(line)
+    if (!item) {
+      if (chars.length > 0 && /^\S/.test(line)) break
+      continue
+    }
+    let v = item[1] ?? ''
+    if (/^'.*'$/.test(v)) v = v.slice(1, -1).replace(/''/g, "'")
+    else if (/^".*"$/.test(v)) v = JSON.parse(v) as string
+    chars.push(v)
+  }
+  // The model has one class more than the file lists: the space.
+  if (chars.at(-1) !== ' ') chars.push(' ')
+  return chars
+}
+
 export function ocrAssets (): Plugin {
   const require = createRequire(import.meta.url)
-  const tesseract = dirname(require.resolve('tesseract.js/package.json'))
-  const core = dirname(createRequire(join(tesseract, 'package.json')).resolve('tesseract.js-core/package.json'))
-  const spa = dirname(require.resolve('@tesseract.js-data/spa/package.json'))
-  const files: Record<string, string> = {
-    'ocr/worker.min.js': join(tesseract, 'dist/worker.min.js'),
-    'ocr/worker.min.js.map': join(tesseract, 'dist/worker.min.js.map'),
-    'ocr/worker.min.js.LICENSE.txt': join(tesseract, 'dist/worker.min.js.LICENSE.txt'),
-    'ocr/tesseract-core-lstm.wasm.js': join(core, 'tesseract-core-lstm.wasm.js'),
-    'ocr/tesseract-core-simd-lstm.wasm.js': join(core, 'tesseract-core-simd-lstm.wasm.js'),
-    'ocr/tesseract-core-relaxedsimd-lstm.wasm.js': join(core, 'tesseract-core-relaxedsimd-lstm.wasm.js'),
-    'ocr/LICENSE-tesseract.js-core.txt': join(core, 'LICENSE'),
+  const ortDist = dirname(require.resolve('onnxruntime-web/wasm'))
+  const bundle = dirname(require.resolve('@arcships/light-ocr-model-ppocrv6-tiny/bundle/manifest.json'))
+  const pkg = dirname(bundle)
+  const version = (name: string): string => {
+    const dir = name === 'onnxruntime-web' ? dirname(ortDist) : dirname(require.resolve(`${name}/package.json`))
+    return (JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as { version: string }).version
   }
-  // LSTM-only "best_int" model: small and accurate. Shipped uncompressed: some servers send .gz files
-  // with Content-Encoding: gzip, the browser then unpacks them and the SRI hash would not match.
-  const lang = gunzipSync(readFileSync(join(spa, '4.0.0_best_int/spa.traineddata.gz')))
+  const sha256 = (b: Buffer): string => createHash('sha256').update(b).digest('hex')
+  const model = (part: 'det' | 'rec'): Buffer => {
+    const b = readFileSync(join(bundle, part, 'inference.onnx'))
+    if (sha256(b) !== PPOCR_SHA256[part]) throw new Error(`PP-OCRv6 tiny ${part} model does not match the published SHA-256`)
+    return b
+  }
   return {
     name: 'dni-redactor:ocr-assets',
     apply: 'build',
-    generateBundle () {
-      for (const [fileName, from] of Object.entries(files)) this.emitFile({ type: 'asset', fileName, source: readFileSync(from) })
-      this.emitFile({ type: 'asset', fileName: 'ocr/spa.traineddata', source: lang })
+    async generateBundle () {
+      const { rolldown } = await import('rolldown')
+      const build = await rolldown({
+        input: resolve(import.meta.dirname, '../src/ocr/worker.ts'),
+        platform: 'browser',
+        resolve: { conditionNames: ['onnxruntime-web-use-extern-wasm', 'browser', 'import', 'default'] },
+        logLevel: 'silent',
+      })
+      const { output } = await build.generate({ format: 'iife', minify: true, sourcemap: true, sourcemapExcludeSources: false })
+      await build.close()
+      const chunk = output.find((o) => o.type === 'chunk')
+      if (!chunk || output.filter((o) => o.type === 'chunk').length !== 1) throw new Error('OCR worker must bundle to one file')
+      this.emitFile({ type: 'asset', fileName: 'ocr/worker.min.js', source: `${chunk.code}\n//# sourceMappingURL=worker.min.js.map\n` })
+      if (chunk.map) this.emitFile({ type: 'asset', fileName: 'ocr/worker.min.js.map', source: chunk.map.toString() })
+      const files: Record<string, Buffer | string> = {
+        'ocr/ort-wasm-simd-threaded.mjs': readFileSync(join(ortDist, 'ort-wasm-simd-threaded.mjs')),
+        'ocr/ort-wasm-simd-threaded.wasm': readFileSync(join(ortDist, 'ort-wasm-simd-threaded.wasm')),
+        'ocr/ppocrv6-tiny-det.onnx': model('det'),
+        'ocr/ppocrv6-tiny-rec.onnx': model('rec'),
+        'ocr/ppocrv6-tiny-dict.json': JSON.stringify(parseCharacterDict(readFileSync(join(bundle, 'rec', 'inference.yml'), 'utf8'))),
+        'ocr/LICENSE-PP-OCRv6.txt': readFileSync(join(bundle, 'LICENSES', 'PaddleOCR-Apache-2.0.txt')),
+        'ocr/LICENSE-PP-OCRv6-NOTICE.txt': readFileSync(join(pkg, 'NOTICE')),
+        // Neither npm package ships its licence file; both are MIT (package.json "license").
+        'ocr/LICENSE-worker.txt': [
+          'ocr/worker.min.js bundles:',
+          `- paddleocr ${version('paddleocr')} (https://github.com/x3zvawq/paddleocr.js), MIT, Copyright (c) x3zvawq`,
+          `- onnxruntime-web ${version('onnxruntime-web')} (https://github.com/microsoft/onnxruntime), MIT, Copyright (c) Microsoft Corporation`,
+          'ocr/ort-wasm-simd-threaded.mjs and .wasm are part of onnxruntime-web.',
+          '',
+          readFileSync(resolve(import.meta.dirname, '../LICENSES/MIT.txt'), 'utf8'),
+        ].join('\n'),
+      }
+      for (const [fileName, source] of Object.entries(files)) this.emitFile({ type: 'asset', fileName, source })
     },
   }
 }

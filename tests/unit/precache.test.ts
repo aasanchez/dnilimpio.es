@@ -4,7 +4,7 @@ import { WORKER_SCRIPTS, cacheName, isOnDemand, isPrecached, isSourceMap, parseM
 import { BEACON_ENDPOINT, BEACON_SCRIPT } from '../../src/analytics/endpoints.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
-const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }], onDemand: [{ path: 'ocr/spa.traineddata', integrity: HASH }] }
+const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }], onDemand: [{ path: 'ocr/ppocrv6-tiny-rec.onnx', integrity: HASH }] }
 
 describe('isPrecached', () => {
   it('keeps app files and leaves out source maps, the worker and dotfiles', () => {
@@ -60,13 +60,13 @@ describe('route (deny by default)', () => {
   const scope = 'https://example.org/app/'
   const known = {
     files: new Set([`${scope}index.html`, `${scope}assets/a.js`]),
-    onDemand: new Set([`${scope}ocr/spa.traineddata`]),
+    onDemand: new Set([`${scope}ocr/ppocrv6-tiny-rec.onnx`]),
   }
   const get = (url: string, mode = 'no-cors'): string => route('GET', url, mode, scope, known).kind
 
   it('answers the files of the build, from the cache or on first use', () => {
     expect(route('GET', `${scope}assets/a.js`, 'cors', scope, known)).toEqual({ kind: 'file', url: `${scope}assets/a.js` })
-    expect(route('GET', `${scope}ocr/spa.traineddata`, 'same-origin', scope, known)).toEqual({ kind: 'on-demand', url: `${scope}ocr/spa.traineddata` })
+    expect(route('GET', `${scope}ocr/ppocrv6-tiny-rec.onnx`, 'same-origin', scope, known)).toEqual({ kind: 'on-demand', url: `${scope}ocr/ppocrv6-tiny-rec.onnx` })
     expect(get(`${scope}assets/a.js#x`)).toBe('file')
   })
   it('answers every page load inside the scope with index.html', () => {
@@ -127,7 +127,7 @@ describe('isSourceMap', () => {
 
 describe('isOnDemand', () => {
   it('covers the OCR files and the corner model, not the app', () => {
-    expect(isOnDemand('ocr/spa.traineddata')).toBe(true)
+    expect(isOnDemand('ocr/ppocrv6-tiny-rec.onnx')).toBe(true)
     expect(isOnDemand('assets/ml/model-x.js')).toBe(true)
     expect(isOnDemand('assets/ml/ort-wasm-simd-threaded-x.mjs')).toBe(true)
     expect(isOnDemand('assets/index-x.js')).toBe(false)

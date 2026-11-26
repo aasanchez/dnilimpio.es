@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Single entry point for the on-demand OCR module, so the first page load does not include Tesseract.js.
+// Single entry point for the on-demand OCR module, so the first page load does not include the OCR engine.
 
 let pending: Promise<typeof import('./ocr.ts')> | null = null
 

@@ -16,6 +16,8 @@
   import { WATERMARK_OPACITY, WATERMARK_SCALE, normaliseWatermark } from '../engine/watermark.ts'
   import Review from './Review.svelte'
   import SmartFind from './SmartFind.svelte'
+  import FitZones from './FitZones.svelte'
+  import { fitSide } from '../engine/snap.ts'
 
   let { lang, doc, align, edit, phase = $bindable(), onAdjust, onReset, onPhase, onGuide }: {
     lang: Lang
@@ -111,6 +113,21 @@
 
   function place (key: string, rect: Rect): void {
     edit.placement = { ...edit.placement, [key]: rect }
+  }
+
+  /**
+   * Fit to the text: the ticked fields' boxes, as placed now, grow to cover the words found next to
+   * them. One step that Back to original position undoes, like a hand adjustment.
+   */
+  function fitToText (found: ReadonlyArray<{ side: Side; words: Rect[] }>): number {
+    let next = { ...edit.placement }
+    for (const { side: s, words } of found) next = { ...next, ...fitSide(placed, s, words, hidden) }
+    const n = Object.keys(next).filter((k) => next[k] !== edit.placement[k]).length
+    if (n > 0) {
+      edit.placement = next
+      zoneDraft = null
+    }
+    return n
   }
 
   function resetPlacement (): void {
@@ -467,6 +484,7 @@
             </button>
             <button type="button" class="button small" id="reset-zones" disabled={!moved} onclick={resetPlacement}>{t(lang, 'resetZones')}</button>
           </div>
+          <FitZones {lang} {cards} disabled={finalPreview || hidden.size === 0} onFit={fitToText} />
           {#if adjusting}
             <p class="hint" id="adjust-hint">{t(lang, 'adjustHint')}</p>
             <p class="font-mono text-xs text-muted" id="zone-position" aria-live="polite">
