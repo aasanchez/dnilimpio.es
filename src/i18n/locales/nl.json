@@ -1,5 +1,4 @@
 {
-  "appTitle": "Schone DNI",
   "sourceCode": "Broncode",
   "buildVersion": "Versie",
   "buildDeployed": "uitgerold {when}",
@@ -165,8 +164,8 @@
   "doneHint": "Druk na het versturen op Alles wissen. Het tabblad sluiten wist ook alles.",
   "errShare": "Delen is mislukt. De pdf staat nog in je downloadmap.",
   "sendTitle": "Verstuur het zelf",
-  "sendLeadShare": "DNI Limpio verstuurt niets. Het deelmenu van je apparaat opent: jij kiest de app en de ontvanger.",
-  "sendLeadManual": "DNI Limpio verstuurt niets. Deze links openen WhatsApp of je e-mail met een bericht; voeg de pdf zelf toe vanuit je downloadmap.",
+  "sendLeadShare": "DNI Tapado.es verstuurt niets. Het deelmenu van je apparaat opent: jij kiest de app en de ontvanger.",
+  "sendLeadManual": "DNI Tapado.es verstuurt niets. Deze links openen WhatsApp of je e-mail met een bericht; voeg de pdf zelf toe vanuit je downloadmap.",
   "shareWhatsApp": "Delen via WhatsApp",
   "shareEmail": "Delen via e-mail",
   "shareSubject": "Document met beschermde gegevens",

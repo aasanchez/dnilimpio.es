@@ -26,7 +26,7 @@
       <div class="mini-card">
         <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
-      <p class="term"><span class="p">$</span> dni-limpio --local<br />→ {t(lang, 'logSent')} · ok</p>
+      <p class="term"><span class="p">$</span> dt.es --local<br />→ {t(lang, 'logSent')} · ok</p>
     </div>
   </div>
 

@@ -1,5 +1,4 @@
 {
-  "appTitle": "Clean DNI",
   "sourceCode": "Source code",
   "buildVersion": "Version",
   "buildDeployed": "deployed {when}",
@@ -165,8 +164,8 @@
   "doneHint": "Once you have sent it, press Clear everything. Closing the tab clears it too.",
   "errShare": "Could not share. The PDF is still in your downloads folder.",
   "sendTitle": "Send it yourself",
-  "sendLeadShare": "DNI Limpio sends nothing. Your device's share menu opens: you choose the app and the person.",
-  "sendLeadManual": "DNI Limpio sends nothing. These links open WhatsApp or your email with a message; attach the PDF yourself from your downloads folder.",
+  "sendLeadShare": "DNI Tapado.es sends nothing. Your device's share menu opens: you choose the app and the person.",
+  "sendLeadManual": "DNI Tapado.es sends nothing. These links open WhatsApp or your email with a message; attach the PDF yourself from your downloads folder.",
   "shareWhatsApp": "Share via WhatsApp",
   "shareEmail": "Share via email",
   "shareSubject": "Document with protected data",

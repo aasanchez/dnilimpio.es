@@ -23,6 +23,9 @@
   import type CardGuideT from './components/CardGuide.svelte'
   import { emptyEditState, type Phase } from './ui/edit-state.ts'
 
+  /** The product name. Not translated: it is the brand and the domain (dnitapado.es). */
+  const BRAND = 'DNI Tapado.es'
+
   type Step = 'home' | 'doc' | 'capture' | 'auto' | 'align' | 'edit'
 
   // The language choice lives in memory only: it resets to the browser's language on reload.
@@ -95,7 +98,7 @@
   $effect(() => {
     document.documentElement.lang = lang
     document.documentElement.dir = dir(lang)
-    document.title = t(lang, 'appTitle')
+    document.title = BRAND
   })
 
   /** Moves focus to the new screen's heading so screen readers announce it, and scrolls to the top. */
@@ -204,7 +207,10 @@
         <svg class="flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
       </button>
     {/if}
-    <div class="brand"><span class="brand-mark" aria-hidden="true">dl</span>{t(lang, 'appTitle')}</div>
+    <!-- The logo returns to the start screen. Photos and choices stay, as with Back; Reset clears them.
+         preventDefault: following href would reload the page, and pagehide drops the photos. -->
+    <a class="brand" id="brand" href="./" aria-current={step === 'home' ? 'page' : undefined}
+      onclick={(e: MouseEvent) => { e.preventDefault(); if (step !== 'home') go('home') }}><span class="brand-mark" aria-hidden="true">DT.es</span>{BRAND}</a>
     <LanguageSelect bind:lang />
   </header>
 

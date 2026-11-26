@@ -1,5 +1,4 @@
 {
-  "appTitle": "Puhdas DNI",
   "sourceCode": "Lähdekoodi",
   "buildVersion": "Versio",
   "buildDeployed": "julkaistu {when}",
@@ -165,8 +164,8 @@
   "doneHint": "Kun olet lähettänyt sen, paina Tyhjennä kaikki. Myös välilehden sulkeminen tyhjentää kaiken.",
   "errShare": "Jakaminen epäonnistui. PDF on yhä latauskansiossa.",
   "sendTitle": "Lähetä se itse",
-  "sendLeadShare": "DNI Limpio ei lähetä mitään. Laitteesi jakovalikko avautuu: sinä valitset sovelluksen ja vastaanottajan.",
-  "sendLeadManual": "DNI Limpio ei lähetä mitään. Linkit avaavat WhatsAppin tai sähköpostisi valmiin viestin kanssa; liitä PDF itse latauskansiostasi.",
+  "sendLeadShare": "DNI Tapado.es ei lähetä mitään. Laitteesi jakovalikko avautuu: sinä valitset sovelluksen ja vastaanottajan.",
+  "sendLeadManual": "DNI Tapado.es ei lähetä mitään. Linkit avaavat WhatsAppin tai sähköpostisi valmiin viestin kanssa; liitä PDF itse latauskansiostasi.",
   "shareWhatsApp": "Jaa WhatsAppissa",
   "shareEmail": "Jaa sähköpostilla",
   "shareSubject": "Asiakirja, jonka tiedot on suojattu",

@@ -1,5 +1,4 @@
 {
-  "appTitle": "DNI propre",
   "sourceCode": "Code source",
   "buildVersion": "Version",
   "buildDeployed": "déployé {when}",
@@ -165,8 +164,8 @@
   "doneHint": "Une fois envoyé, appuyez sur Tout effacer. Fermer l’onglet efface aussi tout.",
   "errShare": "Le partage a échoué. Le PDF est toujours dans vos téléchargements.",
   "sendTitle": "Envoyez-le vous-même",
-  "sendLeadShare": "DNI Limpio n'envoie rien. Le menu de partage de votre appareil s'ouvre : vous choisissez l'application et le destinataire.",
-  "sendLeadManual": "DNI Limpio n'envoie rien. Ces liens ouvrent WhatsApp ou votre messagerie avec un message ; joignez vous-même le PDF depuis votre dossier de téléchargements.",
+  "sendLeadShare": "DNI Tapado.es n'envoie rien. Le menu de partage de votre appareil s'ouvre : vous choisissez l'application et le destinataire.",
+  "sendLeadManual": "DNI Tapado.es n'envoie rien. Ces liens ouvrent WhatsApp ou votre messagerie avec un message ; joignez vous-même le PDF depuis votre dossier de téléchargements.",
   "shareWhatsApp": "Partager via WhatsApp",
   "shareEmail": "Partager par e-mail",
   "shareSubject": "Document avec données protégées",
