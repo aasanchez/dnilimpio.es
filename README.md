@@ -1,24 +1,29 @@
 # DNI Tapado.es
 
-Hide the sensitive data on a photo of your Spanish identity document before you share a copy.
-Everything runs in your browser, on your device. Nothing is uploaded.
+Hide the sensitive data on a photo of your Spanish identity document (DNI or TIE) before you share a
+copy. Everything runs in your browser, on your device. Your photos are never uploaded.
 
-**Use it:** <https://aasanchez.github.io/dnilimpio.es/> (planned move to `dnitapado.es`). The GitHub repository keeps the name `dnilimpio.es` for now.
+**Use it:** <https://aasanchez.github.io/dnilimpio.es/>
+
+> [!NOTE]
+> **Names and addresses.** The product was called *dnilimpio.es* and is now **DNI Tapado.es** (short
+> mark **DT.es**). The custom domain **`dnitapado.es`** is being set up and is not live yet; until
+> then the site is served only from the GitHub Pages address above. The GitHub repository keeps the
+> name `aasanchez/dnilimpio.es` for now, so every link to the source, the CI and the provenance
+> check below uses that name.
 
 > [!IMPORTANT]
-> **Work in progress.** The full flow works for the DNI 4.0, DNI 3.0 and TIE: select both sides, confirm the document
-> (detected automatically when possible), straighten them, choose the fields to hide, draw extra black boxes, add a
-> watermark, review and download the PDF. Smart field finding is still being built (see [Status](#status)).
-> Always check the result before you share it.
+> Automatic detection can miss data. Always check both sides of the result before you share it.
 
 ## Contents
 
 - [What it does](#what-it-does)
-- [Privacy](#privacy)
 - [Supported documents](#supported-documents)
-- [Status](#status)
 - [How to use it](#how-to-use-it)
+- [Privacy and security](#privacy-and-security)
+- [Audit it yourself](#audit-it-yourself)
 - [Languages](#languages)
+- [Status](#status)
 - [Development](#development)
 - [Tests](#tests)
 - [Continuous integration](#continuous-integration)
@@ -30,22 +35,28 @@ Everything runs in your browser, on your device. Nothing is uploaded.
 
 ## What it does
 
-When a landlord, employer or company asks for a copy of your DNI or TIE, they usually
-need only some of the data. This tool makes a copy that shows only what you choose:
+When a landlord, employer or company asks for a copy of your DNI or TIE, they usually need only
+some of the data. This tool makes a copy that shows only what you choose:
 
-1. **Select** a photo of the front and the back (JPEG, PNG, WebP; camera on mobile). On a phone,
-   the **capture coach** gives live tips and takes the photo by itself when the card is sharp.
-2. **Confirm the document**: DNI 4.0, DNI 3.0 or TIE. When possible, the app reads the code on the
-   back (MRZ) on your device and preselects it.
+1. **Select** a photo of the front and of the back. On a phone, the **capture coach** gives live
+   tips and takes the photo by itself when the card is sharp. On a computer, drag and drop, choose a
+   file or paste.
+2. **Confirm the document**: DNI 4.0, DNI 3.0 or TIE. The app reads the code on the back (MRZ) on
+   your device and preselects it.
 3. **Straighten**: the app finds the card in each photo, turns it the right way up (sideways or
-   upside down) and straightens it by itself. You can adjust the corners by hand if needed.
-4. **Choose the fields to hide** (signature, dates, support number, CAN, MRZ and others), and draw
-   extra black boxes over anything else.
-5. **Add a watermark** (optional), for example `COPY ONLY FOR RENTAL APPLICATION`. The text is
-   repeated in small, faint diagonal rows over the whole card, so every part of it carries the text
-   and the card stays readable.
+   upside down) and straightens it. You can place the corners by hand if needed.
+4. **Choose the fields to hide** (signature, dates, support number, CAN, MRZ and others). Move or
+   resize a cover box by hand if it sits a little off its field, let **Find automatically** cover
+   data it reads with on-device OCR, and draw extra black boxes over anything else.
+5. **Add a watermark** (optional), for example `FOR RENTAL ONLY`. The text is repeated in small,
+   diagonal rows over the whole card, so every part of the image carries it. Text size and opacity
+   are adjustable; at 100 % opacity the text is solid black.
 6. **Convert to black and white** (optional).
 7. **Review** both sides and **download a PDF**: `protected-document.pdf`.
+8. **Share it yourself** (optional) through WhatsApp, email or the system share sheet. The app
+   never sends anything.
+
+![A synthetic card with the watermark: one large diagonal text (before) and the small repeated rows the app draws (after)](docs/images/watermark-before-after.jpg)
 
 The PDF holds new images in which the hidden pixels are replaced with solid black. It is not the
 original photo with boxes on top: the hidden data is gone from the file.
@@ -53,84 +64,228 @@ original photo with boxes on top: the hidden data is gone from the file.
 The tool does not make an official document, and a redacted copy does not replace the original.
 Whether a recipient accepts a redacted copy is up to them.
 
-## Privacy
+## Supported documents
+
+| Document | Shape | Source of the field positions | Hidden by default | Optional |
+|---|---|---|---|---|
+| DNI 4.0 (August 2021 onwards) | card, 85.6 × 54 mm | Policía Nacional specimen | CAN, signature, issue and expiry dates, support number (3 places), MRZ | date and place of birth, address, parents |
+| DNI 3.0 (2015 to 2021) | card, 85.6 × 54 mm | PRADO ESP-BO-05001 | CAN, signature, issue date (laser text by the small photo), expiry date, support number (3 places), MRZ | date and place of birth, address, parents |
+| TIE, foreigner identity card (2020 model) | card, 85.6 × 54 mm | PRADO ESP-HO-03001 | CAN, signature, issue and expiry dates, card number (2 places), MRZ | date and place of birth, address, permit type |
+
+Positions were measured on official specimens ([method and findings](docs/ZONES.md)); the data is in
+[`src/zones/`](src/zones/). The name, the photo and the DNI or NIE number stay visible by design;
+cover them with a black box, or with **Find automatically**, if needed. Any other document can be
+redacted by hand with black boxes.
+
+**Document detection.** The document is detected from the machine-readable lines (MRZ) on the back,
+and you always confirm it ([ADR 0011](docs/adr/0011-document-detection.md)):
+
+- Code `IR` → TIE. Code `ID` → DNI.
+- DNI 3.0 or 4.0: both have the same MRZ, so the version comes from the issue date. It is worked out
+  from the dates of birth and expiry (a DNI is valid 2 years under age 5, 5 years under 30 and
+  10 years under 70; the DNI 4.0 is issued from 2 August 2021). When the dates fit both versions, or
+  for a permanent DNI (holder 70 or over), the app says it is a DNI and asks you to choose the version.
+- Nothing is preselected until detection answers or you choose: **Continue** waits for a document,
+  so a TIE is never handled with DNI positions by mistake.
+- Detection needs OCR. Online, the first time, it downloads the OCR files by itself (about 8 MB; the
+  status line says so). After that it also runs offline. When OCR cannot run (offline before the
+  first download, no service worker, an old browser), a note says so and you choose by hand. A
+  choice you make yourself is never changed.
+
+**Card guide.** "What is on my card?" on the start screen, and the ⓘ beside each field in the
+editor, open a guide to every element of each card: what it is, how a copy of it can be misused, and
+what the app does with it. Every statement cites the official text that says it (BOE, EUR-Lex, ICAO
+Doc 9303, Policía Nacional, PRADO, AEPD, INCIBE), with links that open in a new tab. When no official
+source was found, the guide says so instead of guessing ([ADR 0014](docs/adr/0014-card-guide.md),
+[source notes](docs/GUIDE-SOURCES.md)). The guide is bundled with the app, so it also opens offline.
+
+## How to use it
+
+Open the site in a current browser (Chrome, Edge, Firefox, Safari; desktop or mobile). No account,
+no installation. The layout is built for a phone first: one step per screen, the main button always
+at the bottom within thumb reach, and a progress bar at the top (**Photos**, **Corners**, **Hide**,
+**Download**). The back arrow in the top bar returns to the previous step without losing work. The
+**DT.es** logo returns to the start screen without reloading the page; your photos are kept.
+
+1. **Start screen.** It explains what the tool does and has:
+   - **What is on my card?**, the [card guide](#supported-documents).
+   - The **no-cookies notice**, in the place where other sites put a cookie banner. It only informs:
+     there is nothing to accept. English text: *"No cookies, no profiles, no data to sell. We only
+     count visits, anonymously and without cookies. Every Eurocrat's dream: this banner only exists
+     to tell you it isn't needed. Your photos never leave your device."* **I believe you** closes it;
+     it comes back after 4 days at the earliest.
+   - In the footer: **Source code** (this repository, in a new tab), **Check it with your AI** (see
+     [Audit it yourself](#audit-it-yourself)), the build version and deploy time, and the NagWara
+     product band.
+
+   Optional: disconnect from the Internet once the page has loaded. After the first visit, the tool
+   also opens with no connection. Press **Start**.
+2. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself.
+   - On a phone, **Take a photo** opens the capture coach (see below) and **Gallery** opens your
+     pictures.
+   - On a computer, the photo area is an upload area: drag an image onto it, use **Choose a file**,
+     or paste with <kbd>Ctrl</kbd>+<kbd>V</kbd>. A file dropped anywhere else in the window is
+     ignored, so it never replaces the app in the tab.
+   - Any image the browser can open is accepted (JPEG, PNG, WebP; HEIC where the browser supports
+     it, such as Safari), up to 40 MB. Tap a side's tile to replace its photo.
+
+   **Capture coach.** A live camera view with a card-shaped frame. Inside the frame, a faint
+   drawing shows which side to hold up: a photo and text lines for the front, text lines and the
+   three machine-readable lines for the back. It fades once the card is in place. Below it, one tip
+   at a time: *Fit the card inside the frame*, *Move a little closer*, *Hold the card straight*,
+   *Too dark*, *Glare: tilt the card slightly*, *Hold the phone still*, *Blurry: wait for it to
+   focus*. When every check passes for about half a second, the photo is taken by itself, and the
+   view moves to the back: turn the card over and it takes that one too. The round button takes the
+   photo at any moment, **Automatic shot** turns the automatic photo off, and ✕ closes the camera.
+
+   The coach uses no model and no network, so it works the same online and offline
+   ([ADR 0008](docs/adr/0008-capture-coach.md)). It needs a browser that gives web pages a live
+   camera, and your permission. If either is missing (permission refused, no camera, an old browser,
+   the page opened from a file), the coach does not open: a short note appears, and **Take a photo**
+   opens the phone's own camera app instead.
+3. **Document.** Confirm DNI 4.0, DNI 3.0 or TIE, then **Continue**. Each one has its own field
+   positions. The app reads the MRZ on your device and preselects the document: *Document detected:
+   TIE. Check it before you continue.* You can choose by hand at any moment. Until a document is
+   chosen, **Continue** stays off. To change the document later, go back from the editor: your
+   photos are kept, the corners and choices start again.
+4. **Straighten (automatic).** After **Continue**, the app looks for the card in each photo (with the
+   on-device model, or classic edge detection), turns it the right way up, whether the photo was
+   taken sideways or upside down, and straightens it. It then opens step 5 with both sides already
+   corrected. You only see the corner screen when:
+   - the card was not found in a photo (*We could not find the document in this photo. Place the
+     corners by hand.*),
+   - you tap **Place the corners myself** while it works, or
+   - you tap **Adjust corners** in step 5.
+
+   **Corner screen.** The four circles sit on the corners that were found. Drag them onto the
+   corners of the card; a magnifier shows the area under your finger. On a keyboard, arrow keys move
+   the selected corner and <kbd>N</kbd> selects the next one. **Rotate** turns the frame a quarter
+   turn, **Reset** puts the circles back. The button straightens the card again and takes you on.
+5. **Hide.** The card stays on screen. Choose **Front** or **Back**; the list below shows that
+   side's fields as switches. You can also tap a field on the card itself to cover or uncover it.
+   The recommended fields start covered (see [Supported documents](#supported-documents)). Fields
+   left visible get a dashed orange outline; **Final preview** hides the outlines. A warning appears
+   if the CAN stays visible, or if the MRZ stays visible while data it repeats is hidden.
+   **Adjust corners** goes back to step 4 and keeps your choices. Three tabs:
+   - **Data:** the field switches and quick choices (**Recommended**, **Hide all**, **Show all**).
+     - **Adjust boxes** lets you move or resize each cover box by hand when the template sits a
+       little off the card. While you adjust, you see the photo uncovered; the copy stays covered.
+       With a keyboard, <kbd>N</kbd> selects the next box, arrow keys move it and
+       <kbd>Shift</kbd>+arrows resize it. **Back to original position** undoes the adjustments.
+     - **Find automatically** reads both sides with OCR on your device and adds a black box over each
+       piece of data you pick: name and surnames, DNI/NIE number, dates, support number, CAN and MRZ
+       lines. Dates, support number, CAN and MRZ are picked to start with; name and number are not.
+       It works from the text itself, so it also finds data on layouts the app has not measured. A
+       DNI/NIE number or a date counts only when its check letter or calendar date is valid. The
+       boxes it adds are ordinary boxes: check them in **Boxes**, move or delete them, or undo them
+       all in one step ([ADR 0010](docs/adr/0010-smart-field-finding.md)). The first use downloads
+       about 8 MB. If finding cannot run (offline before that download, or a browser without a
+       service worker), the button is disabled with a short note and you hide the data by hand.
+   - **Boxes:** extra black boxes for anything the list does not cover. Turn on **Draw black box**
+     and drag on the card. Select a box to move it, or drag its corners to resize it. **Undo** and
+     **Redo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>) work on
+     boxes. With a keyboard: **Add box**, then arrow keys move it, <kbd>Shift</kbd>+arrows resize it,
+     <kbd>N</kbd> selects the next box and <kbd>Delete</kbd> removes it.
+   - **Watermark:** type what the copy is for, or pick a suggestion (rental, bank, dated copy). The
+     card updates as you type. Long text wraps onto a few short lines (at most 120 characters).
+     **Text size** (50 % to 300 %) and **Opacity** (5 % to 100 %, default 16 %) apply live; at 100 %
+     the text is solid black. **Convert to black and white** is here too.
+6. **Download.** Check both final images and the summary, tick **I have checked both sides**, then
+   **Download PDF**. The file is called `protected-document.pdf`.
+7. **Done.** Under **Send it yourself**, **Share via WhatsApp** and **Share via email** open the system
+   share sheet with the PDF on devices that support sharing files. On other devices they open
+   WhatsApp or your email app with a fixed short message, and you attach `protected-document.pdf`
+   from your downloads folder. **Clear everything** removes the photos and all your choices from the
+   page; closing the tab does the same.
+
+## Privacy and security
 
 **In short.** Your document never leaves your device. Detection, text recognition (OCR), redaction,
 the watermark and the PDF all run in your browser. The site sends no photo, file name or data read
 from the card to any server. It uses no cookies, trackers or profiles; the public site counts visits
 anonymously with Cloudflare Web Analytics (see [Visit counts](#visit-counts)). Apart from that, it
-downloads only its own files; once they are on your device you can go offline. The PDF leaves the app only when you download or share it.
-An external security and privacy audit (25 November 2026) reviewed this; its findings are fixed and
-covered by tests (see [Security reviews](#security-reviews)).
+downloads only its own files; once they are on your device you can go offline. The PDF leaves the
+app only when you download or share it. An external security and privacy audit (25 November 2026)
+reviewed this; its findings are fixed and covered by tests (see [Security reviews](#security-reviews)).
 
 ### What the tool guarantees
 
-- **No upload.** Photos are processed in the browser with the Canvas API. The page has no server side.
-- **Almost no network access from the page.** The Content Security Policy allows the page to send
-  requests to one other address only: `connect-src 'self' https://cloudflareinsights.com`, where the
-  visit counter reports. `'self'` is there so the browser's developer tools can load the published
-  source maps (see **Verifiable code** below and [ADR 0016](docs/adr/0016-source-maps-in-devtools.md));
-  the app itself never calls `fetch()`. It loads styles and images only from its own origin, and
-  scripts from its own origin plus the counter's exact URL. WebRTC, which no CSP rule covers, is
-  removed before any code runs.
+- **No upload.** Photos are processed in the browser with the Canvas API. The site is static and has
+  no server side.
+- **Almost no network access from the page.** The Content Security Policy
+  ([`scripts/csp.ts`](scripts/csp.ts)) is `default-src 'none'` and lets the page send requests to
+  one other address only: `connect-src 'self' https://cloudflareinsights.com`, where the visit
+  counter reports. `'self'` is there so the browser's developer tools can load the published source
+  maps ([ADR 0016](docs/adr/0016-source-maps-in-devtools.md)); the app itself never calls `fetch()`.
+  It loads styles, fonts and images only from its own origin, and scripts from its own origin plus
+  the counter's exact URL. `form-action`, `base-uri` and `object-src` are `'none'`. WebRTC, which no
+  CSP rule covers, is removed before any code runs.
 - **Deny by default.** After the first visit, the service worker answers only the exact files of this
   build. Any other request from the page or its workers (another address, a query string, another
   method) is refused and never reaches the network, so even a same-origin request cannot carry data
-  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). The exceptions are the visit
-  counter's script and report, at their exact addresses, and this build's own source maps, each
-  checked against its hash and never cached. An end-to-end test runs a whole document
-  workflow with fictional card values and checks that no request is sent and none carries those
-  values (`tests/e2e/privacy.spec.ts`).
-- **On-device AI only.** The corner finder is a small model that runs in the page with WebAssembly.
-  The photo goes to it in memory, scaled to 224 × 224 pixels, and nowhere else. The CSP allows
-  WebAssembly (`'wasm-unsafe-eval'`) but still no `eval()` and no connections
+  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). The exceptions are the visit counter's
+  script and report, at their exact addresses, and this build's own source maps, each checked
+  against its hash and never cached. An end-to-end test runs a whole document workflow with
+  fictional card values and checks that no request is sent and none carries those values
+  ([`tests/e2e/privacy.spec.ts`](tests/e2e/privacy.spec.ts)).
+- **On-device AI only.** The corner finder is a small model (DocCornerNet from `scanic-ml`) that runs
+  in the page with WebAssembly. The photo goes to it in memory, scaled to 224 × 224 pixels, and
+  nowhere else. The CSP allows WebAssembly (`'wasm-unsafe-eval'`) but still no `eval()`
   ([ADR 0007](docs/adr/0007-corner-model.md)).
 - **No storage of your data.** Photos, fields, watermark text and PDFs are kept in memory only. The
   code is not allowed to use browser storage, cookies or network APIs (`localStorage`,
   `sessionStorage`, `indexedDB`, `document.cookie`, `fetch`, `sendBeacon` and others, enforced by the
   linter). The browser stores only the app itself (its HTML, scripts and styles), for offline use,
-  and one `localStorage` key with the date you last closed the no-cookies notice, so it shows at most
-  every 4 days (`src/ui/notice-memory.ts`, the only file allowed to use storage). A test checks that
-  cookies and storage stay empty after a whole workflow.
-- **Clear everything means everything.** "Clear everything" drops the photos and every choice, and
-  stops the OCR worker, which keeps the last image it read. Leaving the page (another site, closing the
-  tab, a reload) does the same, so the browser's back-forward cache keeps no document.
+  and one `localStorage` key, `dnilimpio.noticeDismissedAt`, with the date you last closed the
+  no-cookies notice, so it shows at most every 4 days
+  ([`src/ui/notice-memory.ts`](src/ui/notice-memory.ts), the only file allowed to use storage). If
+  the browser blocks storage, the notice simply shows on every visit. A test checks that cookies and
+  storage hold nothing else after a whole workflow.
+- **Clear everything means everything.** **Clear everything** drops the photos and every choice, and
+  stops the OCR worker, which keeps the last image it read. Leaving the page (another site, closing
+  the tab, a reload) does the same, so the browser's back-forward cache keeps no document. Links that
+  leave the app (source code, card guide sources, NagWara) open in a new tab for that reason.
 - **Text recognition (OCR) on the device.** When OCR is used, the image is read by a Web Worker in
   your browser. The OCR engine and Spanish language data (about 8 MB) come from this site, never from
   a third party, are downloaded only the first time OCR is used, and are checked against their hash
   before use. The worker runs under its own strict CSP: it can read its own files in `ocr/` and
   cannot send requests anywhere. If OCR cannot run (offline before the first download, or no service
-  worker), it is switched off and you choose the document by hand
-  ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
+  worker), it is switched off and you choose by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md)).
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
   it is stored; if one does not match, nothing is stored ([ADR 0004](docs/adr/0004-offline-service-worker.md)).
   The corner model (about 2.6 MB) is not part of that first copy: it is stored the first time you use
-  it online. Offline before that, classic edge detection places the corners, or you place them by hand.
-  A new version reaches an open tab by itself: when the tab is on the start screen with no photos, and
-  it is the only tab of the tool, it switches to the new version and reloads once. Work in progress is
-  never interrupted.
+  it online. Offline before that, classic edge detection places the corners, or you place them by
+  hand.
+- **Updates never interrupt work.** A new version reaches an open tab by itself: when the tab is on
+  the start screen with no photos, and it is the only tab of the tool, it switches to the new version
+  and reloads once. A tab with photos keeps its version until it returns to the start screen
+  ([`src/offline/update.ts`](src/offline/update.ts)).
 - **Camera stays on the device.** The live camera (capture coach) is analysed frame by frame in
   memory. No frame is stored or sent, and the camera turns off when you close the view, finish both
   sides or leave the tab.
-- **No tracking.** No cookies, profiles, telemetry, fonts or third-party scripts, except the
-  anonymous visit counter described below.
+- **No tracking.** No cookies, profiles, telemetry, external fonts or third-party scripts, except the
+  anonymous visit counter described below. Fonts and icons are self-hosted or inline.
 - **No framing.** Inside another site's frame the app does not start; it only offers to open itself
-  in its own tab. No page can overlay it with invisible controls.
+  in its own tab. Page loads answered by the service worker also carry the headers GitHub Pages
+  cannot send: `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`.
+- **One Trusted Types policy.** The page never turns strings into HTML (no `innerHTML`, no
+  `{@html}`). Trusted Types are required, and the only policy, `default`, accepts three script URLs:
+  the service worker, the OCR worker and the visit counter.
 - **Real redaction.** Hidden areas are painted as opaque black pixels on a new image, with a margin
   around each field. Blur and pixelation are not offered, because they can be reversed.
 - **Clean PDF.** Each image is re-encoded, and the JPEG is rebuilt with only the data a decoder needs:
   no EXIF, GPS, camera model, thumbnail or comments. The PDF has no metadata, no text, no
   annotations, no scripts and no attachments. Tests check this object by object.
 - **Verifiable code.** The production build is minified but ships source maps (`.map` files) that
-  map every line back to the source in this repository. The browser's developer tools show the
-  original source under **Sources**. A map on its own proves nothing, because the same build
-  produces it; the proof is in the hashes below, which cover the maps too. Every script and stylesheet has a
+  map every line back to the source in this repository. Every script and stylesheet has a
   Subresource Integrity hash, including the PDF code that loads in the background after the page
   appears (its hash is in an import map, allowed by the CSP through its own SHA-256 hash). A changed
   file is refused by the browser, both when the page loads it and when it is saved for offline use.
   The build is reproducible, every deployed file has signed build provenance, and after each deploy
-  CI checks that the live site serves exactly the files it built (see [Continuous integration](#continuous-integration)).
+  CI checks that the live site serves exactly the files it built. See
+  [Audit it yourself](#audit-it-yourself).
 
 ### What it cannot guarantee
 
@@ -149,8 +304,8 @@ covered by tests (see [Security reviews](#security-reviews)).
 - **No browser rule can stop a page from navigating to a URL.** The protection there is that only
   this build's verified code runs (CSP, SRI, the locked dependency list) and that the code never
   navigates with your data (enforced by the linter).
-- **Sharing is your choice.** **Share via WhatsApp** and **Share via email** hand the PDF to the app you
-  pick through the system share sheet; what that app does with it is outside the tool. Where the
+- **Sharing is your choice.** **Share via WhatsApp** and **Share via email** hand the PDF to the app
+  you pick through the system share sheet; what that app does with it is outside the tool. Where the
   browser cannot share files, they are plain `wa.me` and `mailto:` links with a fixed message and no
   file, and you attach the PDF yourself. No link carries data from your document.
 - **Memory is released, not wiped.** The tool drops its references and clears canvases, but cannot
@@ -160,9 +315,10 @@ covered by tests (see [Security reviews](#security-reviews)).
 
 ### Visit counts
 
-The public site (`aasanchez.github.io`, `dnitapado.es`) counts visits with
-[Cloudflare Web Analytics](https://www.cloudflare.com/web-analytics/)
-([ADR 0015](docs/adr/0015-cookieless-analytics.md)):
+The public site counts visits with [Cloudflare Web Analytics](https://www.cloudflare.com/web-analytics/)
+([ADR 0015](docs/adr/0015-cookieless-analytics.md)). It runs only on the public host names listed in
+[`src/analytics/endpoints.ts`](src/analytics/endpoints.ts): `aasanchez.github.io`, the upcoming
+`dnitapado.es` (and `www.`), and the earlier name `dnilimpio.es` (and `www.`).
 
 - **What is sent.** Cloudflare's beacon reports the page load: the page address, the referring site,
   load timings and the browser. Cloudflare sees your IP address, as any server does, and derives a
@@ -170,201 +326,135 @@ The public site (`aasanchez.github.io`, `dnitapado.es`) counts visits with
   progress live in memory and never in the address, so no report can contain them.
 - **What is not.** No cookies, no `localStorage`, no fingerprinting, no profile across sites. A test
   checks that cookies and storage stay empty.
-- **When it does not run.** Offline, on any other host (local builds, tests, forks), and when your
-  browser sends Global Privacy Control or Do Not Track. If Cloudflare cannot be reached, the app works
-  the same.
+- **When it does not run.** Offline, on any other host (local builds, tests, forks), in development
+  builds, and when your browser sends Global Privacy Control or Do Not Track. If Cloudflare cannot be
+  reached, the app works the same.
 - **The limits.** The beacon is the only third-party script and the only script without an SRI hash
   (Cloudflare does not publish versioned copies). Like any script in a page it could read the page.
   The CSP, Trusted Types and the service worker let it load from its exact URL and send only to
-  `cloudflareinsights.com`. If you prefer not to load it, enable Global Privacy Control, use a content
-  blocker, or go offline before you select a photo.
-
-### Check it yourself
-
-1. Open the browser's developer tools, **Network** tab, before you select a photo.
-2. Use the tool to the end. The only requests are the page's own files, all from the same origin,
-   and on the public site the visit counter (`static.cloudflareinsights.com/beacon.min.js` and one
-   report to `cloudflareinsights.com`), which carry nothing from your document.
-   The first time you select a photo, the page also downloads the corner model (`assets/ml/`) from
-   the same origin; these are plain downloads of the app's files and carry nothing from you.
-3. For the strongest check, load the page, then disconnect from the Internet (airplane mode) before you
-   select a photo. The tool keeps working, including after a reload.
-4. Read the policy in the page source: `<meta http-equiv="Content-Security-Policy">`.
-5. Check which code you run: the start screen's footer shows the short commit SHA of the build, linked
-   to that commit on GitHub (see [Deployment](#deployment)).
-6. Read the running code as source: developer tools, **Sources** tab. The source maps map the
-   minified files back to `src/` in this repository.
-7. Check that a file is the one CI built from this repository, source maps included:
-   `gh attestation verify <file> --repo aasanchez/dnilimpio.es`, or rebuild it yourself and compare
-   (see [Continuous integration](#continuous-integration)).
+  `cloudflareinsights.com`. If you prefer not to load it, enable Global Privacy Control, use a
+  content blocker, or go offline before you select a photo.
 
 ### Security reviews
 
 An external static review of the source (25 November 2026) found no upload or storage of documents
 and no high or critical issue. It raised 6 medium and 5 low findings about defence in depth. One,
 that the host can see when the OCR files are first downloaded, is a limit of any website and is
-described above. The others were fixed in separate pull requests with tests: the service worker's deny-by-default rule and the OCR
-worker's own CSP ([#29](https://github.com/aasanchez/dnilimpio.es/pull/29), [#31](https://github.com/aasanchez/dnilimpio.es/pull/31)), OCR cleanup ([#32](https://github.com/aasanchez/dnilimpio.es/pull/32)), the end-to-end privacy test ([#33](https://github.com/aasanchez/dnilimpio.es/pull/33)), the full
-post-deploy check ([#34](https://github.com/aasanchez/dnilimpio.es/pull/34)), reproducible builds, SBOM and provenance ([#35](https://github.com/aasanchez/dnilimpio.es/pull/35)), WebRTC, framing and
-`pagehide` ([#36](https://github.com/aasanchez/dnilimpio.es/pull/36)), and buffer clearing and wider lint rules ([#38](https://github.com/aasanchez/dnilimpio.es/pull/38)). Headers that need a server
-(HSTS, Permissions-Policy, COOP) cannot be set on GitHub Pages; github.io is on the HSTS preload list.
+described above. The others were fixed in separate pull requests with tests:
 
-## Supported documents
+- the service worker's deny-by-default rule and the OCR worker's own CSP
+  ([#29](https://github.com/aasanchez/dnilimpio.es/pull/29), [#31](https://github.com/aasanchez/dnilimpio.es/pull/31));
+- OCR cleanup ([#32](https://github.com/aasanchez/dnilimpio.es/pull/32));
+- the end-to-end privacy test ([#33](https://github.com/aasanchez/dnilimpio.es/pull/33));
+- the full post-deploy check ([#34](https://github.com/aasanchez/dnilimpio.es/pull/34));
+- reproducible builds, SBOM and provenance ([#35](https://github.com/aasanchez/dnilimpio.es/pull/35));
+- WebRTC, framing and `pagehide` ([#36](https://github.com/aasanchez/dnilimpio.es/pull/36));
+- buffer clearing and wider lint rules ([#38](https://github.com/aasanchez/dnilimpio.es/pull/38)).
 
-| Document | Shape | Source of the field positions | Hidden by default | Optional |
-|---|---|---|---|---|
-| DNI 4.0 (August 2021 onwards) | card, 85.6 × 54 mm | Policía Nacional specimen | CAN, signature, issue and expiry dates, support number (3 places), MRZ | date and place of birth, address, parents |
-| DNI 3.0 (2015 to 2021) | card, 85.6 × 54 mm | PRADO ESP-BO-05001 | CAN, signature, issue date (laser text by the small photo), expiry date, support number (3 places), MRZ | date and place of birth, address, parents |
-| TIE, foreigner identity card (2020 model) | card, 85.6 × 54 mm | PRADO ESP-HO-03001 | CAN, signature, issue and expiry dates, card number (2 places), MRZ | date and place of birth, address, permit type |
+Headers that need a server for every response (HSTS, Permissions-Policy, COOP) cannot be set on
+GitHub Pages; `github.io` is on the HSTS preload list.
 
-Positions were measured on official specimens ([method and findings](docs/ZONES.md)). The name, the
-photo and the DNI or NIE number stay visible by design; cover them with a black box if needed. Any
-other document can be redacted by hand with black boxes.
+## Audit it yourself
 
-**Card guide.** "What is on my card?" on the start screen, and the ⓘ beside each field in the
-editor, open a guide to every element of each card: what it is, how a copy of it can be misused, and
-what the app does with it. Every statement cites the official text that says it (BOE, EUR-Lex, ICAO
-Doc 9303, Policía Nacional, PRADO, AEPD, INCIBE), with links that open in a new tab. When no official
-source was found, the guide says so instead of guessing ([ADR 0014](docs/adr/0014-card-guide.md), [source notes](docs/GUIDE-SOURCES.md)).
+You do not have to trust the claims above. Each one can be checked.
 
-The document is detected from the machine-readable lines (MRZ) on the back, and you always confirm
-it ([ADR 0011](docs/adr/0011-document-detection.md)):
+**In the browser**
 
-- Code `IR` → TIE. Code `ID` → DNI.
-- DNI 3.0 or 4.0: both have the same MRZ, so the version comes from the issue date. It is worked out
-  from the dates of birth and expiry (a DNI is valid 2 years under age 5, 5 years under 30 and
-  10 years under 70; the DNI 4.0 is issued from 2 August 2021). When the dates fit both versions, or
-  for a permanent DNI (holder 70 or over), the app says it is a DNI and asks you to choose the version.
-- Nothing is preselected until detection answers or you choose: **Continue** waits for a document,
-  so a TIE is never handled with DNI positions by mistake.
-- Detection needs OCR. Online, the first time, it downloads the OCR files by itself (about 8 MB, the
-  status line says so); after that it also runs offline. When OCR cannot run (offline before the first download, no
-  service worker, an old browser), a note says so and you choose by hand. A choice you make yourself
-  is never changed.
+1. Open the browser's developer tools, **Network** tab, before you select a photo.
+2. Use the tool to the end. The only requests are the page's own files, all from the same origin,
+   and on the public site the visit counter (`static.cloudflareinsights.com/beacon.min.js` and one
+   report to `cloudflareinsights.com`), which carry nothing from your document. The first time you
+   select a photo, the page also downloads the corner model (`assets/ml/`), and the first time OCR
+   runs, the OCR files (`ocr/`), both from the same origin. These are plain downloads of the app's
+   files and carry nothing from you.
+3. For the strongest check, load the page, then disconnect from the Internet (airplane mode) before
+   you select a photo. The tool keeps working, including after a reload.
+4. Read the policy in the page source: `<meta http-equiv="Content-Security-Policy">`.
+5. Check which code you run: the start screen's footer shows the short commit SHA of the build,
+   linked to that commit on GitHub (see [Version shown in the app](#version-shown-in-the-app)).
+6. Read the running code as source: developer tools, **Sources** tab. The source maps map the
+   minified files back to `src/` in this repository.
+
+A source map on its own proves nothing, because the same build produces it. The proof is in the
+hashes below, which cover the maps too.
+
+**With an AI coding agent.** **Check it with your AI** on the start screen (in the footer and in the
+no-cookies notice) opens a ready-made audit prompt to copy into an AI coding agent. It asks for a
+deep review of this repository's privacy claim: image lifecycle, every network primitive, the
+declared analytics exception, dependencies, CSP, the service worker and reproducibility, with a
+YES/NO verdict and file and line references. Copying uses the clipboard only; nothing is sent. The
+text is in [`src/security/audit-prompt.ts`](src/security/audit-prompt.ts).
+
+**Check that the live files are the ones built from this repository**
+
+- **Provenance.** Every deployed file, source maps included, has signed build provenance:
+
+  ```sh
+  gh attestation verify <file> --repo aasanchez/dnilimpio.es
+  ```
+
+- **Rebuild.** The build is reproducible: the same commit gives the same bytes.
+
+  ```sh
+  git checkout <commit>
+  export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" GITHUB_SHA="$(git rev-parse HEAD)"
+  pnpm install --frozen-lockfile && pnpm build
+  node scripts/build-manifest.ts dist   # SHA-384 of every file, to compare with the live site
+  ```
+
+- **Post-deploy check.** After every deploy, CI's `smoke` job
+  ([`scripts/smoke.ts`](scripts/smoke.ts)) downloads the live site and checks it byte for byte
+  against the build (see [Continuous integration](#continuous-integration)).
+
+Security problems: please report them privately through GitHub's
+[security advisories](https://github.com/aasanchez/dnilimpio.es/security/advisories/new), not in a
+public issue.
+
+## Languages
+
+The interface is available in 13 languages: Spanish (default), Catalan, Valencian, Galician, Basque,
+English, French, Dutch, Swedish, Finnish, Ukrainian, Romanian and Arabic (right to left). All
+languages are bundled in the build; the page never downloads translations. The language follows the
+browser and can be changed from the selector at the top. The card guide has its own texts per
+language ([`src/guide/locales/`](src/guide/locales/)).
+
+Translations other than Spanish and English are machine-assisted drafts. Corrections are welcome:
+edit one file in [`src/i18n/locales/`](src/i18n/locales/) and open a pull request. Spanish
+(`es.json`) defines the keys. Translations can also be managed with Crowdin through its GitHub
+integration ([`crowdin.yml`](crowdin.yml)); the app itself never contacts Crowdin.
 
 ## Status
 
-The project follows [docs/PLAN.md](docs/PLAN.md). Summary:
+The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PLAN.md](docs/PLAN.md).
 
 | Part | State |
 |---|---|
 | Select front and back photos (file, drag and drop, paste, camera) | Done |
-| Straighten each side by its corners | Done |
-| Secure raster engine: greyscale, opaque masks with margin, self-check | Done |
-| PDF engine: A4, one side per page, metadata-free | Done |
-| Move the UI to Svelte 5 and pnpm | Done |
-| Fields to hide, live preview, watermark, black and white, review, PDF download, reset | Done |
-| Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
-| Offline mode with service worker and integrity checks | Done |
-| Redesign of the workflow and interface: guided phone-first flow, new visual style | Done |
-| Capture coach: live camera tips (framing, tilt, light, glare, blur, movement) and automatic shot | Done |
-| DNI 3.0 and TIE, with a document picker | Done |
-| Find the card's corners automatically: on-device model, then classic edge detection, then manual; sides snapped onto the card's real edges | Done |
-| Automatic straightening: find, turn (sideways, upside down) and straighten both sides; corners only on request | Done |
-| On-device OCR engine and MRZ reader (Tesseract.js, self-hosted, loaded on first use) | Done |
-| Smart field finding: OCR covers names, DNI/NIE number, dates, support number, CAN and MRZ | Done |
+| Capture coach: live camera tips and automatic shot | Done |
+| DNI 4.0, DNI 3.0 and TIE, with a document picker | Done |
 | Document type detection from the MRZ (preselects the picker) | Done |
-| 31 languages | 13 today |
-
-## How to use it
-
-Open the site in a current browser (Chrome, Edge, Firefox, Safari; desktop or mobile). No account,
-no installation. The layout is built for a phone first: one step per screen, the main button always
-at the bottom within thumb reach, and a progress bar at the top (**Photos**, **Corners**, **Hide**,
-**Download**). The back arrow in the top bar returns to the previous step without losing work.
-
-1. Optional: disconnect from the Internet after the page has loaded. After the first visit, the
-   tool also opens with no connection.
-2. **Start.** The first screen explains what the tool does. Press **Start**.
-3. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself. On a
-   phone, **Take photo** opens the capture coach (see below) and **Gallery** opens your pictures; on
-   a computer, **Choose image**, drag and drop, or paste (<kbd>Ctrl</kbd>+<kbd>V</kbd>) also work.
-   Tap a side's tile to replace its photo.
-
-   **Capture coach.** A live camera view with a card-shaped frame. Inside the frame, a faint
-   drawing shows which side to hold up: a photo and text lines for the front, text lines and the
-   three machine-readable lines for the back. It fades once the card is in place. Below it, one tip at a time:
-   *Fit the card inside the frame*, *Move a little closer*, *Hold the card straight*, *Too dark*,
-   *Glare: tilt the card slightly*, *Hold the phone still*, *Blurry: wait for it to focus*. When
-   every check passes for about half a second, the photo is taken by itself, and the view moves to
-   the back: turn the card over and it takes that one too. The round button takes the photo at any
-   moment, **Automatic shot** turns the automatic photo off, and ✕ closes the camera.
-
-   The coach uses no model and no network, so it works the same online and offline. It needs a
-   browser that gives web pages a live camera, and your permission. If either is missing (permission
-   refused, no camera, an old browser, the page opened from a file), the coach does not open: a
-   short note appears, and **Take photo** opens the phone's own camera app instead, as before.
-4. **Document.** Confirm DNI 4.0, DNI 3.0 or TIE, then **Continue**. Each one has its own field
-   positions. The app reads the code on the back (MRZ) on your device and preselects the document:
-   *Document detected: TIE. Check it before you continue.* The first time, it downloads the OCR files
-   (about 8 MB) once; you can choose by hand at any moment. Until a document is chosen, **Continue**
-   stays off. Detection runs
-   only in your browser and the photos never leave the device. To change the document later, go
-   back from the editor: your photos are kept, the corners and choices start again.
-5. **Straighten (automatic).** After **Continue**, the app looks for the card in each photo (with the
-   on-device model, or classic edge detection), turns it the right way up, whether the photo was
-   taken sideways or upside down, and straightens it. It then opens step 6 with both sides already
-   corrected. You only see the corner screen when:
-   - the card was not found in a photo ("We could not find the document in this photo. Place the
-     corners by hand."),
-   - you tap **Place the corners myself** while it works, or
-   - you tap **Adjust corners** in step 6.
-
-   **Corner screen.** The four circles sit on the corners that were found. To correct them, drag
-   them onto the corners of the card; a magnifier shows the area under
-   your finger. On a keyboard, arrow keys move the selected corner and <kbd>N</kbd> selects the next
-   one. **Rotate** turns the frame a quarter turn (use it if a card still shows sideways or upside
-   down), **Reset** puts the circles back. The button straightens the card again and takes you on.
-6. **Hide.** The card stays on screen. Choose **Front** or **Back**; the list below shows that
-   side's fields as switches. You can also tap a field on the card itself to cover or uncover it.
-   The recommended fields start covered: signature, issue and expiry dates, support number, CAN and
-   the machine-readable lines (MRZ), as far as the document has them (see
-   [Supported documents](#supported-documents)). Fields left visible get a dashed orange outline; **Final
-   preview** hides the outlines. **Adjust corners** goes back to step 5 and keeps your choices.
-   Three tabs:
-   - **Data:** the field switches and quick choices (**Recommended**, **Hide all**, **Show all**).
-     Below them, **Find automatically** reads both sides with OCR on your device and adds a black
-     box over each piece of data you pick: name and surnames, DNI/NIE number, dates, support number,
-     CAN and MRZ lines. Dates, support number, CAN and MRZ are picked to start with; name and number
-     are not. It works from the text itself, so it also finds data on layouts the app has not
-     measured. A DNI/NIE number or a date counts only when its check letter or calendar date is
-     valid. The boxes it adds are ordinary boxes: check them in **Boxes**, move or delete them, or
-     undo them all in one step. The first use downloads about 8 MB. If finding cannot run (offline
-     before that download, or a browser without a service worker), the button is disabled with a
-     short note and you hide the data by hand.
-   - **Boxes:** extra black boxes for anything the list does not cover. Turn on **Draw black box**
-     and drag on the card. Select a box to move it, or drag its corners to resize it. **Undo** and
-     **Redo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>) work on
-     boxes. With a keyboard: **Add box**, then arrow keys move it, <kbd>Shift</kbd>+arrows resize it,
-     <kbd>N</kbd> selects the next box and <kbd>Delete</kbd> removes it.
-   - **Watermark:** type what the copy is for, or pick a suggestion (rental, bank, dated copy), and
-     turn on **Convert to black and white** if you like. The card updates as you type. The text is
-     drawn small and light, repeated in staggered diagonal rows across the whole card, so a cropped
-     part of the image still shows it. Long text wraps onto a few short lines (at most 120
-     characters).
-7. **Download.** Check both final images and the summary, tick **I have checked both sides**, then
-   **Download PDF**. The file is called `protected-document.pdf`.
-8. **Done.** Under **Send it yourself**, **Share via WhatsApp** and **Share via email** open the system
-   share sheet with the PDF on devices that support it. On other devices they open WhatsApp or your
-   email app with a short message, and you attach `protected-document.pdf` from your downloads folder.
-   **Clear everything** removes the photos and all your choices from the page; closing the tab does
-   the same.
-
-## Languages
-
-The interface is available in Spanish (default), Catalan, Valencian, Galician, Basque, English, French,
-Dutch, Swedish, Finnish, Ukrainian, Romanian and Arabic (right to left). All languages are bundled in
-the build; the page never downloads translations. The language follows the browser and can be changed
-from the selector at the top.
-
-Translations other than Spanish and English are machine-assisted drafts. Corrections are welcome: edit
-one file in `src/i18n/locales/` and open a pull request. Spanish (`es.json`) defines the keys.
+| Corner finding: on-device model, then classic edge detection, then manual; sides snapped onto the card's real edges | Done |
+| Automatic straightening: find, turn (sideways, upside down) and straighten both sides | Done |
+| Secure raster engine: greyscale, opaque masks with margin, self-check | Done |
+| Fields to hide, live preview, hand-adjustable cover boxes | Done |
+| Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
+| Smart field finding with on-device OCR (Tesseract.js, self-hosted, loaded on first use) | Done |
+| Watermark with size and opacity controls; black and white | Done |
+| PDF export: A4, one side per page, metadata-free | Done |
+| Share via WhatsApp, email or the system share sheet | Done |
+| Card guide with official citations | Done |
+| Offline mode with a verified service worker; automatic update of idle tabs | Done |
+| No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
+| Cookieless visit counts (Cloudflare Web Analytics) | Done |
+| Published source maps, verified by hash | Done |
+| Custom domain `dnitapado.es` | DNS being set up |
+| Languages: 31 in the specification | 13 today |
 
 ## Development
 
-Requirements: [nvm](https://github.com/nvm-sh/nvm) and pnpm. Exact versions are pinned:
-Node.js in [`.nvmrc`](.nvmrc) (latest stable when last updated) and pnpm in the `packageManager` field
-of [`package.json`](package.json). End users need neither: the site is static.
+Requirements: [nvm](https://github.com/nvm-sh/nvm) and pnpm. Exact versions are pinned: Node.js in
+[`.nvmrc`](.nvmrc) and pnpm in the `packageManager` field of [`package.json`](package.json). End
+users need neither: the site is static.
 
 ```bash
 nvm install && nvm use                       # Node.js version from .nvmrc
@@ -377,9 +467,9 @@ pnpm dev                                     # http://localhost:5173 (no CSP in 
 | Command | What it does |
 |---|---|
 | `pnpm dev` | Development server with hot reload |
-| `pnpm build` | Production build in `dist/` (CSP and SRI injected) |
+| `pnpm build` | Production build in `dist/` (CSP, SRI, import map and service worker file list injected) |
 | `pnpm preview` | Serve `dist/` at http://localhost:4173 |
-| `pnpm typecheck` | `svelte-check`: TypeScript strict mode in `.ts` and `.svelte` files |
+| `pnpm typecheck` | `svelte-check`: TypeScript strict mode in `.ts` and `.svelte` files; warnings fail |
 | `pnpm lint` | ESLint: neostandard style, typescript-eslint strict, Svelte rules, security bans |
 | `pnpm format` | Fix style issues automatically (ESLint `--fix`) |
 | `pnpm test` / `pnpm test:unit` | Unit tests (Vitest) |
@@ -388,59 +478,75 @@ pnpm dev                                     # http://localhost:5173 (no CSP in 
 | `pnpm size` | Bundle size against its budgets (after `pnpm build`) |
 | `pnpm verify` | Type check, lint, unit tests, build and end-to-end tests, as CI runs them |
 
-Stack: [Svelte 5](https://svelte.dev) with runes for the interface, Vite, strict TypeScript, native
-CSS and the Canvas API. Image, geometry, redaction and PDF logic are plain TypeScript modules that do
-not depend on Svelte. See [ADR 0003](docs/adr/0003-svelte-vite-pnpm.md).
+**Stack.** [Svelte 5](https://svelte.dev) with runes for the interface, Vite, strict TypeScript,
+native CSS and the Canvas API ([ADR 0003](docs/adr/0003-svelte-vite-pnpm.md)). Image, geometry,
+redaction and PDF logic are plain TypeScript modules that do not depend on Svelte.
 
-Rules the code follows:
+Runtime dependencies, all bundled and served from this site:
+
+| Package | Use | Loaded |
+|---|---|---|
+| `@cantoo/pdf-lib` | PDF export ([ADR 0001](docs/adr/0001-pdf-library.md)) | In the background after the page appears |
+| `scanic-ml`, `onnxruntime-web` | Corner model and its WebAssembly runtime ([ADR 0007](docs/adr/0007-corner-model.md)) | On first use |
+| `tesseract.js`, `@tesseract.js-data/spa` | OCR engine and Spanish data ([ADR 0009](docs/adr/0009-on-device-ocr.md)) | On first use |
+| `wasm-feature-detect` | Picks the OCR core the browser supports | With OCR |
+
+**Rules the code follows**
 
 - No HTML strings: no `innerHTML` and no `{@html}`. Svelte builds DOM nodes directly
-  (`fragments: 'tree'`). The CSP allows one Trusted Types policy, `default`, which only accepts
-  three script URLs: the service worker, the OCR worker ([ADR 0009](docs/adr/0009-on-device-ocr.md)) and
-  the visit counter ([ADR 0015](docs/adr/0015-cookieless-analytics.md)).
+  (`fragments: 'tree'`). The only Trusted Types policy, `default`, accepts three script URLs: the
+  service worker, the OCR worker and the visit counter.
 - No `eval`, `new Function`, inline scripts or inline styles. WebAssembly is allowed only for the
-  corner model's runtime ([ADR 0007](docs/adr/0007-corner-model.md)).
+  corner model's runtime and the OCR engine.
 - No runtime requests and no persistent storage, except the visit counter on the public site
   (`src/analytics/`) and the notice's closing date (`src/ui/notice-memory.ts`).
+- Links that leave the app open in a new tab, because leaving the page clears the photos.
 - Test images are synthetic or official specimens. Never commit a photo of a real person's document.
 
 ## Tests
 
-- **Unit** (`tests/unit/`): edge snapping (sides 7 % outside or inside a card on woven fabric come back onto it, past a printed band; a weak border on a light table is kept even when a band inside is much stronger), upright check (anchor boxes, upright and upside-down cards for every document), document type from the MRZ (code, issue date from birth and expiry dates), homography and warp, corner editing, zone data for every document (inside
-  the card, sources, defaults, sizes), file decoding, i18n keys, build version (commit SHA checks,
-  commit link, relative time in several languages),
-  redaction raster (every masked pixel is opaque black, input untouched), JPEG filter (metadata
-  segments dropped, image data unchanged), corner model answer checks, and PDF structure (pages, images, no metadata, no text,
-  deterministic output).
-- **End to end** (`tests/e2e/`): document picker (each document's size, fields and warnings; changing
-  it keeps the photos), document detection (synthetic MRZ backs: TIE and DNI 4.0 preselected, nothing preselected without a result, a sideways
-  photo, a manual choice never overridden, a note and the manual picker when offline or without a service
-  worker), photo selection, automatic straightening (photos turned 0°, 90°, 180° and 270° come out
-upright, front and back), corner alignment from **Adjust corners**, the corner model (real model under the
-  real CSP on generated cluttered photos and on dark woven fabric in portrait phone photos, edge detection when the model is unavailable, the manual
-  corner screen with a note when nothing is found, never overriding the user, cached after first use and working
-  offline, a tampered model refused), the field checklist and its
-  warnings, review, a real PDF download (decoded in the browser to check that hidden areas are black
-  and that the file has no metadata, no source file name and no watermark text), reset,
-  the footer version (short SHA linked to the commit, relative deploy time that updates and follows
-  the language, same version after an offline reload), and
-  security checks on the built page: exact CSP, referrer policy, SRI on every asset, no inline code, no CSP violations and no
-  request outside the page's origin, every on-demand chunk listed in the import map with the right
-  hash, a tampered PDF chunk refused by the browser, the visit counter served as the public site
-  (one script and one report with only the token, no cookies, other addresses refused, the service
-  worker's pass-through, nothing offline, under GPC or DNT, or on other hosts), and offline mode (reload and full flow to the
-  PDF with the network off; a tampered file stops the service worker install).
+Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm build`).
+
+**Unit** ([`tests/unit/`](tests/unit/), Vitest):
+
+| Area | Files | What is checked |
+|---|---|---|
+| Capture | `input`, `decode`, `live`, `coach` | File picker and camera modes, decode errors (HEIC, size, not an image), live camera needs and failures, coach metrics (blur, light, framing) |
+| Geometry | `homography`, `quad-edit` | Homography round trips and degenerate quads, corner editing |
+| Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates |
+| OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
+| Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, manual box maths, every masked pixel opaque black |
+| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages, images, no metadata, no text, deterministic output |
+| Platform | `precache`, `lockdown`, `analytics`, `build-info`, `i18n`, `guide`, `deps-report` | Service worker manifest, WebRTC removal and frame check, analytics host and GPC/DNT rules, version and relative time, translation keys, guide citations, dependency report |
+
+**End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP):
+
+| Spec | What is checked |
+|---|---|
+| `privacy` | A whole workflow with fictional card values sends no request and stores nothing |
+| `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused, photos dropped on `pagehide` |
+| `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers, a tampered file stops the install, corner model cached after first use |
+| `analytics` | The beacon on the public site only: one script, one report with only the token, nothing offline, under GPC or DNT, or on other hosts |
+| `update` | An idle single tab switches to a new build; a tab with photos, or a second tab, holds it back |
+| `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks |
+| `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, offline note |
+| `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard |
+| `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases; smart field finding |
+| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, a real PDF decoded in the browser (hidden areas black, no metadata, no file name, no watermark text in the file), reset |
+| `share` | WhatsApp and email as share sheet or as plain links, and a failed share |
+| `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
+| `privacy-notice` | No accept step, 4-day memory, blocked storage, translations, audit prompt |
+| `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, build SHA and relative deploy time (also offline) |
 
 ## Continuous integration
 
 Every pull request and every push to `master` runs the **CI** workflow
 ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). It is split into small jobs, each with one
 purpose, grouped in logical stages (the layout follows the
-[to-be-continuous](https://gitlab.com/to-be-continuous/samples/svelte-on-s3) GitLab templates).
-GitHub Actions has no stages: a job starts as soon as the jobs it `needs` have passed, so
-independent checks run in parallel and a failure shows exactly which check failed.
-
-The work is split by where the code is:
+[to-be-continuous](https://gitlab.com/to-be-continuous/samples/svelte-on-s3) GitLab templates;
+[ADR 0013](docs/adr/0013-ci-pipeline.md)). GitHub Actions has no stages: a job starts as soon as the
+jobs it `needs` have passed, so independent checks run in parallel and a failure shows exactly which
+check failed.
 
 - **Pull request: validate.** Every check runs. Nothing is deployed.
 - **`master`: release.** The code was already validated on its pull request, so the checks do not
@@ -475,13 +581,13 @@ changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke ─ lighthous
 | test | `reproducible` | Builds the same commit again on a fresh runner and compares the SHA-384 of every file with the `dist/` artifact ([`scripts/build-manifest.ts`](scripts/build-manifest.ts)). Any difference fails | PR | Yes |
 | test | `bundle-size` | `pnpm size`: gzip size of the start page, PDF chunk, corner model and OCR files against budgets in [`scripts/bundle-size.ts`](scripts/bundle-size.ts) | PR | No, warns (`--strict` makes it fail) |
 | code analysis | `reuse` | Every file has copyright and licence information ([REUSE](https://reuse.software)) | PR | Yes |
-| code analysis | `audit` | `pnpm audit --prod`: known high or critical vulnerabilities in the code that ships | PR | Yes |
+| code analysis | `audit` | `pnpm audit --prod --audit-level high`: known high or critical vulnerabilities in the code that ships | PR | Yes |
 | code analysis | `dependency-review` | A new or updated dependency with a known moderate or worse vulnerability | PR | Yes |
 | code analysis | `workflow-lint` | [actionlint](https://github.com/rhysd/actionlint) and [zizmor](https://docs.zizmor.sh) on the workflows (syntax, script injection, permissions, pinning). Rules turned off are explained in [`.github/zizmor.yml`](.github/zizmor.yml) | PR | Yes |
 | acceptance | `lighthouse` | Lighthouse on the built site (performance, accessibility, best practices, SEO), thresholds in [`lighthouserc.json`](lighthouserc.json). Reports are a workflow artifact; nothing is uploaded elsewhere | PR | No, warns |
 | gate | `ci-ok` | Passes when every job above passed or was skipped on purpose | Both | Yes |
 | deploy | `deploy` | Publishes the built `dist/` to GitHub Pages. Only a push or manual run on `master`, never a pull request or another branch. A running deploy is never cancelled | `master` | Yes |
-| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte. Retries for up to 5 minutes while Pages updates | `master` | Yes |
+| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte, source maps included. Retries for up to 5 minutes while Pages updates | `master` | Yes |
 | post-deploy | `attest` | Signed build provenance for every deployed file ([artifact attestations](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)). Check a file with `gh attestation verify <file> --repo aasanchez/dnilimpio.es` | `master` | Yes |
 | post-deploy | `lighthouse-live` | Lighthouse on the live site, with real hosting (compression, cache headers). Thresholds in [`lighthouserc.live.json`](lighthouserc.live.json) | `master` | No, warns |
 
@@ -493,21 +599,21 @@ changes ─ install ─ build ─ ci-ok ─ deploy ─┬─ smoke ─ lighthous
 - Playwright's Chromium headless shell (smaller than full Chromium), keyed on the Playwright version.
 - `dist/` is built once per run and passed to the jobs that need it as an artifact.
 
-The **CodeQL** workflow ([`.github/workflows/codeql.yml`](.github/workflows/codeql.yml)) runs static
-security analysis of the TypeScript and Svelte code and of the workflows, on pull requests, on
-`master` and every Monday. Results appear under **Security > Code scanning**. GitGuardian scans for
-secrets.
+**Other workflows**
 
-The **Dependency check** workflow ([`.github/workflows/deps-check.yml`](.github/workflows/deps-check.yml))
-runs every Wednesday at 16:00 Madrid time, and by hand from the Actions tab. It never blocks a pull
-request. Results are in each job's summary (`scripts/deps-report.ts`).
+- **CodeQL** ([`.github/workflows/codeql.yml`](.github/workflows/codeql.yml)): static security
+  analysis of the TypeScript and Svelte code and of the workflows, on pull requests, on `master` and
+  every Monday. Results appear under **Security > Code scanning**. GitGuardian scans for secrets.
+- **Dependency check** ([`.github/workflows/deps-check.yml`](.github/workflows/deps-check.yml)):
+  every Wednesday at 16:00 Madrid time, and by hand from the Actions tab. It never blocks a pull
+  request. Results are in each job's summary ([`scripts/deps-report.ts`](scripts/deps-report.ts)).
 
-| Job | Command | Scope | Fails |
-|---|---|---|---|
-| `audit` | `pnpm audit --json` | Whole tree (direct and transitive), runtime and dev. Each advisory names the direct dependency to update | At high or critical (manual run: level of your choice) |
-| `outdated` | `pnpm outdated --format json` | Direct dependencies only, runtime and dev | Never; deprecated packages get a warning |
+  | Job | Command | Scope | Fails |
+  |---|---|---|---|
+  | `audit` | `pnpm audit --json` | Whole tree (direct and transitive), runtime and dev. Each advisory names the direct dependency to update | At high or critical (manual run: level of your choice) |
+  | `outdated` | `pnpm outdated --format json` | Direct dependencies only, runtime and dev | Never; deprecated packages get a warning |
 
-Rules the workflows follow:
+**Rules the workflows follow**
 
 - Actions are pinned to full commit SHAs; the comment gives the release tag.
 - Every job has read-only permissions, except `deploy` (Pages), `attest` (signing the provenance) and
@@ -516,15 +622,6 @@ Rules the workflows follow:
 - Node, pnpm and Playwright versions come from `.nvmrc`, `package.json` and `pnpm-lock.yaml`, set up
   by one shared action ([`.github/actions/setup`](.github/actions/setup/action.yml)).
 - A new push to a pull request cancels its previous run. On `master` runs queue instead.
-
-**Rebuild and check it yourself.** The build is reproducible: the same commit gives the same bytes.
-
-```sh
-git checkout <commit>
-export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" GITHUB_SHA="$(git rev-parse HEAD)"
-pnpm install --frozen-lockfile && pnpm build
-node scripts/build-manifest.ts dist   # SHA-384 of every file, to compare with the live site
-```
 
 **Branch protection** for `master`:
 
@@ -541,16 +638,21 @@ tools that are not npm packages (REUSE, actionlint, zizmor) can be run with `pip
 ## Deployment
 
 On `master`, the `deploy` job publishes the freshly built `dist/` to GitHub Pages (the same code
-that passed every check on its pull request). `smoke` then checks that the live site serves it, and
-`lighthouse-live` measures it. To redeploy without a new commit, run the **CI** workflow on
-`master` from the Actions tab.
+that passed every check on its pull request). `smoke` then checks that the live site serves it,
+`attest` signs its provenance, and `lighthouse-live` measures it. To redeploy without a new commit,
+run the **CI** workflow on `master` from the Actions tab.
 
 Do not re-run the old **pages build and deployment** workflow if it appears in the Actions tab. It
 publishes the raw, unbuilt source of an old commit over the real site.
 
-The build uses relative paths, so `dist/` works at a domain root, under a subpath and on any static
-server (Nginx, Caddy, Cloudflare Pages). Moving to the `dnitapado.es` domain needs no code change:
-set the custom domain in the repository's Pages settings and point DNS at GitHub Pages.
+The build uses relative paths (`base: './'`), so `dist/` works at a domain root, under a subpath and
+on any static server (Nginx, Caddy, Cloudflare Pages).
+
+**Custom domain.** The move to `dnitapado.es` needs no code change: the analytics host list already
+includes it. What is left is outside the code: finish the DNS set-up, set the custom domain in the
+repository's Pages settings, and point the DNS records at GitHub Pages. The service worker, its
+cache and the notice's storage key are per origin, so on the new domain the first visit downloads
+the app again.
 
 ### Version shown in the app
 
@@ -559,17 +661,17 @@ The start screen's footer shows the running build: `Versión 2a07023 · desplega
 - The SHA is the commit the build comes from, shortened to 7 characters and linked to
   `<REPO_URL>/commit/<full SHA>`. CI takes it from `GITHUB_SHA`; a local build takes it from
   `git rev-parse HEAD`. Without either, the footer says `desarrollo` and shows no link.
-- The time is when `dist/` was built. On `master` the `deploy` job publishes that build once every check
-  has passed, so it is the deploy time to within minutes. It is shown as relative time in the page's
-  language (`Intl.RelativeTimeFormat`), updates every 30 seconds, and shows the exact date on hover.
-  Set `SOURCE_DATE_EPOCH` (seconds) to fix it, for example for a reproducible build.
+- The time is when `dist/` was built. On `master` the `deploy` job publishes that build once every
+  check has passed, so it is the deploy time to within minutes. It is shown as relative time in the
+  page's language (`Intl.RelativeTimeFormat`), updates every 30 seconds, and shows the exact date on
+  hover. Set `SOURCE_DATE_EPOCH` (seconds) to fix it, for example for a reproducible build.
 - Both values are written into the JavaScript bundle at build time (Vite `define`, see
   [`vite.config.ts`](vite.config.ts) and [`src/version/build-info.ts`](src/version/build-info.ts)).
-  The page fetches nothing, so the footer works offline. A tab always shows the build it runs: after a
-  service worker update, the new build brings its own values.
-- Consequence: every deploy changes the bundle, so every deploy is a new offline build, even when only
-  documentation changed. The service worker then downloads the app files once more (on-demand files
-  already saved, OCR data and the corner model, are kept when their bytes match).
+  The page fetches nothing, so the footer works offline. A tab always shows the build it runs: after
+  a service worker update, the new build brings its own values.
+- Consequence: every deploy changes the bundle, so every deploy is a new offline build, even when
+  only documentation changed. The service worker then downloads the app files once more (on-demand
+  files already saved, OCR data and the corner model, are kept when their bytes match).
 
 There is no downloadable offline package ([ADR 0002](docs/adr/0002-no-standalone-release.md)).
 
@@ -577,27 +679,30 @@ There is no downloadable offline package ([ADR 0002](docs/adr/0002-no-standalone
 
 ```text
 src/
-  main.ts            mounts the app, registers the service worker
-  sw.ts              service worker: verified offline cache of the build
-  offline/           service worker registration and precache helpers
-  App.svelte         screen flow
-  components/        Svelte components, one per screen or control
+  main.ts            removes WebRTC, refuses framing, mounts the app, registers the service worker, loads the visit counter
+  sw.ts              service worker: verified offline cache, deny by default, page headers
+  App.svelte         screen flow, brand, clearing on pagehide
+  components/        Svelte components, one per screen or control (start screen, notice, audit prompt, footer, editor, review…)
+  analytics/         Cloudflare Web Analytics: exact addresses, host list, loading rules
   capture/           file input, drag and drop, paste, decoding, live camera and capture coach
   geometry/          homography, perspective warp, corner editing (pure TypeScript)
-  guide/             card guide: official sources, cited entries per document, text per language
-  zones/             field positions and size per document, from official specimens; documents.ts lists them
-  redact/            normalised zones to pixels, opaque fills
-  engine/            fields, secure raster, watermark, JPEG filter, PDF export (TypeScript)
-  detect/            corner finding: on-device model (loaded on demand), classic edge detection
-                     (Sobel + Hough), answer checks, fallback order; document type from the MRZ
+  detect/            corner finding (on-device model, classic edge detection, edge snapping), upright check,
+                     automatic straightening, document type from the MRZ
   ocr/               on-device OCR (Tesseract.js, loaded on demand), MRZ reader, smart field finding
-  security/          Trusted Types policy
+  zones/             field positions and size per document, from official specimens; documents.ts lists them
+  redact/            normalised zones to pixels
+  engine/            fields, masks, secure raster, watermark, JPEG filter, PDF export, undo history
+  guide/             card guide: official sources, cited entries per document, text per language
+  offline/           service worker registration, precache manifest, automatic update of idle tabs
+  security/          Trusted Types policy, WebRTC and frame lockdown, audit prompt text
   version/           commit SHA and build time shown in the footer, relative time
   i18n/              dictionaries, one JSON file per language
-  ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state
-scripts/             CSP, build plugins (CSP, SRI, offline file list), test fixture generator
+  ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state, notice memory
+scripts/             CSP, build plugins (CSP, SRI, import map, offline file list), build manifest, smoke test,
+                     bundle size, dependency report, test fixture generator
 tests/               unit, e2e and synthetic fixtures
-docs/                plan, zone measurement method, decision records
+docs/                plan, zone measurement method, guide sources, decision records, images
+LICENSES/            licence texts (REUSE)
 ```
 
 ## Design decisions
@@ -619,6 +724,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0013](docs/adr/0013-ci-pipeline.md): CI split into small, single-purpose jobs in logical stages, with one required check.
 - [0014](docs/adr/0014-card-guide.md): card guide; every element explained with official citations, nothing guessed.
 - [0015](docs/adr/0015-cookieless-analytics.md): cookieless visit counts with Cloudflare Web Analytics, on the public site only.
+- [0016](docs/adr/0016-source-maps-in-devtools.md): source maps readable in the developer tools (`connect-src 'self'`); the service worker serves only this build's maps, checked by hash.
 
 ## Contributing
 
@@ -626,19 +732,33 @@ Issues and pull requests are welcome. Before you open a pull request:
 
 1. Run `pnpm verify`; it must pass.
 2. Add or update tests for what you change.
-3. Do not add runtime dependencies, network requests or storage without discussing it in an issue first.
+3. Do not add runtime dependencies, network requests or storage without discussing it in an issue
+   first.
 4. Use only synthetic images or official specimens in tests and screenshots.
+5. Keep every file's licence information ([REUSE](https://reuse.software)); new files carry an
+   `SPDX-License-Identifier` header or are listed in [`REUSE.toml`](REUSE.toml).
 
-Security problems: please report them privately through GitHub's
-[security advisories](https://github.com/aasanchez/dnilimpio.es/security/advisories/new),
-not in a public issue.
+Pull requests are merged with **Squash and merge**. Security problems: please report them privately
+through [security advisories](https://github.com/aasanchez/dnilimpio.es/security/advisories/new).
 
 ## Licence
 
-[AGPL-3.0-or-later](LICENSE). If you run a modified version as a website, you must offer its source code
-to its users. Third-party libraries keep their own licences (`@cantoo/pdf-lib`, `onnxruntime-web` and
-the `scanic-ml` model and runtime: MIT; Tesseract.js and its core and language data: Apache-2.0;
-`wasm-feature-detect`: Apache-2.0). The bundled
-fonts (Bricolage Grotesque, JetBrains Mono, Caveat) are under the [SIL Open Font Licence
-1.1](LICENSES/OFL-1.1.txt). File-level
-licence data follows [REUSE](REUSE.toml).
+The code is under the [GNU Affero General Public License v3.0 or later](LICENSE)
+(`AGPL-3.0-or-later`). If you run a modified version as a website, you must offer its source code to
+its users. File-level licence data follows [REUSE](https://reuse.software) ([`REUSE.toml`](REUSE.toml),
+texts in [`LICENSES/`](LICENSES/)).
+
+Exceptions:
+
+- **NagWara name and mark.** DNI Tapado.es is a NagWara product. The NagWara name and the mark in
+  [`src/components/NagwaraMark.svelte`](src/components/NagwaraMark.svelte) are not under the AGPL.
+  You may keep them unchanged in copies that credit NagWara; do not use them to name, brand or
+  endorse any other product without written permission
+  ([`LicenseRef-NagWara-Marks`](LICENSES/LicenseRef-NagWara-Marks.txt)).
+- **GitHub mark.** The inline GitHub mark ([`src/components/GitHubMark.svelte`](src/components/GitHubMark.svelte))
+  comes from Octicons, [MIT](LICENSES/MIT.txt).
+- **Fonts.** The bundled fonts (Bricolage Grotesque, JetBrains Mono, Caveat) are under the
+  [SIL Open Font Licence 1.1](LICENSES/OFL-1.1.txt).
+- **Libraries.** Third-party libraries keep their own licences: `@cantoo/pdf-lib`, `onnxruntime-web`
+  and the `scanic-ml` model and runtime are MIT; Tesseract.js, its core and language data, and
+  `wasm-feature-detect` are Apache-2.0.
