@@ -49,11 +49,14 @@ Serve <https://dnitapado.es> from **Cloudflare Workers static assets**, with no 
   attested, reproducible artifact is unchanged. `wrangler` is pinned in `deploy/pnpm-lock.yaml`,
   installed without install scripts, and only by that job. The API token lives in the GitHub
   environment `cloudflare`.
-- After the deploy, `smoke-cloudflare` checks that dnitapado.es serves this build byte for byte and
-  sends exactly these headers.
-- The `<meta>` CSP stays as a fallback. GitHub Pages keeps receiving the same build, so the old
-  address <https://aasanchez.github.io/dnilimpio.es/> keeps working with the `<meta>` CSP and the
-  service worker's headers.
+- After the deploy, `smoke` checks that dnitapado.es serves this build byte for byte and sends
+  exactly these headers.
+- **One host.** CI no longer deploys to GitHub Pages. The old address
+  <https://aasanchez.github.io/dnilimpio.es/> redirects to dnitapado.es, because the repository's
+  Pages settings keep the custom domain. Two hosts would mean two policies to explain: one with
+  headers and one without.
+- The `<meta>` CSP stays as a fallback, with the service worker's headers, for any host that sends
+  no headers (a fork, a local copy).
 - The service worker now adds `frame-ancestors 'none'` as a second policy next to the host's CSP
   (`addPageHeaders()`), instead of replacing it.
 - `vite preview` sends the same headers, so every e2e test runs under them.

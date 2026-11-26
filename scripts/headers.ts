@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // HTTP security headers sent by the host (ADR 0027). Cloudflare Workers reads them from a `_headers`
-// file next to the site's files. GitHub Pages cannot send headers; there the <meta> CSP and the
-// service worker's PAGE_HEADERS remain the only policy (fallback).
+// file next to the site's files. On a host that sends no headers (a fork, a local copy) the <meta>
+// CSP and the service worker's PAGE_HEADERS remain the only policy (fallback).
 //
 //   node scripts/headers.ts <dist dir>    writes <dist dir>/_headers for the build in that folder
 //

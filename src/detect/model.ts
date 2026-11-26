@@ -37,7 +37,7 @@ let session: Promise<ort.InferenceSession> | null = null
 export function load (): Promise<ort.InferenceSession> {
   session ??= (async () => {
     ort.env.logLevel = 'error'
-    ort.env.wasm.numThreads = 1 // threads need cross-origin isolation, which GitHub Pages cannot set
+    ort.env.wasm.numThreads = 1 // threads need cross-origin isolation, which the site does not turn on (no COEP, ADR 0027)
     ort.env.wasm.proxy = false
     ort.env.wasm.wasmPaths = { mjs: new URL(loaderUrl, import.meta.url).href }
     ort.env.wasm.wasmBinary = decodeBase64(wasmBase64)

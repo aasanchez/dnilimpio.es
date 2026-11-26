@@ -16,8 +16,8 @@ AI models (Cache Storage) and the notice's closing date, and the host sees each 
 never write "nothing stored" or "never leaves" without that context.
 
 - Live site: <https://dnitapado.es> (Cloudflare Workers static assets, `wrangler.jsonc`, ADR 0027).
-  GitHub Pages serves the same build at the old address <https://aasanchez.github.io/dnilimpio.es/>;
-  keep both working (see rule 6).
+  It is the only host. The old address <https://aasanchez.github.io/dnilimpio.es/> only redirects
+  there; CI deploys nothing to GitHub Pages. The build must still work under a subpath (rule 6).
 - The repository is still named `aasanchez/dnilimpio.es`. Do not rename repository URLs, the cache
   prefix `dnilimpio-` or the storage key `dnilimpio.noticeDismissedAt`: renaming them orphans
   caches and shows the notice again to returning users.
@@ -172,7 +172,7 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 - **Before you open the PR**, run `pnpm verify` and confirm it passes. Report failures honestly;
   never skip, disable or loosen a test, lint rule or budget to get green.
 - **CI and deploy.** PRs run every check and never deploy. `master` builds, deploys to Cloudflare
-  (dnitapado.es) and GitHub Pages, smoke-tests both (files and headers) and runs Lighthouse. To
+  (dnitapado.es), smoke-tests the live site (files, headers, no cookies) and runs Lighthouse. To
   redeploy, run the "CI" workflow on `master`; never re-run the legacy "pages build and deployment" workflow, because it publishes unbuilt source. Actions
   are pinned to commit SHAs; keep them pinned.
 

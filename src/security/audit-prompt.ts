@@ -34,7 +34,7 @@ Execute the audit across the following areas:
 
 5. Live Site Verification (${LIVE_SITE})
 
-   - Fetch ${LIVE_SITE} and record the HTTP status, every response header and any redirect (www.dnitapado.es and the earlier address https://aasanchez.github.io/dnilimpio.es/ should redirect to it).
+   - Fetch ${LIVE_SITE} and record the HTTP status, every response header and any redirect (www.dnitapado.es serves the same files with the same headers; the earlier address https://aasanchez.github.io/dnilimpio.es/ should redirect to the live site). Compare the response headers with scripts/headers.ts and flag any Set-Cookie.
    - Extract the <meta http-equiv="Content-Security-Policy"> from the served index.html and compare it, directive by directive, with scripts/csp.ts. The only expected difference is one extra script-src hash, which must be the SHA-256 of the inline import map. Flag any other source, especially in connect-src.
    - For every script, stylesheet and import-map entry the page references, download the file, compute its SHA-384 and compare it with the integrity value in the page. Flag any file without SRI, any third-party host and any Set-Cookie header.
    - Download sw.js and check that every file in its inlined manifest matches its listed SHA-384 on the live site. Request a few .map URLs (for example the entry script's URL plus .map) and confirm none is served.

@@ -18,7 +18,7 @@
 //   is served byte for byte. A host that changed any file, even together with its
 //   hashes, fails here.
 //
-// GitHub Pages can serve the previous build for a short time after a deploy, so the check retries
+// A host can serve the previous build for a short time after a deploy, so the check retries
 // for up to SMOKE_TIMEOUT_S seconds (default 300) before it fails.
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'node:fs'
