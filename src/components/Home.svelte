@@ -7,6 +7,7 @@
   import AuditPrompt from './AuditPrompt.svelte'
   import GitHubMark from './GitHubMark.svelte'
   import NagwaraBand from './NagwaraBand.svelte'
+  import InstallApp from './InstallApp.svelte'
 
   const { lang, onStart, notice, onNoticeDismiss, onGuide }: { lang: Lang; onStart: () => void; notice: boolean; onNoticeDismiss: () => void; onGuide: () => void } = $props()
 </script>
@@ -42,6 +43,7 @@
   </ul>
 
   <footer class="area-foot p-4 text-center font-mono text-xs lg:mt-8 lg:border-t lg:border-hair lg:pt-6">
+    <InstallApp {lang} />
     <!-- New tab: leaving this page clears the photos (pagehide in App.svelte). -->
     <a class="source-link inline-flex min-h-6 items-center gap-[0.4em] text-muted" id="source-link" href={__REPO_URL__} target="_blank" rel="noopener noreferrer"><GitHubMark />{t(lang, 'sourceCode')}</a>
     <AuditPrompt {lang} id="audit-footer" extra="mx-auto flex min-h-8 text-xs" />

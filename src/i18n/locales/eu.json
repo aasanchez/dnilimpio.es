@@ -1,5 +1,7 @@
 {
   "sourceCode": "Iturburu-kodea",
+  "installApp": "Instalatu aplikazioa",
+  "installIos": "iPhone edo iPadean: sakatu Partekatu (gezi bat gorantz duen karratua; iOS 26n ··· menuan dago), aukeratu «Gehitu hasierako pantailan» eta sakatu «Gehitu».",
   "nagwaraVisit": "Bisitatu NagWara",
   "nagwaraProduct": "NagWara produktu bat da hau,",
   "nagwaraMachines": "Makinek exekutatzen dute,",
