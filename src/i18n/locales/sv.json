@@ -101,7 +101,7 @@
   "startHint": "Ungefär 2 minuter. Ha dokumentet till hands.",
   "privacyKicker": "om kakor (utan kakor)",
   "privacyTitle": "Bryssel skulle vara stolt",
-  "privacyBody": "Inga kakor, ingen profilering, inga uppgifter att sälja. Ditt dokument behandlas på din enhet och appen laddar inte upp det. Besök räknas med Cloudflare, i en isolerad ram som inte kan se dina foton. Varje eurokrats dröm: den här rutan finns bara för att säga att den inte behövs.",
+  "privacyBody": "Inga kakor, ingen profilering, inga uppgifter att sälja. Ditt dokument behandlas på din enhet och appen laddar inte upp det. Besök räknas i en isolerad ram som inte kan se dina foton. Varje eurokrats dröm: den här rutan finns bara för att säga att den inte behövs.",
   "privacyOk": "Jag tror dig",
   "auditOpen": "Kontrollera med din AI",
   "auditKicker": "lita inte, kontrollera",

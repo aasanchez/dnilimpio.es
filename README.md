@@ -122,8 +122,8 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    - **What is on my card?**, the [card guide](#supported-documents).
    - The **no-cookies notice**, in the place where other sites put a cookie banner. It only informs:
      there is nothing to accept. English text: *"No cookies, no profiles, no data to sell. Your
-     document is processed on your device, and the app does not upload it. Visits are counted with
-     Cloudflare, in an isolated frame that cannot see your photos. Every Eurocrat's dream: this
+     document is processed on your device, and the app does not upload it. Visits are counted in an
+     isolated frame that cannot see your photos. Every Eurocrat's dream: this
      banner only exists to tell you it isn't needed."* It stays short on purpose; this README lists
      exactly what is sent and stored ([Privacy and security](#privacy-and-security)). **I believe you** closes it; it comes back after 4 days at
      the earliest.
