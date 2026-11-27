@@ -313,9 +313,9 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   late result never brings a cleared document back ([`src/engine/wipe.ts`](src/engine/wipe.ts),
   [`tests/e2e/cleanup.spec.ts`](tests/e2e/cleanup.spec.ts)).
 - **Text recognition (OCR) on the device.** When OCR is used, the image is read by a Web Worker in
-  your browser. The OCR engine (PP-OCRv6 tiny on ONNX Runtime, about 9 MB) comes from this site, never from
-  a third party, are downloaded only the first time OCR is used, and are checked against their hash
-  before use. The worker runs under its own strict CSP: it can read its own files in `ocr/` and
+  your browser. The OCR engine (PP-OCRv6 tiny on ONNX Runtime, about 9 MB) comes from this site,
+  never from a third party. Its files are downloaded only the first time OCR is used and are checked
+  against their hash before use. The worker runs under its own strict CSP: it can read its own files in `ocr/` and
   cannot send requests anywhere. If OCR cannot run (offline before the first download, or no service
   worker), it is switched off and you choose by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md),
   [ADR 0019](docs/adr/0019-ppocr-and-text-detection.md)).
@@ -344,7 +344,7 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **No tracking and no third-party scripts beside your photos.** No cookies, profiles, telemetry or
   external fonts. Only this site's own scripts run in the page that holds the photos
   ([ADR 0023](docs/adr/0023-no-third-party-script-with-photos.md)); a test fails if any other script
-  runs there. Visits are counted in an isolated frame, described below. Fonts and icons are self-hosted or inline.
+  runs there. The host counts the requests it serves (see [Visit counts](#visit-counts)). Fonts and icons are self-hosted or inline.
 - **Security headers from the host.** dnitapado.es sends the full CSP as a header, with
   `frame-ancestors 'none'`, plus HSTS, `X-Content-Type-Options: nosniff`,
   `Referrer-Policy: no-referrer`, a `Permissions-Policy` that allows only the camera, clipboard
@@ -622,7 +622,9 @@ integration ([`crowdin.yml`](crowdin.yml)); the app itself never contacts Crowdi
 
 ## Status
 
-The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PLAN.md](docs/PLAN.md).
+The full flow works for the DNI 4.0, DNI 3.0 and TIE. The first implementation plan is kept in
+[docs/PLAN.md](docs/PLAN.md) for history; this table and the [decision records](#design-decisions)
+show the current state.
 
 | Part | State |
 |---|---|
@@ -650,10 +652,10 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | Automatic releases: semantic version per deploy, tag and GitHub Release, version in the footer | Done |
 | No third-party script in the page with photos (ADR 0023) | Done |
 | No analytics code: no third-party script, frame or cookie; the host counts requests (ADR 0027) | Done |
-| Opt-in anonymous usage stats from a photo-free thanks page (ADR 0029) | Done in code; live once Workers Analytics Engine is on ([Deployment](#deployment)) |
+| Opt-in anonymous usage stats from a photo-free thanks page (ADR 0029) | Done |
 | Stricter CSP while photos are in the page; service worker check on the photo step | Done |
 | Custom domain `dnitapado.es`, HTTPS enforced; one host, the old address redirects | Done |
-| Security headers from the host (Cloudflare Workers): CSP with `frame-ancestors`, HSTS, Permissions-Policy, COOP, worker CSPs | Done in code; live once Cloudflare is set up ([Deployment](#deployment)) |
+| Security headers from the host (Cloudflare Workers): CSP with `frame-ancestors`, HSTS, Permissions-Policy, COOP, worker CSPs | Done |
 | Languages: 31 in the specification | 13 today |
 
 ## Development
@@ -719,14 +721,14 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 |---|---|---|
 | Capture | `input`, `decode`, `sniff`, `live`, `coach`, `capture-state` | Sides in use with an optional back, file picker and camera modes, type by first bytes (name and MIME type ignored, AVIF refused), size in pixels from JPEG, PNG, WebP and HEIC headers, size and pixel limits (decompression bomb), decode errors, live camera needs and failures, coach metrics (blur, light, framing) |
 | Geometry | `homography`, `quad-edit` | Homography round trips and degenerate quads, corner editing |
-| Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates |
-| OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
-| Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black |
+| Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type`, `doc-text` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates, document type from the front's printed text (accents, case and OCR misreads ignored) |
+| OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink |
+| Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black, Fit to the text (a box only grows, by at most half its size, and stays on the card) |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
 | Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns), the service worker route open only to the thanks page |
-| Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal and frame check, the photo step's policy and the service worker check, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
+| Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `install`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal and frame check, the photo step's policy and the service worker check, iPhone and iPad detection and installed mode for the install link, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off:
 
@@ -752,7 +754,8 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; closing the sheet; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
-| `privacy-notice` | Exact privacy wording (processing on the device, no upload, visit-count frame), no accept step, 4-day memory, blocked storage, translations, audit prompt |
+| `privacy-notice` | Exact privacy wording (processing on the device, no upload), no accept step, 4-day memory, blocked storage, translations, audit prompt, 80 % of the screen width on phone, tablet and desktop |
+| `layout` | Phone: one column, main button in a sticky bar at the bottom, no sideways scroll. Wide screen: card on the left, tools and main button on the right, steps in the top bar |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, release version linked to its GitHub Release, build SHA and relative deploy time (also offline) |
 
@@ -889,15 +892,16 @@ The build uses relative paths (`base: './'`), so `dist/` works at a domain root,
 on any static server (Nginx, Caddy, Cloudflare). A host that sends no headers still gets the `<meta>`
 CSP and the service worker's headers.
 
-**Cloudflare setup** (once, by the owner of the Cloudflare account):
+**Cloudflare setup** (once, by the owner of the Cloudflare account). These steps were completed for
+dnitapado.es on 27 November 2026. They are kept here for a new account or a fork.
 
 1. Create an API token from the **Edit Cloudflare Workers** template, limited to this account and the
    `dnitapado.es` zone. In the repository settings, create the environment `cloudflare` (deployment
    branches: `master` only) and add the secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
-2. In the `dnitapado.es` zone, delete the DNS records that point to GitHub Pages (the `A`/`AAAA`
-   records of `dnitapado.es` and the `CNAME` of `www`). The first deploy attaches both names to the
-   Worker and creates their records and certificate. The site is down between the deletion and the
-   end of that deploy.
+2. In the zone, delete any DNS record that already exists for the domain and `www` (for
+   dnitapado.es, these were the GitHub Pages `A`/`AAAA` and `CNAME` records). The first deploy
+   attaches both names to the Worker and creates their records and certificate. The site is down
+   between the deletion and the end of that deploy.
 3. In the zone, keep off every feature that rewrites pages or sets a cookie: Rocket Loader, Email
    Obfuscation, the automatic injection of Web Analytics and Bot Fight Mode. Leave Cloudflare's own
    HSTS setting off; the `_headers` file sends HSTS. `smoke` fails if a feature changes a file or a
@@ -905,9 +909,7 @@ CSP and the service worker's headers.
 4. In the repository's Pages settings, leave the custom domain `dnitapado.es` set, so the old
    github.io address keeps redirecting. GitHub will warn that the DNS no longer points to it; that
    is expected.
-5. Delete what the visit counter used: the Web Analytics site in Cloudflare and the repository
-   `aasanchez/dnitapado-stats`.
-6. Turn on **Workers Analytics Engine** for the account (Workers & Pages, Analytics Engine) before
+5. Turn on **Workers Analytics Engine** for the account (Workers & Pages, Analytics Engine) before
    the first deploy with the opt-in stats. The first send creates the dataset `dnitapado_usage`.
    To query it, create an API token with **Account Analytics: Read** and use the SQL API (example
    query under [Usage stats (opt-in)](#usage-stats-opt-in)).
@@ -984,7 +986,7 @@ src/
   engine/            fields, masks, secure raster, watermark, JPEG filter, PDF export, undo history
   guide/             card guide: official sources, cited entries per document, text per language
   offline/           service worker registration, precache manifest, automatic update of idle tabs
-  security/          Trusted Types policy, WebRTC and frame lockdown, audit prompt text
+  security/          Trusted Types policy, WebRTC and frame lockdown, photo-step CSP (intake lockdown), audit prompt text
   version/           commit SHA and build time shown in the footer, relative time
   i18n/              dictionaries, one JSON file per language
   ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state, notice memory
@@ -1011,7 +1013,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0006](docs/adr/0006-document-types.md): several document types, chosen by the user.
 - [0007](docs/adr/0007-corner-model.md): corner finding with a small on-device model, and the CSP change it needs.
 - [0008](docs/adr/0008-capture-coach.md): capture coach with classical image metrics, no model.
-- [0009](docs/adr/0009-on-device-ocr.md): on-device OCR with Tesseract.js, self-hosted and loaded on demand.
+- [0009](docs/adr/0009-on-device-ocr.md): on-device OCR, self-hosted and loaded on demand. The engine (Tesseract.js) was replaced by 0019; the rest stands.
 - [0010](docs/adr/0010-smart-field-finding.md): smart field finding from OCR text; results become ordinary boxes.
 - [0011](docs/adr/0011-document-detection.md): document type detected from the MRZ, after the photos; it only preselects.
 - [0012](docs/adr/0012-automatic-straightening.md): automatic straightening (find, turn, straighten); the corner screen only on request.
@@ -1071,6 +1073,6 @@ Exceptions:
   comes from Octicons, [MIT](LICENSES/MIT.txt).
 - **Fonts.** The bundled fonts (Bricolage Grotesque, JetBrains Mono, Caveat) are under the
   [SIL Open Font Licence 1.1](LICENSES/OFL-1.1.txt).
-- **Libraries.** Third-party libraries keep their own licences: `@cantoo/pdf-lib`, `onnxruntime-web`
-  the `scanic-ml` model and runtime, and `paddleocr` are MIT; the PP-OCRv6 models are Apache-2.0.
+- **Libraries.** Third-party libraries keep their own licences: `@cantoo/pdf-lib`, `onnxruntime-web`,
+  the `scanic-ml` model and runtime and `paddleocr` are MIT; the PP-OCRv6 models are Apache-2.0.
   Their licence texts are published next to the OCR files in `ocr/`.
