@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { describe, expect, it } from 'vitest'
-import { buildScripts, exactSource, intakePolicy } from '../../src/security/intake-lockdown.ts'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  LOCKDOWN_ATTR, buildScripts, exactSource, intakePolicy, isLocked, loadAllFonts, lockIntake, policyFor,
+} from '../../src/security/intake-lockdown.ts'
 import { isVerifiedWorker, type WorkerLike } from '../../src/offline/verify.ts'
 
 const BASE = 'https://dnitapado.es/'
@@ -76,5 +78,104 @@ describe('isVerifiedWorker', () => {
     expect(await isVerifiedWorker(worker('https://evil.example/sw.js', { ok: true }), SUB)).toBe(false)
     expect(await isVerifiedWorker(worker(`${SUB}sw.js`, { ok: false }), SUB)).toBe(false)
     expect(await isVerifiedWorker(worker(`${SUB}sw.js`, undefined), SUB, 50)).toBe(false)
+  })
+})
+
+/** A <meta> element as lockIntake builds it. */
+interface FakeMeta { httpEquiv: string; content: string; attrs: Set<string>; setAttribute: (n: string) => void }
+
+/** The parts of a page the lockdown reads and writes, without a DOM. */
+interface PageParts { base?: string; scripts?: string[]; preloads?: string[]; importMap?: string | null; fonts?: unknown }
+function page ({ base = SUB, scripts = [], preloads = [], importMap = null, fonts }: PageParts = {}): Document & { metas: FakeMeta[] } {
+  const metas: FakeMeta[] = []
+  const attr = (v: string): { getAttribute: () => string } => ({ getAttribute: () => v })
+  const doc = {
+    baseURI: base,
+    fonts,
+    metas,
+    head: {
+      querySelector: (sel: string) => (sel === `meta[${LOCKDOWN_ATTR}]` ? metas.find((m) => m.attrs.has(LOCKDOWN_ATTR)) ?? null : null),
+      append: (m: FakeMeta) => { metas.push(m) },
+    },
+    querySelectorAll: (sel: string) => (sel === 'script[src]' ? scripts.map(attr) : sel === 'link[rel="modulepreload"]' ? preloads.map(attr) : []),
+    querySelector: (sel: string) => (sel === 'script[type="importmap"]' && importMap !== null ? { textContent: importMap } : null),
+    createElement: (): FakeMeta => {
+      const m: FakeMeta = { httpEquiv: '', content: '', attrs: new Set(), setAttribute: (n) => { m.attrs.add(n) } }
+      return m
+    },
+  }
+  return doc as unknown as Document & { metas: FakeMeta[] }
+}
+
+describe('policyFor', () => {
+  it('lists the page\'s scripts, preloads, import map modules and the two workers, by exact address', () => {
+    const doc = page({
+      scripts: ['./assets/index-1.js', 'https://static.cloudflareinsights.com/beacon.min.js'],
+      preloads: ['./assets/chunk-2.js'],
+      importMap: JSON.stringify({ imports: {}, integrity: { './assets/ocr-3.js': 'sha384-x' } }),
+    })
+    const p = Object.fromEntries(policyFor(doc).split('; ').map((d) => { const [k, ...v] = d.split(' '); return [k ?? '', v] }))
+    expect(p['script-src']).toEqual([`${SUB}assets/index-1.js`, `${SUB}assets/chunk-2.js`, `${SUB}assets/ocr-3.js`, "'wasm-unsafe-eval'"])
+    expect(p['worker-src']).toEqual([`${SUB}sw.js`, `${SUB}ocr/worker.min.js`])
+    expect(p['connect-src']).toEqual(["'none'"])
+  })
+})
+
+describe('lockIntake', () => {
+  it('adds the intake policy as a marked <meta> once, and never takes it away', () => {
+    const doc = page({ scripts: ['./assets/index-1.js'] })
+    expect(isLocked(doc)).toBe(false)
+    lockIntake(doc)
+    lockIntake(doc)
+    expect(isLocked(doc)).toBe(true)
+    expect(doc.metas).toHaveLength(1)
+    expect(doc.metas[0]?.httpEquiv).toBe('Content-Security-Policy')
+    expect(doc.metas[0]?.content).toBe(policyFor(doc))
+  })
+})
+
+describe('loadAllFonts', () => {
+  afterEach(() => { vi.useRealTimers() })
+
+  it('loads every font face, and a face that fails does not stop the others', async () => {
+    const loaded: string[] = []
+    const face = (name: string, ok = true): { load: () => Promise<void> } => ({
+      load: () => {
+        if (!ok) return Promise.reject(new Error('404'))
+        loaded.push(name)
+        return Promise.resolve()
+      },
+    })
+    await loadAllFonts(page({ fonts: [face('a'), face('b', false), face('c')] }))
+    expect(loaded).toEqual(['a', 'c'])
+  })
+
+  it('waits at most the time limit for a face that never loads', async () => {
+    vi.useFakeTimers()
+    let done = false
+    void loadAllFonts(page({ fonts: [{ load: async () => await new Promise(() => undefined) }] }), 3000).then(() => { done = true })
+    await vi.advanceTimersByTimeAsync(2999)
+    expect(done).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(done).toBe(true)
+  })
+
+  it('does nothing in a browser without the font loading API', async () => {
+    await expect(loadAllFonts(page())).resolves.toBeUndefined()
+  })
+})
+
+describe('prepareIntake', () => {
+  it('locks the page even when the fonts cannot be listed, and prepares it once', async () => {
+    vi.resetModules()
+    const { prepareIntake } = await import('../../src/security/intake-lockdown.ts')
+    const broken = { [Symbol.iterator]: () => { throw new Error('no fonts') } }
+    const doc = page({ fonts: broken })
+    await prepareIntake(doc)
+    expect(isLocked(doc)).toBe(true)
+    const other = page()
+    await prepareIntake(other)
+    // Once per page load: the first call did the work.
+    expect(isLocked(other)).toBe(false)
   })
 })
