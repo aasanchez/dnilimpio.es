@@ -19,6 +19,8 @@
     "test:unit": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:visual": "scripts/visual.sh",
+    "test:visual:update": "scripts/visual.sh --update-snapshots=changed",
     "size": "node scripts/bundle-size.ts",
     "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm test:e2e"
   },
