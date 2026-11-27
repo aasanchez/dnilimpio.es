@@ -14,8 +14,8 @@ const NOW = new Date('2026-01-15T10:00:00+01:00')
 const CHANGING = ['#build-version']
 
 /** Both synthetic photos, DNI chosen, straightened by edge detection: ends in the editor. Any language. */
-async function toEditor (page: Page): Promise<void> {
-  await openCapture(page)
+async function toEditor (page: Page, path = '/'): Promise<void> {
+  await openCapture(page, path)
   await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await page.locator('#capture-continue').click()
@@ -64,7 +64,7 @@ for (const lang of ['es', 'ar'] as const) {
     })
 
     test('editor, review and stats page', async ({ page }) => {
-      await toEditor(page)
+      await toEditor(page, lang === 'es' ? '/' : `/${lang}`)
       await expect(page.locator('html')).toHaveAttribute('lang', lang)
       await shot(page, `${lang}-2-editor`)
       await shot(page, `${lang}-2-editor-tools`, { bottom: true })
