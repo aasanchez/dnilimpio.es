@@ -77,6 +77,19 @@ test.describe('with a working camera', () => {
     expect(live).toBe(0)
   })
 
+  test('after the front, the camera offers to go on without the back', async ({ page }) => {
+    await openCapture(page)
+    await page.locator('#live-front').click()
+    // No skip while the front is still missing.
+    await expect(page.locator('#live-skip-back')).toHaveCount(0)
+    await expect(page.locator('#status-front')).toHaveText('Imagen cargada.', { timeout: 10_000 })
+    await expect(page.locator('#live-title')).toHaveText('Foto del reverso')
+    await page.locator('#live-skip-back').click()
+    await expect(page.locator('dialog.live')).toHaveCount(0)
+    await expect(page.locator('h2')).toHaveText('¿Qué documento vas a copiar?')
+    expect(await page.evaluate(() => document.querySelectorAll('video').length)).toBe(0)
+  })
+
   test('automatic shot can be turned off, and the camera closes with the close button', async ({ page }) => {
     await openCapture(page)
     await page.locator('#live-front').click()
