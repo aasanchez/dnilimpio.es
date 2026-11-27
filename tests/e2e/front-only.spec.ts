@@ -113,8 +113,11 @@ test('front only: the editor has one side and only front fields, and the PDF has
   await expect(page.locator('#status-front')).toHaveText('')
 })
 
-test('front only: going back from the editor and adding the back brings both sides', async ({ page }) => {
+test('front only: going back from the editor and adding the back brings both sides, back fields still hidden', async ({ page }) => {
   await frontOnlyToEditor(page)
+  // Presets act on the front only: the back's recommended choices (MRZ) are kept for later.
+  await page.locator('#restore-all').click()
+  await expect(page.locator('#hidden-count')).toHaveText('0 de 6')
   await page.locator('#back').click()
   await page.locator('#back').click()
   // Back on the photo step, it opens on the empty back, ready to add it.
@@ -126,4 +129,7 @@ test('front only: going back from the editor and adding the back brings both sid
   await page.locator('#doc-continue').click()
   await expect(page.locator('#tab-back')).toBeVisible()
   await expect(page.locator('#front-only')).toHaveCount(0)
+  await page.locator('#tab-back').click()
+  await expect(page.locator('#field-mrz')).toBeChecked()
+  await expect(page.locator('#field-can')).toHaveCount(0)
 })

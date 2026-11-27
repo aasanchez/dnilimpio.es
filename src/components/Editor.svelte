@@ -310,6 +310,14 @@
 
   const fieldKey = (id: ZoneId): Key => `field_${id}`
 
+  /**
+   * A preset (Recommended, Hide all, Show all) for the fields on the sides in use. Choices for a side
+   * left out (a skipped back) stay as they are, so adding the back later keeps its protection.
+   */
+  function setHere (ids: readonly ZoneId[]): void {
+    edit.hidden = [...edit.hidden.filter((id) => !fieldIds.has(id)), ...ids]
+  }
+
   function toggle (id: ZoneId, on: boolean): void {
     edit.hidden = on ? [...new Set([...edit.hidden, id])] : edit.hidden.filter((x) => x !== id)
   }
@@ -468,9 +476,9 @@
 
       <div class="flex flex-col gap-3" id="panel-fields" role="tabpanel" aria-labelledby="tool-fields" hidden={tool !== 'fields'}>
         <div class="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none]" role="group" aria-label={t(lang, 'presets')}>
-          <button type="button" class="chip" id="preset-recommended" aria-pressed={sameSet([...hidden], recommended)} onclick={() => { edit.hidden = [...recommended] }}>{t(lang, 'presetRecommended')}</button>
-          <button type="button" class="chip" id="hide-all" aria-pressed={hidden.size === fields.length} onclick={() => { edit.hidden = fields.map((f) => f.id) }}>{t(lang, 'hideAll')}</button>
-          <button type="button" class="chip" id="restore-all" aria-pressed={hidden.size === 0} onclick={() => { edit.hidden = [] }}>{t(lang, 'restoreAll')}</button>
+          <button type="button" class="chip" id="preset-recommended" aria-pressed={sameSet([...hidden], recommended)} onclick={() => { setHere(recommended) }}>{t(lang, 'presetRecommended')}</button>
+          <button type="button" class="chip" id="hide-all" aria-pressed={hidden.size === fields.length} onclick={() => { setHere(fields.map((f) => f.id)) }}>{t(lang, 'hideAll')}</button>
+          <button type="button" class="chip" id="restore-all" aria-pressed={hidden.size === 0} onclick={() => { setHere([]) }}>{t(lang, 'restoreAll')}</button>
         </div>
         <ul class="rows" aria-label={t(lang, 'fieldsToHide')}>
           {#each sideFields as f (f.id)}
