@@ -92,7 +92,7 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
   await page.locator('#review-confirm').check()
 
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
-  expect(download.suggestedFilename()).toBe('protected-document.pdf')
+  expect(download.suggestedFilename()).toBe('redacted-dni.pdf')
   const pdf = readFileSync(await download.path())
   const text = pdf.toString('latin1')
   expect(text.startsWith('%PDF-')).toBe(true)
@@ -124,6 +124,14 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
 })
 
 /** Number of pure black pixels in the preview canvas (masks plus any solid black watermark text). */
+test('the PDF is named after the document type: redacted-tie.pdf for a TIE, in every language', async ({ page }) => {
+  await toEditor(page, 'tie')
+  await page.locator('#review').click()
+  await page.locator('#review-confirm').check()
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
+  expect(download.suggestedFilename()).toBe('redacted-tie.pdf')
+})
+
 test('a change made while the front is shown reaches the back in the review and the PDF', async ({ page }) => {
   // The editor renders only the side on screen; every side is brought up to date before the review.
   await toEditor(page)
