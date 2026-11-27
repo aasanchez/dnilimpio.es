@@ -14,7 +14,7 @@
   const { lang, secure, sides, phase, hiddenCount, boxCount, watermark, greyscale, onDone, onReset }: {
     lang: Lang
     secure: Readonly<Record<Side, HTMLCanvasElement>>
-    /** The sides to show and export, front first: one page each. The back is optional. */
+    /** The sides to show and export, front first, all on one PDF page. The back is optional. */
     sides: readonly Side[]
     phase: 'review' | 'done'
     hiddenCount: number
@@ -176,7 +176,6 @@
     </div>
     <ul class="summary area-stage" id="done-summary">
       <li><span class="tick" aria-hidden="true">✓</span> {tf(lang, 'doneFile', { name: fileName })}</li>
-      <li><span class="tick" aria-hidden="true">✓</span> {tf(lang, 'donePages', { n: sides.length })}</li>
       <li><span class="tick" aria-hidden="true">✓</span> {t(lang, 'doneLocal')}</li>
     </ul>
     <div class="area-side flex flex-col gap-4">

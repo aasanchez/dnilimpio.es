@@ -14,11 +14,12 @@
 //   network: another origin, another path, a query string, a method other than GET (route()). There is
 //   no exception (ADR 0023).
 // - Activate: deletes the caches of older builds. A new build activates once no tab runs the old
-//   one, or earlier when the app's only tab is idle and asks for it ('activate' message), so no open
-//   page loses files it still needs.
+//   one, or earlier when an idle page asks for it ('activate' message) and every other window of the
+//   app answers that it is idle too, or when the person presses "Update now" (src/offline/takeover.ts).
 // It never stores user data: images and PDFs live in memory and blob: URLs, which never reach it.
 // The build (scripts/vite-plugins.ts) replaces the manifest placeholder below with the file list.
 
+import { ANSWER_TIMEOUT_MS, mayTakeOver, type WindowAnswer } from './offline/takeover.ts'
 import { CACHE_PREFIX, WORKER_SCRIPTS, cacheName, parseManifest, route, sriOf, workerCsp } from './offline/precache.ts'
 
 const sw = self as unknown as ServiceWorkerGlobalScope
@@ -120,7 +121,7 @@ sw.addEventListener('install', (event) => {
     }
     // No skipWaiting() here: an update waits until every tab of the previous build is closed, so those
     // tabs keep their own worker and cache (including the PDF chunk they may still need to load).
-    // The one exception is the 'activate' message below, from the app's only, idle tab.
+    // The exception is the 'activate' message below: every window idle, or the person asked.
   })())
 })
 
@@ -141,17 +142,45 @@ async function ensureOnDemand (url: string): Promise<Response> {
   return await verifiedHit(cache, file.url, file.integrity) ?? await download(cache, file.url, file.integrity)
 }
 
+/**
+ * Asks one window of the app whether it is idle (src/offline/update.ts answers). A window frozen in
+ * the background runs no code and never answers: after ANSWER_TIMEOUT_MS it counts as 'silent'.
+ */
+async function askWindow (client: Client): Promise<WindowAnswer> {
+  return await new Promise((resolve) => {
+    const channel = new MessageChannel()
+    const timer = setTimeout(() => { resolve('silent') }, ANSWER_TIMEOUT_MS)
+    channel.port1.onmessage = (e: MessageEvent<unknown>) => {
+      clearTimeout(timer)
+      resolve((e.data as { idle?: unknown } | null)?.idle === true ? 'idle' : 'busy')
+    }
+    client.postMessage({ type: 'idle?' }, [channel.port2])
+  })
+}
+
 // The page asks for optional files before using them ({ type: 'prepare', paths }), so a missing
 // network or a file that fails its integrity check is reported at once, as one clear error.
 // { type: 'status', paths } answers whether all of them are already in this build's cache.
 sw.addEventListener('message', (event) => {
-  const msg = event.data as { type?: unknown; paths?: unknown } | null
+  const msg = event.data as { type?: unknown; paths?: unknown; force?: unknown } | null
   // { type: 'activate' }: an idle page asks this new build to take over (src/offline/update.ts).
-  // Only when that page is the app's only tab, so no other tab loses the files of its build.
+  // It does only if every other window of the app answers that it is idle, so no window loses the
+  // files of its build while it works. { type: 'activate', force: true }: the person pressed
+  // "Update now"; it takes over at once (src/offline/takeover.ts). The answer says which happened.
   if (msg?.type === 'activate') {
+    const reply = event.ports[0]
+    const from = event.source instanceof Client ? event.source : undefined
     event.waitUntil((async () => {
-      const tabs = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true })
-      if (tabs.length <= 1) await sw.skipWaiting()
+      let answers: WindowAnswer[] = []
+      if (msg.force !== true) {
+        const windows = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        answers = await Promise.all(windows.filter((c) => c.id !== from?.id).map(askWindow))
+        // The asking page too, last: it may have left the start screen while the others answered.
+        if (from !== undefined) answers.push(await askWindow(from))
+      }
+      const activated = mayTakeOver(answers, msg.force === true)
+      if (activated) await sw.skipWaiting()
+      reply?.postMessage({ activated })
     })())
     return
   }

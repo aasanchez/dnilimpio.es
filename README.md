@@ -54,7 +54,8 @@ some of the data. This tool makes a copy that shows only what you choose:
    diagonal rows over the whole card, so every part of the image carries it. Text size and opacity
    are adjustable; at 100 % opacity the text is solid black.
 6. **Convert to black and white** (optional).
-7. **Review** the result and **download a PDF**: `protected-document.pdf`, one page per side.
+7. **Review** the result and **download a PDF**: `protected-document.pdf`, one A4 page. Each side is printed at 130% of the real card size
+   (about 111 × 70 mm); with both sides, the front is on top and the back below.
 8. **Download or share it**: **Share** opens your device's share sheet with the PDF, where you pick
    WhatsApp, Telegram, Gmail, Mail or another app. The app never sends anything.
 
@@ -138,7 +139,7 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 2. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself.
    The back is optional: many requests need only the front. **Continue without the back** goes on
    with the front alone, and the rest of the flow works on that one side: the editor shows only the
-   front's fields, and the PDF has one page. **Remove the photo of the back** drops a back you added
+   front's fields, and the PDF shows only the front, centred on the page. **Remove the photo of the back** drops a back you added
    by mistake. In the capture coach, **Continue without the back** closes the camera after the front.
    - On a phone, **Take a photo** opens the capture coach (see below) and **Gallery** opens your
      pictures.
@@ -317,10 +318,12 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   build, cached and checked like the rest, and installing sends nothing anywhere. The start screen
   shows **Install the app** only where it works: it opens the browser's own dialog, or, on iPhone and
   iPad, shows the steps in the Share menu ([ADR 0018](docs/adr/0018-installable-app.md)).
-- **Updates never interrupt work.** A new version reaches an open tab by itself: when the tab is on
-  the start screen with no photos, and it is the only tab of the tool, it switches to the new version
-  and reloads once. A tab with photos keeps its version until it returns to the start screen
-  ([`src/offline/update.ts`](src/offline/update.ts)).
+- **Updates never interrupt work.** A new version reaches an open tab by itself: when every open
+  window of the tool is on the start screen with no photos, they switch to the new version and reload
+  once. A tab with photos keeps its version until it returns to the start screen. When another window
+  cannot answer (a tab or the installed app frozen in the background), the start screen shows
+  **Update now** instead ([`src/offline/update.ts`](src/offline/update.ts),
+  [ADR 0030](docs/adr/0030-update-with-other-windows-open.md)).
 - **Camera stays on the device.** The live camera (capture coach) is analysed frame by frame in
   memory. No frame is stored or sent, and the camera turns off when you close the view, finish both
   sides or leave the tab.
@@ -556,7 +559,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | OCR engine PP-OCRv6 tiny; document detection from the front's printed text | Done |
 | Fit to the text: cover boxes of the ticked fields grow to the words OCR finds | Done |
 | Watermark with size and opacity controls; black and white | Done |
-| PDF export: A4, one side per page, metadata-free | Done |
+| PDF export: one A4 page, each side at 130% of card size, metadata-free | Done |
 | Download or share the PDF through the system share sheet | Done |
 | Card guide with official citations | Done |
 | Offline mode with a verified service worker; automatic update of idle tabs | Done |
@@ -636,10 +639,10 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates |
 | OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
 | Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black |
-| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages (two, or one with the front alone), images, no metadata, no text, deterministic output |
+| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
-| Platform | `precache`, `lockdown`, `intake-lockdown`, `stats-frame`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, the photo step's policy and the service worker check, counter frame hosts, sandbox and CSP, version and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity |
+| Platform | `precache`, `takeover`, `lockdown`, `intake-lockdown`, `stats-frame`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release` | Service worker manifest and deny-by-default routes (Cloudflare refused), when a new build may take over, WebRTC removal and frame check, the photo step's policy and the service worker check, counter frame hosts, sandbox and CSP, version and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP):
 
@@ -651,14 +654,14 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
 | `offline` | Full flow to the PDF offline, also with the front alone, deny-by-default service worker, page headers, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
 | `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; page code that gathers the canary file names, OCR text and watermark cannot send them by beacon, fetch, image, style sheet, font, frame or form; the counter frame is cross-site, sandboxed, given nothing, gone before any photo, not shown offline, under GPC or DNT, or on other hosts |
-| `update` | An idle single tab switches to a new build; a tab with photos, or a second tab, holds it back |
+| `update` | An idle tab switches to a new build, with other idle windows too; a tab with photos or a busy window holds it back; a window that cannot answer brings **Update now**, which applies it; a busy window keeps its photos and reloads back on the start screen; a page that leaves the start screen while the others answer keeps its photos |
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks, and skipping the back from it |
 | `front-only` | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, done screen, adding the back later |
 | `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, TIE when detection finds no answer, offline note with nothing preselected |
 | `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases; smart field finding |
 | `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
-| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, done screen summary in plain sentences, a real PDF decoded in the browser (hidden areas black, no metadata, no file name, no watermark text in the file), reset |
+| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, done screen summary in plain sentences, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), reset |
 | `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; closing the sheet; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
@@ -866,6 +869,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0025](docs/adr/0025-intake-lockdown.md): a second, stricter CSP from the photo step on: exact build scripts, images only from memory, no fonts, styles or connections; a service worker check with a calm note when it is missing.
 - [0026](docs/adr/0026-recheck-cache-hits.md): the service worker hashes every cache hit again before it answers; a rewritten entry is deleted and downloaded again, or refused offline.
 - [0028](docs/adr/0028-tie-fallback.md): TIE is preselected when detection reads the photos but cannot tell the document; without detection nothing is preselected; you can change it.
+- [0030](docs/adr/0030-update-with-other-windows-open.md): a new version takes over when every open window is idle, or when the person presses Update now; a frozen tab no longer blocks updates.
 
 ## Contributing
 

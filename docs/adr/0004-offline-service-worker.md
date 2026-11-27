@@ -1,6 +1,6 @@
 # 0004. Offline mode with a verified service worker
 
-- Status: accepted; the Trusted Types policy is now `default` ([ADR 0009](0009-on-device-ocr.md)); cache hits are hashed again before use ([ADR 0026](0026-recheck-cache-hits.md))
+- Status: accepted; the Trusted Types policy is now `default` ([ADR 0009](0009-on-device-ocr.md)); cache hits are hashed again before use ([ADR 0026](0026-recheck-cache-hits.md)); a new build takes over when every window is idle or the person asks ([ADR 0030](0030-update-with-other-windows-open.md))
 - Date: 2026-11-25
 
 ## Context

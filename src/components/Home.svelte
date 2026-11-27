@@ -8,6 +8,7 @@
   import GitHubMark from './GitHubMark.svelte'
   import NagwaraBand from './NagwaraBand.svelte'
   import InstallApp from './InstallApp.svelte'
+  import UpdateReady from './UpdateReady.svelte'
 
   const { lang, onStart, notice, onNoticeDismiss, onGuide }: { lang: Lang; onStart: () => void; notice: boolean; onNoticeDismiss: () => void; onGuide: () => void } = $props()
 </script>
@@ -53,6 +54,7 @@
     {#if notice}
       <PrivacyNotice {lang} onDismiss={onNoticeDismiss} />
     {/if}
+    <UpdateReady {lang} />
     <button type="button" class="button primary" id="start" onclick={onStart}>{t(lang, 'start')} <span class="flip" aria-hidden="true">→</span></button>
     <p class="hint">{t(lang, 'startHint')}</p>
   </div>

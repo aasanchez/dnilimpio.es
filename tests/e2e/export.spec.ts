@@ -96,7 +96,10 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
   const pdf = readFileSync(await download.path())
   const text = pdf.toString('latin1')
   expect(text.startsWith('%PDF-')).toBe(true)
-  expect(text).toMatch(/\/Count 2/)
+  // Both sides on one page.
+  expect(text).toMatch(/\/Count 1\b/)
+  expect(text.match(/\/Type \/Page\b(?!s)/g)).toHaveLength(1)
+  expect(text.match(/\/Subtype \/Image/g)).toHaveLength(2)
   for (const forbidden of ['/Info', '/Producer', '/CreationDate', '/Metadata', 'synthetic', 'Exif', 'JFIF', 'COPIA']) {
     expect(text).not.toContain(forbidden)
   }
@@ -105,7 +108,6 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
   await expect(page.locator('#reset-done')).toBeVisible()
   // The done screen says what happened in plain sentences, not as a fake terminal log.
   await expect(page.locator('#done-summary')).toContainText('Archivo: protected-document.pdf')
-  await expect(page.locator('#done-summary')).toContainText('Páginas: 2')
   await expect(page.locator('#done-summary')).toContainText('Tu documento se ha procesado en tu dispositivo y la app no lo ha subido.')
 
   const [front, back] = jpegs(pdf)
