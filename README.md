@@ -828,6 +828,12 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
   | `audit` | `pnpm audit --json`, for the app and for the deploy tool in `deploy/` | Whole tree (direct and transitive), runtime and dev. Each advisory names the direct dependency to update | At high or critical (manual run: level of your choice) |
   | `outdated` | `pnpm outdated --format json` | Direct dependencies only, runtime and dev | Never; deprecated packages get a warning |
 
+- **Dependabot version updates** ([`.github/dependabot.yml`](.github/dependabot.yml)): every
+  Wednesday at 16:00 Madrid time, Dependabot opens pull requests for the app (`/`), the deploy tool
+  (`deploy/`) and the GitHub Actions. Minor and patch updates come grouped in one pull request per
+  area; each major update gets its own. A release must be 7 days old before it is proposed. Versions
+  stay exact and actions stay pinned to SHAs. Each pull request runs the full CI and needs review.
+
 **Rules the workflows follow**
 
 - Actions are pinned to full commit SHAs; the comment gives the release tag.
