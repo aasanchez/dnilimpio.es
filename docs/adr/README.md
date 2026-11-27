@@ -18,7 +18,7 @@ project specification on purpose).
 | [0010](0010-smart-field-finding.md) | Smart field finding: OCR text patterns and checks; results become ordinary undoable boxes | accepted |
 | [0011](0011-document-detection.md) | Document type detected from the MRZ after the photos; it only preselects the picker | accepted; screen order changed by 0012, DNI fallback by 0021, TIE fallback by 0028 |
 | [0012](0012-automatic-straightening.md) | Automatic straightening: find, turn (sideways, upside down) and straighten both photos; corner screen only on request | accepted |
-| [0013](0013-ci-pipeline.md) | CI split into small single-purpose jobs in logical stages; one required check | accepted |
+| [0013](0013-ci-pipeline.md) | CI split into small single-purpose jobs in logical stages; one required check | accepted; release job added by 0032 |
 | [0014](0014-card-guide.md) | Card guide: every element explained with official citations; no source, no claim | accepted |
 | [0015](0015-cookieless-analytics.md) | Cookieless visit counts with Cloudflare Web Analytics, public site only | superseded by 0023 |
 | [0016](0016-source-maps-in-devtools.md) | Source maps readable in the developer tools: `connect-src 'self'`; the service worker serves only this build's maps | superseded by 0022 |
@@ -37,3 +37,4 @@ project specification on purpose).
 | [0029](0029-opt-in-usage-stats.md) | Opt-in usage stats from a photo-free thanks page: fixed list, sent only on a tap, Worker on `/stats` only, no IP stored; the app page keeps `connect-src 'none'` | accepted |
 | [0030](0030-update-with-other-windows-open.md) | A new version takes over when every window is idle, or when the person presses Update now | accepted |
 | [0031](0031-photo-file-checks.md) | Photo files checked by content (JPEG, PNG, WebP, HEIC), at most 25 MB and 50 MP from the header, before decoding | accepted |
+| [0032](0032-semver-releases.md) | Automatic patch releases: version from the latest tag, tag and GitHub Release after the deploy, version in the footer | accepted |

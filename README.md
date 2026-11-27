@@ -542,8 +542,8 @@ You do not have to trust the claims above. Each one can be checked.
 3. For the strongest check, load the page, then disconnect from the Internet (airplane mode) before
    you select a photo. The tool keeps working, including after a reload.
 4. Read the policy in the page source: `<meta http-equiv="Content-Security-Policy">`.
-5. Check which code you run: the start screen's footer shows the short commit SHA of the build,
-   linked to that commit on GitHub (see [Version shown in the app](#version-shown-in-the-app)).
+5. Check which code you run: the start screen's footer shows the release version, linked to its
+   GitHub Release, and the short commit SHA of the build, linked to that commit on GitHub (see [Version shown in the app](#version-shown-in-the-app)).
 
 The site publishes no source maps ([ADR 0022](docs/adr/0022-no-published-source-maps.md)). To check the
 running code, rebuild that commit (below) and compare the hashes; the source is `src/` at that
@@ -580,14 +580,17 @@ only; nothing is sent. The text is in [`src/security/audit-prompt.ts`](src/secur
   ```
 
 - **Release evidence.** Each release run keeps a `release-evidence` artifact for 90 days: the
-  SHA-384 of every deployed file (`files.sha384.txt`), the commit and the SBOM. These files are
-  attested too, so their signed provenance stays with GitHub after the artifact expires.
+  SHA-384 of every deployed file (`files.sha384.txt`), the commit, the version and the SBOM. These
+  files are attested too, so their signed provenance stays with GitHub after the artifact expires.
+  The same files are attached to the version's
+  [GitHub Release](https://github.com/aasanchez/dnilimpio.es/releases), which does not expire.
 
 - **Rebuild.** The build is reproducible: the same commit gives the same bytes.
 
   ```sh
   git checkout <commit>
   export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" GITHUB_SHA="$(git rev-parse HEAD)"
+  export RELEASE_VERSION=<version>     # from the footer or the release's version.txt, such as 1.4.8
   pnpm install --frozen-lockfile && pnpm build
   node scripts/build-manifest.ts dist   # SHA-384 of every file, to compare with the live site
   ```
@@ -644,6 +647,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | Memory clean-up: canvases, temporary buffers, download links, late results after a reset | Done |
 | Installable app: manifest, maskable and Apple icons, install link and iOS steps | Done |
 | No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
+| Automatic releases: semantic version per deploy, tag and GitHub Release, version in the footer | Done |
 | No third-party script in the page with photos (ADR 0023) | Done |
 | No analytics code: no third-party script, frame or cookie; the host counts requests (ADR 0027) | Done |
 | Opt-in anonymous usage stats from a photo-free thanks page (ADR 0029) | Done in code; live once Workers Analytics Engine is on ([Deployment](#deployment)) |
@@ -722,7 +726,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
 | Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns), the service worker route open only to the thanks page |
-| Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal and frame check, the photo step's policy and the service worker check, version and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity |
+| Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal and frame check, the photo step's policy and the service worker check, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off:
 
@@ -750,7 +754,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
 | `privacy-notice` | Exact privacy wording (processing on the device, no upload, visit-count frame), no accept step, 4-day memory, blocked storage, translations, audit prompt |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
-| `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, build SHA and relative deploy time (also offline) |
+| `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, release version linked to its GitHub Release, build SHA and relative deploy time (also offline) |
 
 ## Continuous integration
 
@@ -780,14 +784,15 @@ reuse · audit · dependency-review · workflow-lint ───┘
 
 master (push, or a manual run of CI)
 changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ smoke ─ lighthouse-live
-                                                          └─ attest ─ verify-provenance
+                                                          ├─ attest ─ verify-provenance
+                                                          └─ release
 ```
 
 | Stage | Job | What it does | Runs on | Fails the pipeline |
 |---|---|---|---|---|
-| changes | `changes` | Decides what the run does: release on `master`; on a pull request, whether it touches code. A change to only Markdown, `docs/` or `LICENSES/` skips the code jobs | Both | No |
+| changes | `changes` | Decides what the run does: release on `master`; on a pull request, whether it touches code. A change to only Markdown, `docs/` or `LICENSES/` skips the code jobs. Computes the release version from the git tags ([`scripts/release-version.ts`](scripts/release-version.ts), see [Releases](#releases)) | Both | No |
 | setup | `install` | `pnpm install --frozen-lockfile`. Saves the `node_modules` and pnpm store caches that every later job restores | Both | Yes |
-| build | `build` | `pnpm build` with `SOURCE_DATE_EPOCH` set to the commit time, so the build is reproducible. Uploads `dist/` once; every later job tests or deploys that same build. Also uploads a CycloneDX SBOM of the runtime dependencies (`sbom` artifact, from `pnpm sbom`) and the `release-evidence` artifact (SHA-384 of every file, commit, SBOM; kept 90 days) | Both | Yes |
+| build | `build` | `pnpm build` with `SOURCE_DATE_EPOCH` set to the commit time and `RELEASE_VERSION` set to the version, so the build is reproducible. Uploads `dist/` once; every later job tests or deploys that same build. Also uploads a CycloneDX SBOM of the runtime dependencies (`sbom` artifact, from `pnpm sbom`) and the `release-evidence` artifact (SHA-384 of every file, commit, version, SBOM; kept 90 days) | Both | Yes |
 | build | `typecheck` | `pnpm typecheck` (svelte-check, strict TypeScript) | PR | Yes |
 | build | `lint` | `pnpm lint` (ESLint) | PR | Yes |
 | build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. No threshold yet | PR | Yes |
@@ -804,6 +809,7 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 | post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte. Also the exact HTTP headers of [`scripts/headers.ts`](scripts/headers.ts) on the page, `sw.js` and the OCR worker (`SMOKE_HOST_HEADERS=1`), and no cookie on any response. Retries for up to 5 minutes while the host updates | `master` | Yes |
 | post-deploy | `attest` | Signed build provenance for every deployed file and the release evidence ([artifact attestations](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)) | `master` | Yes |
 | post-deploy | `verify-provenance` | Checks those signatures as a third party would, with [`scripts/verify-release.ts`](scripts/verify-release.ts): every file must carry provenance for this repository, `ci.yml` on `master`, this commit and a GitHub-hosted runner. Also checks the evidence lists exactly the deployed files | `master` | Yes |
+| release | `release` | Once `deploy` succeeded: tags the commit with its version and publishes a GitHub Release with generated notes and the release evidence attached. Safe to re-run; fails if the tag exists on another commit | `master` | Yes |
 | post-deploy | `lighthouse-live` | Lighthouse on the live site, with real hosting (compression, cache headers). Thresholds in [`lighthouserc.live.json`](lighthouserc.live.json) | `master` | No, warns |
 
 **Caching.** Each job starts from caches instead of downloading again:
@@ -914,7 +920,11 @@ new address downloads the app again.
 
 ### Version shown in the app
 
-The start screen's footer shows the running build: `Versión 2a07023 · desplegado hace 5 minutos`.
+The start screen's footer shows the running build: `Versión 1.4.8 · 2a07023 · desplegado hace 5 minutos`.
+
+- The version is the release version of the deploy (see [Releases](#releases)), linked to its
+  GitHub Release in a new tab. CI sets it with `RELEASE_VERSION`; a local build has none, and the
+  footer then starts with the SHA.
 
 - The SHA is the commit the build comes from, shortened to 7 characters and linked to
   `<REPO_URL>/commit/<full SHA>`. CI takes it from `GITHUB_SHA`; a local build takes it from
@@ -932,6 +942,27 @@ The start screen's footer shows the running build: `Versión 2a07023 · desplega
   files already saved, OCR data and the corner model, are kept when their bytes match).
 
 There is no downloadable offline package ([ADR 0002](docs/adr/0002-no-standalone-release.md)).
+
+### Releases
+
+Every deploy from `master` is a release with a [semantic version](https://semver.org)
+([ADR 0032](docs/adr/0032-semver-releases.md)).
+
+- **Patch: automatic.** Each new commit on `master` takes the highest `vMAJOR.MINOR.PATCH` tag on
+  `master` and adds one to the patch: `v1.4.7` gives `1.4.8`. With no tag yet, the first version is
+  `1.0.0`. Tags in another form, such as `v1.0.0-rc.1`, are ignored.
+- **Major and minor: by hand.** Push a tag such as `v1.5.0` on a commit of `master`. Then either run
+  CI on `master` by hand, which deploys that commit as `1.5.0`, or wait for the next merge, which
+  deploys as `1.5.1`.
+- **The tag comes after the deploy.** The `changes` job computes the version before the build, so
+  the build (and the rebuild check) carry it. Only when `deploy` succeeds does the `release` job
+  create the tag and the [GitHub Release](https://github.com/aasanchez/dnilimpio.es/releases), with
+  notes from the merged pull requests and the release evidence attached.
+- **One run at a time.** Runs on `master` wait for each other, so each sees the tag of the run
+  before it. Pushes that arrive during a run deploy together, under one version, in the next run.
+  A failed deploy creates no tag; the next run uses the same number.
+- **If `release` fails** after a successful deploy, re-run that job before the next merge, or the
+  next commit deploys with the same number.
 
 ## Project layout
 
@@ -1003,6 +1034,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0029](docs/adr/0029-opt-in-usage-stats.md): opt-in anonymous usage stats; "Clear everything" opens a photo-free thanks page that shows the exact figures and sends them only on a tap; fixed list, Worker on `/stats` only, Workers Analytics Engine, no IP stored; the app page still has `connect-src 'none'`.
 - [0030](docs/adr/0030-update-with-other-windows-open.md): a new version takes over when every open window is idle, or when the person presses Update now; a frozen tab no longer blocks updates.
 - [0031](docs/adr/0031-photo-file-checks.md): photos are checked before decoding: JPEG, PNG, WebP or HEIC by their first bytes, at most 25 MB and 50 megapixels from the header, on every way in.
+- [0032](docs/adr/0032-semver-releases.md): every deploy from `master` is a release: the patch goes up by one from the latest tag, major and minor are set by hand with a tag, the tag and GitHub Release are created after the deploy, and the footer shows the version.
 
 ## Contributing
 

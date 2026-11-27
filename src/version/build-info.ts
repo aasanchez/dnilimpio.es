@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The version this page runs: the commit it was built from and when it was built. Both are fixed at
-// build time (vite.config.ts), inside the page's own code, so the footer shows the build that is
+// The version this page runs: its release version (ADR 0032), the commit it was built from and when it
+// was built. All are fixed at build time (vite.config.ts), inside the page's own code, so the footer shows the build that is
 // actually running, online or offline. After a service worker update, the new build's code brings
 // its own values. Nothing is fetched.
 
@@ -18,6 +18,17 @@ export const shortSha = (sha: string): string => sha.slice(0, SHORT_SHA_LENGTH)
 /** Link to the commit on GitHub, or undefined when the commit is unknown. */
 export function commitUrl (repo: string, sha: string): string | undefined {
   return sha === '' ? undefined : `${repo.replace(/\/+$/, '')}/commit/${sha}`
+}
+
+/** Accepts a release version MAJOR.MINOR.PATCH (no "v", no pre-release); anything else becomes ''. */
+export function normalizeVersion (raw: string | undefined): string {
+  const version = (raw ?? '').trim()
+  return /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/.test(version) ? version : ''
+}
+
+/** Link to the version's GitHub Release (tag vMAJOR.MINOR.PATCH), or undefined when there is none. */
+export function releaseUrl (repo: string, version: string): string | undefined {
+  return version === '' ? undefined : `${repo.replace(/\/+$/, '')}/releases/tag/v${version}`
 }
 
 const UNITS: ReadonlyArray<readonly [Intl.RelativeTimeFormatUnit, number]> = [
