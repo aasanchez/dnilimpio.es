@@ -233,6 +233,7 @@
   "findUnsupported": "La busca automàtica no està disponible en este navegador. Tapa les dades a mà.",
   "findFailed": "La busca automàtica no ha funcionat esta vegada. Tapa les dades a mà.",
   "framed": "Per seguretat, esta ferramenta només funciona en la seua pròpia pestanya. Obri-la ací.",
+  "webrtcOpen": "Per seguretat, este navegador no pot obrir fotos ací: no permet desactivar WebRTC, que podria enviar dades fora de la pàgina. Prova un altre navegador o actualitza este.",
   "guideOpen": "Què hi ha en la meua targeta?",
   "guideAbout": "Què és: {field}",
   "seoTitle": "Tapar dades del DNI i posar marca d'aigua",

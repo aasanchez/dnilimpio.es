@@ -233,6 +233,7 @@
   "findUnsupported": "Căutarea automată nu este disponibilă în acest browser. Acoperă datele manual.",
   "findFailed": "Căutarea automată nu a funcționat de data aceasta. Acoperă datele manual.",
   "framed": "Pentru siguranța ta, acest instrument funcționează doar în propria filă. Deschide-l aici.",
+  "webrtcOpen": "Pentru siguranța ta, acest browser nu poate deschide fotografii aici: nu permite aplicației să dezactiveze WebRTC, care ar putea trimite date în afara paginii. Încearcă alt browser sau actualizează-l pe acesta.",
   "guideOpen": "Ce conține cardul meu?",
   "guideAbout": "Despre: {field}",
   "seoTitle": "Acoperă datele din DNI și adaugă un filigran",

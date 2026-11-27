@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // First import: removes WebRTC before any other module (or library) runs.
-import { isFramed } from './security/lockdown.ts'
+import { exposedGlobals, isFramed } from './security/lockdown.ts'
 import { mount } from 'svelte'
 import App from './App.svelte'
 import { blockStrayDrops } from './capture/input.ts'
@@ -27,6 +27,17 @@ function showFramed (target: HTMLElement): void {
   target.replaceChildren(p)
 }
 
+/**
+ * WebRTC could not be removed (exposedGlobals()): the app does not start, so no photo is ever opened
+ * in a page that could send it outside the CSP. It says why and suggests another browser.
+ */
+function showWebrtcOpen (target: HTMLElement): void {
+  const p = document.createElement('p')
+  p.id = 'webrtc-open'
+  p.textContent = t(startLang(location.href), 'webrtcOpen')
+  target.replaceChildren(p)
+}
+
 // First, before any library can turn a string into a script URL.
 installTrustedTypesPolicy()
 
@@ -45,6 +56,7 @@ await loadLang(startLang(location.href))
 
 const target = document.getElementById('app')
 if (target && isFramed(window)) showFramed(target)
+else if (target && exposedGlobals(window).length > 0) showWebrtcOpen(target)
 else if (target) {
   // The build puts a static copy of the Spanish start screen here, for search engines and a fast
   // first paint (ADR 0041). The live app replaces it; it does not hydrate it.

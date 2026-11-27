@@ -33,6 +33,27 @@ export function blockGlobals (scope: object): string[] {
 }
 
 /**
+ * Blocked constructors still reachable on `scope` after blockGlobals(): a property the browser made
+ * non-configurable cannot be replaced, and blockGlobals() then skips it. The app checks this and
+ * refuses to open photos when the list is not empty, so WebRTC removal fails closed (audit F-14).
+ * A property that throws when read counts as reachable.
+ */
+export function exposedGlobals (scope: object): string[] {
+  const exposed: string[] = []
+  for (let i = 0; i < BLOCKED_GLOBALS.length; i++) {
+    const name = BLOCKED_GLOBALS[i]
+    if (name === undefined || !(name in scope)) continue
+    try {
+      if ((scope as Record<string, unknown>)[name] === undefined) continue
+    } catch {
+      // Fall through: a value that cannot be checked is treated as present.
+    }
+    exposed[exposed.length] = name
+  }
+  return exposed
+}
+
+/**
  * True when the page is shown inside a frame of another page. The app then refuses to run, so no
  * page can show it under its own, invisible controls (clickjacking). GitHub Pages cannot send
  * frame-ancestors, and a <meta> CSP ignores it; the service worker adds it only for same-site frames
