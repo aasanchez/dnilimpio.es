@@ -102,3 +102,13 @@ test('a failed share says so and offers Download', async ({ page }) => {
   await expect(page.locator('#download')).toBeEnabled()
   await expect(page.locator('#review-title')).toBeVisible()
 })
+
+test('going back during the 1.5 s after Download and clear still clears everything', async ({ page }) => {
+  await page.addInitScript(() => { Object.defineProperty(navigator, 'canShare', { value: undefined }) })
+  await toReview(page)
+  await page.locator('#review-confirm').check()
+  await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
+  // Back to the editor before the app clears itself: the clear still happens.
+  await page.locator('#back').click()
+  await expect(page.locator('#thanks-title')).toHaveText('Tu documento ya no está aquí')
+})
