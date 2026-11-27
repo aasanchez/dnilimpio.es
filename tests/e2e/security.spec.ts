@@ -100,6 +100,8 @@ test('the build publishes no source maps and no script points to one (ADR 0022)'
 
 test('Trusted Types: HTML strings are rejected and no other policy can be created', async ({ page }) => {
   await page.goto('/')
+  const supported = await page.evaluate(() => 'trustedTypes' in window)
+  test.skip(!supported, 'This browser has no Trusted Types. tests/e2e/no-trusted-types.spec.ts covers that path.')
   const result = await page.evaluate(() => {
     const tryIt = (f: () => void): string => { try { f(); return 'allowed' } catch { return 'blocked' } }
     const tt = (window as unknown as { trustedTypes?: { createPolicy: (n: string, o: object) => unknown } }).trustedTypes

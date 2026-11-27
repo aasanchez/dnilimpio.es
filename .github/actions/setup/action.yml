@@ -8,17 +8,21 @@
 # 2. On a miss, the pnpm store, so the install downloads only what changed.
 # Only the `install` job saves caches (save-cache: 'true'); the other jobs only restore them, so
 # parallel jobs never race to write the same cache entry.
-# Optionally Playwright's Chromium headless shell (smaller than full Chromium), cached by version.
+# Optionally one Playwright browser, cached by Playwright version: Chromium's headless shell (smaller
+# than full Chromium) by default, or Firefox or WebKit for the cross-browser e2e job.
 name: Setup project
-description: Node, pnpm, cached node_modules and (optionally) Playwright Chromium headless shell
+description: Node, pnpm, cached node_modules and (optionally) one Playwright browser
 
 inputs:
   save-cache:
     description: "'true' to save the node_modules and pnpm store caches (the install job only)"
     default: 'false'
   playwright:
-    description: "'true' to install Playwright Chromium and its system libraries"
+    description: "'true' to install a Playwright browser and its system libraries"
     default: 'false'
+  browser:
+    description: "The Playwright browser to install: 'chromium' (headless shell only), 'firefox' or 'webkit'"
+    default: 'chromium'
 
 runs:
   using: composite
@@ -84,18 +88,22 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium-headless-shell
+        key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ inputs.browser == 'chromium' && 'chromium-headless-shell' || inputs.browser }}
 
-    # Headless tests only need Chromium's headless shell (--only-shell), a smaller download.
+    # Headless Chromium tests only need its headless shell (--only-shell), a smaller download.
     # Cache hit: the browser is there, only the system libraries (not cacheable) are installed.
     - if: inputs.playwright == 'true'
-      name: Install Playwright Chromium headless shell
+      name: Install Playwright ${{ inputs.browser }}
       shell: bash
       env:
         CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        BROWSER: ${{ inputs.browser }}
       run: |
+        case "$BROWSER" in chromium|firefox|webkit) ;; *) echo "Unknown browser: $BROWSER"; exit 1 ;; esac
         if [ "$CACHE_HIT" = 'true' ]; then
-          pnpm exec playwright install-deps chromium
-        else
+          pnpm exec playwright install-deps "$BROWSER"
+        elif [ "$BROWSER" = 'chromium' ]; then
           pnpm exec playwright install --with-deps --only-shell chromium
+        else
+          pnpm exec playwright install --with-deps "$BROWSER"
         fi
