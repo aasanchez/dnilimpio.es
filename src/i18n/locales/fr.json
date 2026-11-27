@@ -2,6 +2,8 @@
   "sourceCode": "Code source",
   "installApp": "Installer l'app",
   "installIos": "Sur iPhone ou iPad : touchez Partager (le carré avec une flèche vers le haut ; sous iOS 26, il se trouve dans le menu ···), choisissez « Sur l'écran d'accueil », puis touchez « Ajouter ».",
+  "updateReady": "Une nouvelle version est prête. Une autre fenêtre de l'app est ouverte : elle ne s'est donc pas appliquée seule.",
+  "updateNow": "Mettre à jour",
   "nagwaraVisit": "Visiter NagWara",
   "nagwaraProduct": "Ceci est un produit NagWara,",
   "nagwaraMachines": "Les machines exécutent,",

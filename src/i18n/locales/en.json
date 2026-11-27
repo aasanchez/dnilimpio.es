@@ -2,6 +2,8 @@
   "sourceCode": "Source code",
   "installApp": "Install the app",
   "installIos": "On iPhone or iPad: tap Share (the square with an up arrow; on iOS 26 it is in the ··· menu), choose “Add to Home Screen”, then tap “Add”.",
+  "updateReady": "A new version is ready. Another window of the app is open, so it did not update by itself.",
+  "updateNow": "Update now",
   "nagwaraVisit": "Visit NagWara",
   "nagwaraProduct": "This is a NagWara product,",
   "nagwaraMachines": "Machines execute,",
