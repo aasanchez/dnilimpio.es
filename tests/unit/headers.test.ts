@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { CSP, THANKS_CSP, cspWithScriptHashes } from '../../scripts/csp.ts'
-import { COMMON_HEADERS, HOST_WORKER_CSP, SERVICE_WORKER_CSP, THANKS_PAGE_CSP, cookiesSetBy, headersFor, hostHeaderRules, pageCsp, renderHeadersFile } from '../../scripts/headers.ts'
+import { COMMON_HEADERS, HOST_WORKER_CSP, SERVICE_WORKER_CSP, THANKS_PAGE_CSP, cookiesSetBy, headersFor, reportingProblems, hostHeaderRules, pageCsp, renderHeadersFile } from '../../scripts/headers.ts'
 
 const MAP = '{"imports":{},"integrity":{"./assets/a.js":"sha384-x"}}'
 const HTML = `<html><head><script type="importmap">${MAP}</script></head></html>`
@@ -54,6 +54,36 @@ describe('hostHeaderRules', () => {
   it('has no preload in HSTS and no COEP (ADR 0027)', () => {
     expect(COMMON_HEADERS['Strict-Transport-Security']).not.toMatch(/preload/)
     expect(Object.keys(COMMON_HEADERS)).not.toContain('Cross-Origin-Embedder-Policy')
+  })
+})
+
+describe('Network Error Logging (ADR 0034)', () => {
+  it('turns NEL off on every file, which also clears a policy a browser cached earlier', () => {
+    expect(COMMON_HEADERS['NEL']).toBe('{"max_age":0}')
+    expect(JSON.parse(COMMON_HEADERS['NEL'] ?? '')).toEqual({ max_age: 0 })
+    for (const path of ['/', '/sw.js', '/thanks.html', '/ocr/worker.min.js']) {
+      const h = headersFor(rules, path)
+      expect(h['nel']).toBe('{"max_age":0}')
+      expect(h['report-to']).toBeUndefined()
+      expect(h['reporting-endpoints']).toBeUndefined()
+    }
+  })
+  it('reportingProblems accepts no NEL or NEL with max_age 0, and nothing else', () => {
+    expect(reportingProblems(new Headers())).toEqual([])
+    expect(reportingProblems(new Headers({ nel: '{"max_age":0}' }))).toEqual([])
+  })
+  it('reportingProblems refuses Cloudflare\'s default NEL and Report-To headers', () => {
+    const cf = new Headers({
+      nel: '{"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}',
+      'report-to': '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4"}]}',
+    })
+    const problems = reportingProblems(cf)
+    expect(problems).toHaveLength(2)
+    expect(problems[0]).toMatch(/^NEL: .*604800/)
+    expect(problems[1]).toMatch(/^report-to: /)
+    // Our value plus the host's, joined by a comma, still fails.
+    expect(reportingProblems(new Headers([['nel', '{"max_age":0}'], ['nel', '{"max_age":604800}']]))).toHaveLength(1)
+    expect(reportingProblems(new Headers({ 'reporting-endpoints': 'default="https://example.org/r"' }))).toHaveLength(1)
   })
 })
 

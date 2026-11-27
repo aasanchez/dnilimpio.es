@@ -32,10 +32,11 @@ project specification on purpose).
 | [0024](0024-visit-counter-in-isolated-frame.md) | Visit counts from a sandboxed frame on another site, start screen only; `frame-src` for that page only | superseded by 0027 |
 | [0025](0025-intake-lockdown.md) | Intake lockdown: a stricter CSP while photos are in the page (exact build scripts, images from memory only, no connection); service worker check | accepted |
 | [0026](0026-recheck-cache-hits.md) | The service worker hashes every cache hit again; a rewritten entry is deleted and downloaded again | accepted, status answer amended by 0033 |
-| [0027](0027-security-headers-from-the-host.md) | Security headers from the host: dnitapado.es on Cloudflare Workers with a generated `_headers`; the only host, GitHub Pages no longer deployed; no COEP; no analytics code, the host counts requests | accepted |
+| [0027](0027-security-headers-from-the-host.md) | Security headers from the host: dnitapado.es on Cloudflare Workers with a generated `_headers`; the only host, GitHub Pages no longer deployed; no COEP; no analytics code, the host counts requests | accepted, amended by 0034 |
 | [0028](0028-tie-fallback.md) | TIE preselected when detection reads the photos but cannot tell the document; nothing preselected without detection | accepted |
 | [0029](0029-opt-in-usage-stats.md) | Opt-in usage stats from a photo-free thanks page: fixed list, sent only on a tap, Worker on `/stats` only, no IP stored; the app page keeps `connect-src 'none'` | accepted |
 | [0030](0030-update-with-other-windows-open.md) | A new version takes over when every window is idle, or when the person presses Update now | accepted |
 | [0031](0031-photo-file-checks.md) | Photo files checked by content (JPEG, PNG, WebP, HEIC), at most 25 MB and 50 MP from the header, before decoding | accepted |
 | [0032](0032-semver-releases.md) | Automatic patch releases: version from the latest tag, tag and GitHub Release after the deploy, version in the footer | accepted |
 | [0033](0033-ocr-ready-once-per-worker.md) | The page keeps the service worker's "OCR is ready" answer per worker; a new worker or a failed OCR job asks again; files are still hashed when served | accepted |
+| [0034](0034-no-network-error-logging.md) | No Network Error Logging: `NEL: {"max_age":0}` on every file, NEL off in the zone settings, no `Report-To`; the post-deploy check fails otherwise | accepted |

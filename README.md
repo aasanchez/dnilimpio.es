@@ -534,6 +534,10 @@ GitHub Pages, so dnitapado.es moved to Cloudflare Workers, which sends them
 ([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)). COEP is not set: the page loads nothing from another site, so it would protect nothing more, and
 the app does not need cross-origin isolation.
 
+Cloudflare added Network Error Logging headers that ask the browser to report failed requests to
+Cloudflare. Every file now turns them off, the zone setting is off, and the post-deploy check fails
+if they come back ([ADR 0034](docs/adr/0034-no-network-error-logging.md)).
+
 ## Audit it yourself
 
 You do not have to trust the claims above. Each one can be checked.
@@ -818,7 +822,7 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 | acceptance | `lighthouse` | Lighthouse on the built site (performance, accessibility, best practices, SEO), thresholds in [`lighthouserc.json`](lighthouserc.json). Reports are a workflow artifact; nothing is uploaded elsewhere | PR | No, warns |
 | gate | `ci-ok` | Passes when every job above passed or was skipped on purpose | Both | Yes |
 | deploy | `deploy` | Adds the `_headers` file ([`scripts/headers.ts`](scripts/headers.ts)) to the built `dist/` and publishes it to Cloudflare Workers for dnitapado.es ([`wrangler.jsonc`](wrangler.jsonc)). `wrangler` comes from [`deploy/pnpm-lock.yaml`](deploy/pnpm-lock.yaml), installed without install scripts. Only a push or manual run on `master`, never a pull request or another branch. A running deploy is never cancelled | `master` | Yes |
-| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte. Also the exact HTTP headers of [`scripts/headers.ts`](scripts/headers.ts) on the page, `sw.js` and the OCR worker (`SMOKE_HOST_HEADERS=1`), and no cookie on any response. Retries for up to 5 minutes while the host updates | `master` | Yes |
+| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte. Also the exact HTTP headers of [`scripts/headers.ts`](scripts/headers.ts) on the page, `sw.js` and the OCR worker (`SMOKE_HOST_HEADERS=1`), no NEL policy above 0 and no `Report-To` (ADR 0034), and no cookie on any response. Retries for up to 5 minutes while the host updates | `master` | Yes |
 | post-deploy | `attest` | Signed build provenance for every deployed file and the release evidence ([artifact attestations](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)) | `master` | Yes |
 | post-deploy | `verify-provenance` | Checks those signatures as a third party would, with [`scripts/verify-release.ts`](scripts/verify-release.ts): every file must carry provenance for this repository, `ci.yml` on `master`, this commit and a GitHub-hosted runner. Also checks the evidence lists exactly the deployed files | `master` | Yes |
 | release | `release` | Once `deploy` succeeded: tags the commit with its version and publishes a GitHub Release with generated notes and the release evidence attached. Safe to re-run; fails if the tag exists on another commit | `master` | Yes |
@@ -891,6 +895,14 @@ pull request) to one host:
 Nothing is deployed to GitHub Pages any more. The old address
 <https://aasanchez.github.io/dnilimpio.es/> redirects to dnitapado.es, because the repository's
 Pages settings keep `dnitapado.es` as the custom domain.
+
+Cloudflare zone settings that the repository cannot set, and that `smoke` checks:
+
+- **Network Error Logging: off.** Otherwise Cloudflare adds `NEL` and `Report-To` headers, and
+  browsers send failed-request reports to Cloudflare
+  ([ADR 0034](docs/adr/0034-no-network-error-logging.md)).
+- Features that set a cookie or rewrite HTML stay off
+  ([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)).
 
 To redeploy without a new commit, run the **CI** workflow on `master` from the Actions tab.
 
@@ -1047,6 +1059,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0031](docs/adr/0031-photo-file-checks.md): photos are checked before decoding: JPEG, PNG, WebP or HEIC by their first bytes, at most 25 MB and 50 megapixels from the header, on every way in.
 - [0032](docs/adr/0032-semver-releases.md): every deploy from `master` is a release: the patch goes up by one from the latest tag, major and minor are set by hand with a tag, the tag and GitHub Release are created after the deploy, and the footer shows the version.
 - [0033](docs/adr/0033-ocr-ready-once-per-worker.md): the page asks the service worker once per worker whether OCR is ready; a new worker or a failed OCR job asks again; every file is still hashed when it is served.
+- [0034](docs/adr/0034-no-network-error-logging.md): no Network Error Logging; every file turns NEL off, Cloudflare's NEL and `Report-To` headers are off in the zone settings, and the post-deploy check fails if they come back.
 
 ## Contributing
 
