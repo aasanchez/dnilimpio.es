@@ -1,12 +1,13 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Review before download (spec §17): final sanitised images, summary, warning, explicit confirmation.
-     After the download: send it yourself (WhatsApp, email) and clear everything.
-     The app never sends the PDF: the system share sheet or a wa.me or mailto: link does, and only when
-     the user acts. -->
+     After the download: send it yourself (WhatsApp, Telegram, Gmail, mail app) and clear everything.
+     The app never sends the PDF: the system share sheet does, with the file, or an app opened by a
+     link does, with a fixed message and no file (src/engine/share-links.ts). Only when the user acts. -->
 <script lang="ts">
   import { saveFile } from '../engine/render.ts'
   import { loadExport } from '../engine/load-export.ts'
   import { normaliseWatermark } from '../engine/watermark.ts'
+  import { SHARE_TARGETS, opensNewTab, shareHref, type ShareTarget } from '../engine/share-links.ts'
   import { shrink } from '../engine/wipe.ts'
   import { t, tf, type Lang } from '../i18n/index.ts'
   import type { Side } from '../zones/dni.ts'
@@ -79,12 +80,14 @@
     }
   }
 
-  /** Text for the manual links (no file can travel in a wa.me or mailto: link). */
+  /** Text for the links: a fixed message that names the file. No file can travel in a link. */
   const message = $derived(t(lang, 'shareMessage'))
-  const whatsappHref = $derived(`https://wa.me/?text=${encodeURIComponent(message)}`)
-  const mailHref = $derived(`mailto:?subject=${encodeURIComponent(t(lang, 'shareSubject'))}&body=${encodeURIComponent(message)}`)
+  const subject = $derived(t(lang, 'shareSubject'))
+  /** App names are brands, not translated. The mail link opens the default mail app (Apple Mail, Outlook…), so it has a generic name. */
+  const targetName = (target: ShareTarget): string =>
+    target === 'whatsapp' ? 'WhatsApp' : target === 'telegram' ? 'Telegram' : target === 'gmail' ? 'Gmail' : t(lang, 'shareEmail')
 
-  /** Opens the system share sheet with the PDF; the user picks WhatsApp, Mail or another app there. */
+  /** Opens the system share sheet with the PDF; the user picks WhatsApp, Telegram, Gmail, Mail or another app there. */
   async function share (): Promise<void> {
     if (!pdf) return
     shareStatus = 'idle'
@@ -149,14 +152,14 @@
       <section class="send grid gap-2.5 rounded-lg border-2 border-ink bg-surface p-3.5" aria-labelledby="send-title">
         <h3 class="text-lg font-extrabold" id="send-title">{t(lang, 'sendTitle')}</h3>
         <p class="hint" id="send-lead">{t(lang, shareable ? 'sendLeadShare' : 'sendLeadManual')}</p>
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] gap-2.5">
-          {#if shareable}
-            <button type="button" class="button" id="share-whatsapp" onclick={share}>{@render whatsappIcon()}{t(lang, 'shareWhatsApp')}</button>
-            <button type="button" class="button" id="share-email" onclick={share}>{@render mailIcon()}{t(lang, 'shareEmail')}</button>
-          {:else}
-            <a class="button" id="share-whatsapp" href={whatsappHref} target="_blank" rel="noopener noreferrer">{@render whatsappIcon()}{t(lang, 'shareWhatsApp')}</a>
-            <a class="button" id="share-email" href={mailHref}>{@render mailIcon()}{t(lang, 'shareEmail')}</a>
-          {/if}
+        {#if shareable}
+          <button type="button" class="button primary" id="share-file" onclick={share}>{@render shareIcon()}{t(lang, 'shareFile')}</button>
+          <p class="hint" id="send-links-lead">{t(lang, 'sendLinksLead')}</p>
+        {/if}
+        <div class="grid grid-cols-2 gap-2.5 lg:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]" id="share-links">
+          {#each SHARE_TARGETS as target (target)}
+            <a class="button" id="share-{target}" href={shareHref(target, message, subject)} target={opensNewTab(target) ? '_blank' : undefined} rel={opensNewTab(target) ? 'noopener noreferrer' : undefined}>{@render targetIcon(target)}{targetName(target)}</a>
+          {/each}
         </div>
         {#if shareStatus === 'error'}<p class="notice-warn" role="alert">{t(lang, 'errShare')}</p>{/if}
       </section>
@@ -172,10 +175,18 @@
   </section>
 {/if}
 
-{#snippet whatsappIcon ()}
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.3-4A8 8 0 1 1 8.4 19z" /><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-1 .8a4 4 0 0 1-1.8-1.8l.8-1-1-2z" /></svg>
+{#snippet shareIcon ()}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4" /><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7" /></svg>
 {/snippet}
 
-{#snippet mailIcon ()}
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3.5 6.5l8.5 6.5 8.5-6.5" /></svg>
+{#snippet targetIcon (target: ShareTarget)}
+  {#if target === 'whatsapp'}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.3-4A8 8 0 1 1 8.4 19z" /><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-1 .8a4 4 0 0 1-1.8-1.8l.8-1-1-2z" /></svg>
+  {:else if target === 'telegram'}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4L3 11l6 2.5M21 4l-3 16-9-6.5M21 4L9 13.5V19l3-3" /></svg>
+  {:else if target === 'gmail'}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18V7l9 6.5L21 7v11" /><path d="M3 7a2 2 0 0 1 3.2-1.6L12 9.8l5.8-4.4A2 2 0 0 1 21 7" /></svg>
+  {:else}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3.5 6.5l8.5 6.5 8.5-6.5" /></svg>
+  {/if}
 {/snippet}

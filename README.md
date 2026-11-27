@@ -55,8 +55,8 @@ some of the data. This tool makes a copy that shows only what you choose:
    are adjustable; at 100 % opacity the text is solid black.
 6. **Convert to black and white** (optional).
 7. **Review** the result and **download a PDF**: `protected-document.pdf`, one page per side.
-8. **Share it yourself** (optional) through WhatsApp, email or the system share sheet. The app
-   never sends anything.
+8. **Share it yourself** (optional) through the system share sheet, WhatsApp, Telegram, Gmail or
+   your mail app. The app never sends anything.
 
 ![A synthetic card with the watermark: one large diagonal text (before) and the small repeated rows the app draws (after)](docs/images/watermark-before-after.jpg)
 
@@ -214,10 +214,12 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
      the text is solid black. **Convert to black and white** is here too.
 6. **Download.** Check the final images (one per side) and the summary, tick **I have checked both sides** (or **I have checked the front**), then
    **Download PDF**. The file is called `protected-document.pdf`.
-7. **Done.** Under **Send it yourself**, **Share via WhatsApp** and **Share via email** open the system
-   share sheet with the PDF on devices that support sharing files. On other devices they open
-   WhatsApp or your email app with a fixed short message, and you attach `protected-document.pdf`
-   from your downloads folder. **Clear everything** removes the photos and all your choices from the
+7. **Done.** Under **Send it yourself**, on devices that support sharing files, **Share the PDF**
+   opens the system share sheet with the PDF attached: you pick WhatsApp, Telegram, Gmail, Mail or
+   another app there. The links **WhatsApp**, **Telegram**, **Gmail** and **Email** (your default
+   mail app, such as Apple Mail) are always there. They open the app with a fixed short message and
+   no file, and you attach `protected-document.pdf` from your downloads folder. A link cannot carry a
+   file, and the app does not upload the PDF anywhere to make one. **Clear everything** removes the photos and all your choices from the
    page; closing the tab does the same.
 
 ## Privacy and security
@@ -372,10 +374,13 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **No browser rule can stop a page from navigating to a URL.** The protection there is that only
   this build's verified code runs (CSP, SRI, the locked dependency list) and that the code never
   navigates with your data (enforced by the linter).
-- **Sharing is your choice.** **Share via WhatsApp** and **Share via email** hand the PDF to the app
-  you pick through the system share sheet; what that app does with it is outside the tool. Where the
-  browser cannot share files, they are plain `wa.me` and `mailto:` links with a fixed message and no
-  file, and you attach the PDF yourself. No link carries data from your document.
+- **Sharing is your choice.** **Share the PDF** hands the PDF to the app you pick through the
+  system share sheet (Web Share API, on the device); what that app does with it is outside the tool.
+  The app links are plain `wa.me`, `t.me/share`, Gmail compose and `mailto:` links
+  (`src/engine/share-links.ts`) with a fixed message and no file, and you attach the PDF yourself.
+  No link carries data from your document. Opening one is a navigation you start, so the CSP
+  (`connect-src 'none'`) still holds. The Telegram link must name a web address; it names this
+  site's.
 - **Memory is released, not securely erased.** JavaScript cannot erase memory securely. Zeroing a
   buffer overwrites that buffer only; the browser, the graphics driver and the operating system may
   keep other copies (the decoded photo, GPU textures, the file you chose, swap or a crash report).
@@ -548,7 +553,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | Fit to the text: cover boxes of the ticked fields grow to the words OCR finds | Done |
 | Watermark with size and opacity controls; black and white | Done |
 | PDF export: A4, one side per page, metadata-free | Done |
-| Share via WhatsApp, email or the system share sheet | Done |
+| Share through the system share sheet (with the PDF), or WhatsApp, Telegram, Gmail and mail links (without it) | Done |
 | Card guide with official citations | Done |
 | Offline mode with a verified service worker; automatic update of idle tabs | Done |
 | Memory clean-up: canvases, temporary buffers, download links, late results after a reset | Done |
@@ -627,7 +632,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates |
 | OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
 | Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black |
-| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages (two, or one with the front alone), images, no metadata, no text, deterministic output |
+| Output | `watermark`, `jpeg`, `pdf`, `share-links` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages (two, or one with the front alone), images, no metadata, no text, deterministic output; share links carry only the fixed, encoded message |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
 | Platform | `precache`, `lockdown`, `intake-lockdown`, `stats-frame`, `build-info`, `i18n`, `guide`, `deps-report`, `verify-release` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, the photo step's policy and the service worker check, counter frame hosts, sandbox and CSP, version and relative time, translation keys and no absolute privacy claims in es/en, guide citations, dependency report, pinned provenance identity |
 
@@ -649,7 +654,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases; smart field finding |
 | `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
 | `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, a real PDF decoded in the browser (hidden areas black, no metadata, no file name, no watermark text in the file), reset |
-| `share` | WhatsApp and email as share sheet or as plain links, and a failed share |
+| `share` | Share sheet with the PDF; WhatsApp, Telegram, Gmail and mail as plain links; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `privacy-notice` | Exact privacy wording (processing on the device, no upload, visit-count frame), no accept step, 4-day memory, blocked storage, translations, audit prompt |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
