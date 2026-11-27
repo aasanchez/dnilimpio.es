@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Secure raster (spec §16): builds a new RGBA buffer in which sensitive pixels are replaced, not covered.
 // Order: optional greyscale → opaque masks (expanded outwards) → verification. The watermark is drawn
-// after this step, on a canvas, and the result is re-encoded as a new image (see jpeg.ts and pdf.ts).
+// after this step, on a canvas; sealMasks() then paints the masks again over it and checks the final
+// pixels, so every masked pixel of the exported raster is opaque black. The result is re-encoded as a
+// new image (see jpeg.ts and pdf.ts).
 // Pure functions on RGBA buffers: no DOM, so the tests run in Node.
 
 import { fillRects, toPixels, type PxRect } from '../redact/zones.ts'
@@ -90,4 +92,27 @@ export function sanitise (src: RGBA, opts: SanitiseOptions): RGBA {
     throw new Error('Redaction check failed: a masked pixel is not opaque black')
   }
   return out
+}
+
+/** The two operations sealMasks() needs from a canvas, so the check runs in Node too. */
+export interface MaskSurface {
+  /** Paints `r` opaque black (0, 0, 0, 255), replacing what is there. */
+  fillBlack: (r: PxRect) => void
+  /** Returns the pixels of `r` as a buffer of r.w × r.h pixels. */
+  read: (r: PxRect) => RGBA
+}
+
+/**
+ * Runs after anything drawn on top of the sanitised raster (the watermark). Paints every mask black
+ * again, then reads the final pixels back and checks them. Throws if a masked pixel is not opaque
+ * black. Only the masked areas are read, so the cost is small.
+ */
+export function sealMasks (surface: MaskSurface, rects: readonly PxRect[]): void {
+  for (const r of rects) surface.fillBlack(r)
+  for (const r of rects) {
+    const region = surface.read(r)
+    const bad = findUnmaskedPixel(region, [{ x: 0, y: 0, w: r.w, h: r.h }])
+    region.data.fill(0)
+    if (bad !== -1) throw new Error('Redaction check failed: a masked pixel is not opaque black after the watermark')
+  }
 }
