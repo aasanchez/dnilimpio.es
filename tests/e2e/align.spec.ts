@@ -97,3 +97,36 @@ test('corners confirmed by hand survive replacing only the other photo', async (
   await page.locator('#tab-front').click()
   await expect.poll(dark).toBeLessThan(100)
 })
+
+test('switching side saves the corners by itself: back on the front, they are where the person left them', async ({ page }) => {
+  await toAlign(page)
+  // Move the top-left corner out onto the dark table, then switch sides with no Continue.
+  await dragCorner(page, CARD[0]!, { x: 60, y: 80 })
+  const moved = await page.locator('[data-corners]').getAttribute('data-corners')
+  await page.locator('#align-tab-back').click()
+  await expect(page.locator('h2')).toHaveText('Encuadra el reverso')
+  // The front was saved: its tab is done and the corners come back as they were.
+  await expect(page.locator('#align-tab-front')).toContainText('✓')
+  await page.locator('#align-tab-front').click()
+  await expect(page.locator('h2')).toHaveText('Encuadra el anverso')
+  await expect(page.locator('[data-corners]')).toHaveAttribute('data-corners', moved ?? '')
+  // Continue from the back uses the saved front: its top-left corner now shows the dark table.
+  await page.locator('#align-tab-back').click()
+  await page.locator('#align-continue').click()
+  await expect(page.locator('h2')).toHaveText('Elige qué tapar')
+  await page.locator('#tab-front').click()
+  await expect.poll(async () => (await pixel(page, '#preview', 8, 8))[0] ?? 255).toBeLessThan(120)
+})
+
+test('switching side with crossed corners keeps them on screen but the side is not done', async ({ page }) => {
+  await toAlign(page)
+  await dragCorner(page, CARD[0]!, { x: 1500, y: 1100 })
+  const crossed = await page.locator('[data-corners]').getAttribute('data-corners')
+  await page.locator('#align-tab-back').click()
+  await expect(page.locator('#align-tab-front')).not.toContainText('✓')
+  // Continue on the back leads to the front, which still needs valid corners.
+  await page.locator('#align-continue').click()
+  await expect(page.locator('h2')).toHaveText('Encuadra el anverso')
+  await expect(page.locator('[data-corners]')).toHaveAttribute('data-corners', crossed ?? '')
+  await expect(page.locator('#align-continue')).toBeDisabled()
+})

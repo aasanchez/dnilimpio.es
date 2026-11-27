@@ -316,7 +316,7 @@
       {@const bitmap = alignBitmap}
       {#key alignSide}
         <AlignStep {lang} side={alignSide} {sides} {size} {bitmap} {align} {aligned} missed={missed.includes(alignSide)}
-          onSide={(s: Side) => { go('align', s) }} onDone={() => { onAligned(alignSide) }} />
+          onSide={(s: Side, done: boolean) => { aligned[alignSide] = done; go('align', s) }} onDone={() => { onAligned(alignSide) }} />
       {/key}
     {:else if step === 'edit' && allAligned && align.warped.front}
       {#key docModel}
