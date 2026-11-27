@@ -8,7 +8,8 @@ import { aiResult, photoSource, sessionStats } from '../../src/stats/session.ts'
 import { THANKS_URL, thanksHref } from '../../src/stats/thanks-link.ts'
 import { STATS_URL } from '../../src/stats/send.ts'
 import { readFragment } from '../../src/thanks/fragment.ts'
-import { LANGS } from '../../src/i18n/index.ts'
+import { thanksText } from '../../src/thanks/strings.ts'
+import { LANGS, loadLang, t } from '../../src/i18n/index.ts'
 import { STATS_ENDPOINT, THANKS_PAGE, route } from '../../src/offline/precache.ts'
 import worker from '../../worker/index.ts'
 import { dataPoint, handleStats, type AnalyticsDataset } from '../../src/stats/endpoint.ts'
@@ -206,5 +207,16 @@ describe('service worker route for the stats (ADR 0029)', () => {
     expect(route('GET', `${scope}thanks.html#v=1&doc=tie`, 'navigate', scope, known)).toEqual({ kind: 'thanks', url: `${scope}thanks.html` })
     expect(route('GET', `${scope}thanks.html?x`, 'navigate', scope, known)).toEqual({ kind: 'index' })
     expect(route('GET', `${scope}anything`, 'navigate', scope, known)).toEqual({ kind: 'index' })
+  })
+})
+
+describe('thanks page text', () => {
+  // The thanks page loads nothing on demand (no import map), so its text is built in (ADR 0029).
+  it.each(LANGS)('%s: has its text without loading the language first', async (lang) => {
+    const text = thanksText(lang, 'statsSend')
+    if (lang !== 'es') expect(text).not.toBe(t('es', 'statsSend'))
+    await loadLang(lang)
+    expect(text).toBe(t(lang, 'statsSend'))
+    expect(thanksText(lang, 'statsLead')).toBe(t(lang, 'statsLead'))
   })
 })

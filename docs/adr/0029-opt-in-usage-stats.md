@@ -86,7 +86,11 @@ Options considered:
 - Cloudflare still sees each request's IP address and user agent at its edge, as for every page
   load; the Worker does not store them. The README says so.
 - The thanks page and the app share one chunk (`app-*.js`, `app-*.css`): the Svelte runtime, the
-  translations, the stats list and the stylesheet. The service worker still imports nothing.
+  language code with Spanish, and the stylesheet. The service worker still imports nothing.
+- The app loads its other languages on demand, checked through its import map. The thanks page has
+  no import map and loads nothing on demand, so the build links all 13 dictionaries into it as
+  ordinary scripts with integrity (`src/thanks/strings.ts`). They are the files the service worker
+  has already cached for the app.
 - CLAUDE.md rule 1 and ESLint have one narrow exception each: `fetch` in `src/stats/send.ts` and the
   navigation in `src/stats/thanks-link.ts`.
 - Alexis turns on Workers Analytics Engine in the Cloudflare account before the first deploy with

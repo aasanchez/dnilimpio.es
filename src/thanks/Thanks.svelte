@@ -3,10 +3,11 @@
      be sent, and sends them only when the person taps Send. Offline, nothing can be sent. -->
 <script lang="ts">
   import { untrack } from 'svelte'
-  import { dir, isLang, pickLang, t, type Lang } from '../i18n/index.ts'
+  import { dir, isLang, pickLang, type Lang } from '../i18n/index.ts'
   import { deviceStats } from '../stats/device.ts'
   import { encodeStats, type SessionStats } from '../stats/schema.ts'
   import { sendStats } from '../stats/send.ts'
+  import { thanksText } from './strings.ts'
 
   const { session: initial }: { session: SessionStats | undefined } = $props()
   // Read once: the page shows and sends the figures it opened with.
@@ -51,28 +52,28 @@
 
   <section class="content flex flex-1 flex-col gap-4 px-4 pt-6 pb-6">
     <div>
-      <p class="kicker">{t(lang, 'thanksKicker')}</p>
-      <h1 class="text-[2rem] font-extrabold tracking-[-1px]" id="thanks-title">{t(lang, 'thanksTitle')}</h1>
+      <p class="kicker">{thanksText(lang, 'thanksKicker')}</p>
+      <h1 class="text-[2rem] font-extrabold tracking-[-1px]" id="thanks-title">{thanksText(lang, 'thanksTitle')}</h1>
     </div>
-    <p class="lead">{t(lang, 'thanksLead')}</p>
+    <p class="lead">{thanksText(lang, 'thanksLead')}</p>
 
     {#if text !== undefined}
       <section class="grid gap-2.5 rounded-lg border-2 border-ink bg-surface p-3.5" id="stats" aria-labelledby="stats-title">
-        <h2 class="text-lg font-extrabold" id="stats-title">{t(lang, 'statsTitle')}</h2>
-        <p class="hint">{t(lang, 'statsLead')}</p>
-        <p class="hint">{t(lang, 'statsPayload')}</p>
+        <h2 class="text-lg font-extrabold" id="stats-title">{thanksText(lang, 'statsTitle')}</h2>
+        <p class="hint">{thanksText(lang, 'statsLead')}</p>
+        <p class="hint">{thanksText(lang, 'statsPayload')}</p>
         <pre class="term whitespace-pre-wrap break-all" id="stats-payload" dir="ltr">{lines.join('\n')}</pre>
         {#if status === 'sent'}
-          <p class="lead" id="stats-status" role="status">{t(lang, 'statsSent')}</p>
+          <p class="lead" id="stats-status" role="status">{thanksText(lang, 'statsSent')}</p>
         {:else}
-          <button type="button" class="button" id="stats-send" disabled={!online || status === 'sending'} onclick={send}>{t(lang, 'statsSend')}</button>
-          <p class="notice-warn empty:hidden" id="stats-status" role={status === 'error' ? 'alert' : 'status'}>{status === 'error' ? t(lang, 'statsError') : online ? '' : t(lang, 'statsOffline')}</p>
+          <button type="button" class="button" id="stats-send" disabled={!online || status === 'sending'} onclick={send}>{thanksText(lang, 'statsSend')}</button>
+          <p class="notice-warn empty:hidden" id="stats-status" role={status === 'error' ? 'alert' : 'status'}>{status === 'error' ? thanksText(lang, 'statsError') : online ? '' : thanksText(lang, 'statsOffline')}</p>
         {/if}
       </section>
     {/if}
 
     <div class="actionbar">
-      <a class="button primary" id="start-again" href="./">{t(lang, 'reset')}</a>
+      <a class="button primary" id="start-again" href="./">{thanksText(lang, 'reset')}</a>
     </div>
   </section>
 </div>

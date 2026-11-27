@@ -1,12 +1,13 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Step 1: photos of both sides. One side at a time, front first; it moves to the back by itself. -->
+<!-- Step 1: photos of the card. One side at a time, front first; it moves to the back by itself.
+     The back is optional: once the front is in, the person can go on without it, or remove it. -->
 <script lang="ts">
   import { untrack } from 'svelte'
   import type { DecodeError, DecodeResult } from '../capture/decode.ts'
   import { prefersCameraButton, wireCapture, wirePageDrop, wirePaste, type CaptureTarget } from '../capture/input.ts'
   import { canUseLiveCamera, type CameraFailure } from '../capture/live.ts'
   import { t, type Key, type Lang } from '../i18n/index.ts'
-  import type { CaptureState } from '../ui/capture-state.ts'
+  import { canContinue, type CaptureState } from '../ui/capture-state.ts'
   import type { PhotoVia } from '../stats/session.ts'
   import { shrink } from '../engine/wipe.ts'
   import type { Side } from '../zones/dni.ts'
@@ -16,10 +17,12 @@
   import GhostCard from './GhostCard.svelte'
   import { watchFilter } from '../offline/verify.ts'
 
-  const { lang, state: photos, onLoaded, onContinue }: {
+  const { lang, state: photos, onLoaded, onRemoved, onContinue }: {
     lang: Lang
     state: CaptureState
     onLoaded: (side: Side, bitmap: ImageBitmap, via: PhotoVia) => void
+    /** Drops a side's photo. Only the back offers it: the front is required. */
+    onRemoved: (side: Side) => void
     onContinue: () => void
   } = $props()
 
@@ -41,6 +44,8 @@
   const useLive = $derived(liveSupported && !liveFailed)
   const targets: Partial<Record<Side, CaptureTarget>> = {}
   const ready = $derived(photos.front !== null && photos.back !== null)
+  /** The front is in and the back is not: the person may go on with the front alone. */
+  const frontOnly = $derived(canContinue(photos) && photos.back === null)
   let current = $state<Side>(untrack(() => (photos.front === null || photos.back !== null ? 'front' : 'back')))
   // Element refs per side: the tile (drop target) and the two inputs in the action bar.
   const zones = $state<Partial<Record<Side, HTMLElement>>>({})
@@ -72,6 +77,19 @@
     onResult(side, { ok: true, bitmap }, 'camera')
     // Stay open for the other side while it is still empty; otherwise we are done.
     if (current === side) liveOpen = false
+  }
+
+  /** Goes on without the back photo (from the action bar or the live camera). */
+  function skipBack (): void {
+    liveOpen = false
+    errors.back = null
+    onContinue()
+  }
+
+  function removeBack (): void {
+    errors.back = null
+    onRemoved('back')
+    current = 'back'
   }
 
   function onLiveFail (reason: CameraFailure): void {
@@ -140,6 +158,7 @@
     {#key current}<SideBadge {lang} side={current} id="side-badge" />{/key}
     <h2>{t(lang, current === 'front' ? 'captureFront' : 'captureBack')}</h2>
     <p class="lead">{t(lang, 'captureHint')}</p>
+    {#if current === 'back'}<p class="hint" id="back-optional">{t(lang, 'backOptional')}</p>{/if}
   </div>
 
   <div class="area-stage flex flex-col gap-3">
@@ -178,7 +197,7 @@
   <div class="area-side flex flex-col gap-4">
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-1">
       {#each SIDES as side (side)}
-        <CaptureSide {lang} {side} loaded={photos[side] !== null} isCurrent={side === current}
+        <CaptureSide {lang} {side} optional={side === 'back'} loaded={photos[side] !== null} isCurrent={side === current}
           message={errors[side] ? t(lang, errors[side]) : photos[side] ? t(lang, 'loaded') : ''} isError={errors[side] !== null}
           onSelect={() => { current = side }} bind:zone={zones[side]} />
       {/each}
@@ -186,17 +205,23 @@
     {#each SIDES as side (side)}
       {#if errors[side]}<p class="notice-warn" id="error-{side}">{sideName(side)}: {t(lang, errors[side])}</p>{/if}
     {/each}
+    {#if photos.back !== null}
+      <button type="button" class="link-button justify-self-start" id="capture-remove-back" onclick={removeBack}>{t(lang, 'removeBack')}</button>
+    {/if}
     {#if !withCamera}<p class="hint">{t(lang, 'pasteHint')}</p>{/if}
     {#if liveNote}<p class="hint" id="live-note" role="status">{t(lang, liveNote)}</p>{/if}
   </div>
 
   {#if liveOpen}
-    <LiveCamera {lang} side={current} {onShot} onClose={() => { liveOpen = false }} onFail={onLiveFail} />
+    <LiveCamera {lang} side={current} {onShot} onClose={() => { liveOpen = false }} onFail={onLiveFail} onSkip={frontOnly ? skipBack : undefined} />
   {/if}
 
   <div class="actionbar">
     {#if ready}
       <button type="button" class="button primary" id="capture-continue" onclick={onContinue}>{t(lang, 'continue')} <span class="flip" aria-hidden="true">→</span></button>
+    {:else if frontOnly}
+      <!-- The back is optional: go on with the front alone. -->
+      <button type="button" class="button" id="capture-skip-back" onclick={skipBack}>{t(lang, 'skipBack')} <span class="flip" aria-hidden="true">→</span></button>
     {/if}
     <!-- One pair of buttons per side; only the side on screen shows. The inputs sit inside their labels. -->
     {#each SIDES as side (side)}

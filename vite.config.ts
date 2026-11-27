@@ -59,10 +59,11 @@ export default defineConfig({
       preserveEntrySignatures: 'exports-only',
       output: {
         // What the start page and the thanks page (ADR 0029) both use goes into one chunk with a fixed
-        // name, `app`: the Svelte runtime, the translations, the page lockdown and the
-        // stylesheet. The service worker shares nothing with them (it may import no chunk).
+        // name, `app`: the Svelte runtime, the language code with Spanish (the other languages stay
+        // chunks of their own, loaded on demand), the page lockdown and the stylesheet. The service
+        // worker shares nothing with them (it may import no chunk).
         codeSplitting: {
-          groups: [{ name: 'app', test: /[\\/]node_modules[\\/](\.pnpm[\\/])?svelte[@\\/]|[\\/]src[\\/]i18n[\\/]|[\\/]src[\\/]security[\\/]lockdown\.ts$|[\\/]src[\\/]ui[\\/]styles\.css/ }],
+          groups: [{ name: 'app', test: /[\\/]node_modules[\\/](\.pnpm[\\/])?svelte[@\\/]|[\\/]src[\\/]i18n[\\/](index\.ts|locales[\\/]es\.json)$|[\\/]src[\\/]security[\\/]lockdown\.ts$|[\\/]src[\\/]ui[\\/]styles\.css/ }],
         },
         entryFileNames: (chunk) => (chunk.name === 'sw' ? 'sw.js' : 'assets/[name]-[hash].js'),
         chunkFileNames: (chunk) => (isModelPart(chunk.moduleIds) ? 'assets/ml/[name]-[hash].js' : 'assets/[name]-[hash].js'),

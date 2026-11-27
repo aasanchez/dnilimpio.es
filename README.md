@@ -16,7 +16,7 @@ document.
 > check below uses that name.
 
 > [!IMPORTANT]
-> Automatic detection can miss data. Always check both sides of the result before you share it.
+> Automatic detection can miss data. Always check every side of the result before you share it.
 
 ## Contents
 
@@ -41,7 +41,7 @@ document.
 When a landlord, employer or company asks for a copy of your DNI or TIE, they usually need only
 some of the data. This tool makes a copy that shows only what you choose:
 
-1. **Select** a photo of the front and of the back. On a phone, the **capture coach** gives live
+1. **Select** a photo of the front and, if you need it, of the back. The back is optional. On a phone, the **capture coach** gives live
    tips and takes the photo by itself when the card is sharp. On a computer, drag and drop, choose a
    file or paste.
 2. **Confirm the document**: DNI or TIE. The app reads the card on your device and preselects it,
@@ -55,7 +55,7 @@ some of the data. This tool makes a copy that shows only what you choose:
    diagonal rows over the whole card, so every part of the image carries it. Text size and opacity
    are adjustable; at 100 % opacity the text is solid black.
 6. **Convert to black and white** (optional).
-7. **Review** both sides and **download a PDF**: `protected-document.pdf`.
+7. **Review** the result and **download a PDF**: `protected-document.pdf`, one page per side.
 8. **Share it yourself** (optional) through WhatsApp, email or the system share sheet. The app
    never sends anything.
 
@@ -93,8 +93,11 @@ and you always confirm it ([ADR 0011](docs/adr/0011-document-detection.md)):
   for a holder 70 or over, or no OCR), the app uses the DNI 4.0, the most common one, and says so.
   The editor has an **Older DNI (3.0)** switch next to the box controls: it changes the layout and
   keeps your photos and choices.
-- Nothing is preselected until detection answers or you choose: **Continue** waits for a document,
-  so a TIE is never handled with DNI positions by mistake.
+- While the photos are read, nothing is selected and **Continue** waits. When detection reads the
+  photos but cannot tell the document, the app selects **TIE** and says so: DNI detection is
+  reliable, so an unrecognised card is most likely a TIE. You can change it
+  ([ADR 0028](docs/adr/0028-tie-fallback.md)). When detection cannot run (offline before the first
+  download, an old browser), nothing is selected and **Continue** waits for your choice.
 - When the MRZ cannot settle it (no MRZ read, or dates that fit both DNI versions), the app also reads
   the printed text of the front, such as "PERMISO DE RESIDENCIA" or "REINO DE ESPAÑA", and where the
   DNI number sits ([ADR 0019](docs/adr/0019-ppocr-and-text-detection.md)). The MRZ wins when both answer.
@@ -134,6 +137,10 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    Optional: disconnect from the Internet once the page has loaded. After the first visit, the tool
    also opens with no connection. Press **Start**.
 2. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself.
+   The back is optional: many requests need only the front. **Continue without the back** goes on
+   with the front alone, and the rest of the flow works on that one side: the editor shows only the
+   front's fields, and the PDF has one page. **Remove the photo of the back** drops a back you added
+   by mistake. In the capture coach, **Continue without the back** closes the camera after the front.
    - On a phone, **Take a photo** opens the capture coach (see below) and **Gallery** opens your
      pictures.
    - On a computer, the photo area is an upload area: drag an image onto it, use **Choose a file**,
@@ -159,8 +166,10 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 3. **Document.** Confirm DNI or TIE, then **Continue**. The app reads the card on your device and
    preselects the document: *Document detected: TIE. Check it before you continue.* For a DNI it
    also picks the version (3.0 or 4.0), whose field positions differ; when it cannot tell, it uses
-   the 4.0 and the editor offers an **Older DNI (3.0)** switch. You can choose by hand at any moment. Until a document is
-   chosen, **Continue** stays off. To change the document later, go back from the editor: your
+   the 4.0 and the editor offers an **Older DNI (3.0)** switch. You can choose by hand at any moment. While the photos are
+   read, **Continue** stays off. When the app reads the card but cannot tell the
+   document, it selects TIE: *TIE is selected. If it is a DNI, change it.* When it cannot read the
+   card (no OCR), nothing is selected. To change the document later, go back from the editor: your
    photos are kept, the corners and choices start again.
 4. **Straighten (automatic).** After **Continue**, the app looks for the card in each photo (with the
    on-device model, or classic edge detection), turns it the right way up, whether the photo was
@@ -175,8 +184,8 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    corners of the card; a magnifier shows the area under your finger. On a keyboard, arrow keys move
    the selected corner and <kbd>N</kbd> selects the next one. **Rotate** turns the frame a quarter
    turn, **Reset** puts the circles back. The button straightens the card again and takes you on.
-5. **Hide.** The card stays on screen. Choose **Front** or **Back**; the list below shows that
-   side's fields as switches. You can also tap a field on the card itself to cover or uncover it.
+5. **Hide.** The card stays on screen. Choose **Front** or **Back** (only with a back photo); the
+   list below shows that side's fields as switches. You can also tap a field on the card itself to cover or uncover it.
    The recommended fields start covered (see [Supported documents](#supported-documents)). Fields
    left visible get a dashed orange outline; **Final preview** hides the outlines. A warning appears
    if the CAN stays visible, or if the MRZ stays visible while data it repeats is hidden.
@@ -208,7 +217,7 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
      card updates as you type. Long text wraps onto a few short lines (at most 120 characters).
      **Text size** (50 % to 300 %) and **Opacity** (5 % to 100 %, default 16 %) apply live; at 100 %
      the text is solid black. **Convert to black and white** is here too.
-6. **Download.** Check both final images and the summary, tick **I have checked both sides**, then
+6. **Download.** Check the final images (one per side) and the summary, tick **I have checked both sides** (or **I have checked the front**), then
    **Download PDF**. The file is called `protected-document.pdf`.
 7. **Done.** Under **Send it yourself**, **Share via WhatsApp** and **Share via email** open the system
    share sheet with the PDF on devices that support sharing files. On other devices they open
@@ -583,9 +592,12 @@ public issue.
 ## Languages
 
 The interface is available in 13 languages: Spanish (default), Catalan, Valencian, Galician, Basque,
-English, French, Dutch, Swedish, Finnish, Ukrainian, Romanian and Arabic (right to left). All
-languages are bundled in the build; the page never downloads translations. The language follows the
-browser and can be changed from the selector at the top. The card guide has its own texts per
+English, French, Dutch, Swedish, Finnish, Ukrainian, Romanian and Arabic (right to left). Every
+language is a file of the build, served from this site and precached by the service worker, so the
+selector also works offline. The start page holds only Spanish; the page's own language loads as
+one small file before the first render, and a language picked later loads when it is picked. The
+app never downloads a translation from anywhere else. The language follows the browser and can be
+changed from the selector at the top. The card guide has its own texts per
 language ([`src/guide/locales/`](src/guide/locales/)).
 
 Translations other than Spanish and English are machine-assisted drafts. Corrections are welcome:
@@ -600,7 +612,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 
 | Part | State |
 |---|---|
-| Select front and back photos (file, drag and drop, paste, camera) | Done |
+| Select front and back photos (file, drag and drop, paste, camera); the back is optional | Done |
 | Capture coach: live camera tips and automatic shot | Done |
 | DNI 4.0, DNI 3.0 and TIE, with a two-choice picker (DNI, TIE); DNI version detected, 4.0 fallback with a switch | Done |
 | Document type detection from the MRZ (preselects the picker) | Done |
@@ -689,15 +701,15 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 
 | Area | Files | What is checked |
 |---|---|---|
-| Capture | `input`, `decode`, `live`, `coach` | File picker and camera modes, decode errors (HEIC, size, not an image), live camera needs and failures, coach metrics (blur, light, framing) |
+| Capture | `input`, `decode`, `live`, `coach`, `capture-state` | Sides in use with an optional back, file picker and camera modes, decode errors (HEIC, size, not an image), live camera needs and failures, coach metrics (blur, light, framing) |
 | Geometry | `homography`, `quad-edit` | Homography round trips and degenerate quads, corner editing |
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates |
 | OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
-| Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, manual box maths, every masked pixel opaque black |
-| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages, images, no metadata, no text, deterministic output |
+| Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black |
+| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages (two, or one with the front alone), images, no metadata, no text, deterministic output |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
-| Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns), the service worker route open only to the thanks page |
-| Platform | `precache`, `headers`, `lockdown`, `intake-lockdown`, `build-info`, `i18n`, `guide`, `deps-report`, `verify-release` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal and frame check, the photo step's policy and the service worker check, version and relative time, translation keys and no absolute privacy claims in es/en, guide citations, dependency report, pinned provenance identity |
+| Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns), the service worker route open only to the thanks page |
+| Platform | `precache`, `headers`, `lockdown`, `intake-lockdown`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal and frame check, the photo step's policy and the service worker check, version and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off:
 
@@ -709,17 +721,19 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `stats` | Clear everything opens the photo-free thanks page; nothing is sent before the tap; the text sent is the text shown; its own CSP; the app page still cannot connect to `/stats`, with and without the service worker; a changed fragment shows nothing to send; offline and error states; Arabic layout |
 | `cleanup` | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
 | `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
-| `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers added next to the host's CSP, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
+| `offline` | Full flow to the PDF offline, also with the front alone, deny-by-default service worker, page headers added next to the host's CSP, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
 | `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; page code that gathers the canary file names, OCR text and watermark cannot send them by beacon, fetch, image, style sheet, font, frame or form; the page opens no frame, the CSP has no `frame-src` and refuses a frame to another site; the start screen sends nothing to another site, also offline or under GPC |
 | `update` | An idle single tab switches to a new build; a tab with photos, or a second tab, holds it back |
-| `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks |
-| `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, offline note |
+| `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks, and skipping the back from it |
+| `front-only` | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, done screen and share actions, adding the back later |
+| `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, TIE when detection finds no answer, offline note with nothing preselected |
 | `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases; smart field finding |
 | `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
 | `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, a real PDF decoded in the browser (hidden areas black, no metadata, no file name, no watermark text in the file), reset |
 | `share` | WhatsApp and email as share sheet or as plain links, and a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
+| `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
 | `privacy-notice` | Exact privacy wording (processing on the device, no upload, visit-count frame), no accept step, 4-day memory, blocked storage, translations, audit prompt |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, build SHA and relative deploy time (also offline) |
@@ -765,7 +779,7 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 | build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. No threshold yet | PR | Yes |
 | test | `e2e (1/2)`, `e2e (2/2)` | `pnpm test:e2e`, split in two shards, against the built `dist/` | PR | Yes |
 | test | `reproducible` | Builds the same commit again on a fresh runner and compares the SHA-384 of every file with the `dist/` artifact ([`scripts/build-manifest.ts`](scripts/build-manifest.ts)). Any difference fails. Also runs on the release commit, because the squash merge makes a new commit; `deploy` waits for it | Both | Yes |
-| test | `bundle-size` | `pnpm size`: gzip size of the start page, PDF chunk, corner model and OCR files against budgets in [`scripts/bundle-size.ts`](scripts/bundle-size.ts) | PR | No, warns (`--strict` makes it fail) |
+| test | `bundle-size` | `pnpm size`: gzip size of the start page (entry and preloaded modules), PDF chunk, corner model and OCR files against budgets in [`scripts/bundle-size.ts`](scripts/bundle-size.ts) | PR | No, warns (`--strict` makes it fail) |
 | code analysis | `reuse` | Every file has copyright and licence information ([REUSE](https://reuse.software)) | PR | Yes |
 | code analysis | `audit` | `pnpm audit --prod --audit-level high`: known high or critical vulnerabilities in the code that ships | PR | Yes |
 | code analysis | `dependency-review` | A new or updated dependency with a known moderate or worse vulnerability | PR | Yes |
@@ -965,6 +979,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0025](docs/adr/0025-intake-lockdown.md): a second, stricter CSP from the photo step on: exact build scripts, images only from memory, no fonts, styles or connections; a service worker check with a calm note when it is missing.
 - [0026](docs/adr/0026-recheck-cache-hits.md): the service worker hashes every cache hit again before it answers; a rewritten entry is deleted and downloaded again, or refused offline.
 - [0027](docs/adr/0027-security-headers-from-the-host.md): security headers from the host; dnitapado.es on Cloudflare Workers with a generated `_headers` file, the only host, no COEP; no analytics code, the host counts requests; nothing deployed to GitHub Pages.
+- [0028](docs/adr/0028-tie-fallback.md): TIE is preselected when detection reads the photos but cannot tell the document; without detection nothing is preselected; you can change it.
 - [0029](docs/adr/0029-opt-in-usage-stats.md): opt-in anonymous usage stats; "Clear everything" opens a photo-free thanks page that shows the exact figures and sends them only on a tap; fixed list, Worker on `/stats` only, Workers Analytics Engine, no IP stored; the app page still has `connect-src 'none'`.
 
 ## Contributing

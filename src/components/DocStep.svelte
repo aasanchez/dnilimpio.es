@@ -1,12 +1,14 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- After the photos: which document is it, DNI or TIE? Each layout has its own field positions.
-     When OCR can run, the photos preselect the answer; the person always confirms it. Nothing is
-     preselected otherwise: Continue waits for a choice. The DNI version (3.0 or 4.0) is not asked:
+     When OCR can run, the photos preselect the answer; the person always confirms it. While the
+     photos are read, nothing is selected and Continue waits. When detection ran but found no answer,
+     TIE is preselected (ADR 0028). Without detection (offline, old browser, OCR failure), nothing is
+     preselected: Continue waits for a choice. The DNI version (3.0 or 4.0) is not asked:
      it comes from detection, or is the most common one (4.0), with a switch in the editor. -->
 <script lang="ts">
   import { untrack } from 'svelte'
   import { t, tf, type Key, type Lang } from '../i18n/index.ts'
-  import { CHOICES, DEFAULT_DNI, choiceOf, isDni, type DniVersion, type DocChoice } from '../zones/documents.ts'
+  import { CHOICES, DEFAULT_DNI, FALLBACK_CHOICE, choiceOf, isDni, type DniVersion, type DocChoice } from '../zones/documents.ts'
   import type { DocModel } from '../zones/types.ts'
   import type { CaptureState } from '../ui/capture-state.ts'
   import { loadDetect } from '../detect/load-detect.ts'
@@ -53,6 +55,14 @@
   }
 
   let auto = $state<Auto>({ s: 'checking' })
+  /** True once detection ran without an answer and the fallback (TIE) was preselected. */
+  let fellBack = $state(false)
+  /** Detection ran and found no answer: preselect the fallback, unless the person already picked. */
+  function fallBack (): void {
+    if (touched) return
+    choose(FALLBACK_CHOICE)
+    fellBack = true
+  }
   /** Set when the person picks a radio themselves, even the one already selected: detection then never overrides it. */
   let touched = $state(!untrack(() => preselect))
   // The screen can close while OCR runs (Continue or Back): late results are then ignored.
@@ -73,6 +83,7 @@
       } else {
         auto = guess?.kind === 'dni' ? { s: 'dni' } : { s: 'none' }
       }
+      if (auto.s === 'none') fallBack()
       // A DNI whose version is unknown still preselects DNI: the default version, never an error.
       if (guess?.kind === 'dni' || guess?.kind === 'tie') {
         if (!touched) choose(guess.kind)
@@ -101,13 +112,15 @@
     }
   })()
 
+  /** Says the TIE was preselected, while it still is. */
+  const fallbackNote = $derived(fellBack && choice === FALLBACK_CHOICE ? ` ${t(lang, 'detectTieFallback')}` : '')
   const message = $derived.by((): string => {
     switch (auto.s) {
       case 'reading': return auto.mb === null ? t(lang, 'detectReading') : tf(lang, 'detectDownloading', { mb: auto.mb })
       case 'unavailable': return t(lang, auto.key)
       case 'found': return tf(lang, 'detectFound', { doc: t(lang, `doc_${auto.model}`) })
       case 'dni': return t(lang, 'detectDniGuess')
-      case 'none': return t(lang, 'detectNone')
+      case 'none': return t(lang, 'detectNone') + fallbackNote
       default: return ''
     }
   })

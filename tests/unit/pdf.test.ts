@@ -52,6 +52,12 @@ describe('buildPdf', () => {
     }
   })
 
+  it('writes a single page when only the front is exported (the back is optional)', async () => {
+    const text = latin1(await buildPdf([dirtyJpeg()]))
+    expect(text).toMatch(/\/Type \/Pages[\s\S]*?\/Count 1/)
+    expect(text.match(/\/Type \/Page\b(?!s)/g)).toHaveLength(1)
+  })
+
   it('contains no metadata, text, annotations, forms, scripts or attachments', async () => {
     const pdf = await buildPdf([dirtyJpeg()])
     const text = latin1(pdf)

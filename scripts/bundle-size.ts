@@ -11,21 +11,37 @@ interface Budget {
   /** Label in the report. */
   name: string
   /** Files in dist/ (path relative to dist/, with forward slashes) that count towards this budget. */
-  match: RegExp
+  match: RegExp | ((rel: string) => boolean)
   /** Limit in kB (1 kB = 1000 bytes). */
   limitKb: number
   /** gzip: compressed size; raw: size on disk. */
   measure: 'gzip' | 'raw'
 }
 
+const DIST = 'dist'
+
+/**
+ * The scripts the start page loads before it can run: the entry module and every module the build
+ * preloads with it (its static imports), read from dist/index.html. Chunks shared with code loaded
+ * later still count here, because the browser fetches them at start.
+ */
+function startScripts (): Set<string> {
+  const html = readFileSync(join(DIST, 'index.html'), 'utf8')
+  const refs = [...html.matchAll(/<script\b[^>]*\bsrc="\.\/([^"]+\.js)"/g), ...html.matchAll(/<link\b[^>]*\brel="modulepreload"[^>]*\bhref="\.\/([^"]+\.js)"/g)]
+  return new Set(refs.map((m) => m[1] ?? ''))
+}
+const START = startScripts()
+
 // Current sizes plus about 10 % headroom (2026-11-25). Raise a limit only on purpose, in the same PR
 // that makes the bundle bigger, and say why.
 const BUDGETS: readonly Budget[] = [
-  // The start page loads its entry and the `app` chunk it shares with the thanks page (ADR 0029).
-  { name: 'Start page JavaScript', match: /^assets\/(index|app)-[\w-]+\.js$/, limitKb: 100, measure: 'gzip' },
+  // The entry and every chunk preloaded with it, the `app` chunk shared with the thanks page included
+  // (ADR 0029). 86 kB since languages load on demand (2026-11-27), was 122.9 kB with all 13 dictionaries.
+  { name: 'Start page JavaScript', match: (rel) => START.has(rel), limitKb: 86, measure: 'gzip' },
   // CSS: 12 kB since Tailwind CSS (ADR 0017): its base reset and the utility classes, about 10.3 kB.
   { name: 'Start page CSS', match: /^assets\/(index|app)-[\w-]+\.css$/, limitKb: 12, measure: 'gzip' },
-  // The thanks page's own code (ADR 0029); it also loads the shared `app` chunk.
+  // The thanks page's own code (ADR 0029). It also loads the shared `app` chunk and, since languages
+  // load on demand, all 13 dictionaries: it has no import map, so it loads nothing on demand.
   { name: 'Thanks page JavaScript', match: /^assets\/thanks-[\w-]+\.js$/, limitKb: 5, measure: 'gzip' },
   { name: 'PDF export chunk', match: /^assets\/export-[\w-]+\.js$/, limitKb: 275, measure: 'gzip' },
   { name: 'Corner model (on demand)', match: /^assets\/ml\/.+\.js$/, limitKb: 2850, measure: 'gzip' },
@@ -33,7 +49,6 @@ const BUDGETS: readonly Budget[] = [
   { name: 'Whole dist/ folder', match: /^(?!.*\.map$)/, limitKb: 28000, measure: 'raw' },
 ]
 
-const DIST = 'dist'
 const strict = process.argv.includes('--strict')
 
 function files (dir: string): string[] {
@@ -49,7 +64,8 @@ const kb = (bytes: number): string => (bytes / 1000).toFixed(1)
 let over = 0
 const rows: string[] = []
 for (const b of BUDGETS) {
-  const matched = all.filter((f) => b.match.test(f.rel))
+  const test = b.match
+  const matched = all.filter((f) => (typeof test === 'function' ? test(f.rel) : test.test(f.rel)))
   const bytes = matched.reduce((sum, f) => sum + (b.measure === 'gzip' ? gzipSync(readFileSync(f.path)).length : statSync(f.path).size), 0)
   const ok = matched.length > 0 && bytes <= b.limitKb * 1000
   if (!ok) over++

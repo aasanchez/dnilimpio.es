@@ -1,6 +1,6 @@
 # 0011. Document type detected from the MRZ, after the photos
 
-- Status: accepted; the front's printed text added by [0019](0019-ppocr-and-text-detection.md)
+- Status: accepted; the front's printed text added by [0019](0019-ppocr-and-text-detection.md); "no default" changed by [0028](0028-tie-fallback.md) (TIE when detection runs without an answer)
 - Date: 2026-11-25
 - Changes: [0006](0006-document-types.md) (screen order)
 
@@ -29,7 +29,9 @@ Detection needs the photos, but the picker came before them.
      2 August 2021 → DNI 4.0; entirely from 2015 to before that day → DNI 3.0. Otherwise, or when a
      date check digit fails, or for a permanent DNI: "it is a DNI, choose the version".
 - **No default.** Until detection answers or the person picks, no document is selected and
-  **Continue** is off. (A DNI 4.0 default made a real TIE get DNI boxes, 2026-11-25.)
+  **Continue** is off. (A DNI 4.0 default made a real TIE get DNI boxes, 2026-11-25.) Changed by
+  [ADR 0028](0028-tie-fallback.md): when detection reads the photos without an answer, TIE is
+  preselected. Without detection, nothing is.
 - **It only preselects.** The person confirms with **Continue**. A radio the person picked is never
   changed, and once a document is confirmed for these photos, returning to the screen does not
   change it. A new photo allows a new preselect.
@@ -40,8 +42,9 @@ Detection needs the photos, but the picker came before them.
     DNI 4.0 default.
   - `unavailable` (offline before the first download, no service worker, old browser): a note says
     so, and the picker works as before.
-  - Any failure while reading ends in "could not recognise the document, choose it". No error
-    reaches the screen.
+  - Any failure while reading ends in "could not recognise the document". No error reaches the
+    screen. (Since [ADR 0028](0028-tie-fallback.md), a read without an answer preselects TIE; OCR
+    that cannot start preselects nothing.)
 - The detection code is its own chunk, loaded when the Document screen opens. Results are kept per
   photo in memory (a `WeakMap`), so going back and forth does not read the same photo twice.
 

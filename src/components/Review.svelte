@@ -11,9 +11,11 @@
   import { t, tf, type Lang } from '../i18n/index.ts'
   import type { Side } from '../zones/dni.ts'
 
-  const { lang, secure, phase, hiddenCount, boxCount, watermark, greyscale, onDone, onReset, onFinish }: {
+  const { lang, secure, sides, phase, hiddenCount, boxCount, watermark, greyscale, onDone, onReset, onFinish }: {
     lang: Lang
     secure: Readonly<Record<Side, HTMLCanvasElement>>
+    /** The sides to show and export, front first: one page each. The back is optional. */
+    sides: readonly Side[]
     phase: 'review' | 'done'
     hiddenCount: number
     boxCount: number
@@ -25,7 +27,6 @@
     onFinish: () => void
   } = $props()
 
-  const SIDES = ['front', 'back'] as const
   let confirmed = $state(false)
   let busy = $state(false)
   let status = $state<'idle' | 'done' | 'error'>('idle')
@@ -33,6 +34,8 @@
   let pdf: File | null = null
   let shareStatus = $state<'idle' | 'error'>('idle')
   const mark = $derived(normaliseWatermark(watermark))
+  /** The back photo was skipped: the copy has the front only. */
+  const oneSide = $derived(!sides.includes('back'))
   const sideName = (s: Side): string => t(lang, s === 'front' ? 'tabFront' : 'tabBack')
 
   /** Web Share with files: most phones, a few desktop browsers. */
@@ -63,7 +66,7 @@
     status = 'idle'
     try {
       const { exportPdf, PDF_FILE_NAME } = await loadExport()
-      const blob = await exportPdf(SIDES.map((s) => secure[s]))
+      const blob = await exportPdf(sides.map((s) => secure[s]))
       // Left meanwhile (Reset, leaving the page): the PDF is not saved and not kept.
       if (!mounted) return
       saveFile(blob, PDF_FILE_NAME)
@@ -104,7 +107,7 @@
       <p class="lead">{t(lang, 'reviewLead')}</p>
     </div>
     <div class="area-stage flex flex-col gap-4">
-      {#each SIDES as s (s)}
+      {#each sides as s (s)}
         <figure class="win m-0">
           <figcaption class="winbar"><i></i><i></i><i></i><span class="title">{sideName(s)}</span></figcaption>
           <div class="winbody"><canvas class="block h-auto w-full rounded-md" id="review-{s}" {@attach copyOf(s)}></canvas></div>
@@ -113,13 +116,14 @@
     </div>
     <div class="area-side flex flex-col gap-4">
       <ul class="term" id="review-summary">
+        {#if oneSide}<li id="summary-front-only"><span class="p">✓</span> {t(lang, 'frontOnly')}</li>{/if}
         <li><span class="p">✓</span> {tf(lang, 'summaryHidden', { n: hiddenCount })}</li>
         <li><span class="p">✓</span> {tf(lang, 'summaryBoxes', { n: boxCount })}</li>
         <li><span class="p">✓</span> {mark === '' ? t(lang, 'summaryNoWatermark') : tf(lang, 'summaryWatermark', { text: mark })}</li>
         <li><span class="p">✓</span> {t(lang, greyscale ? 'summaryGreyscale' : 'summaryColour')}</li>
       </ul>
-      <p class="notice-warn" id="review-warning">{t(lang, 'reviewWarning')}</p>
-      <label class="flex min-h-14.5 items-center gap-3 rounded-lg border-2 border-ink bg-surface px-3.5 py-2.5 has-checked:bg-sunk"><input type="checkbox" class="check" id="review-confirm" bind:checked={confirmed} /> {t(lang, 'reviewConfirm')}</label>
+      <p class="notice-warn" id="review-warning">{t(lang, oneSide ? 'reviewWarningFront' : 'reviewWarning')}</p>
+      <label class="flex min-h-14.5 items-center gap-3 rounded-lg border-2 border-ink bg-surface px-3.5 py-2.5 has-checked:bg-sunk"><input type="checkbox" class="check" id="review-confirm" bind:checked={confirmed} /> {t(lang, oneSide ? 'reviewConfirmFront' : 'reviewConfirm')}</label>
       <p class="notice-warn" id="download-status" role={status === 'error' ? 'alert' : 'status'}>{status === 'error' ? t(lang, 'errExport') : ''}</p>
       <button type="button" class="link-button" id="reset-review" onclick={onReset}>{t(lang, 'reset')}</button>
     </div>
@@ -139,7 +143,7 @@
     </div>
     <div class="win area-stage">
       <div class="winbar"><i></i><i></i><i></i><span class="title">export.log</span></div>
-      <p class="term" aria-hidden="true"><span class="p">$</span> dt.es export<br />→ protected-document.pdf · 2 pp · ok<br />→ {t(lang, 'logSent')}<br /><span class="p">_</span></p>
+      <p class="term" aria-hidden="true"><span class="p">$</span> dt.es export<br />→ protected-document.pdf · {sides.length} pp · ok<br />→ {t(lang, 'logSent')}<br /><span class="p">_</span></p>
     </div>
     <div class="area-side flex flex-col gap-4">
       <p class="lead" id="download-status" role="status">{status === 'done' ? t(lang, 'downloaded') : ''}</p>
