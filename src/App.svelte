@@ -143,8 +143,7 @@
   }
 
   function back (): void {
-    if (step === 'edit' && phase === 'done') phase = 'review'
-    else if (step === 'edit' && phase === 'review') phase = 'edit'
+    if (step === 'edit' && phase === 'review') phase = 'edit'
     else if (step === 'edit' || step === 'auto') { go('doc'); return } else if (step === 'align') { go(allAligned ? 'edit' : 'doc'); return } else if (step === 'doc') { go('capture'); return } else { go('home'); return }
     void focusHeading()
   }
@@ -185,7 +184,7 @@
     go('capture', 'front')
   }
 
-  /**
+   * "Download and clear" or "Share and clear", once the PDF has left: the usage figures of this session (ids and counts only,
    * "Clear everything" on the done screen: the usage figures of this session (ids and counts only,
    * src/stats/session.ts) are taken first, then everything is cleared, then the photo-free thanks
    * page opens. It sends nothing by itself; there the person may choose to send them (ADR 0029).

@@ -103,12 +103,8 @@ test('front only: the editor has one side and only front fields, and the PDF has
   expect(text.startsWith('%PDF-')).toBe(true)
   expect(text).toMatch(/\/Count 1\b/)
   expect(text.match(/\/Type \/Page\b(?!s)/g)).toHaveLength(1)
-  // Done screen, as with both sides.
-  await expect(page.locator('h2')).toHaveText('Tu PDF está listo')
-  await expect(page.locator('#done-summary')).toContainText('Archivo: protected-document.pdf')
+  // As with both sides: no done screen. Cleared first, then the thanks page opens (ADR 0029).
   await expect(page.locator('#download-status')).toHaveText('PDF creado. Búscalo en tu carpeta de descargas.')
-  await page.locator('#reset-done').click()
-  // Cleared first, then the thanks page opens (ADR 0029), as in cleanup.spec and stats.spec.
   await expect(page.locator('#thanks-title')).toHaveText('Tu documento ya no está aquí')
 })
 
