@@ -9,7 +9,7 @@ import { ARTICLE_CSP } from '../../scripts/csp.ts'
 import { ARTICLE_CONTENT_TYPE } from '../../scripts/headers.ts'
 
 /** Every published Spanish article of this build (the build reads the same folder). */
-const SPANISH = readdirSync('dist/articles').filter((f) => f !== 'index.html')
+const SPANISH = readdirSync('dist/articles').filter((f) => f !== 'index.html' && f !== '404.html')
 
 /** Collects CSP reports, page errors and requests to any other host. */
 function watch (page: Page): { problems: string[] } {

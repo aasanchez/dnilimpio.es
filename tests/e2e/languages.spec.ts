@@ -48,10 +48,11 @@ test.describe('language in the address (ADR 0038)', () => {
     expect(new URL(page.url()).pathname).toBe('/')
   })
 
-  test('an unknown language opens in Spanish and leaves the address clean', async ({ page }) => {
-    await page.goto('/de')
+  test('an unknown language is an unknown address: the Spanish not-found page (ADR 0045)', async ({ page }) => {
+    const res = await page.goto('/de')
+    expect(res?.status()).toBe(404)
     await expect(page.locator('html')).toHaveAttribute('lang', 'es')
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/')
+    await expect(page.locator('#not-found-home')).toHaveAttribute('href', './')
   })
 
   test('the address follows the selector, and a reload keeps the language', async ({ page }) => {

@@ -3,9 +3,9 @@
 // The dev server is left without CSP because Vite's HMR client needs inline code and a WebSocket.
 
 import { createHash } from 'node:crypto'
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, posix, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, THANKS_CSP, cspWithScriptHashes } from './csp.ts'
 import { headersFor, hostHeaderRules, redirectFor, rewriteFor, type HeaderRule } from './headers.ts'
@@ -13,6 +13,7 @@ import { insertIntoApp, renderHomes } from './prerender.ts'
 import { noScriptTag } from './language-pages.ts'
 import { STATS_PATH, handleStats } from '../src/stats/endpoint.ts'
 import { isArticlePage } from '../src/articles/paths.ts'
+import { NOT_FOUND_FILE, notFoundPages } from '../src/notfound/page.ts'
 import { GUIDE_PAGES, SW_FILE, THANKS_PAGE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 import { robotsTxt, sitemapXml, startPageSitemap, staticHead, structuredData, type SitemapUrl } from '../src/seo/site.ts'
 import { LANGS, type Lang } from '../src/i18n/langs.ts'
@@ -147,6 +148,14 @@ export function subresourceIntegrity (more: { pages?: (indexHtml: string) => Rea
         writeFileSync(path, html)
       }
 
+      // The not-found pages (ADR 0045): their stylesheet, checked the same way. They run no script.
+      for (const page of notFoundPages()) {
+        const path = join(outDir, page.path)
+        const html = withSri(readFileSync(path, 'utf8'), dirname(page.path))
+        if (/<script\b/i.test(html) || !/<link rel="stylesheet" [^>]*integrity="sha384-/.test(html)) throw new Error(`${page.path}: must link its stylesheet with integrity and have no script`)
+        writeFileSync(path, html)
+      }
+
       const htmlPath = join(outDir, 'index.html')
       const out = withSri(readFileSync(htmlPath, 'utf8'))
 
@@ -214,6 +223,30 @@ function writePrecacheManifest (outDir: string): void {
 }
 
 /**
+ * The not-found page the host sends for `path` (ADR 0045), or null when the build has a file there.
+ * Like the host, it takes the `404.html` of the nearest folder above the path.
+ */
+export function notFoundFor (outDir: string, path: string): string | null {
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(path)
+  } catch {
+    decoded = path
+  }
+  // As a URL resolves it: `..` never climbs above the site's folder.
+  const rel = posix.normalize(`/${decoded}`).replace(/^\/+/, '')
+  const target = join(outDir, rel)
+  if (rel !== '' && existsSync(target) && statSync(target).isFile()) return null
+  let folder = rel.slice(0, rel.lastIndexOf('/') + 1)
+  for (;;) {
+    const page = join(outDir, folder, NOT_FOUND_FILE)
+    if (existsSync(page)) return page
+    if (folder === '') return null
+    folder = folder.slice(0, folder.slice(0, -1).lastIndexOf('/') + 1)
+  }
+}
+
+/**
  * `vite preview` sends the same HTTP headers as the Cloudflare host (scripts/headers.ts, ADR 0027), so
  * the e2e tests run under the host's CSP, Permissions-Policy and framing rules, not only the <meta> CSP.
  * Set PREVIEW_HOST_HEADERS=0 to preview the build as GitHub Pages serves it (no headers).
@@ -259,6 +292,16 @@ export function hostHeadersInPreview (): Plugin {
         // address shows its own start page (ADR 0044).
         const file = rewriteFor(path)
         if (file !== null) req.url = `${file}${new URL(req.url ?? '/', 'http://preview').search}`
+        // An unknown path gets the nearest not-found page with status 404, as on the host (ADR 0045).
+        // So does a rewrite to a file the build does not have, such as the articles folder of a
+        // language with no articles: the host then answers for the address, not for the file.
+        const notFound = file === null || notFoundFor(outDir, file) !== null ? notFoundFor(outDir, path) : null
+        if (notFound !== null) {
+          res.statusCode = 404
+          res.setHeader('Content-Type', 'text/html; charset=utf-8')
+          res.end(readFileSync(notFound))
+          return
+        }
         next()
       })
     },

@@ -44,7 +44,9 @@ export const REDIRECTS_FILE = '_redirects'
  * redirect; ADR 0044), as route() in the service worker does.
  */
 export function redirectsFile (): string {
-  const lines = ['/es / 301', '/es/ / 301']
+  // The site address shows index.html (200). Unknown paths get a not-found page (ADR 0045), so the
+  // start page is named here, not left to a fallback.
+  const lines = ['/ /index.html 200', '/es / 301', '/es/ / 301']
   for (const lang of LANGS) {
     if (lang === 'es') continue
     const seg = lang.toLowerCase()

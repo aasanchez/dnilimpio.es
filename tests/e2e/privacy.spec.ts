@@ -120,7 +120,7 @@ test('nothing about the document is stored in the browser', async ({ page }) => 
       session: sessionStorage.length, // eslint-disable-line no-restricted-properties
       databases: (await indexedDB.databases()).map((d) => d.name), // eslint-disable-line no-restricted-properties
       // Only the app's own files (its install manifest, icons and favicon, ADR 0018; robots.txt and sitemap.xml; the card guide pages, ADR 0040; the articles, ADR 0039): no blob:, no photo, no PDF.
-      foreign: cached.filter((p) => !/^\/(index\.html|thanks\.html|guia-(dni-4|dni-3|tie)\.html|(ca|ca-es-valencia|gl|eu|en|fr|nl|sv|fi|uk|ro|ar)\.html|([a-z-]+\/)?articles\/[a-z0-9.-]+|manifest\.webmanifest|robots\.txt|sitemap\.xml|favicon\.ico|icons\/[\w-]+\.(png|svg)|assets\/.+|ocr\/.+)$/.test(p)),
+      foreign: cached.filter((p) => !/^\/(index\.html|thanks\.html|guia-(dni-4|dni-3|tie)\.html|(ca|ca-es-valencia|gl|eu|en|fr|nl|sv|fi|uk|ro|ar)\.html|(([a-z-]+\/)?(articles\/)?)?404\.html|([a-z-]+\/)?articles\/[a-z0-9.-]+|manifest\.webmanifest|robots\.txt|sitemap\.xml|favicon\.ico|icons\/[\w-]+\.(png|svg)|assets\/.+|ocr\/.+)$/.test(p)),
     }
   })
   expect(stored).toEqual({ cookies: '', local: 0, session: 0, databases: [], foreign: [] })
