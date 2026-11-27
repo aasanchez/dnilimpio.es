@@ -54,7 +54,8 @@ some of the data. This tool makes a copy that shows only what you choose:
    diagonal rows over the whole card, so every part of the image carries it. Text size and opacity
    are adjustable; at 100 % opacity the text is solid black.
 6. **Convert to black and white** (optional).
-7. **Review** the result and **download a PDF**: `protected-document.pdf`, one page per side.
+7. **Review** the result and **download a PDF**: `protected-document.pdf`, one A4 page. Each side is printed at 130% of the real card size
+   (about 111 × 70 mm); with both sides, the front is on top and the back below.
 8. **Download or share it**: **Share** opens your device's share sheet with the PDF, where you pick
    WhatsApp, Telegram, Gmail, Mail or another app. The app never sends anything.
 
@@ -138,7 +139,7 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 2. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself.
    The back is optional: many requests need only the front. **Continue without the back** goes on
    with the front alone, and the rest of the flow works on that one side: the editor shows only the
-   front's fields, and the PDF has one page. **Remove the photo of the back** drops a back you added
+   front's fields, and the PDF shows only the front, centred on the page. **Remove the photo of the back** drops a back you added
    by mistake. In the capture coach, **Continue without the back** closes the camera after the front.
    - On a phone, **Take a photo** opens the capture coach (see below) and **Gallery** opens your
      pictures.
@@ -556,7 +557,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | OCR engine PP-OCRv6 tiny; document detection from the front's printed text | Done |
 | Fit to the text: cover boxes of the ticked fields grow to the words OCR finds | Done |
 | Watermark with size and opacity controls; black and white | Done |
-| PDF export: A4, one side per page, metadata-free | Done |
+| PDF export: one A4 page, each side at 130% of card size, metadata-free | Done |
 | Download or share the PDF through the system share sheet | Done |
 | Card guide with official citations | Done |
 | Offline mode with a verified service worker; automatic update of idle tabs | Done |
@@ -636,7 +637,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates |
 | OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
 | Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black |
-| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages (two, or one with the front alone), images, no metadata, no text, deterministic output |
+| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
 | Platform | `precache`, `lockdown`, `intake-lockdown`, `stats-frame`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, the photo step's policy and the service worker check, counter frame hosts, sandbox and CSP, version and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity |
 
@@ -657,7 +658,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases; smart field finding |
 | `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
-| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, a real PDF decoded in the browser (hidden areas black, no metadata, no file name, no watermark text in the file), reset |
+| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), reset |
 | `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; closing the sheet; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
