@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Pure helpers shared by the service worker and the build: no DOM, no worker globals, tested in Node.
 
-import { articleRoute, isArticleFile } from '../articles/paths.ts'
+import { INDEX_FILE, articleRoute, isArticleFile, isArticlePage } from '../articles/paths.ts'
 
 export interface PrecacheFile { readonly path: string; readonly integrity: string }
 export interface PrecacheManifest {
@@ -89,9 +89,12 @@ export function isPrecached (path: string): boolean {
  * The build fails on a file whose extension is not listed here (checkFiles()).
  */
 export const CONTENT_TYPES: Readonly<Record<string, string>> = {
+  avif: 'image/avif',
   css: 'text/css; charset=utf-8',
   html: 'text/html; charset=utf-8',
   ico: 'image/x-icon',
+  jpeg: 'image/jpeg',
+  jpg: 'image/jpeg',
   js: 'text/javascript; charset=utf-8',
   json: 'application/json; charset=utf-8',
   mjs: 'text/javascript; charset=utf-8',
@@ -101,16 +104,23 @@ export const CONTENT_TYPES: Readonly<Record<string, string>> = {
   txt: 'text/plain; charset=utf-8',
   wasm: 'application/wasm',
   webmanifest: 'application/manifest+json',
+  webp: 'image/webp',
   woff2: 'font/woff2',
   xml: 'application/xml; charset=utf-8',
 }
 
-/** The fixed Content-Type of a build file (CONTENT_TYPES), or undefined for an unknown extension. */
+/**
+ * The fixed Content-Type of a build file (CONTENT_TYPES), from its path relative to the site's
+ * folder, or undefined for an unknown extension. An article has no extension and is HTML, as the host
+ * sends it (ADR 0039).
+ */
 export function contentTypeOf (path: string): string | undefined {
+  if (isArticlePage(path) && !path.endsWith(INDEX_FILE)) return CONTENT_TYPES['html']
   const name = path.slice(path.lastIndexOf('/') + 1)
   const dot = name.lastIndexOf('.')
   if (dot <= 0) return undefined
-  return Object.hasOwn(CONTENT_TYPES, name.slice(dot + 1)) ? CONTENT_TYPES[name.slice(dot + 1)] : undefined
+  const ext = name.slice(dot + 1).toLowerCase()
+  return Object.hasOwn(CONTENT_TYPES, ext) ? CONTENT_TYPES[ext] : undefined
 }
 
 /** Cached on first use instead of at install. */

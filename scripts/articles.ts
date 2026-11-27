@@ -25,7 +25,7 @@ import { BRAND, type SitemapUrl } from '../src/seo/site.ts'
 export const CONTENT_DIR = 'content/articles'
 
 /** Image types an article may show. No SVG: it is a document that can carry code. */
-const IMAGE_TYPES = new Set(['.png', '.jpg', '.jpeg', '.webp', '.avif'])
+export const IMAGE_TYPES = new Set(['.png', '.jpg', '.jpeg', '.webp', '.avif'])
 
 /** A Markdown file read from disk, not yet turned into HTML. */
 export interface Source {
