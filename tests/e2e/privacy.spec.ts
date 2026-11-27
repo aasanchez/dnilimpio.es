@@ -50,7 +50,8 @@ async function finishDocument (page: Page): Promise<string> {
   await page.locator('#download').click()
   const pdf = await download
   // The file name of the export never echoes the photos' names.
-  expect(pdf.suggestedFilename()).toBe('protected-document.pdf')
+  expect(pdf.suggestedFilename()).toBe('redacted-dni.pdf')
+  expect(canariesIn(pdf.suggestedFilename())).toEqual([])
   return await pdf.path()
 }
 
