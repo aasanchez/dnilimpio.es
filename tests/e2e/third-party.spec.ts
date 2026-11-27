@@ -221,7 +221,7 @@ test('page code that gathers file names, OCR text and the watermark cannot send 
   await controlled(page)
   // Fictional card text (read by OCR), canary file names, then smart find and a canary watermark.
   // TEMPORARY DIAGNOSTICS (to be reverted)
-  page.on('console', (m) => { console.log(`[diag console ${m.type()}] ${m.text().slice(0, 600)}`) })
+  page.on('console', (m) => { const t = m.text(); console.log(`[diag console ${m.type()}] ${t.includes('Content-Security-Policy') ? t.slice(0, 160) + ' ... ' + t.slice(-500) : t.slice(0, 600)}`) })
   page.on('pageerror', (e) => { console.log(`[diag pageerror] ${String(e).slice(0, 600)}`) })
   page.on('requestfailed', (r) => { console.log(`[diag requestfailed] ${r.url()} ${r.failure()?.errorText ?? ''}`) })
   await toEditorWithText(page, { names: NAMES })
@@ -233,6 +233,8 @@ test('page code that gathers file names, OCR text and the watermark cannot send 
     const map = JSON.parse(document.querySelector('script[type=importmap]')?.textContent ?? '{}') as { integrity?: Record<string, string> }
     const ocr = Object.keys(map.integrity ?? {}).find((k) => /\/ocr-[^/]+\.js$/.test(k))
     out.push(`ocrChunk=${ocr ?? 'none'}`)
+    const metas = [...document.querySelectorAll('meta[http-equiv=Content-Security-Policy]')].map((m) => (m.getAttribute('content') ?? '').slice(-300))
+    out.push(`metas=${JSON.stringify(metas)}`)
     if (ocr !== undefined) {
       try { const m = await import(ocr) as { ocrStatus: () => Promise<unknown> }; out.push(`status=${JSON.stringify(await m.ocrStatus())}`) } catch (e) { out.push(`import failed: ${String(e)}`) }
     }
