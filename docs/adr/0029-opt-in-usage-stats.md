@@ -91,6 +91,8 @@ Options considered:
   no import map and loads nothing on demand, so the build links all 13 dictionaries into it as
   ordinary scripts with integrity (`src/thanks/strings.ts`). They are the files the service worker
   has already cached for the app.
+- The thanks page is a window of the app, so a waiting new build asks it whether it is idle
+  (ADR 0030). It always answers yes: it holds no photo and has loaded all its files.
 - CLAUDE.md rule 1 and ESLint have one narrow exception each: `fetch` in `src/stats/send.ts` and the
   navigation in `src/stats/thanks-link.ts`.
 - Alexis turns on Workers Analytics Engine in the Cloudflare account before the first deploy with

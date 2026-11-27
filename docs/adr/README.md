@@ -35,3 +35,4 @@ project specification on purpose).
 | [0027](0027-security-headers-from-the-host.md) | Security headers from the host: dnitapado.es on Cloudflare Workers with a generated `_headers`; the only host, GitHub Pages no longer deployed; no COEP; no analytics code, the host counts requests | accepted |
 | [0028](0028-tie-fallback.md) | TIE preselected when detection reads the photos but cannot tell the document; nothing preselected without detection | accepted |
 | [0029](0029-opt-in-usage-stats.md) | Opt-in usage stats from a photo-free thanks page: fixed list, sent only on a tap, Worker on `/stats` only, no IP stored; the app page keeps `connect-src 'none'` | accepted |
+| [0030](0030-update-with-other-windows-open.md) | A new version takes over when every window is idle, or when the person presses Update now | accepted |

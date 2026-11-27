@@ -11,3 +11,14 @@ const target = document.getElementById('app')
 const session = readFragment(location.hash)
 history.replaceState(null, '', location.pathname + location.search)
 if (target && !isFramed(window)) mount(Thanks, { target, props: { session } })
+
+// A waiting new build asks each window whether it is idle before it takes over (src/offline/takeover.ts,
+// ADR 0030). This page holds no photo and has already loaded all its files, so it always is. Without
+// this answer an open thanks page would count as a window that cannot answer and hold updates back.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (e: MessageEvent<unknown>) => {
+    const port = e.ports[0]
+    if ((e.data as { type?: unknown } | null)?.type === 'idle?' && port) port.postMessage({ idle: true })
+  })
+  navigator.serviceWorker.startMessages()
+}
