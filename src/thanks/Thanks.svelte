@@ -4,6 +4,7 @@
 <script lang="ts">
   import { untrack } from 'svelte'
   import { dir, isLang, pickLang, type Lang } from '../i18n/index.ts'
+  import { appLink } from '../i18n/url.ts'
   import { deviceStats } from '../stats/device.ts'
   import { encodeStats, type SessionStats } from '../stats/schema.ts'
   import { sendStats } from '../stats/send.ts'
@@ -17,6 +18,8 @@
   const BRAND = 'DNI Tapado.es'
 
   const lang: Lang = session !== undefined && isLang(session.lang) ? session.lang : pickLang(navigator.languages)
+  /** The app's address in this page's language (ADR 0038). */
+  const appHref = appLink(lang)
   const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
   const text = session === undefined
     ? undefined
@@ -47,7 +50,7 @@
 
 <div class="app mx-auto flex min-h-dvh max-w-[40rem] flex-col">
   <header class="flex min-h-[58px] items-center gap-2 border-b border-hair bg-paper px-3">
-    <a class="brand flex min-h-11 flex-1 items-center gap-2 text-lg font-bold tracking-[-0.3px] text-inherit no-underline" href="./"><span class="brand-mark inline-flex h-6 items-center justify-center rounded-sm border-2 border-ink bg-accent px-1.25 font-mono text-xs font-bold text-on-accent" aria-hidden="true">DT.es</span>{BRAND}</a>
+    <a class="brand flex min-h-11 flex-1 items-center gap-2 text-lg font-bold tracking-[-0.3px] text-inherit no-underline" href={appHref}><span class="brand-mark inline-flex h-6 items-center justify-center rounded-sm border-2 border-ink bg-accent px-1.25 font-mono text-xs font-bold text-on-accent" aria-hidden="true">DT.es</span>{BRAND}</a>
   </header>
 
   <section class="content flex flex-1 flex-col gap-4 px-4 pt-6 pb-6">
@@ -72,7 +75,7 @@
     {/if}
 
     <div class="actionbar">
-      <a class="button" id="start-again" href="./">{thanksText(lang, 'reset')}</a>
+      <a class="button" id="start-again" href={appHref}>{thanksText(lang, 'reset')}</a>
     </div>
   </section>
 </div>

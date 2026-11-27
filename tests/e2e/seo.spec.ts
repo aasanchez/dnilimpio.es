@@ -32,6 +32,24 @@ test('robots.txt and sitemap.xml are real files with the site address', async ({
   const xml = await sitemap.text()
   expect(xml).toMatch(/^<\?xml version="1.0" encoding="UTF-8"\?>\n<urlset /)
   expect(xml).toContain('<loc>https://dnitapado.es/</loc>')
+  // One address per language, each with its alternates (ADR 0038).
+  expect(xml).toContain('<loc>https://dnitapado.es/en</loc>')
+  expect(xml).toContain('<xhtml:link rel="alternate" hreflang="x-default" href="https://dnitapado.es/"/>')
+})
+
+test('the server sends the hreflang links in the HTML itself', async ({ request }) => {
+  const html = await (await request.get('./fr')).text()
+  expect(html).toContain('<link rel="alternate" hreflang="fr" href="https://dnitapado.es/fr" />')
+  expect(html).toContain('<link rel="alternate" hreflang="es" href="https://dnitapado.es/" />')
+})
+
+test('each language address is its own canonical page', async ({ page }) => {
+  await page.goto('/en')
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(1)
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://dnitapado.es/en')
+  await page.locator('#lang').selectOption('es')
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://dnitapado.es/')
 })
 
 test.describe('Spanish browser', () => {

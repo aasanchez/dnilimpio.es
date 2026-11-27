@@ -18,7 +18,7 @@ async function manifestOf (page: Page): Promise<Manifest> {
 }
 
 test('has a manifest with relative URLs and icons of the stated sizes', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/en')
   const m = await manifestOf(page)
   expect(m).toMatchObject({ id: './', name: 'DNI Tapado.es', short_name: 'DT.es', start_url: './', scope: './', display: 'standalone' })
   expect(m.icons.map((i) => i.purpose).sort()).toEqual(['any', 'any', 'maskable', 'maskable'])
@@ -37,7 +37,7 @@ test('has a manifest with relative URLs and icons of the stated sizes', async ({
 })
 
 test('links a favicon in SVG, PNG and ICO with relative URLs', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/en')
   const links = await page.locator('link[rel="icon"]').evaluateAll((els) => els.map((el) => ({
     href: el.getAttribute('href'), type: el.getAttribute('type'), sizes: el.getAttribute('sizes'),
   })))
@@ -66,7 +66,7 @@ test.describe('with the service worker', () => {
   test.use({ serviceWorkers: 'allow' })
 
   test('Chromium finds nothing that stops installation', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/en')
     await page.evaluate(async () => { await navigator.serviceWorker.ready })
     await expect.poll(async () => await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true)
     const cdp = await page.context().newCDPSession(page)
@@ -78,7 +78,7 @@ test.describe('with the service worker', () => {
 })
 
 test('offers the browser install dialog when Chromium allows it, then hides the link', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/en')
   await expect(page.locator('#install')).toHaveCount(0)
   // The same event Chromium fires, with a dialog that the user accepts.
   await page.evaluate(() => {
@@ -99,7 +99,7 @@ test.describe('on iPhone', () => {
   test.use({ userAgent: IPHONE, hasTouch: true })
 
   test('shows the Add to Home Screen steps', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/en')
     const button = page.locator('#install')
     await expect(button).toHaveAttribute('aria-expanded', 'false')
     await button.click()
@@ -111,7 +111,7 @@ test.describe('on iPhone', () => {
 
   test('shows nothing once installed', async ({ page }) => {
     await page.addInitScript(() => { Object.defineProperty(navigator, 'standalone', { value: true }) })
-    await page.goto('/')
+    await page.goto('/en')
     await expect(page.locator('#source-link')).toBeVisible()
     await expect(page.locator('#install')).toHaveCount(0)
   })

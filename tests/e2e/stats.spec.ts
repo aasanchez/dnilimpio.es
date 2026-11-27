@@ -106,6 +106,8 @@ test('Arabic: the thanks page is right to left, the sent text stays left to righ
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   await expect(page.locator('#stats-payload')).toHaveAttribute('dir', 'ltr')
   await expect(page.locator('#stats-send')).toHaveText('أرسل الإحصاءات المجهولة')
+  // Back to the app in the same language (ADR 0038).
+  await expect(page.locator('#start-again')).toHaveAttribute('href', './ar')
 })
 
 test.describe('with the service worker', () => {

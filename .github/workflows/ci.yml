@@ -466,7 +466,7 @@ jobs:
           test "$FAILED" = 'false'
 
   # ── Stage 7: deploy (master only) ───────────────────────────────────────────────────────────────
-  # The tested build, with the `_headers` file of scripts/headers.ts, to Cloudflare Workers
+  # The tested build, with the `_headers` and `_redirects` files of scripts/headers.ts, to Cloudflare Workers
   # (wrangler.jsonc, ADR 0027). wrangler comes from deploy/pnpm-lock.yaml, installed without install
   # scripts. The API token lives in the `cloudflare` environment, which only master may use.
   # An `if:` without a status function means success() of every job upstream, including jobs skipped on

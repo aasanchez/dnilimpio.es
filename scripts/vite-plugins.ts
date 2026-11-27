@@ -8,11 +8,11 @@ import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, THANKS_CSP, cspWithScriptHashes } from './csp.ts'
-import { headersFor, hostHeaderRules, type HeaderRule } from './headers.ts'
+import { headersFor, hostHeaderRules, redirectFor, type HeaderRule } from './headers.ts'
 import { insertIntoApp, renderHome } from './prerender.ts'
 import { STATS_PATH, handleStats } from '../src/stats/endpoint.ts'
 import { SW_FILE, THANKS_PAGE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
-import { robotsTxt, sitemapXml, staticHead } from '../src/seo/site.ts'
+import { robotsTxt, sitemapXml, startPageSitemap, staticHead } from '../src/seo/site.ts'
 import es from '../src/i18n/locales/es.json' with { type: 'json' }
 
 export function securityHeaders (): Plugin {
@@ -55,7 +55,7 @@ export function searchFiles (site: string): Plugin {
     },
     generateBundle () {
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(site) })
-      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml([{ loc: site }]) })
+      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml(startPageSitemap(site)) })
     },
   }
 }
@@ -212,6 +212,14 @@ export function hostHeadersInPreview (): Plugin {
           return
         }
         for (const [k, v] of Object.entries(headersFor(rules, path))) res.setHeader(k, v)
+        // The host's language redirects (`_redirects`, ADR 0038), with the query kept.
+        const to = redirectFor(path)
+        if (to !== null) {
+          res.statusCode = 301
+          res.setHeader('Location', `${to}${new URL(req.url ?? '/', 'http://preview').search}`)
+          res.end()
+          return
+        }
         next()
       })
     },

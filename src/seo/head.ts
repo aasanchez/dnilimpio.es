@@ -37,5 +37,5 @@ export function applyHead (lang: Lang): void {
   setMeta('property', 'og:title', title)
   setMeta('property', 'og:description', description)
   setMeta('property', 'og:locale', OG_LOCALE[lang])
-  setCanonical(canonicalUrl(__SITE_URL__))
+  setCanonical(canonicalUrl(__SITE_URL__, lang))
 }

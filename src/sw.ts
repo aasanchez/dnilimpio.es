@@ -206,6 +206,8 @@ sw.addEventListener('fetch', (event) => {
       case 'deny':
         // A network error, as if the request had been blocked: nothing is sent.
         return Response.error()
+      case 'redirect':
+        return Response.redirect(to.url, 301)
       case 'stats':
         // The opt-in stats of the thanks page (ADR 0029), as the page sent them, without cookies.
         return await fetch(req, { credentials: 'omit' })

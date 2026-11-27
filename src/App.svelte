@@ -5,7 +5,8 @@
      only when a card is not found, when the person asks for it, or from "Adjust corners". -->
 <script lang="ts">
   import { tick } from 'svelte'
-  import { dir, pickLang, t, type Key, type Lang } from './i18n/index.ts'
+  import { dir, isLoaded, t, type Key, type Lang } from './i18n/index.ts'
+  import { appLink, hrefForLang, startLang } from './i18n/url.ts'
   import { BRAND } from './seo/site.ts'
   import { applyHead } from './seo/head.ts'
   import { emptyAlignState, resetSide } from './ui/align-state.ts'
@@ -33,7 +34,9 @@
   type Step = 'home' | 'doc' | 'capture' | 'auto' | 'align' | 'edit'
 
   // The language choice lives in memory only: it resets to the browser's language on reload.
-  let lang = $state<Lang>(pickLang(navigator.languages))
+  // The address's language (ADR 0038), if main.ts could load it; else Spanish, the start page's text.
+  const asked = startLang(location.href)
+  let lang = $state<Lang>(isLoaded(asked) ? asked : 'es')
   let step = $state<Step>('home')
   /** Chosen document; the one whose zones, shape and straightened size are in use. */
   let docModel = $state<DocModel>(DEFAULT_DOC)
@@ -116,6 +119,13 @@
     document.documentElement.lang = lang
     document.documentElement.dir = dir(lang)
     applyHead(lang)
+  })
+
+  // The address follows the language, so a copied or bookmarked link opens in the same language.
+  // replaceState: a language change is not a step the Back button should undo.
+  $effect(() => {
+    const href = hrefForLang(location.href, lang)
+    if (href !== location.href) history.replaceState(history.state, '', href)
   })
 
   /** Moves focus to the new screen's heading so screen readers announce it, and scrolls to the top. */
@@ -296,7 +306,7 @@
     {/if}
     <!-- The logo returns to the start screen. Photos and choices stay, as with Back; Reset clears them.
          preventDefault: following href would reload the page, and pagehide drops the photos. -->
-    <a class="brand flex min-h-11 flex-1 items-center lg:me-auto lg:flex-none gap-2 text-lg font-bold tracking-[-0.3px] text-inherit no-underline hover:underline hover:underline-offset-3" id="brand" href="./" aria-current={step === 'home' ? 'page' : undefined}
+    <a class="brand flex min-h-11 flex-1 items-center lg:me-auto lg:flex-none gap-2 text-lg font-bold tracking-[-0.3px] text-inherit no-underline hover:underline hover:underline-offset-3" id="brand" href={appLink(lang)} aria-current={step === 'home' ? 'page' : undefined}
       onclick={(e: MouseEvent) => { e.preventDefault(); if (step !== 'home') go('home') }}><span class="brand-mark inline-flex h-6 items-center justify-center rounded-sm border-2 border-ink bg-accent px-1.25 font-mono text-xs font-bold text-on-accent" aria-hidden="true">DT.es</span>{BRAND}</a>
     <LanguageSelect bind:lang />
   </header>

@@ -30,8 +30,8 @@ export function startQuad (doc: Doc = 'dni-4.0'): Array<{ x: number; y: number }
 export const START = startQuad()
 
 /** From the start screen to the photo step. */
-export async function openCapture (page: Page): Promise<void> {
-  await page.goto('/')
+export async function openCapture (page: Page, path = '/'): Promise<void> {
+  await page.goto(path)
   await page.locator('#start').click()
 }
 

@@ -87,6 +87,8 @@ function withPrerenderGlobals<T> (now: number, fn: () => T): T {
   }
   stub('navigator', { language: 'es', languages: ['es'], userAgent: '', maxTouchPoints: 0 })
   stub('window', { matchMedia: () => ({ matches: false }) })
+  // The site address: the Spanish start screen (ADR 0038). The page reads its language from the path.
+  stub('location', { href: 'https://prerender.invalid/', pathname: '/', search: '', hash: '' })
   stub('localStorage', undefined)
   const realNow = Date.now
   const realTz = process.env['TZ']
