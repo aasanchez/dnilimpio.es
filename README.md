@@ -695,6 +695,8 @@ pnpm dev                                     # http://localhost:5173 (no CSP in 
 | `pnpm test` / `pnpm test:unit` | Unit tests (Vitest) |
 | `pnpm test:coverage` | Unit tests with a coverage report in `coverage/` |
 | `pnpm test:e2e` | End-to-end tests (Playwright, against the production build) |
+| `pnpm test:visual` | Screenshot comparisons in the pinned Playwright container (needs Docker); see [Visual regression](#visual-regression) |
+| `pnpm test:visual:update` | Write new screenshot baselines in that container |
 | `pnpm size` | Bundle size against its budgets (after `pnpm build`) |
 | `pnpm verify` | Type check, lint, unit tests, build and end-to-end tests, as CI runs them |
 
@@ -773,6 +775,36 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `layout` | Phone: one column, main button in a sticky bar at the bottom, no sideways scroll. Wide screen: card on the left, tools and main button on the right, steps in the top bar |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, release version linked to its GitHub Release, build SHA and relative deploy time (also offline) |
+| `visual` | Screenshots of the start screen, its footer, the editor, the editor's tools, the review and the stats page at 390 × 844 px, in Spanish and Arabic, compared with the baselines. Runs only in the pinned container (see below, [ADR 0036](docs/adr/0036-visual-regression-in-pinned-container.md)) |
+
+### Visual regression
+
+[`tests/e2e/visual.spec.ts`](tests/e2e/visual.spec.ts) compares 12 screenshots with the PNG
+baselines in [`tests/e2e/__screenshots__/`](tests/e2e/__screenshots__/). Text rendering depends on
+the browser build and the system fonts (Arabic uses a system font), so the screenshots run only in
+the official Playwright Docker image, pinned by digest in
+[`scripts/visual.sh`](scripts/visual.sh) and in the CI job `visual`. `pnpm test:e2e` skips them.
+
+- The build version, commit SHA and deploy time in the footer, and the text the stats page would
+  send (it names the commit), are hidden before each screenshot. They keep their space.
+- The clock is fixed (the watermark presets show today's date) and the corner model and OCR are
+  blocked, so each screen shows the same state on every run.
+- Animations are stopped and the text caret is hidden.
+
+To check or update the baselines (Docker is needed):
+
+```bash
+pnpm test:visual                 # compare; differences go to test-results/
+pnpm test:visual:update          # write new baselines for the screens that changed
+pnpm test:visual -g "ar"         # only the Arabic screens
+```
+
+The script builds the app inside the container, with its own `node_modules` in a Docker volume.
+After an intended change to the interface, run `pnpm test:visual:update`, look at every changed PNG
+in the diff, and commit them with the change. When the CI job `visual` fails, its `visual-diff`
+artifact holds the expected, actual and diff image of each screen. When you bump
+`@playwright/test`, update the image tag and digest in both places and regenerate every baseline
+(`pnpm test:visual --update-snapshots=all`).
 
 ## Continuous integration
 
@@ -794,7 +826,8 @@ up to date with `master` before merging: the tree that lands on `master` is the 
 ```text
 Pull request
 changes ─ install ─┬─ build ──────┬─ e2e (4 shards) ─┐
-                   ├─ typecheck   ├─ bundle-size     │
+                   ├─ typecheck   ├─ visual          │
+                   │              ├─ bundle-size     │
                    ├─ lint        ├─ reproducible    │
                    │              └─ lighthouse      │
                    └─ unit                           ├─ ci-ok
@@ -815,6 +848,7 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 | build | `lint` | `pnpm lint` (ESLint) | PR | Yes |
 | build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. No threshold yet | PR | Yes |
 | test | `e2e (1/4)` to `e2e (4/4)` | `pnpm test:e2e`, split in four shards, against the built `dist/` | PR | Yes |
+| test | `visual` | Screenshot comparisons ([Visual regression](#visual-regression)) against the built `dist/`, inside the pinned Playwright image. On a difference, the `visual-diff` artifact holds the images | PR | Yes |
 | test | `reproducible` | Builds the same commit again on a fresh runner and compares the SHA-384 of every file with the `dist/` artifact ([`scripts/build-manifest.ts`](scripts/build-manifest.ts)). Any difference fails. Also runs on the release commit, because the squash merge makes a new commit; `deploy` waits for it | Both | Yes |
 | test | `bundle-size` | `pnpm size`: gzip size of the start page (entry and preloaded modules), PDF chunk, corner model and OCR files against budgets in [`scripts/bundle-size.ts`](scripts/bundle-size.ts) | PR | No, warns (`--strict` makes it fail) |
 | code analysis | `reuse` | Every file has copyright and licence information ([REUSE](https://reuse.software)) | PR | Yes |
@@ -1054,6 +1088,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0032](docs/adr/0032-semver-releases.md): every deploy from `master` is a release: the patch goes up by one from the latest tag, major and minor are set by hand with a tag, the tag and GitHub Release are created after the deploy, and the footer shows the version.
 - [0033](docs/adr/0033-ocr-ready-once-per-worker.md): the page asks the service worker once per worker whether OCR is ready; a new worker or a failed OCR job asks again; every file is still hashed when it is served.
 - [0034](docs/adr/0034-no-frames-no-fresh-webrtc.md): the page refuses every frame element and pop-up, so no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits until a browser implements it.
+- [0036](docs/adr/0036-visual-regression-in-pinned-container.md): screenshot tests of key phone screens in Spanish and Arabic run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual`, so the baselines match on every machine.
 
 ## Contributing
 

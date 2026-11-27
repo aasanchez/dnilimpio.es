@@ -40,3 +40,4 @@ project specification on purpose).
 | [0032](0032-semver-releases.md) | Automatic patch releases: version from the latest tag, tag and GitHub Release after the deploy, version in the footer | accepted |
 | [0033](0033-ocr-ready-once-per-worker.md) | The page keeps the service worker's "OCR is ready" answer per worker; a new worker or a failed OCR job asks again; files are still hashed when served | accepted |
 | [0034](0034-no-frames-no-fresh-webrtc.md) | No frames, no pop-ups: no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits for browser support | accepted |
+| [0036](0036-visual-regression-in-pinned-container.md) | Screenshot tests (12 phone screens, Spanish and Arabic) run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual` | accepted |
