@@ -41,24 +41,39 @@ async function asBrowserWithoutTrustedTypes (page: Page): Promise<string[]> {
   return errors
 }
 
-test('without Trusted Types the app starts, and the CSP alone refuses a foreign worker', async ({ page }) => {
+test('without Trusted Types the app starts, and the CSP alone refuses another site\'s script', async ({ page }) => {
   const errors = await asBrowserWithoutTrustedTypes(page)
   await page.goto('/')
   await expect(page.locator('h1')).toBeVisible()
-  const result = await page.evaluate(() => {
-    const tryIt = (f: () => void): string => { try { f(); return 'allowed' } catch { return 'blocked' } }
+  // Checked before the probe below, whose refused script is reported as a violation on purpose.
+  expect(errors).toEqual([])
+  const result = await page.evaluate(async () => {
     const meta = document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content') ?? ''
+    // Without Trusted Types, a plain string reaches a script element's src. script-src 'self' must
+    // still stop it: the browser reports a violation and never loads the file.
+    const foreignScript = await new Promise<string>((resolve) => {
+      const script = document.createElement('script')
+      document.addEventListener('securitypolicyviolation', (e) => {
+        if (e.blockedURI.startsWith('https://example.org/')) resolve(`refused by ${e.effectiveDirective}`)
+      })
+      script.addEventListener('load', () => { resolve('loaded') })
+      script.addEventListener('error', () => { setTimeout(() => { resolve('requested') }, 500) })
+      script.src = 'https://example.org/evil.js'
+      document.head.append(script)
+    })
     return {
       trustedTypes: typeof (window as unknown as { trustedTypes?: unknown }).trustedTypes,
       ttInPolicy: /trusted-types/.test(meta),
-      // worker-src 'self' stops another site's script, with or without Trusted Types.
-      foreignWorker: tryIt(() => { new Worker('https://example.org/evil.js').terminate() }),
-      ownWorker: tryIt(() => { new Worker('ocr/worker.min.js').terminate() }),
+      foreignScript,
     }
   })
-  expect(result).toEqual({ trustedTypes: 'undefined', ttInPolicy: false, foreignWorker: 'blocked', ownWorker: 'allowed' })
-  // The only reports allowed are the refused foreign worker's.
-  expect(errors.filter((e) => !e.includes('example.org'))).toEqual([])
+  expect(result).toEqual({ trustedTypes: 'undefined', ttInPolicy: false, foreignScript: 'refused by script-src-elem' })
+  // The app's own OCR worker still starts from a plain string (worker-src 'self').
+  expect(await page.evaluate(async () => await new Promise<string>((resolve) => {
+    const w = new Worker('ocr/worker.min.js')
+    w.addEventListener('error', () => { resolve('error') })
+    setTimeout(() => { w.terminate(); resolve('running') }, 1000)
+  }))).toBe('running')
 })
 
 test('without Trusted Types the whole flow reaches the PDF', async ({ page }) => {

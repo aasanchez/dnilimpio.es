@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
 import { cspWithScriptHashes } from '../../scripts/csp.ts'
-import { fixture, openCapture, toEditor } from './helpers.ts'
+import { fixture, frameApp, openCapture, toEditor } from './helpers.ts'
 
 /** The inline import map's text, or null. It is the only inline script the CSP allows (by hash). */
 const importMapText = async (page: Page): Promise<string | null> =>
@@ -66,11 +66,18 @@ test('without the service worker, the CSP alone stops every same-origin connecti
       x.onerror = () => { resolve('blocked') }
       try { x.open('POST', 'leak'); x.send(data) } catch { resolve('blocked') }
     })
+    // WebKit refuses some of these at once with a SecurityError; that counts as blocked too.
     const source = async (): Promise<string> => await new Promise((resolve) => {
-      const es = new EventSource(`leak/events?${data}`)
-      es.onopen = () => { es.close(); resolve('sent') }
-      es.onerror = () => { es.close(); resolve('blocked') }
+      try {
+        const es = new EventSource(`leak/events?${data}`)
+        es.onopen = () => { es.close(); resolve('sent') }
+        es.onerror = () => { es.close(); resolve('blocked') }
+      } catch { resolve('blocked') }
     })
+    const beacon = (): string => {
+      // eslint-disable-next-line no-restricted-properties -- this test checks that the CSP blocks it
+      try { return String(navigator.sendBeacon(`leak/beacon?${data}`, data)) } catch { return 'blocked' }
+    }
     return {
       get: await tryFetch(),
       post: await tryFetch({ method: 'POST', body: data }),
@@ -78,8 +85,7 @@ test('without the service worker, the CSP alone stops every same-origin connecti
       xhr: await xhr(),
       eventSource: await source(),
       // sendBeacon() may answer true and be stopped later: only `reached` below tells.
-      // eslint-disable-next-line no-restricted-properties -- this test checks that the CSP blocks it
-      beacon: String(navigator.sendBeacon(`leak/beacon?${data}`, data)),
+      beacon: beacon(),
     }
   })
   expect(results).toEqual({ get: 'blocked', post: 'blocked', header: 'blocked', xhr: 'blocked', eventSource: 'blocked', beacon: results.beacon })
@@ -166,9 +172,10 @@ test.describe('hardening (security audit of 2026-11-25)', () => {
   })
 
   test('the host refuses to show the app inside another page\'s frame (frame-ancestors, ADR 0027)', async ({ page, baseURL }) => {
-    await page.setContent(`<iframe src="${baseURL ?? ''}" width="800" height="600"></iframe>`)
-    await expect.poll(() => page.frames()[1]?.url()).toMatch(/^chrome-error:/)
+    await frameApp(page, baseURL ?? '')
     await expect(page.frameLocator('iframe').locator('h1')).toHaveCount(0)
+    // Not even the page's own frame guard (#app with a link to itself): the host refused the page.
+    await expect(page.frameLocator('iframe').locator('#app')).toHaveCount(0)
   })
 
   test('on a host without headers (GitHub Pages), inside a frame the app does not start, it only links to itself', async ({ page, context, baseURL }) => {

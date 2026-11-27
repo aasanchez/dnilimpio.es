@@ -228,3 +228,18 @@ export async function controlled (page: Page): Promise<void> {
   await page.evaluate(async () => { await navigator.serviceWorker.ready })
   await expect.poll(async () => await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true)
 }
+
+/**
+ * Puts the app in a frame of `page` and waits until the frame has loaded (an error page when the
+ * host refuses it). Works in every browser: Chromium shows chrome-error:, Firefox and WebKit an empty
+ * document. After the load event the app, had it run, would show its heading.
+ */
+export async function frameApp (page: Page, url: string): Promise<void> {
+  await page.setContent('<iframe width="800" height="600"></iframe>')
+  await page.locator('iframe').evaluate(async (frame, src) => {
+    await new Promise<void>((resolve) => {
+      frame.addEventListener('load', () => { resolve() }, { once: true })
+      frame.setAttribute('src', src)
+    })
+  }, url)
+}

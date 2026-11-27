@@ -59,7 +59,8 @@ function pdfLeaks (path: string): string[] {
   return canariesIn(readFileSync(path).toString('latin1'))
 }
 
-test('after the first visit, a whole document workflow sends no request at all', async ({ page, context }) => {
+test('after the first visit, a whole document workflow sends no request at all', async ({ page, context, browserName }) => {
+  test.skip(browserName !== 'chromium', "Playwright routes and reports a service worker's own requests only in Chromium: without that, this test could miss a request.")
   test.setTimeout(300_000)
   // Watched from the very first request: the first visit downloads the app's files, and none of
   // those requests may carry document data either.

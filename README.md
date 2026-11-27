@@ -681,6 +681,7 @@ nvm install && nvm use                       # Node.js version from .nvmrc
 npm install --global pnpm@12.23.0            # or any official pnpm install method, same version
 pnpm install --frozen-lockfile               # exact versions from pnpm-lock.yaml; no install scripts run
 pnpm exec playwright install chromium        # once, for the end-to-end tests
+pnpm exec playwright install firefox webkit  # once, only for pnpm test:e2e:browsers
 pnpm dev                                     # http://localhost:5173 (no CSP in dev mode)
 ```
 
@@ -694,7 +695,8 @@ pnpm dev                                     # http://localhost:5173 (no CSP in 
 | `pnpm format` | Fix style issues automatically (ESLint `--fix`) |
 | `pnpm test` / `pnpm test:unit` | Unit tests (Vitest) |
 | `pnpm test:coverage` | Unit tests with a coverage report in `coverage/` |
-| `pnpm test:e2e` | End-to-end tests (Playwright, against the production build) |
+| `pnpm test:e2e` | End-to-end tests in Chromium (Playwright, against the production build) |
+| `pnpm test:e2e:browsers` | The cross-browser subset of the end-to-end tests in Firefox and WebKit (Safari's engine) |
 | `pnpm size` | Bundle size against its budgets (after `pnpm build`) |
 | `pnpm verify` | Type check, lint, unit tests, build and end-to-end tests, as CI runs them |
 
@@ -744,28 +746,31 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns, 429 above the rate limit with one key for all senders), the service worker route open only to the thanks page |
 | Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `install`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal, frame guard and frame check, the photo step's policy and the service worker check, iPhone and iPad detection and installed mode for the install link, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
 
-**End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off:
+**End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off.
+
+Every spec runs in Chromium. The specs marked **(all browsers)** also run in Firefox and WebKit, Safari's engine (`CROSS_BROWSER_SPECS` in [`playwright.config.ts`](playwright.config.ts)). A test that a browser cannot run, because it lacks the feature, is skipped with a reason in the report, never silently.
 
 | Spec | What is checked |
 |---|---|
-| `privacy` | A whole workflow sends no request and stores nothing. Canaries from the card text (OCR), the photos' file names and the watermark never appear in any request's address, headers or body, from the first visit on, nor as text in the PDF |
-| `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused by the host and, without headers, by the page, photos dropped on `pagehide` |
+| `privacy` (all browsers) | A whole workflow sends no request and stores nothing. Canaries from the card text (OCR), the photos' file names and the watermark never appear in any request's address, headers or body, from the first visit on, nor as text in the PDF |
+| `security` (all browsers) | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused by the host and, without headers, by the page, photos dropped on `pagehide` |
 | `headers` | The host's headers: page CSP equal to the `<meta>` CSP plus `frame-ancestors`, the worker CSPs, HSTS, Permissions-Policy (camera on; microphone, location, clipboard reading off), no COEP |
 | `stats` | The small Send anonymous data link opens the photo-free stats page; nothing is sent before the tap; the text sent is the text shown; its own CSP; the app page still cannot connect to `/stats`, with and without the service worker; a changed fragment shows nothing to send; offline and error states; Arabic layout |
-| `cleanup` | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
+| `cleanup` (all browsers) | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
 | `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
 | `webrtc-frames` | Canary: in a page without the app, a blank frame (each DOM insertion method, also disguised with a shadowed `nodeType` or with built-ins replaced), `srcdoc`, `innerHTML`, `document.write`, a nested frame and `window.open` each reach a working data channel; in the app, on the start screen and with photos loaded, none of these routes does, nor a frameset, object, embed or three-argument `document.open` |
-| `offline` | Full flow to the PDF offline, also with the front alone, deny-by-default service worker, page headers added next to the host's CSP, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
-| `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; page code that gathers the canary file names, OCR text and watermark cannot send them by beacon, fetch, image, style sheet, font, frame or form; the page opens no frame, the CSP has no `frame-src` and refuses a frame to another site; the start screen sends nothing to another site, also offline or under GPC |
+| `offline` (all browsers) | Full flow to the PDF offline, also with the front alone, deny-by-default service worker, page headers added next to the host's CSP, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
+| `third-party` (all browsers) | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; page code that gathers the canary file names, OCR text and watermark cannot send them by beacon, fetch, image, style sheet, font, frame or form; the page opens no frame, the CSP has no `frame-src` and refuses a frame to another site; the start screen sends nothing to another site, also offline or under GPC |
 | `update` | An idle tab switches to a new build, with other idle windows too; a tab with photos or a busy window holds it back; a window that cannot answer brings **Update now**, which applies it; a busy window keeps its photos and reloads back on the start screen; a page that leaves the start screen while the others answer keeps its photos; an open thanks page does not hold the update back |
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks, and skipping the back from it |
 | `file-checks` | File picker, camera input, drag and drop and paste all refuse a file by content (not by name or MIME type), over 25 MB, or over 50 MP (a decompression bomb), with a translated message; HEIC where the browser cannot decode it |
-| `front-only` | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, the stats link, adding the back later |
+| `front-only` (all browsers) | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, the stats link, adding the back later |
 | `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, TIE when detection finds no answer, offline note with nothing preselected |
 | `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard, corners saved when you switch side |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases, "ready" asked once per worker and asked again after a rewritten file is refused; smart field finding |
 | `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
-| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, no watermark over hidden fields, a change made with the front on screen reaching the back in the review and the PDF, review, the review stays after the download with the small stats link, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), reset |
+| `export` (all browsers) | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, no watermark over hidden fields, a change made with the front on screen reaching the back in the review and the PDF, review, the review stays after the download with the small stats link, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), reset |
+| `no-trusted-types` (all browsers) | The page served as a browser without Trusted Types sees it (no `trustedTypes`, no Trusted Types directives): the app starts, the service worker registers, the OCR worker starts, the flow reaches the PDF, and the CSP alone still refuses another site's worker |
 | `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; after a download or a share the review stays and the small Send anonymous data link appears; closing the sheet; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
@@ -794,6 +799,7 @@ up to date with `master` before merging: the tree that lands on `master` is the 
 ```text
 Pull request
 changes ─ install ─┬─ build ──────┬─ e2e (4 shards) ─┐
+                   │              ├─ e2e (firefox, webkit)
                    ├─ typecheck   ├─ bundle-size     │
                    ├─ lint        ├─ reproducible    │
                    │              └─ lighthouse      │
@@ -815,6 +821,7 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 | build | `lint` | `pnpm lint` (ESLint) | PR | Yes |
 | build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. No threshold yet | PR | Yes |
 | test | `e2e (1/4)` to `e2e (4/4)` | `pnpm test:e2e`, split in four shards, against the built `dist/` | PR | Yes |
+| test | `e2e (firefox)`, `e2e (webkit)` | The cross-browser specs (`CROSS_BROWSER_SPECS` in [`playwright.config.ts`](playwright.config.ts)) in Firefox and in WebKit, one job each, in parallel with the Chromium shards | PR | Yes |
 | test | `reproducible` | Builds the same commit again on a fresh runner and compares the SHA-384 of every file with the `dist/` artifact ([`scripts/build-manifest.ts`](scripts/build-manifest.ts)). Any difference fails. Also runs on the release commit, because the squash merge makes a new commit; `deploy` waits for it | Both | Yes |
 | test | `bundle-size` | `pnpm size`: gzip size of the start page (entry and preloaded modules), PDF chunk, corner model and OCR files against budgets in [`scripts/bundle-size.ts`](scripts/bundle-size.ts) | PR | No, warns (`--strict` makes it fail) |
 | code analysis | `reuse` | Every file has copyright and licence information ([REUSE](https://reuse.software)) | PR | Yes |
@@ -835,7 +842,8 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 - `node_modules`, keyed on `.nvmrc`, `package.json`, `pnpm-lock.yaml` and `pnpm-workspace.yaml`. A
   hit skips `pnpm install` entirely. Pull requests also read the caches that `master` saved.
 - The pnpm store, used only when `node_modules` misses (a dependency changed).
-- Playwright's Chromium headless shell (smaller than full Chromium), keyed on the Playwright version.
+- Playwright's Chromium headless shell (smaller than full Chromium), Firefox and WebKit, each keyed
+  on the Playwright version.
 - `dist/` is built once per run and passed to the jobs that need it as an artifact.
 
 **Other workflows**
