@@ -46,14 +46,39 @@ function countryOf (req: Request): string {
   return typeof c === 'string' && /^[A-Z]{2}$/.test(c) ? c : 'XX'
 }
 
+/**
+ * The body as text, or undefined once it passes `max` bytes. It reads the stream and stops at the
+ * cap, so a body with no Content-Length (chunked) or a false one is never read in full.
+ */
+export async function readCapped (req: Request, max: number): Promise<string | undefined> {
+  if (req.body === null) return ''
+  const reader = req.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > max) {
+      await reader.cancel()
+      return undefined
+    }
+    chunks.push(value)
+  }
+  const bytes = new Uint8Array(size)
+  let at = 0
+  for (const c of chunks) { bytes.set(c, at); at += c.byteLength }
+  return new TextDecoder().decode(bytes)
+}
+
 export async function handleStats (req: Request, env: Env): Promise<Response> {
   if (req.method !== 'POST') return reply(405)
   // Only the site's own thanks page: browsers mark a request from another site, and a form or a link
   // from elsewhere cannot set this header to same-origin.
   if (req.headers.get('Sec-Fetch-Site') !== 'same-origin') return reply(403)
   if (Number(req.headers.get('Content-Length') ?? '0') > MAX_STATS_LENGTH) return reply(413)
-  const text = await req.text()
-  if (text.length > MAX_STATS_LENGTH) return reply(413)
+  const text = await readCapped(req, MAX_STATS_LENGTH)
+  if (text === undefined) return reply(413)
   const stats = parseStats(text)
   if (stats === undefined) return reply(400)
   // No dataset (a local run without the binding): accepted, not stored.
