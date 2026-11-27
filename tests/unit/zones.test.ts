@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { DNI_4_0, type ZoneId } from '../../src/zones/dni.ts'
 import { activeRects, fillRects, toPixels } from '../../src/redact/zones.ts'
-import { CHOICES, DEFAULT_DNI, DEFAULT_DOC, DNI_VERSIONS, DOCUMENTS, choiceOf, documentOf, isDni, pixelSize } from '../../src/zones/documents.ts'
+import { CHOICES, DEFAULT_DNI, DEFAULT_DOC, FALLBACK_CHOICE, DNI_VERSIONS, DOCUMENTS, choiceOf, documentOf, isDni, pixelSize } from '../../src/zones/documents.ts'
 import type { ModelZones, Rect, Side } from '../../src/zones/types.ts'
 import en from '../../src/i18n/locales/en.json'
 
@@ -102,6 +102,10 @@ describe('documents', () => {
     expect(DEFAULT_DNI).toBe('dni-4.0')
     expect(DOCUMENTS.map((d) => choiceOf(d.model))).toEqual(['dni', 'dni', 'tie'])
     expect(DOCUMENTS.filter((d) => isDni(d.model)).map((d) => d.model)).toEqual([...DNI_VERSIONS])
+  })
+  it('falls back to the TIE when detection cannot answer, one of the picker options', () => {
+    expect(FALLBACK_CHOICE).toBe('tie')
+    expect(CHOICES).toContain(FALLBACK_CHOICE)
   })
   it('gives both DNI layouts the same card size and fields, so the version can change in the editor', () => {
     const [v4, v3] = DNI_VERSIONS.map(documentOf)
