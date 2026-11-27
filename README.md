@@ -706,7 +706,7 @@ pnpm dev                                     # http://localhost:5173 (no CSP in 
 | `pnpm lint` | ESLint: neostandard style, typescript-eslint strict, Svelte rules, security bans |
 | `pnpm format` | Fix style issues automatically (ESLint `--fix`) |
 | `pnpm test` / `pnpm test:unit` | Unit tests (Vitest) |
-| `pnpm test:coverage` | Unit tests with a coverage report in `coverage/` |
+| `pnpm test:coverage` | Unit tests with a coverage report in `coverage/`; fails below the coverage floor |
 | `pnpm test:e2e` | End-to-end tests in Chromium (Playwright, against the production build) |
 | `pnpm test:e2e:browsers` | The cross-browser subset of the end-to-end tests in Firefox and WebKit (Safari's engine) |
 | `pnpm test:visual` | Screenshot comparisons in the pinned Playwright container (needs Docker); see [Visual regression](#visual-regression) |
@@ -743,6 +743,14 @@ Runtime dependencies, all bundled and served from this site:
 
 Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm build`).
 
+**Coverage floor.** `pnpm test:coverage` fails when unit test coverage falls below the thresholds
+in [`vitest.config.ts`](vitest.config.ts). There is one floor for all of `src/` and a stricter one
+each for `src/engine/`, `src/zones/` with `src/redact/`, `src/security/`, and the stats list and
+request (`src/stats/schema.ts`, `src/stats/send.ts`). Each value is 1 point below the coverage
+measured when it was set. Entry points, the service worker, the OCR worker and the `load-*.ts`
+loaders run only in a browser, so they are left out; the end-to-end tests cover them. When coverage
+rises, raise the floor. Never lower it to get a green run.
+
 The property tests draw their inputs from a seeded generator ([`tests/unit/property.ts`](tests/unit/property.ts)),
 so every run checks the same cases. A failure prints its seed and the command that repeats it. To try
 new cases, run `PROPERTY_SEED=random pnpm test tests/unit/redaction.property.test.ts`; to run more
@@ -766,7 +774,7 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | Search metadata | `seo` | Site address checks, escaped static head with no script or style, title and description length, Open Graph locale for every language, language addresses, canonical per language, hreflang list (no Valencian, `x-default`), `robots.txt` and sitemap (one entry per language, hreflang alternates, escaping), crawl files served by the service worker |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
-| Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns, 429 above the rate limit with one key for all senders), the service worker route open only to the thanks page |
+| Usage stats | `stats`, `stats-send` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns, 429 above the rate limit with one key for all senders), the service worker route open only to the thanks page; the one request sent with no cookie, referrer, cache or redirect, and success only on 204 |
 | App updates | `update-rules` | An idle page offers a waiting build and reloads once into it; a busy page is never reloaded and reloads back on the start screen; no reload on the first visit; "Update now" when another window holds the build back, which forces it; an update check at most every 15 minutes when the tab comes back; the answer to "idle?" (also from the thanks page) |
 | Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `notice-memory`, `install`, `build-info`, `i18n`, `i18n-load`, `lang-url`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal, frame guard and frame check, the photo step's policy (built from the page, added once, fonts loaded first with a time limit) and the service worker check, the notice's one stored date (4 days, blocked storage), iPhone and iPad detection and installed mode for the install link, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, the language read from and written to the address path (any case, unknown paths ignored, subpath, query kept), language redirects equal on host and service worker, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
 
@@ -881,7 +889,7 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 | build | `build` | `pnpm build` with `SOURCE_DATE_EPOCH` set to the commit time and `RELEASE_VERSION` set to the version, so the build is reproducible. Uploads `dist/` once; every later job tests or deploys that same build. Also uploads a CycloneDX SBOM of the runtime dependencies (`sbom` artifact, from `pnpm sbom`) and the `release-evidence` artifact (SHA-384 of every file, commit, version, SBOM; kept 90 days) | Both | Yes |
 | build | `typecheck` | `pnpm typecheck` (svelte-check, strict TypeScript) | PR | Yes |
 | build | `lint` | `pnpm lint` (ESLint) | PR | Yes |
-| build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. No threshold yet | PR | Yes |
+| build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. Fails below the coverage floor (see [Tests](#tests)) | PR | Yes |
 | test | `e2e (1/4)` to `e2e (4/4)` | `pnpm test:e2e`, split in four shards, against the built `dist/` | PR | Yes |
 | test | `e2e (firefox)`, `e2e (webkit)` | The cross-browser specs (`CROSS_BROWSER_SPECS` in [`playwright.config.ts`](playwright.config.ts)) in Firefox and in WebKit, one job each, in parallel with the Chromium shards | PR | Yes |
 | test | `visual` | Screenshot comparisons ([Visual regression](#visual-regression)) against the built `dist/`, inside the pinned Playwright image. On a difference, the `visual-diff` artifact holds the images | PR | Yes |
