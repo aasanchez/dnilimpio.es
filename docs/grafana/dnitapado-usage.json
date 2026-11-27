@@ -1,0 +1,1321 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_ANALYTICS_ENGINE",
+      "label": "Workers Analytics Engine",
+      "description": "The Altinity plugin for ClickHouse data source that points at the Analytics Engine SQL API.",
+      "type": "datasource",
+      "pluginId": "vertamedia-clickhouse-datasource",
+      "pluginName": "Altinity plugin for ClickHouse"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "datasource",
+      "id": "vertamedia-clickhouse-datasource",
+      "name": "Altinity plugin for ClickHouse",
+      "version": "3.1.1"
+    }
+  ],
+  "title": "DNI Tapado.es usage stats",
+  "uid": "dnitapado-usage",
+  "description": "Opt-in anonymous usage stats (ADR 0029, ADR 0047), read from Workers Analytics Engine dataset dnitapado_usage. Setup: docs/GRAFANA.md.",
+  "tags": [
+    "dnitapado"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "refresh": "",
+  "schemaVersion": 39,
+  "version": 1,
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Uses",
+      "description": "Uses sent in the time range: one per tap on Send on the thanks page. SUM(_sample_interval) corrects for Analytics Engine sampling.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT SUM(_sample_interval) AS uses\nFROM dnitapado_usage\nWHERE $timeFilter",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "sum"
+          ],
+          "fields": ""
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Detection right",
+      "description": "Automatic document detection: share of uses where it ran (right, wrong or none) and preselected the document the person kept. Uses with 'off' (it could not run) are left out.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT sumIf(_sample_interval, blob3 = 'right') / sumIf(_sample_interval, blob3 IN ('right', 'wrong', 'none')) AS right_rate\nFROM dnitapado_usage\nWHERE $timeFilter",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.8
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Uses with a moved box",
+      "description": "Share of uses where the person moved or resized at least one cover box by hand (list version 2 and later, ADR 0047).",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT sumIf(_sample_interval, double20 > 0) / SUM(_sample_interval) AS moved_rate\nFROM dnitapado_usage\nWHERE $timeFilter AND blob1 NOT IN ('1')",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Back photo used",
+      "description": "Share of uses with a photo of the card's back.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT SUM(_sample_interval * double1) / SUM(_sample_interval) AS back_rate\nFROM dnitapado_usage\nWHERE $timeFilter",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Uses over time, per document",
+      "description": "Uses per time bucket, one line per document type. The bucket follows the zoom level ($timeSeries).",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT $timeSeries AS t, blob2 AS doc, SUM(_sample_interval) AS uses\nFROM dnitapado_usage\nWHERE $timeFilter\nGROUP BY doc, t\nORDER BY t",
+          "rawQuery": true,
+          "format": "time_series",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "stacking": {
+              "mode": "normal"
+            },
+            "fillOpacity": 80
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 7,
+      "type": "row",
+      "title": "Documents and detection",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 8,
+      "type": "piechart",
+      "title": "Card types",
+      "description": "Uses per document: dni-4.0, dni-3.0, tie (DOCS in src/stats/schema.ts).",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT blob2 AS doc, SUM(_sample_interval) AS uses\nFROM dnitapado_usage\nWHERE $timeFilter\nGROUP BY doc\nORDER BY uses DESC",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": true,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "displayLabels": []
+      }
+    },
+    {
+      "id": 9,
+      "type": "piechart",
+      "title": "Detection result",
+      "description": "right: preselected the document kept. wrong: the person chose another. none: read the photos, found no answer. off: could not run.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 15,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT blob3 AS ai, SUM(_sample_interval) AS uses\nFROM dnitapado_usage\nWHERE $timeFilter\nGROUP BY ai\nORDER BY uses DESC",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": true,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "displayLabels": []
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Detection right, over time",
+      "description": "Share of uses where detection ran and was right, per time bucket.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 15,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT $timeSeries AS t, sumIf(_sample_interval, blob3 = 'right') / sumIf(_sample_interval, blob3 IN ('right', 'wrong', 'none')) AS right_rate\nFROM dnitapado_usage\nWHERE $timeFilter\nGROUP BY t\nORDER BY t",
+          "rawQuery": true,
+          "format": "time_series",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "points",
+            "pointSize": 6
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Covered fields",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
+      "type": "table",
+      "title": "Covered fields, share of uses per document",
+      "description": "How often each field was covered, as a share of that document's uses. Columns double9 to double19, one per field in the order of FIELDS (src/stats/schema.ts). A field that a document does not have stays at 0.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT blob2 AS doc,\n       SUM(_sample_interval) AS uses,\n       SUM(_sample_interval * double9) / SUM(_sample_interval) AS signature,\n       SUM(_sample_interval * double10) / SUM(_sample_interval) AS issueDate,\n       SUM(_sample_interval * double11) / SUM(_sample_interval) AS expiryDate,\n       SUM(_sample_interval * double12) / SUM(_sample_interval) AS supportNumber,\n       SUM(_sample_interval * double13) / SUM(_sample_interval) AS can,\n       SUM(_sample_interval * double14) / SUM(_sample_interval) AS mrz,\n       SUM(_sample_interval * double15) / SUM(_sample_interval) AS address,\n       SUM(_sample_interval * double16) / SUM(_sample_interval) AS placeOfBirth,\n       SUM(_sample_interval * double17) / SUM(_sample_interval) AS parents,\n       SUM(_sample_interval * double18) / SUM(_sample_interval) AS dateOfBirth,\n       SUM(_sample_interval * double19) / SUM(_sample_interval) AS permitType\nFROM dnitapado_usage\nWHERE $timeFilter\nGROUP BY doc\nORDER BY uses DESC",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 0,
+          "custom": {
+            "cellOptions": {
+              "type": "color-background",
+              "mode": "gradient"
+            }
+          },
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "doc"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "uses"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Extra boxes drawn by hand",
+      "description": "Average number of extra black boxes per use (capped at 50 per use).",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT SUM(_sample_interval * double2) / SUM(_sample_interval) AS boxes\nFROM dnitapado_usage\nWHERE $timeFilter",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Watermark added",
+      "description": "Share of uses with a watermark (its text is never sent).",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 31,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT SUM(_sample_interval * double3) / SUM(_sample_interval) AS mark_rate\nFROM dnitapado_usage\nWHERE $timeFilter",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Greyscale export",
+      "description": "Share of uses exported in greyscale.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 31,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT SUM(_sample_interval * double4) / SUM(_sample_interval) AS grey_rate\nFROM dnitapado_usage\nWHERE $timeFilter",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "OCR ran",
+      "description": "Share of uses where on-device OCR ran.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 31,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT SUM(_sample_interval * double5) / SUM(_sample_interval) AS ocr_rate\nFROM dnitapado_usage\nWHERE $timeFilter",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 17,
+      "type": "row",
+      "title": "Moved boxes (list version 2, ADR 0047)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Moved boxes over time",
+      "description": "Cover boxes moved or resized by hand, per time bucket (double20). Rows of list version 1 have no such column and are left out.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT $timeSeries AS t, SUM(_sample_interval * double20) AS moved_boxes\nFROM dnitapado_usage\nWHERE $timeFilter AND blob1 NOT IN ('1')\nGROUP BY t\nORDER BY t",
+          "rawQuery": true,
+          "format": "time_series",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 19,
+      "type": "table",
+      "title": "Latest moved boxes",
+      "description": "One row per use with a moved box: document, build and the entries field-box-x-y-w-h in 0.5% steps of the straightened card. Compare with src/zones/ at that build.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 37,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT timestamp, blob2 AS doc, blob5 AS build, blob12 AS moved\nFROM dnitapado_usage\nWHERE $timeFilter AND blob1 NOT IN ('1') AND double20 > 0\nORDER BY timestamp DESC\nLIMIT 200",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Devices and versions",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 45,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 21,
+      "type": "piechart",
+      "title": "Device type",
+      "description": "phone, tablet or desktop (DEVICES in src/stats/schema.ts).",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 46,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT blob7 AS device, SUM(_sample_interval) AS uses\nFROM dnitapado_usage\nWHERE $timeFilter\nGROUP BY device\nORDER BY uses DESC",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": true,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "displayLabels": []
+      }
+    },
+    {
+      "id": 22,
+      "type": "piechart",
+      "title": "System",
+      "description": "Operating system class.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 46,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT blob8 AS os, SUM(_sample_interval) AS uses\nFROM dnitapado_usage\nWHERE $timeFilter\nGROUP BY os\nORDER BY uses DESC",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": true,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "displayLabels": []
+      }
+    },
+    {
+      "id": 23,
+      "type": "piechart",
+      "title": "Browser",
+      "description": "Browser class.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 46,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT blob9 AS browser, SUM(_sample_interval) AS uses\nFROM dnitapado_usage\nWHERE $timeFilter\nGROUP BY browser\nORDER BY uses DESC",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": true,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "displayLabels": []
+      }
+    },
+    {
+      "id": 24,
+      "type": "piechart",
+      "title": "Photo source",
+      "description": "camera, file, paste or mixed.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 46,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT blob6 AS src, SUM(_sample_interval) AS uses\nFROM dnitapado_usage\nWHERE $timeFilter\nGROUP BY src\nORDER BY uses DESC",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": true,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "pieType": "donut",
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "displayLabels": []
+      }
+    },
+    {
+      "id": 25,
+      "type": "barchart",
+      "title": "App version",
+      "description": "Uses per build: the first 7 hex digits of the commit (blob5). The footer of each release shows the same digits.",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 54,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT blob5 AS build, SUM(_sample_interval) AS uses\nFROM dnitapado_usage\nWHERE $timeFilter\nGROUP BY build\nORDER BY uses DESC\nLIMIT 20",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xField": "build",
+        "showValue": "auto",
+        "legend": {
+          "showLegend": false
+        }
+      }
+    },
+    {
+      "id": 26,
+      "type": "barchart",
+      "title": "Language",
+      "description": "Uses per app language (LANG_TAGS in src/stats/schema.ts).",
+      "datasource": {
+        "type": "vertamedia-clickhouse-datasource",
+        "uid": "${DS_ANALYTICS_ENGINE}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 54,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "vertamedia-clickhouse-datasource",
+            "uid": "${DS_ANALYTICS_ENGINE}"
+          },
+          "refId": "A",
+          "query": "SELECT blob4 AS lang, SUM(_sample_interval) AS uses\nFROM dnitapado_usage\nWHERE $timeFilter\nGROUP BY lang\nORDER BY uses DESC",
+          "rawQuery": true,
+          "format": "table",
+          "dateTimeType": "DATETIME",
+          "dateTimeColDataType": "timestamp",
+          "dateColDataType": "",
+          "database": "",
+          "table": "dnitapado_usage",
+          "round": "0s",
+          "intervalFactor": 1,
+          "extrapolate": false,
+          "skip_comments": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xField": "lang",
+        "showValue": "auto",
+        "legend": {
+          "showLegend": false
+        }
+      }
+    }
+  ]
+}
