@@ -44,3 +44,4 @@ project specification on purpose).
 | [0036](0036-visual-regression-in-pinned-container.md) | Screenshot tests (12 phone screens, Spanish and Arabic) run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual` | accepted |
 | [0038](0038-one-address-per-language.md) | One address per language: `/` is Spanish, `/<tag>` (such as `/en`) for the others; canonical per language; hreflang in the HTML and the sitemap (not for Valencian) | proposed |
 | [0041](0041-prerendered-start-screen.md) | Prerendered start screen: the Spanish start screen rendered from `App.svelte` into `index.html` at build time, inert until the app replaces it; no font preload | accepted |
+| [0042](0042-axe-accessibility-scan.md) | Automatic accessibility scan: axe-core (dev dependency) on every screen, Spanish and Arabic, phone and wide screen; serious and critical findings fail | accepted |
