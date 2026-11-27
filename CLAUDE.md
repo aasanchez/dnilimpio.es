@@ -124,8 +124,9 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 
 - Image, geometry, redaction and PDF logic are plain TypeScript modules with no Svelte import, so
   unit tests run them in Node. Svelte components stay thin.
-- Masked pixels must be opaque black in the exported raster; exported JPEG and PDF carry no
-  metadata and no text (`src/engine/`, covered by `masks`, `jpeg` and `pdf` tests).
+- Masked pixels must be opaque black in the exported raster, also under the watermark:
+  `sealMasks()` in `src/engine/raster.ts` paints them again after it and checks them. Exported JPEG
+  and PDF carry no metadata and no text (`src/engine/`, covered by `raster`, `jpeg` and `pdf` tests).
 - AI results never act on their own: they become ordinary, undoable boxes or a preselection the
   user can change (ADR 0010, 0011).
 - Styles: Tailwind utilities in markup, shared pieces as `@layer components` classes in

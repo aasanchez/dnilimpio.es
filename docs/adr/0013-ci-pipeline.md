@@ -27,7 +27,7 @@ sit in fixed stages: build, test, code analysis, package, deploy, acceptance.
 - One `install` job saves the pnpm store cache; the other jobs only restore it. A shared composite
   action (`.github/actions/setup`) sets up Node, pnpm, dependencies and, when asked, Playwright
   Chromium (cached by version).
-- End-to-end tests run in two Playwright shards.
+- End-to-end tests run in four Playwright shards (two until 2026-11-27).
 - `ci-ok` is the only check branch protection requires. It fails when any job failed or was
   cancelled, and passes when jobs were skipped on purpose (a documentation-only pull request skips
   the code jobs; `dependency-review` runs on pull requests only).

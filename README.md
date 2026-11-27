@@ -362,7 +362,9 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   `{@html}`). Trusted Types are required, and the only policy, `default`, accepts two script URLs:
   the service worker and the OCR worker.
 - **Real redaction.** Hidden areas are painted as opaque black pixels on a new image, with a margin
-  around each field. Blur and pixelation are not offered, because they can be reversed.
+  around each field. The watermark is not drawn over them: the app paints them black again after the
+  watermark and checks every one of their pixels before export. Blur and pixelation are not offered,
+  because they can be reversed.
 - **Clean PDF.** Each image is re-encoded, and the JPEG is rebuilt with only the data a decoder needs:
   no EXIF, GPS, camera model, thumbnail or comments. The PDF has no metadata, no text, no
   annotations, no scripts and no attachments. Tests check this object by object.
@@ -729,7 +731,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Geometry | `homography`, `quad-edit` | Homography round trips and degenerate quads, corner editing |
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type`, `doc-text` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates, document type from the front's printed text (accents, case and OCR misreads ignored) |
 | OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans`, `ocr-ask`, `ready-memo` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink, a silent service worker turns OCR off after a time limit (15 s to check the files, 3 minutes to download them), "OCR is ready" kept per service worker and asked again after an update or a failure |
-| Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black, Fit to the text (a box only grows, by at most half its size, and stays on the card) |
+| Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black (also after the watermark, checked on the final pixels), Fit to the text (a box only grows, by at most half its size, and stays on the card) |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output |
 | Audit prompt | `audit-prompt` | Every file the prompt names exists, its list of stats fields is the list the thanks page sends, in order, and it stays short and asks for findings, not a verdict |
 | Editor redraws | `redraw` | One render per animation frame, only the side on screen, only when its choices changed; every changed side rendered at once before the review; a failed render is retried; nothing runs after the editor closes |
@@ -758,7 +760,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard, corners saved when you switch side |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases, "ready" asked once per worker and asked again after a rewritten file is refused; smart field finding |
 | `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
-| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, a change made with the front on screen reaching the back in the review and the PDF, review, the review stays after the download with the small stats link, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), reset |
+| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, no watermark over hidden fields, a change made with the front on screen reaching the back in the review and the PDF, review, the review stays after the download with the small stats link, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), reset |
 | `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; after a download or a share the review stays and the small Send anonymous data link appears; closing the sheet; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
@@ -786,7 +788,7 @@ up to date with `master` before merging: the tree that lands on `master` is the 
 
 ```text
 Pull request
-changes ─ install ─┬─ build ──────┬─ e2e (2 shards) ─┐
+changes ─ install ─┬─ build ──────┬─ e2e (4 shards) ─┐
                    ├─ typecheck   ├─ bundle-size     │
                    ├─ lint        ├─ reproducible    │
                    │              └─ lighthouse      │
@@ -807,7 +809,7 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 | build | `typecheck` | `pnpm typecheck` (svelte-check, strict TypeScript) | PR | Yes |
 | build | `lint` | `pnpm lint` (ESLint) | PR | Yes |
 | build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. No threshold yet | PR | Yes |
-| test | `e2e (1/2)`, `e2e (2/2)` | `pnpm test:e2e`, split in two shards, against the built `dist/` | PR | Yes |
+| test | `e2e (1/4)` to `e2e (4/4)` | `pnpm test:e2e`, split in four shards, against the built `dist/` | PR | Yes |
 | test | `reproducible` | Builds the same commit again on a fresh runner and compares the SHA-384 of every file with the `dist/` artifact ([`scripts/build-manifest.ts`](scripts/build-manifest.ts)). Any difference fails. Also runs on the release commit, because the squash merge makes a new commit; `deploy` waits for it | Both | Yes |
 | test | `bundle-size` | `pnpm size`: gzip size of the start page (entry and preloaded modules), PDF chunk, corner model and OCR files against budgets in [`scripts/bundle-size.ts`](scripts/bundle-size.ts) | PR | No, warns (`--strict` makes it fail) |
 | code analysis | `reuse` | Every file has copyright and licence information ([REUSE](https://reuse.software)) | PR | Yes |

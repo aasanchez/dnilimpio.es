@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { expandRect, findUnmaskedPixel, flattenAlpha, maskPixels, sanitise, toGreyscale, type RGBA } from '../../src/engine/raster.ts'
+import { expandRect, findUnmaskedPixel, flattenAlpha, maskPixels, sanitise, sealMasks, toGreyscale, type MaskSurface, type RGBA } from '../../src/engine/raster.ts'
+import { fillRects, type PxRect } from '../../src/redact/zones.ts'
 
 function image (w: number, h: number, rgba: [number, number, number, number]): RGBA {
   const data = new Uint8ClampedArray(w * h * 4)
@@ -87,5 +88,50 @@ describe('sanitise', () => {
     expect(findUnmaskedPixel(img, [{ x: 0, y: 0, w: 4, h: 4 }])).toBe(-1)
     img.data.set([1, 0, 0, 255], (2 * 4 + 3) * 4)
     expect(findUnmaskedPixel(img, [{ x: 0, y: 0, w: 4, h: 4 }])).toBe(2 * 4 + 3)
+  })
+})
+
+/** A canvas stand-in backed by an RGBA buffer. `fill` can be broken to test the check. */
+function bufferSurface (img: RGBA, fill: (r: PxRect) => void = (r) => { fillRects(img.data, img.width, img.height, [r]) }): MaskSurface {
+  return {
+    fillBlack: fill,
+    read: (r) => {
+      const data = new Uint8ClampedArray(r.w * r.h * 4)
+      for (let y = 0; y < r.h; y++) {
+        const o = ((r.y + y) * img.width + r.x) * 4
+        data.set(img.data.subarray(o, o + r.w * 4), y * r.w * 4)
+      }
+      return { width: r.w, height: r.h, data }
+    }
+  }
+}
+
+describe('sealMasks', () => {
+  // A sanitised raster, then a "watermark": a grey, half-transparent-looking stripe across the whole
+  // image, masks included, as drawWatermark() does with its light halo.
+  function watermarked (): { img: RGBA; rects: PxRect[] } {
+    const img = sanitise(image(100, 50, [10, 200, 30, 255]), { masks: [{ x: 0.1, y: 0.2, w: 0.3, h: 0.4 }], greyscale: false, margin: 2 })
+    for (let x = 0; x < 100; x++) for (let y = 18; y < 22; y++) img.data.set([60, 60, 60, 255], (y * 100 + x) * 4)
+    return { img, rects: maskPixels([{ x: 0.1, y: 0.2, w: 0.3, h: 0.4 }], 100, 50, 2) }
+  }
+
+  it('makes every masked pixel opaque black again after the watermark, and leaves the rest alone', () => {
+    const { img, rects } = watermarked()
+    expect(findUnmaskedPixel(img, rects)).not.toBe(-1)
+    sealMasks(bufferSurface(img), rects)
+    expect(findUnmaskedPixel(img, rects)).toBe(-1)
+    // Outside the mask the watermark stays.
+    expect(px(img, 60, 20)).toEqual([60, 60, 60, 255])
+    expect(px(img, 60, 40)).toEqual([10, 200, 30, 255])
+  })
+
+  it('throws when a masked pixel of the final raster is not opaque black', () => {
+    const { img, rects } = watermarked()
+    expect(() => { sealMasks(bufferSurface(img, () => {}), rects) }).toThrow(/Redaction check failed/)
+  })
+
+  it('accepts no masks', () => {
+    const { img } = watermarked()
+    expect(() => { sealMasks(bufferSurface(img), []) }).not.toThrow()
   })
 })
