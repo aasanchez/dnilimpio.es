@@ -192,7 +192,7 @@
   "thanksTitle": "Anonymous usage data",
   "thanksLead": "The photos, the PDF and your choices are cleared from the app.",
   "statsTitle": "Help us improve?",
-  "statsLead": "Optional. Anonymous figures: which fields you covered, whether the AI got the document right, and your device type. Nothing from your document: no text, no image, no positions. From the connection we keep only the country, not your IP address. No cookies.",
+  "statsLead": "Optional. Anonymous figures: which fields you covered, where you moved their boxes on the card, whether the AI got the document right, and your device type. Nothing from your document: no text, no image, no positions on the photo. From the connection we keep only the country, not your IP address. No cookies.",
   "statsPayload": "This is exactly what is sent:",
   "statsSend": "Send anonymous stats",
   "statsSent": "Thank you!",

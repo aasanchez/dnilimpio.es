@@ -25,9 +25,14 @@ export interface EditState {
   boxes: History<Boxes>;
   /** Field boxes the user moved or resized from the template position (memory only, Reset clears it). */
   placement: Placement;
+  /**
+   * Keys of `placement` last set by hand (Adjust boxes), not by Fit to the text. Only these may go in
+   * the opt-in stats (ADR 0047): a fitted box hugs the words read by OCR.
+   */
+  handPlaced: string[];
 }
 
 /** Fresh choices for one document: its recommended fields hidden, no boxes, no watermark. */
 export function emptyEditState (model: ModelZones): EditState {
-  return { hidden: [...defaultHidden(model)], watermark: '', watermarkScale: DEFAULT_WATERMARK_STYLE.scale, watermarkOpacity: DEFAULT_WATERMARK_STYLE.opacity, greyscale: false, boxes: start<Boxes>({ front: [], back: [] }), placement: {} }
+  return { hidden: [...defaultHidden(model)], watermark: '', watermarkScale: DEFAULT_WATERMARK_STYLE.scale, watermarkOpacity: DEFAULT_WATERMARK_STYLE.opacity, greyscale: false, boxes: start<Boxes>({ front: [], back: [] }), placement: {}, handPlaced: [] }
 }

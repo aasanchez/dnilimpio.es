@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { AUDIT_PROMPT, LIVE_SITE } from '../../src/security/audit-prompt.ts'
 import { encodeStats, type UsageStats } from '../../src/stats/schema.ts'
 
-const sample: UsageStats = { doc: 'tie', ai: 'right', back: true, fields: ['can'], boxes: 0, mark: false, grey: false, lang: 'es', app: 'dev', src: 'file', ocr: false, device: 'phone', os: 'android', browser: 'chrome', bv: 131, pwa: false }
+const sample: UsageStats = { doc: 'tie', ai: 'right', back: true, fields: ['can'], boxes: 0, mark: false, grey: false, lang: 'es', app: 'dev', src: 'file', ocr: false, moved: [], device: 'phone', os: 'android', browser: 'chrome', bv: 131, pwa: false }
 
 describe('audit prompt', () => {
   it('names only files that exist', () => {

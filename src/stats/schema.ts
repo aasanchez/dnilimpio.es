@@ -4,16 +4,20 @@
 //
 // The text form is a URL query string with fixed keys in a fixed order, e.g.
 //   v=1&doc=tie&ai=right&back=1&fields=can,mrz,signature&boxes=0&mark=1&grey=0&lang=es&app=1a2b3c4
-//   &device=phone&os=android&browser=chrome&bv=131&pwa=0&src=camera&ocr=1
+//   &src=camera&ocr=1&moved=can-0-124-142-60-18&device=phone&os=android&browser=chrome&bv=131&pwa=0
 // parseStats() accepts exactly that shape and nothing else: an unknown key, a repeated key, a value
 // outside its list or a number out of range rejects the whole text. Nothing from the document can
-// fit in it: no text, no image, no position, no identifier.
+// fit in it: no text, no image, no identifier. The one position it holds is where the person moved a
+// cover box on the straightened card (ADR 0047), in coarse steps; never a position on the photo.
 
 /** Bump on any change of meaning; the Worker stores it with each row. */
-export const STATS_VERSION = 1
+export const STATS_VERSION = 2
 
-/** Longest text parseStats() reads. A valid text is about 250 characters. */
-export const MAX_STATS_LENGTH = 600
+/**
+ * Longest text parseStats() reads. A valid text is about 250 characters, plus about 30 for each box
+ * moved by hand (at most MAX_MOVED, about 450 in all for the 14 boxes of a document).
+ */
+export const MAX_STATS_LENGTH = 1200
 
 export const DOCS = ['dni-4.0', 'dni-3.0', 'tie'] as const
 /**
@@ -45,6 +49,31 @@ export type System = (typeof SYSTEMS)[number]
 export type Browser = (typeof BROWSERS)[number]
 export type PhotoSource = (typeof SOURCES)[number]
 
+/**
+ * Steps of a moved box's position: 200 per card side, so one step is 0.5% of the straightened card
+ * (about 0.43 mm across and 0.27 mm down an ID-1 card). Coarse on purpose (ADR 0047).
+ */
+export const MOVED_STEPS = 200
+/** Most boxes one row can list. A document has at most 14 cover boxes (src/zones/). */
+export const MAX_MOVED = 20
+/** Highest box number within one field (a field can be printed in more than one place). */
+const MAX_RECT_INDEX = 9
+
+/**
+ * A field's cover box that the person moved or resized by hand, as it was when they finished: on the
+ * straightened card, in MOVED_STEPS steps from its top-left corner. Never the default it replaced:
+ * that is fixed by `doc` and `app` (the zones of that build), so each query can rebuild it.
+ */
+export interface MovedBox {
+  readonly field: StatsField
+  /** The box's number among all of its field's boxes, in zone order (front and back). */
+  readonly rect: number
+  readonly x: number
+  readonly y: number
+  readonly w: number
+  readonly h: number
+}
+
 /** What the app knows about one use, handed to the thanks page when the person clears everything. */
 export interface SessionStats {
   readonly doc: StatsDoc
@@ -64,6 +93,8 @@ export interface SessionStats {
   readonly src: PhotoSource
   /** OCR ran on the device during this use. */
   readonly ocr: boolean
+  /** Cover boxes of covered fields that were moved or resized by hand (ADR 0047), in fixed order. */
+  readonly moved: readonly MovedBox[]
 }
 
 /** What the thanks page reads from the browser itself: coarse classes only, nothing that singles out one device. */
@@ -83,12 +114,33 @@ export const MAX_BOXES = 50
 const MAX_BROWSER_VERSION = 999
 
 /** Keys of the session part (the thanks page's address fragment). */
-const SESSION_KEYS = ['v', 'doc', 'ai', 'back', 'fields', 'boxes', 'mark', 'grey', 'lang', 'app', 'src', 'ocr'] as const
+const SESSION_KEYS = ['v', 'doc', 'ai', 'back', 'fields', 'boxes', 'mark', 'grey', 'lang', 'app', 'src', 'ocr', 'moved'] as const
 /** Keys of the full text the thanks page sends. */
 const ALL_KEYS = [...SESSION_KEYS, 'device', 'os', 'browser', 'bv', 'pwa'] as const
 
 const bit = (b: boolean): string => (b ? '1' : '0')
 const sortFields = (fields: readonly StatsField[]): StatsField[] => FIELDS.filter((f) => fields.includes(f))
+
+/** One position in MOVED_STEPS steps, from a 0–1 value: rounded, and kept inside the card. */
+export const toSteps = (v: number): number => Number.isFinite(v) ? Math.min(MOVED_STEPS, Math.max(0, Math.round(v * MOVED_STEPS))) : 0
+
+/** Field order, then box number: one spelling per set of moved boxes. */
+const movedOrder = (a: MovedBox, b: MovedBox): number => FIELDS.indexOf(a.field) - FIELDS.indexOf(b.field) || a.rect - b.rect
+
+const movedEntry = (m: MovedBox): string => [m.field, m.rect, m.x, m.y, m.w, m.h].join('-')
+/** The `moved` value: entries `field-rect-x-y-w-h`, separated by commas. */
+export const movedText = (moved: readonly MovedBox[]): string => moved.map(movedEntry).join(',')
+
+/** The moved boxes as written: only covered fields, each box once, in fixed order, at most MAX_MOVED. */
+function cleanMoved (s: SessionStats): MovedBox[] {
+  const seen = new Set<string>()
+  return [...s.moved].sort(movedOrder).filter((m) => {
+    const key = `${m.field}-${String(m.rect)}`
+    if (!s.fields.includes(m.field) || seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).slice(0, MAX_MOVED)
+}
 
 function sessionPairs (s: SessionStats): Array<[string, string]> {
   return [
@@ -104,6 +156,7 @@ function sessionPairs (s: SessionStats): Array<[string, string]> {
     ['app', s.app],
     ['src', s.src],
     ['ocr', bit(s.ocr)],
+    ['moved', movedText(cleanMoved(s))],
   ]
 }
 
@@ -155,6 +208,17 @@ function pairsOf (text: string, keys: readonly string[]): Map<string, string> | 
   return keys.every((k) => out.has(k)) ? out : undefined
 }
 
+/** One entry `field-rect-x-y-w-h`, or undefined if it is anything else. */
+function movedOf (entry: string): MovedBox | undefined {
+  const parts = entry.split('-')
+  if (parts.length !== 6) return undefined
+  const field = oneOf(FIELDS, parts[0])
+  const rect = parseInt0(parts[1], MAX_RECT_INDEX)
+  const [x, y, w, h] = parts.slice(2).map((p) => parseInt0(p, MOVED_STEPS))
+  if (field === undefined || rect === undefined || x === undefined || y === undefined || w === undefined || h === undefined) return undefined
+  return { field, rect, x, y, w, h }
+}
+
 function sessionOf (m: Map<string, string>): SessionStats | undefined {
   if (m.get('v') !== String(STATS_VERSION)) return undefined
   const doc = oneOf(DOCS, m.get('doc'))
@@ -170,13 +234,20 @@ function sessionOf (m: Map<string, string>): SessionStats | undefined {
   const app = m.get('app') ?? ''
   const src = oneOf(SOURCES, m.get('src'))
   const ocr = parseBit(m.get('ocr'))
+  const rawMoved = m.get('moved') ?? ''
+  const movedList = rawMoved === '' ? [] : rawMoved.split(',')
+  if (movedList.length > MAX_MOVED) return undefined
+  const moved = movedList.map(movedOf)
+  if (moved.some((b) => b === undefined)) return undefined
   if (doc === undefined || ai === undefined || back === undefined || boxes === undefined || mark === undefined || grey === undefined || lang === undefined || src === undefined || ocr === undefined) return undefined
   if (!/^([0-9a-f]{7}|dev)$/.test(app)) return undefined
   // Each field once, in the fixed order: the text has exactly one spelling per set of fields.
   if (fields.some((f) => f === undefined) || new Set(fields).size !== fields.length) return undefined
   const known = fields as StatsField[]
   if (sortFields(known).join(',') !== rawFields) return undefined
-  return { doc, ai, back, fields: known, boxes, mark, grey, lang, app, src, ocr }
+  const session: SessionStats = { doc, ai, back, fields: known, boxes, mark, grey, lang, app, src, ocr, moved: moved as MovedBox[] }
+  // Moved boxes only of covered fields, each once, in the fixed order: encodeSession() writes them so.
+  return movedText(cleanMoved(session)) === rawMoved ? session : undefined
 }
 
 /** The session part from the thanks page's fragment, or undefined if it is anything else. */

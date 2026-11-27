@@ -5,7 +5,7 @@
 // writes one row to Workers Analytics Engine and answers 204. It stores no IP address, sets no cookie
 // and keeps no log of the request. Anything else gets an error and is not stored.
 
-import { FIELDS, MAX_STATS_LENGTH, STATS_VERSION, parseStats, type UsageStats } from './schema.ts'
+import { FIELDS, MAX_STATS_LENGTH, STATS_VERSION, movedText, parseStats, type UsageStats } from './schema.ts'
 
 /** The part of the Workers Analytics Engine binding used here. */
 export interface AnalyticsDataset {
@@ -37,15 +37,15 @@ export const STATS_PATH = '/stats'
 
 /**
  * One row. blobs: text columns, doubles: number columns, in a fixed order that SQL queries rely on
- * (README, "Usage stats"). Append only. The country is Cloudflare's own lookup of the request; the
+ * (README, "Usage stats"). Append only. blob12 and double20 are the hand-moved boxes (ADR 0047). The country is Cloudflare's own lookup of the request; the
  * IP address it comes from is not written.
  */
 export function dataPoint (s: UsageStats, country: string): { indexes: string[], blobs: string[], doubles: number[] } {
   const n = (b: boolean): number => (b ? 1 : 0)
   return {
     indexes: [s.doc],
-    blobs: [String(STATS_VERSION), s.doc, s.ai, s.lang, s.app, s.src, s.device, s.os, s.browser, country, s.fields.join(',')],
-    doubles: [n(s.back), s.boxes, n(s.mark), n(s.grey), n(s.ocr), s.bv, n(s.pwa), s.fields.length, ...FIELDS.map((f) => n(s.fields.includes(f)))],
+    blobs: [String(STATS_VERSION), s.doc, s.ai, s.lang, s.app, s.src, s.device, s.os, s.browser, country, s.fields.join(','), movedText(s.moved)],
+    doubles: [n(s.back), s.boxes, n(s.mark), n(s.grey), n(s.ocr), s.bv, n(s.pwa), s.fields.length, ...FIELDS.map((f) => n(s.fields.includes(f))), s.moved.length],
   }
 }
 

@@ -192,7 +192,7 @@
   "thanksTitle": "Datos de uso anónimos",
   "thanksLead": "Las fotos, el PDF y tus elecciones se han borrado de la app.",
   "statsTitle": "¿Nos ayudas a mejorar?",
-  "statsLead": "Opcional. Son datos anónimos: qué campos tapaste, si la IA acertó el documento y el tipo de dispositivo. Nada de tu documento: ni texto, ni imagen, ni posiciones. De la conexión solo guardamos el país, no tu IP. Sin cookies.",
+  "statsLead": "Opcional. Son datos anónimos: qué campos tapaste, dónde moviste sus recuadros en la tarjeta, si la IA acertó el documento y el tipo de dispositivo. Nada de tu documento: ni texto, ni imagen, ni posiciones en la foto. De la conexión solo guardamos el país, no tu IP. Sin cookies.",
   "statsPayload": "Esto es exactamente lo que se envía:",
   "statsSend": "Enviar estadísticas anónimas",
   "statsSent": "¡Gracias!",

@@ -6,7 +6,8 @@
 import { expect, test, type Page, type Request } from '@playwright/test'
 import { THANKS_CSP } from '../../scripts/csp.ts'
 import { THANKS_PAGE_CSP } from '../../scripts/headers.ts'
-import { parseStats } from '../../src/stats/schema.ts'
+import { parseStats, toSteps } from '../../src/stats/schema.ts'
+import { documentOf } from '../../src/zones/documents.ts'
 import { toEditor } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
@@ -21,8 +22,9 @@ function watchSends (page: Page): Request[] {
   return sent
 }
 
-async function toThanks (page: Page): Promise<void> {
+async function toThanks (page: Page, edit?: (page: Page) => Promise<void>): Promise<void> {
   await toEditor(page)
+  await edit?.(page)
   await page.locator('#review').click()
   await page.locator('#review-confirm').check()
   await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
@@ -60,9 +62,44 @@ test('Send anonymous data opens the photo-free thanks page; nothing is sent unti
   await expect(page.locator('#stats-send')).toBeDisabled()
   expect(sent).toHaveLength(1)
 
+  // No box was moved: the list of moved boxes is empty.
+  expect(stats?.moved).toEqual([])
+
   // Start again: back to the app's start screen.
   await page.locator('#start-again').click()
   await expect(page.locator('#start')).toBeVisible()
+})
+
+test('a cover box moved by hand is listed as its new place on the card, in 0.5% steps, never the photo\'s pixels', async ({ page }) => {
+  const sent = watchSends(page)
+  // The CAN box of the DNI 4.0 front, dragged a third of the card to the left.
+  const can = documentOf('dni-4.0').zones.find((z) => z.id === 'can')?.rects[0]
+  if (can === undefined) throw new Error('no CAN box')
+  const from: [number, number] = [can.x + can.w / 2, can.y + can.h / 2]
+  await toThanks(page, async (p) => {
+    await p.locator('#adjust-zones').click()
+    await p.locator('#preview').evaluate((c) => { c.scrollIntoView({ block: 'center' }) })
+    const box = await p.locator('#preview').boundingBox()
+    if (!box) throw new Error('no preview box')
+    await p.mouse.move(box.x + from[0] * box.width, box.y + from[1] * box.height)
+    await p.mouse.down()
+    await p.mouse.move(box.x + (from[0] - 0.3) * box.width, box.y + from[1] * box.height, { steps: 5 })
+    await p.mouse.up()
+    await expect(p.locator('#zone-position')).toContainText('CAN')
+    await p.locator('#adjust-zones').click()
+  })
+  const shown = (await page.locator('#stats-payload').textContent() ?? '').split('\n').join('&')
+  expect(shown).toMatch(/&moved=can-0-\d+-\d+-\d+-\d+&/)
+  const moved = parseStats(shown)?.moved ?? []
+  expect(moved).toHaveLength(1)
+  const [m] = moved
+  // About 60 steps (0.3 of the card) to the left of the default; the same size and height.
+  expect(Math.abs((m?.x ?? 0) - (toSteps(can.x) - 60))).toBeLessThanOrEqual(2)
+  expect(Math.abs((m?.y ?? 0) - toSteps(can.y))).toBeLessThanOrEqual(1)
+  expect(m?.w).toBe(toSteps(can.w))
+  expect(m?.h).toBe(toSteps(can.h))
+  // Still nothing sent before the tap.
+  expect(sent).toEqual([])
 })
 
 test('the thanks page has its own policy: its own origin only, no frames, no other page loosened', async ({ page }) => {
@@ -102,7 +139,7 @@ test('offline, the button is off and says why; a failed send says so and keeps n
 })
 
 test('Arabic: the thanks page is right to left, the sent text stays left to right', async ({ page }) => {
-  await page.goto('./thanks.html#v=1&doc=tie&ai=none&back=0&fields=can&boxes=0&mark=0&grey=0&lang=ar&app=dev&src=file&ocr=1')
+  await page.goto('./thanks.html#v=2&doc=tie&ai=none&back=0&fields=can&boxes=0&mark=0&grey=0&lang=ar&app=dev&src=file&ocr=1&moved=')
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   await expect(page.locator('#stats-payload')).toHaveAttribute('dir', 'ltr')
   await expect(page.locator('#stats-send')).toHaveText('أرسل الإحصاءات المجهولة')
@@ -117,7 +154,7 @@ test.describe('with the service worker', () => {
     await page.evaluate(async () => { await navigator.serviceWorker.ready })
     await page.reload()
     await expect.poll(async () => await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true)
-    await page.goto('./thanks.html#v=1&doc=tie&ai=right&back=1&fields=can,mrz&boxes=0&mark=0&grey=0&lang=es&app=dev&src=camera&ocr=1')
+    await page.goto('./thanks.html#v=2&doc=tie&ai=right&back=1&fields=can,mrz&boxes=0&mark=0&grey=0&lang=es&app=dev&src=camera&ocr=1&moved=')
     await expect.poll(async () => await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true)
     await page.locator('#stats-send').click()
     // The preview answers with the Worker's own code: 204 only for the exact list.
