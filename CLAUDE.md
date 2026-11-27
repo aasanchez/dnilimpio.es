@@ -149,6 +149,7 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 | `src/detect/` | Corner model, classic edge detection, straightening, document type detection |
 | `src/ocr/` | PP-OCRv6 worker, MRZ reader, smart field finding |
 | `src/zones/` | Field positions per document; `documents.ts` lists the documents |
+| `src/geometry/`, `src/redact/` | Homography, perspective warp, corner editing; normalised zones to pixels |
 | `src/engine/` | Fields, masks, secure raster, watermark, JPEG filter, PDF export, undo history |
 | `src/guide/` | Card guide: sources, cited entries, text per language |
 | `src/offline/`, `src/sw.ts` | Service worker, precache manifest and `route()`, update of idle tabs, worker check |

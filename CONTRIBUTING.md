@@ -78,7 +78,8 @@ The [README test section](README.md#tests) describes what each test file covers.
 
 1. **One pull request per feature or fix.** Keep it small enough to review in one sitting. Do not
    mix a translation fix with a code change.
-2. **Branch from `master`** and give the branch a short, descriptive name.
+2. **Branch from `master`** and name the branch `<type>/<summary>`: the commit type of the pull
+   request title, then two to five lowercase words in kebab case, for example `fix/sw-update-multi-window`.
 3. **Write commit messages** in the style of the history: `type(area): what changes`, for example
    `fix(i18n): correct the Catalan text of the export button`. Common types: `feat`, `fix`, `docs`,
    `test`, `build`, `ci`, `chore`.
@@ -87,8 +88,9 @@ The [README test section](README.md#tests) describes what each test file covers.
    ADR list, or the privacy text.
 6. **Write an ADR for decisions that are costly to reverse**, such as a new dependency, a CSP change,
    a new runtime request or a new kind of storage. Add `docs/adr/NNNN-short-title.md` with the next
-   free number, in the format described in [`docs/adr/README.md`](docs/adr/README.md) (context,
-   decision, alternatives, consequences), and add a row to that file's table.
+   free number, in the format of the existing records (Status, Date, Decided by; then Context, Decision,
+   Consequences; see [`docs/adr/README.md`](docs/adr/README.md)), and add a row to that file's table
+   and to the design decisions list in the README.
 7. **Keep licence information complete.** The project follows [REUSE](https://reuse.software). A new
    source file starts with an SPDX licence header comment (copy the first line of a
    neighbouring file). Files that
@@ -149,7 +151,7 @@ There are two sets of files, one file per language in each:
 
 | Folder | What it contains | Loaded |
 |---|---|---|
-| [`src/i18n/locales/`](src/i18n/locales/) | Every text of the interface: buttons, steps, messages | Bundled in the app |
+| [`src/i18n/locales/`](src/i18n/locales/) | Every text of the interface: buttons, steps, messages | Spanish with the start page; each other language when it is the page's language. All are files of the build, available offline |
 | [`src/guide/locales/`](src/guide/locales/) | The card guide: what each element of the card is and how a copy can be misused | When the guide opens |
 
 Each file is named by its [BCP 47 language tag](https://www.rfc-editor.org/info/bcp47), for example
@@ -331,13 +333,15 @@ translate both the interface and the card guide.
 3. **Create the guide file.** Copy [`src/guide/locales/es.json`](src/guide/locales/es.json) to
    `src/guide/locales/<tag>.json` and translate every text. Keep empty texts empty. The guide loads
    the file automatically.
-4. **Register the language** in [`src/i18n/index.ts`](src/i18n/index.ts):
-   - import the file: `import pt from './locales/pt.json'`;
+4. **Register the language** in [`src/i18n/index.ts`](src/i18n/index.ts). The build finds the
+   new files by itself, so no import is needed:
    - add the tag to `LANGS`, in the order the selector should show it;
    - add the language's own name to `AUTONYMS`, for example `pt: 'Português'`;
-   - add the import to `translations`;
    - if the language is written right to left, update `dir()`;
    - if browsers send an unusual tag for it, update `pickLang()`.
+
+   Then add the same tag at the end of `LANG_TAGS` in [`src/stats/schema.ts`](src/stats/schema.ts),
+   the fixed list of the opt-in usage stats. A unit test fails if the two lists differ.
 5. **Update the tests** in [`tests/unit/i18n.test.ts`](tests/unit/i18n.test.ts): add a
    `pickLang` case for the new tag, and update the right-to-left test if needed.
 6. **Update Crowdin**: add the tag to `languages_mapping` in [`crowdin.yml`](crowdin.yml).
