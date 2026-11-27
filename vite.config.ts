@@ -4,6 +4,7 @@ import { defaultClientConditions, defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
 import { normalizeSha, normalizeVersion } from './src/version/build-info.ts'
+import { guidePages } from './scripts/guide-pages.ts'
 import { base64Import, hostHeadersInPreview, ocrAssets, prerenderStart, searchFiles, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
 import { DEFAULT_SITE_URL, normalizeSiteUrl } from './src/seo/site.ts'
 
@@ -80,5 +81,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [base64Import(), tailwindcss(), svelte(), searchFiles(SITE_URL), securityHeaders(), prerenderStart(), ocrAssets(), subresourceIntegrity(), hostHeadersInPreview()],
+  plugins: [base64Import(), tailwindcss(), svelte(), searchFiles(SITE_URL), securityHeaders(), prerenderStart(), guidePages(SITE_URL), ocrAssets(), subresourceIntegrity(), hostHeadersInPreview()],
 })

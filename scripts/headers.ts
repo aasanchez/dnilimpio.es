@@ -12,8 +12,8 @@
 import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { THANKS_CSP, cspWithScriptHashes } from './csp.ts'
-import { SECURITY_HEADERS, SW_FILE, THANKS_PAGE, WORKER_SCRIPTS } from '../src/offline/precache.ts'
+import { GUIDE_CSP, THANKS_CSP, cspWithScriptHashes } from './csp.ts'
+import { GUIDE_PAGES, SECURITY_HEADERS, SW_FILE, THANKS_PAGE, WORKER_SCRIPTS } from '../src/offline/precache.ts'
 import { LANGS } from '../src/i18n/langs.ts'
 
 /** One rule of the `_headers` file: a path, headers it removes (set by an earlier rule), headers it adds. */
@@ -116,12 +116,16 @@ export function pageCsp (indexHtml: string): string {
 /** The thanks page's CSP (ADR 0029): its own <meta> policy, plus frame-ancestors. */
 export const THANKS_PAGE_CSP = `${THANKS_CSP}; frame-ancestors 'none'`
 
+/** The card guide pages' CSP (ADR 0040): their own <meta> policy, no script at all, plus frame-ancestors. */
+export const GUIDE_PAGE_CSP = `${GUIDE_CSP}; frame-ancestors 'none'`
+
 /**
  * Rules for the host, from the built index.html. Paths are from the root of the host.
  * The page CSP goes on every response: the host answers unknown paths with index.html too (see
  * wrangler.jsonc), and on a script, style or image response a CSP has no effect. The two scripts
  * that run as workers take their policy from their own response, so they get their own CSP instead.
  * The thanks page has its own policy too: the app's would refuse its one connection (ADR 0029).
+ * The guide pages get their own, stricter one: they run no script (ADR 0040).
  */
 export function hostHeaderRules (indexHtml: string): HeaderRule[] {
   const own = (path: string, csp: string): HeaderRule => ({ path: `/${path}`, detach: ['Content-Security-Policy'], headers: { 'Content-Security-Policy': csp } })
@@ -129,6 +133,7 @@ export function hostHeaderRules (indexHtml: string): HeaderRule[] {
     { path: '/*', headers: { ...COMMON_HEADERS, 'Content-Security-Policy': pageCsp(indexHtml) } },
     own(SW_FILE, SERVICE_WORKER_CSP),
     own(THANKS_PAGE, THANKS_PAGE_CSP),
+    ...GUIDE_PAGES.map((p) => own(p, GUIDE_PAGE_CSP)),
     ...WORKER_SCRIPTS.map((w) => own(w, HOST_WORKER_CSP)),
   ]
 }

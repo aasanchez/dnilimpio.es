@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
 import { createHash } from 'node:crypto'
-import { PAGE_HEADERS, SECURITY_HEADERS, WORKER_SCRIPTS, addPageHeaders, cacheName, isOnDemand, isPrecached, parseManifest, route, sriOf, workerCsp } from '../../src/offline/precache.ts'
+import { GUIDE_PAGES, PAGE_HEADERS, SECURITY_HEADERS, STATIC_PAGES, WORKER_SCRIPTS, addPageHeaders, answersIdle, cacheName, isOnDemand, isPrecached, parseManifest, route, sriOf, workerCsp } from '../../src/offline/precache.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
 const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }], onDemand: [{ path: 'ocr/ppocrv6-tiny-rec.onnx', integrity: HASH }] }
@@ -65,6 +65,35 @@ describe('route (deny by default)', () => {
   })
   it('answers every page load inside the scope with index.html', () => {
     for (const url of [scope, `${scope}?lang=es`, `${scope}anything`]) expect(get(url, 'navigate')).toBe('index')
+  })
+  it('answers a load of a guide page of this build with that page, and nothing else (ADR 0040)', () => {
+    const page = `${scope}guia-dni-4.html`
+    const withPage = { ...known, files: new Set([...known.files, page]) }
+    expect(route('GET', page, 'navigate', scope, withPage)).toEqual({ kind: 'page', url: page, onDemand: false })
+    expect(route('GET', `${page}#mrz`, 'navigate', scope, withPage)).toEqual({ kind: 'page', url: page, onDemand: false })
+    // Not in this build's manifest, or not a guide page: the app.
+    expect(get(page, 'navigate')).toBe('index')
+    expect(route('GET', `${scope}guia-otro.html`, 'navigate', scope, withPage).kind).toBe('index')
+    // A page saved on first use instead of at install (StaticPage.onDemand) is still that page.
+    expect(route('GET', page, 'navigate', scope, { ...known, onDemand: new Set([page]) })).toEqual({ kind: 'page', url: page, onDemand: true })
+    // A query string can carry data: the app, never the page.
+    expect(route('GET', `${page}?d=12345678Z`, 'navigate', scope, withPage).kind).toBe('index')
+  })
+  it('lists every static page once, each one a flat file next to index.html', () => {
+    const paths = STATIC_PAGES.map((p) => p.path)
+    expect(new Set(paths).size).toBe(paths.length)
+    expect(paths).toContain('thanks.html')
+    for (const p of paths) expect(p).toMatch(/^[a-z0-9-]+\.html$/)
+    for (const p of STATIC_PAGES) expect(isOnDemand(p.path)).toBe(p.onDemand === true)
+  })
+  it('does not wait for an answer from a guide page, which runs no script (ADR 0040)', () => {
+    for (const p of GUIDE_PAGES) {
+      expect(answersIdle(`${scope}${p}`, scope)).toBe(false)
+      expect(answersIdle(`${scope}${p}#mrz`, scope)).toBe(false)
+      // With a query string, the page load got the app, which answers.
+      expect(answersIdle(`${scope}${p}?x=1`, scope)).toBe(true)
+    }
+    for (const url of [scope, `${scope}thanks.html`, `${scope}?lang=en`]) expect(answersIdle(url, scope)).toBe(true)
   })
   it('refuses everything else', () => {
     expect(get(`${scope}assets/b.js`)).toBe('deny') // not in the manifest

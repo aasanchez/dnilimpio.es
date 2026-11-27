@@ -21,6 +21,40 @@ export const SW_FILE = 'sw.js'
  * only page that may send anything: the opt-in usage stats, to STATS_ENDPOINT.
  */
 export const THANKS_PAGE = 'thanks.html'
+/**
+ * The card guide pages (ADR 0040): one static page per document, written at build time from the
+ * guide data (src/guide/page.ts). They hold no photo and run no script. The service worker serves
+ * them as pages; every other page load gets index.html.
+ */
+export const GUIDE_PAGES = ['guia-dni-4.html', 'guia-dni-3.html', 'guia-tie.html'] as const
+export type GuidePage = (typeof GUIDE_PAGES)[number]
+
+/** A page of its own next to index.html: a page load of exactly its path gets it, not the app. */
+export interface StaticPage {
+  readonly path: string
+  /**
+   * Saved on its first visit instead of at install, still checked against its hash. For pages that
+   * are many or large; none is yet.
+   */
+  readonly onDemand?: boolean
+}
+
+/**
+ * Whether a window can answer the service worker's "idle?" question (src/sw.ts). A guide page runs
+ * no script, so it never answers; it holds no photo and loads nothing later, so it counts as idle
+ * and never holds an update back. Every other window of the site runs the app's code and answers.
+ */
+export function answersIdle (url: string, scope: string): boolean {
+  const key = url.split('#')[0] ?? url
+  return !GUIDE_PAGES.some((p) => key === `${scope}${p}`)
+}
+
+/** Every static page of the site. Every other page load inside the scope gets index.html. */
+export const STATIC_PAGES: readonly StaticPage[] = [
+  { path: THANKS_PAGE },
+  ...GUIDE_PAGES.map((path) => ({ path })),
+]
+
 /** Where the thanks page sends the opt-in stats (worker/index.ts), relative to the app's folder. */
 export const STATS_ENDPOINT = 'stats'
 
@@ -41,7 +75,8 @@ export function isPrecached (path: string): boolean {
 }
 
 /** Cached on first use instead of at install. */
-export const isOnDemand = (path: string): boolean => path.startsWith(ON_DEMAND_DIR) || path.startsWith(MODEL_DIR)
+export const isOnDemand = (path: string): boolean =>
+  path.startsWith(ON_DEMAND_DIR) || path.startsWith(MODEL_DIR) || STATIC_PAGES.some((p) => p.onDemand === true && p.path === path)
 
 /** Parses and checks the manifest the build inlines into the worker. Throws on anything unexpected. */
 export function parseManifest (json: string): PrecacheManifest {
@@ -174,8 +209,8 @@ export type Route =
    * address (`en`, or the site address for Spanish, ADR 0038), as the host does.
    */
   | { readonly kind: 'redirect'; readonly url: string }
-  /** A page load of the thanks page: answer with the cached thanks.html. */
-  | { readonly kind: 'thanks'; readonly url: string }
+  /** A page load of a static page (STATIC_PAGES) of this build: answer with that page. */
+  | { readonly kind: 'page'; readonly url: string; readonly onDemand: boolean }
   /** The thanks page sends the opt-in stats: passed on to the network, unchanged (ADR 0029). */
   | { readonly kind: 'stats' }
   /** A file of this build, saved at install. */
@@ -227,12 +262,15 @@ export function route (method: string, url: string, mode: string, scope: string,
   if (method !== 'GET' || !url.startsWith(scope)) return { kind: 'deny' }
   const key = url.split('#')[0] ?? url
   // A page load may carry a query string or a path of its own: it gets index.html, unless it is
-  // exactly the thanks page.
+  // exactly a static page of this build (the thanks page, a guide page).
   if (mode === 'navigate') {
     const to = languageRedirect(key, scope)
     if (to !== null) return { kind: 'redirect', url: to }
+    if (!STATIC_PAGES.some((p) => key === `${scope}${p.path}`)) return { kind: 'index' }
+    if (known.files.has(key)) return { kind: 'page', url: key, onDemand: false }
+    if (known.onDemand.has(key)) return { kind: 'page', url: key, onDemand: true }
+    return { kind: 'index' }
   }
-  if (mode === 'navigate') return key === thanks && known.files.has(thanks) ? { kind: 'thanks', url: thanks } : { kind: 'index' }
   if (known.files.has(key)) return { kind: 'file', url: key }
   if (known.onDemand.has(key)) return { kind: 'on-demand', url: key }
   return { kind: 'deny' }

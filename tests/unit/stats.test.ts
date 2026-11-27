@@ -254,8 +254,8 @@ describe('service worker route for the stats (ADR 0029)', () => {
     expect(route(method, url, mode, scope, known, client)).toEqual({ kind: 'deny' })
   })
   it('answers a page load of the thanks page with thanks.html, and every other one with index.html', () => {
-    expect(route('GET', `${scope}thanks.html`, 'navigate', scope, known)).toEqual({ kind: 'thanks', url: `${scope}thanks.html` })
-    expect(route('GET', `${scope}thanks.html#v=1&doc=tie`, 'navigate', scope, known)).toEqual({ kind: 'thanks', url: `${scope}thanks.html` })
+    expect(route('GET', `${scope}thanks.html`, 'navigate', scope, known)).toEqual({ kind: 'page', url: `${scope}thanks.html`, onDemand: false })
+    expect(route('GET', `${scope}thanks.html#v=1&doc=tie`, 'navigate', scope, known)).toEqual({ kind: 'page', url: `${scope}thanks.html`, onDemand: false })
     expect(route('GET', `${scope}thanks.html?x`, 'navigate', scope, known)).toEqual({ kind: 'index' })
     expect(route('GET', `${scope}anything`, 'navigate', scope, known)).toEqual({ kind: 'index' })
   })

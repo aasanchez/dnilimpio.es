@@ -11,7 +11,7 @@ import { CSP, THANKS_CSP, cspWithScriptHashes } from './csp.ts'
 import { headersFor, hostHeaderRules, redirectFor, type HeaderRule } from './headers.ts'
 import { insertIntoApp, renderHome } from './prerender.ts'
 import { STATS_PATH, handleStats } from '../src/stats/endpoint.ts'
-import { SW_FILE, THANKS_PAGE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
+import { GUIDE_PAGES, SW_FILE, THANKS_PAGE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 import { robotsTxt, sitemapXml, startPageSitemap, staticHead } from '../src/seo/site.ts'
 import es from '../src/i18n/locales/es.json' with { type: 'json' }
 
@@ -55,7 +55,7 @@ export function searchFiles (site: string): Plugin {
     },
     generateBundle () {
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(site) })
-      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml(startPageSitemap(site)) })
+      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml([...startPageSitemap(site), ...GUIDE_PAGES.map((p) => ({ loc: new URL(p, site).href }))]) })
     },
   }
 }
@@ -115,6 +115,13 @@ export function subresourceIntegrity (): Plugin {
       const thanks = withSri(readFileSync(thanksPath, 'utf8'))
       if (thanks.includes('import(') || !thanks.includes('integrity=')) throw new Error(`${THANKS_PAGE}: unexpected scripts`)
       writeFileSync(thanksPath, thanks)
+      // The card guide pages (ADR 0040): their stylesheet, checked the same way. They run no script.
+      for (const page of GUIDE_PAGES) {
+        const path = join(outDir, page)
+        const html = withSri(readFileSync(path, 'utf8'))
+        if (/<script\b/i.test(html) || !/<link rel="stylesheet" [^>]*integrity="sha384-/.test(html)) throw new Error(`${page}: must link its stylesheet with integrity and have no script`)
+        writeFileSync(path, html)
+      }
 
       const htmlPath = join(outDir, 'index.html')
       const out = withSri(readFileSync(htmlPath, 'utf8'))

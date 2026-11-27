@@ -20,7 +20,7 @@
 // The build (scripts/vite-plugins.ts) replaces the manifest placeholder below with the file list.
 
 import { ANSWER_TIMEOUT_MS, mayTakeOver, type WindowAnswer } from './offline/takeover.ts'
-import { CACHE_PREFIX, WORKER_SCRIPTS, addPageHeaders, cacheName, parseManifest, route, sriOf, workerCsp } from './offline/precache.ts'
+import { CACHE_PREFIX, WORKER_SCRIPTS, addPageHeaders, answersIdle, cacheName, parseManifest, route, sriOf, workerCsp } from './offline/precache.ts'
 
 const sw = self as unknown as ServiceWorkerGlobalScope
 
@@ -39,6 +39,8 @@ const WORKERS = new Set(WORKER_SCRIPTS.map(urlOf))
 
 /** index.html with PAGE_HEADERS added to the host's headers (addPageHeaders()). */
 function withPageHeaders (res: Response): Response {
+  // A network error stays one: it has no headers to add, and status 0 cannot be copied.
+  if (res.type === 'error') return res
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: addPageHeaders(res.headers) })
 }
 
@@ -160,7 +162,8 @@ sw.addEventListener('message', (event) => {
       let answers: WindowAnswer[] = []
       if (msg.force !== true) {
         const windows = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true })
-        answers = await Promise.all(windows.filter((c) => c.id !== from?.id).map(askWindow))
+        // A guide page runs no script, so it cannot answer; it holds nothing an update could break.
+        answers = await Promise.all(windows.filter((c) => c.id !== from?.id && answersIdle(c.url, sw.registration.scope)).map(askWindow))
         // The asking page too, last: it may have left the start screen while the others answered.
         if (from !== undefined) answers.push(await askWindow(from))
       }
@@ -196,6 +199,17 @@ sw.addEventListener('message', (event) => {
   })())
 })
 
+/**
+ * A file saved at install. A missing or rewritten entry gets the same fixed URL again, checked against
+ * its hash. Offline, that fails, and the request gets a network error.
+ */
+async function fromCache (url: string): Promise<Response> {
+  const file = FILES.get(url)
+  if (file === undefined) return Response.error()
+  const cache = await caches.open(CACHE)
+  return await verifiedHit(cache, file.url, file.integrity) ?? await download(cache, file.url, file.integrity)
+}
+
 sw.addEventListener('fetch', (event) => {
   const req = event.request
   event.respondWith((async () => {
@@ -213,18 +227,13 @@ sw.addEventListener('fetch', (event) => {
         return await fetch(req, { credentials: 'omit' })
       case 'on-demand':
         return withWorkerCsp(to.url, await ensureOnDemand(to.url))
+      case 'page':
+        // A static page: saved at install, or on its first visit (StaticPage.onDemand).
+        return withPageHeaders(to.onDemand ? await ensureOnDemand(to.url) : await fromCache(to.url))
       case 'index':
-      case 'thanks':
-      case 'file': {
-        const url = to.kind === 'index' ? INDEX : to.url
-        const file = FILES.get(url)
-        if (file === undefined) return Response.error()
-        // A missing or rewritten entry (install saved every file): the same fixed URL again, checked
-        // against its hash. Offline, that fails, and the request gets a network error.
-        const cache = await caches.open(CACHE)
-        const res = await verifiedHit(cache, file.url, file.integrity) ?? await download(cache, file.url, file.integrity)
-        return to.kind === 'file' ? res : withPageHeaders(res)
-      }
+        return withPageHeaders(await fromCache(INDEX))
+      case 'file':
+        return await fromCache(to.url)
     }
   })())
 })
