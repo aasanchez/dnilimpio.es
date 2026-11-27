@@ -98,7 +98,7 @@ test('front only: the editor has one side and only front fields, and the PDF has
   await expect(page.locator('label:has(#review-confirm)')).toHaveText('He revisado el anverso')
   await page.locator('#review-confirm').check()
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
-  expect(download.suggestedFilename()).toBe('protected-document.pdf')
+  expect(download.suggestedFilename()).toBe('redacted-dni.pdf')
   const text = readFileSync(await download.path()).toString('latin1')
   expect(text.startsWith('%PDF-')).toBe(true)
   expect(text).toMatch(/\/Count 1\b/)

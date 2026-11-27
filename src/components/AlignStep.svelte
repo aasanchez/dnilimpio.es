@@ -6,7 +6,7 @@
   import { defaultQuad, rotateQuad } from '../geometry/quad-edit.ts'
   import { t, type Lang } from '../i18n/index.ts'
   import type { AlignState } from '../ui/align-state.ts'
-  import { resetSide } from '../ui/align-state.ts'
+  import { leaveSide, resetSide } from '../ui/align-state.ts'
   import { cornerEditor, type CornerEditor } from '../ui/corner-editor.ts'
   import { warpBitmap } from '../ui/warp-bitmap.ts'
   import { findCorners } from '../detect/corners.ts'
@@ -129,8 +129,9 @@
    */
   function switchTo (s: Side): void {
     if (s === side) return
-    if (touched && valid) save()
-    onSide(s, touched ? valid : aligned[side])
+    const leave = leaveSide(touched, valid, aligned[side])
+    if (leave.save) save()
+    onSide(s, leave.done)
   }
 </script>
 
