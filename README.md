@@ -657,6 +657,7 @@ show the current state.
 | Fields to hide, live preview, hand-adjustable cover boxes | Done |
 | Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
 | Keyboard use: the whole flow without a mouse, visible focus, focus never lost or hidden | Done |
+| Automatic accessibility scan of every screen (axe-core, ADR 0042) | Done |
 | Smart field finding with on-device OCR (self-hosted, loaded on first use) | Done |
 | OCR engine PP-OCRv6 tiny; document detection from the front's printed text | Done |
 | Fit to the text: cover boxes of the ticked fields grow to the words OCR finds | Done |
@@ -799,6 +800,7 @@ Every spec runs in Chromium. The specs marked **(all browsers)** also run in Fir
 | `privacy-notice` | Exact privacy wording (processing on the device, no upload), no accept step, 4-day memory, blocked storage, translations, audit prompt (short, asks to disprove the claims, checks the live site), 80 % of the screen width on phone, tablet and desktop |
 | `keyboard` | Keyboard only, in Spanish and in Arabic (right to left): the whole flow from Start to the PDF with Tab, Enter, Space and the arrow keys (file chooser, document choice, fields, a box, the watermark, the corners, confirm and download); each new screen focuses its heading; every control shows a focus ring; no focused control hides behind the sticky bars or the notice, on a phone and a wide screen; focus stays on a control after the last photo, Download, Delete, Undo, Redo and Remove the back; Escape closes the card guide and returns focus |
 | `prerender` | The served HTML holds the Spanish start screen as text, with no script or style; without JavaScript it shows in Spanish; the app replaces it (one heading, one Start button that works) in a Spanish and an English browser; before the app starts, the copy takes no focus |
+| `a11y` | axe-core scan ([ADR 0042](docs/adr/0042-axe-accessibility-scan.md)) of every screen, from the start screen and its dialogs to the review and the thanks page, in Spanish and Arabic, on a wide screen in light mode and a phone in dark mode: no serious or critical finding against WCAG 2.2 A and AA and axe's best practices |
 | `layout` | Phone: one column, main button in a sticky bar at the bottom, no sideways scroll. Wide screen: card on the left, tools and main button on the right, steps in the top bar |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `seo` | The served HTML already holds the Spanish title, description and link preview tags; the preview image exists; `robots.txt` and `sitemap.xml` are real files with the site address; one canonical address; a language change updates title, description and preview text |
@@ -1149,6 +1151,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0035](docs/adr/0035-no-network-error-logging.md): no Network Error Logging; every file turns NEL off, Cloudflare's NEL and `Report-To` headers are off in the zone settings, and the post-deploy check fails if they come back.
 - [0036](docs/adr/0036-visual-regression-in-pinned-container.md): screenshot tests of key phone screens in Spanish and Arabic run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual`, so the baselines match on every machine.
 - [0041](docs/adr/0041-prerendered-start-screen.md): the build renders the Spanish start screen from `App.svelte` into `index.html`, inert until the app replaces it, so crawlers without JavaScript read it and the heading paints before any script; no font preload, because measurements showed it slows the first paint.
+- [0042](docs/adr/0042-axe-accessibility-scan.md): an axe-core scan of every screen, in Spanish and Arabic, on a phone and a wide screen, fails CI on any serious or critical accessibility finding. axe is a dev dependency and runs only in tests.
 
 ## Contributing
 
