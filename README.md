@@ -674,6 +674,7 @@ show the current state.
 | Stricter CSP while photos are in the page; service worker check on the photo step | Done |
 | Custom domain `dnitapado.es`, HTTPS enforced; one host, the old address redirects | Done |
 | Security headers from the host (Cloudflare Workers): CSP with `frame-ancestors`, HSTS, Permissions-Policy, COOP, worker CSPs | Done |
+| Search metadata: title and description in every language, link preview image, canonical address, `robots.txt`, `sitemap.xml` | Done |
 | Languages: 31 in the specification | 13 today |
 
 ## Development
@@ -751,6 +752,7 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | Property tests | `redaction.property`, `geometry.property`, `pdf.property` | Generated inputs, hundreds per property: manual boxes stay on the card; zones to pixels cover the whole rectangle and add less than a pixel; every pixel a mask touches, plus its margin, is opaque black and the rest of the photo is unchanged; after a watermark every masked pixel is still black, and a canvas that leaves one pixel grey is caught; every hidden field of every document, side and box placement exports black; homography corners, round trips and degenerate quads; the warp reads the card only from inside its corners; the PDF layout for any image size; no metadata from any JPEG segment reaches the PDF |
 | Audit prompt | `audit-prompt` | Every file the prompt names exists, its list of stats fields is the list the thanks page sends, in order, and it stays short and asks for findings, not a verdict |
 | Editor redraws | `redraw` | One render per animation frame, only the side on screen, only when its choices changed; every changed side rendered at once before the review; a failed render is retried; nothing runs after the editor closes |
+| Search metadata | `seo` | Site address checks, escaped static head with no script or style, title and description length, Open Graph locale for every language, `robots.txt` and sitemap (hreflang alternates, escaping), crawl files not cached by the service worker |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
 | Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns, 429 above the rate limit with one key for all senders), the service worker route open only to the thanks page |
@@ -786,6 +788,7 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | `privacy-notice` | Exact privacy wording (processing on the device, no upload), no accept step, 4-day memory, blocked storage, translations, audit prompt (short, asks to disprove the claims, checks the live site), 80 % of the screen width on phone, tablet and desktop |
 | `layout` | Phone: one column, main button in a sticky bar at the bottom, no sideways scroll. Wide screen: card on the left, tools and main button on the right, steps in the top bar |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
+| `seo` | The served HTML already holds the Spanish title, description and link preview tags; the preview image exists; `robots.txt` and `sitemap.xml` are real files with the site address; one canonical address; a language change updates title, description and preview text |
 | `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, release version linked to its GitHub Release, build SHA and relative deploy time (also offline) |
 
 ## Continuous integration
@@ -922,6 +925,20 @@ Cloudflare zone settings that the repository cannot set, and that `smoke` checks
 
 To redeploy without a new commit, run the **CI** workflow on `master` from the Actions tab.
 
+**Search engines.** The build writes what search engines and link previews read
+([`src/seo/site.ts`](src/seo/site.ts), `searchFiles` in [`scripts/vite-plugins.ts`](scripts/vite-plugins.ts)):
+
+- the start page's title, description and Open Graph tags, in Spanish from `es.json`. The page
+  replaces them with the visitor's language, and adds one canonical address
+  ([`src/seo/head.ts`](src/seo/head.ts));
+- `robots.txt` and `sitemap.xml`;
+- the preview image `icons/og-image.png`, drawn from a synthetic card by
+  [`scripts/make-og-image.ts`](scripts/make-og-image.ts).
+
+These need absolute URLs, so the build takes the site's address from `SITE_URL` (default
+`https://dnitapado.es/`). A fork sets its own. The app's own URLs stay relative. The service worker
+does not cache these files: only crawlers read them.
+
 Do not re-run the old **pages build and deployment** workflow if it appears in the Actions tab. It
 publishes the raw, unbuilt source of an old commit.
 
@@ -950,6 +967,9 @@ dnitapado.es on 27 November 2026. They are kept here for a new account or a fork
    the first deploy with the opt-in stats. The first send creates the dataset `dnitapado_usage`.
    To query it, create an API token with **Account Analytics: Read** and use the SQL API (example
    query under [Usage stats (opt-in)](#usage-stats-opt-in)).
+6. Redirect `www` to the bare domain, so search engines see one site: in the zone, **Rules >
+   Redirect Rules**, create a rule for the hostname `www.dnitapado.es` with a dynamic redirect to
+   `concat("https://dnitapado.es", http.request.uri.path)`, status 301, query string kept.
 
 Visit counts are in the Cloudflare dashboard, under the zone's **Analytics** (requests, unique
 visitors, countries). See [Visit counts](#visit-counts).

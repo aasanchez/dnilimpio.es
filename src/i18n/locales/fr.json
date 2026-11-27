@@ -233,5 +233,7 @@
   "findFailed": "La recherche automatique n'a pas fonctionné cette fois. Masquez les données à la main.",
   "framed": "Pour votre sécurité, cet outil ne fonctionne que dans son propre onglet. Ouvrez-le ici.",
   "guideOpen": "Qu'y a-t-il sur ma carte ?",
-  "guideAbout": "À propos : {field}"
+  "guideAbout": "À propos : {field}",
+  "seoTitle": "Masquer les données du DNI et ajouter un filigrane",
+  "seoDescription": "Masquez les données de votre DNI ou TIE espagnol et ajoutez un filigrane avant d'en envoyer une copie. Gratuit, sans inscription. Le document est traité sur votre appareil."
 }
