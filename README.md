@@ -57,9 +57,8 @@ some of the data. This tool makes a copy that shows only what you choose:
 6. **Convert to black and white** (optional).
 7. **Review** the result and **download a PDF**: `protected-document.pdf`, one A4 page. Each side is printed at 130% of the real card size
    (about 111 × 70 mm); with both sides, the front is on top and the back below.
-8. **Download or share it**: **Share and clear** opens your device's share sheet with the PDF, where
-   you pick WhatsApp, Telegram, Gmail, Mail or another app. The app never sends anything. Either
-   button then clears everything and opens a thanks page that holds no document.
+8. **Download or share it**: **Share** opens your device's share sheet with the PDF, where you pick
+   WhatsApp, Telegram, Gmail, Mail or another app. The app never sends anything.
 
 ![A synthetic card with the watermark: one large diagonal text (before) and the small repeated rows the app draws (after)](docs/images/watermark-before-after.jpg)
 
@@ -226,19 +225,18 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
      **Text size** (50 % to 300 %) and **Opacity** (5 % to 100 %, default 16 %) apply live; at 100 %
      the text is solid black. **Convert to black and white** is here too.
 6. **Download or share.** Check the final images (one per side) and the summary, tick **I have
-   checked both sides** (or **I have checked the front**), then press **Share and clear** or
-   **Download and clear**. **Share and clear** appears only where the browser can share files (most
-   phones, Safari on macOS, Chrome on Windows and ChromeOS). It opens the system share sheet with
-   `protected-document.pdf`: you pick WhatsApp, Telegram, Gmail, Mail or another app, and the person.
-   A shared PDF is not saved to your downloads folder. If you close the share sheet, nothing is
-   cleared and you stay on the review. **Download and clear** saves `protected-document.pdf`, waits
-   1.5 seconds so the browser can take the file, then clears.
-7. **Thanks page (optional stats).** Once the PDF has left, the app removes the photos and all your
-   choices from the page and opens a thanks page that holds no document. There is no separate done
-   screen. Closing the tab clears everything too. The thanks page shows, line by line, the exact anonymous figures it could
-   send: document type, whether the AI got it right, which fields you covered, and your device type.
-   Nothing is sent unless you tap **Send anonymous stats**. **Start again** returns to the start
-   screen. See [Usage stats (opt-in)](#usage-stats-opt-in).
+   checked both sides** (or **I have checked the front**), then press **Share** or **Download PDF**.
+   **Share** appears only where the browser can share files (most phones, Safari on macOS, Chrome on
+   Windows and ChromeOS). It opens the system share sheet with `protected-document.pdf`: you pick
+   WhatsApp, Telegram, Gmail, Mail or another app, and the person. A shared PDF is not saved to your
+   downloads folder. **Download PDF** saves `protected-document.pdf`. You stay on the review, so you
+   can download or share again. **Start again** or closing the tab clears everything.
+7. **Optional: send anonymous data.** Once the PDF is downloaded or shared, a small **Send anonymous
+   data** link appears below the buttons. It clears the photos and opens a separate page that holds
+   no document. That page shows, line by line, the exact anonymous figures it could send: document
+   type, whether the AI got it right, which fields you covered, and your device type. Nothing is
+   sent unless you tap **Send anonymous stats**; the button then says **Thank you!**. **Start
+   again** returns to the start screen. See [Usage stats (opt-in)](#usage-stats-opt-in).
 
 ## Privacy and security
 
@@ -302,16 +300,16 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 
   To remove them, clear the site's data in the browser settings. A test
   checks that cookies and storage hold nothing else after a whole workflow.
-- **Clearing means everything.** **Download and clear**, **Share and clear** and **Start again**
-  drop the photos and every choice, stop the OCR worker, which keeps the last image it read, and
-  revoke the PDF's download link if it is still open. Leaving the page (another site, closing the tab, a reload) does the same, so the
+- **Clearing means everything.** **Start again** and **Send anonymous data** drop the photos and
+  every choice, stop the OCR worker, which keeps the last image it read, and revoke the PDF's
+  download link if it is still open. Leaving the page (another site, closing the tab, a reload) does the same, so the
   browser's back-forward cache keeps no document. Links that leave the app (source code, card guide
   sources, NagWara) open in a new tab for that reason.
 - **Memory is cleared as far as a page can.** Each screen shrinks its canvases to 0 × 0 pixels when
   it closes. Temporary copies of the photo (scaled copies, grey copies for the upside-down check and
   edge detection, the model's input, camera frames) are overwritten with zeros right after use, also
   when a step fails. The PDF kept for sharing is dropped when you leave the review, and its download
-  link is revoked when the app clears itself, 1.5 seconds after **Download and clear**. Work still running for old
+  link is revoked after 10 seconds or at once when the app clears. Work still running for old
   photos (straightening, corner finding, OCR, the PDF) checks that its screen is still open, so a
   late result never brings a cleared document back ([`src/engine/wipe.ts`](src/engine/wipe.ts),
   [`tests/e2e/cleanup.spec.ts`](tests/e2e/cleanup.spec.ts)).
@@ -406,11 +404,11 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **No browser rule can stop a page from navigating to a URL.** The protection there is that only
   this build's verified code runs (CSP, SRI, the locked dependency list) and that the code never
   navigates with your data (enforced by the linter).
-- **Sharing is your choice.** **Share and clear** hands the PDF to the app you pick through the system share
+- **Sharing is your choice.** **Share** hands the PDF to the app you pick through the system share
   sheet (Web Share API, on the device), with a title and no text or link. What that app does with it
   is outside the tool. The page itself still sends nothing (`connect-src 'none'`). The PDF is built
   when you tick the check box, so the share sheet opens within your tap; it stays in memory only
-  until you leave the review. After a share, the app clears everything.
+  until you leave the review.
 - **Memory is released, not securely erased.** JavaScript cannot erase memory securely. Zeroing a
   buffer overwrites that buffer only; the browser, the graphics driver and the operating system may
   keep other copies (the decoded photo, GPU textures, the file you chose, swap or a crash report).
@@ -444,7 +442,7 @@ The site has no analytics code: no script, no frame, no tracking pixel and no co
 The app can send anonymous usage figures, only when you ask, and only after your document is gone
 ([ADR 0029](docs/adr/0029-opt-in-usage-stats.md)).
 
-- **When.** **Download and clear** or **Share and clear** on the review screen clears the photos and your choices, then opens
+- **When.** **Send anonymous data**, a small link on the review screen once the PDF has left, clears the photos and your choices, then opens
   `thanks.html`. That is a separate page: it never holds a photo and loads none of the image, AI or
   PDF code. It shows the exact text it would send. It sends it once, only when you tap **Send
   anonymous stats**. Offline, the button is off.
@@ -541,7 +539,7 @@ You do not have to trust the claims above. Each one can be checked.
 
 1. Open the browser's developer tools, **Network** tab, before you select a photo.
 2. Use the tool to the end. The only requests are the page's own files, all from the same origin.
-   No request goes to another site. After **Download and clear**, the thanks page sends one `POST` to
+   No request goes to another site. After **Send anonymous data**, the stats page sends one `POST` to
    `/stats`, and only if you tap **Send anonymous stats**; its body is the text the page shows. The first time you
    select a photo, the page also downloads the corner model (`assets/ml/`), and the first time OCR
    runs, the OCR files (`ocr/`), both from the same origin. These are plain downloads of the app's
@@ -744,7 +742,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `privacy` | A whole workflow sends no request and stores nothing. Canaries from the card text (OCR), the photos' file names and the watermark never appear in any request's address, headers or body, from the first visit on, nor as text in the PDF |
 | `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused by the host and, without headers, by the page, photos dropped on `pagehide` |
 | `headers` | The host's headers: page CSP equal to the `<meta>` CSP plus `frame-ancestors`, the worker CSPs, HSTS, Permissions-Policy (camera on; microphone, location, clipboard reading off), no COEP |
-| `stats` | Download and clear opens the photo-free thanks page; nothing is sent before the tap; the text sent is the text shown; its own CSP; the app page still cannot connect to `/stats`, with and without the service worker; a changed fragment shows nothing to send; offline and error states; Arabic layout |
+| `stats` | The small Send anonymous data link opens the photo-free stats page; nothing is sent before the tap; the text sent is the text shown; its own CSP; the app page still cannot connect to `/stats`, with and without the service worker; a changed fragment shows nothing to send; offline and error states; Arabic layout |
 | `cleanup` | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
 | `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
 | `offline` | Full flow to the PDF offline, also with the front alone, deny-by-default service worker, page headers added next to the host's CSP, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
@@ -752,13 +750,13 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `update` | An idle tab switches to a new build, with other idle windows too; a tab with photos or a busy window holds it back; a window that cannot answer brings **Update now**, which applies it; a busy window keeps its photos and reloads back on the start screen; a page that leaves the start screen while the others answer keeps its photos; an open thanks page does not hold the update back |
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks, and skipping the back from it |
 | `file-checks` | File picker, camera input, drag and drop and paste all refuse a file by content (not by name or MIME type), over 25 MB, or over 50 MP (a decompression bomb), with a translated message; HEIC where the browser cannot decode it |
-| `front-only` | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, then the thanks page, adding the back later |
+| `front-only` | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, the stats link, adding the back later |
 | `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, TIE when detection finds no answer, offline note with nothing preselected |
 | `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard, corners saved when you switch side |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases; smart field finding |
 | `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
-| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, then the thanks page that says where the PDF is, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), reset |
-| `share` | Share and clear only where files can be shared; the share sheet gets the PDF within the click, with no text or link, then the app clears and opens the thanks page; closing the sheet clears nothing; a failed share; Download and clear saves the whole PDF before it clears |
+| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, the review stays after the download with the small stats link, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), reset |
+| `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; closing the sheet; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
 | `privacy-notice` | Exact privacy wording (processing on the device, no upload), no accept step, 4-day memory, blocked storage, translations, audit prompt, 80 % of the screen width on phone, tablet and desktop |
@@ -978,7 +976,7 @@ Every deploy from `master` is a release with a [semantic version](https://semver
 ```text
 src/
   main.ts            removes WebRTC, refuses framing, mounts the app, registers the service worker
-  thanks/            the photo-free thanks page after Download and clear or Share and clear: shows and, on a tap, sends the opt-in stats
+  thanks/            the photo-free stats page after Send anonymous data: shows and, on a tap, sends the opt-in stats
   stats/             the fixed list of opt-in usage stats, device classes, session figures, the one send
   sw.ts              service worker: verified offline cache, deny by default, page headers
   App.svelte         screen flow, brand, clearing on pagehide
@@ -1040,7 +1038,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0026](docs/adr/0026-recheck-cache-hits.md): the service worker hashes every cache hit again before it answers; a rewritten entry is deleted and downloaded again, or refused offline.
 - [0027](docs/adr/0027-security-headers-from-the-host.md): security headers from the host; dnitapado.es on Cloudflare Workers with a generated `_headers` file, the only host, no COEP; no analytics code, the host counts requests; nothing deployed to GitHub Pages.
 - [0028](docs/adr/0028-tie-fallback.md): TIE is preselected when detection reads the photos but cannot tell the document; without detection nothing is preselected; you can change it.
-- [0029](docs/adr/0029-opt-in-usage-stats.md): opt-in anonymous usage stats; "Download and clear" or "Share and clear" opens a photo-free thanks page that shows the exact figures and sends them only on a tap; fixed list, Worker on `/stats` only, Workers Analytics Engine, no IP stored; the app page still has `connect-src 'none'`.
+- [0029](docs/adr/0029-opt-in-usage-stats.md): opt-in anonymous usage stats; a small "Send anonymous data" link opens a photo-free thanks page that shows the exact figures and sends them only on a tap; fixed list, Worker on `/stats` only, Workers Analytics Engine, no IP stored; the app page still has `connect-src 'none'`.
 - [0030](docs/adr/0030-update-with-other-windows-open.md): a new version takes over when every open window is idle, or when the person presses Update now; a frozen tab no longer blocks updates.
 - [0031](docs/adr/0031-photo-file-checks.md): photos are checked before decoding: JPEG, PNG, WebP or HEIC by their first bytes, at most 25 MB and 50 megapixels from the header, on every way in.
 - [0032](docs/adr/0032-semver-releases.md): every deploy from `master` is a release: the patch goes up by one from the latest tag, major and minor are set by hand with a tag, the tag and GitHub Release are created after the deploy, and the footer shows the version.

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The session part of the opt-in usage stats (ADR 0029), built from the app's state when the person
-// presses "Clear everything". Only ids, yes/no answers and small counts: nothing read from the
+// taps "Send anonymous data". Only ids, yes/no answers and small counts: nothing read from the
 // document, no position, no text (not even the watermark's).
 
 import { choiceOf, type DocChoice } from '../zones/documents.ts'
