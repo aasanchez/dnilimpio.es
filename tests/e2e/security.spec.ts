@@ -163,7 +163,18 @@ test.describe('hardening (security audit of 2026-11-25)', () => {
     }))).toEqual({ peer: 'undefined', webkit: 'undefined', channel: 'undefined', camera: 'function' })
   })
 
-  test('inside another page\'s frame the app does not start, it only links to itself', async ({ page, baseURL }) => {
+  test('the host refuses to show the app inside another page\'s frame (frame-ancestors, ADR 0027)', async ({ page, baseURL }) => {
+    await page.setContent(`<iframe src="${baseURL ?? ''}" width="800" height="600"></iframe>`)
+    await expect.poll(() => page.frames()[1]?.url()).toMatch(/^chrome-error:/)
+    await expect(page.frameLocator('iframe').locator('h1')).toHaveCount(0)
+  })
+
+  test('on a host without headers (GitHub Pages), inside a frame the app does not start, it only links to itself', async ({ page, context, baseURL }) => {
+    // The GitHub Pages copy sends no frame-ancestors: only the page's own check stops it there.
+    await context.route(baseURL ?? '', async (route) => {
+      const res = await route.fetch()
+      await route.fulfill({ status: res.status(), headers: { 'content-type': 'text/html; charset=utf-8' }, body: await res.body() })
+    })
     await page.setContent(`<iframe src="${baseURL ?? ''}" width="800" height="600"></iframe>`)
     const frame = page.frameLocator('iframe')
     await expect(frame.locator('#app a[target="_blank"]')).toHaveText(/solo funciona en su propia pestaña/)

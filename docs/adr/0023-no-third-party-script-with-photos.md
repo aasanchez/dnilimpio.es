@@ -58,9 +58,10 @@ Options considered:
 
 ## Consequences
 
-- Visit counts come only from the isolated frame of [ADR 0024](0024-visit-counter-in-isolated-frame.md).
+- Visit counts came only from the isolated frame of [ADR 0024](0024-visit-counter-in-isolated-frame.md).
+  [ADR 0027](0027-security-headers-from-the-host.md) removed that frame: the host counts requests.
 - The page can send nothing to anyone. Its only requests are the site's own files.
 - The README and the AI audit prompt no longer describe an analytics exception in the app's page;
-  they describe the counter frame of ADR 0024 instead.
+  they described the counter frame of ADR 0024 until ADR 0027 removed it.
 - Adding any third-party script to the page again needs a new ADR and the owner's approval, and it
   breaks `tests/e2e/third-party.spec.ts`.

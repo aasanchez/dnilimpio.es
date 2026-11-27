@@ -53,6 +53,14 @@ jobs:
         run: pnpm audit --json > audit.json || test "$?" -eq 1
       - name: Report
         run: node scripts/deps-report.ts audit audit.json "$AUDIT_LEVEL"
+      # The deploy tool (wrangler, deploy/) has its own lockfile; only the CI deploy job installs it.
+      - name: pnpm audit (deploy tool)
+        if: ${{ !cancelled() }}
+        working-directory: deploy
+        run: pnpm audit --json > ../audit-deploy.json || test "$?" -eq 1
+      - name: Report (deploy tool)
+        if: ${{ !cancelled() }}
+        run: node scripts/deps-report.ts audit audit-deploy.json "$AUDIT_LEVEL"
 
   outdated:
     runs-on: ubuntu-24.04

@@ -7,7 +7,7 @@ import svelte from 'eslint-plugin-svelte'
 import svelteConfig from './svelte.config.js'
 
 export default tseslint.config(
-  { ignores: ['dist/', 'coverage/', 'test-results/', 'playwright-report/'] },
+  { ignores: ['dist/', 'coverage/', 'test-results/', 'playwright-report/', '.wrangler/', 'deploy/node_modules/'] },
   ...neostandard({ ts: true, noJsx: true, filesTs: ['**/*.ts', '**/*.svelte'] }),
   ...tseslint.configs.strictTypeChecked,
   ...svelte.configs.recommended,
@@ -69,6 +69,23 @@ export default tseslint.config(
     // this build's files, so nothing can leave the device from it.
     files: ['src/ocr/worker.ts'],
     rules: { 'no-restricted-globals': ['error', ...['localStorage', 'sessionStorage', 'indexedDB', 'openDatabase', 'caches', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'WebTransport', 'RTCPeerConnection', 'webkitRTCPeerConnection'].map((name) => ({ name, message: 'Only fetch() of ocr/ files is allowed here.' }))] },
+  },
+  {
+    // Opt-in usage stats (ADR 0029). The thanks page sends them with one fetch() to its own origin,
+    // only when the person taps Send; it never holds a photo. Storage stays banned here.
+    files: ['src/stats/send.ts'],
+    rules: { 'no-restricted-globals': ['error', ...['localStorage', 'sessionStorage', 'indexedDB', 'openDatabase', 'caches', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'WebTransport', 'RTCPeerConnection', 'webkitRTCPeerConnection'].map((name) => ({ name, message: 'Only the one fetch() of the opt-in stats is allowed here.' }))] },
+  },
+  {
+    // "Clear everything" opens the thanks page. The address is built only by thanksHref() from the
+    // fixed stats list, and its data is in the fragment, which no browser sends to a server.
+    files: ['src/stats/thanks-link.ts'],
+    rules: { 'no-restricted-syntax': 'off' },
+  },
+  {
+    // The Cloudflare Worker (ADR 0029) runs on the host, not in the page: it never sees a photo.
+    files: ['worker/**/*.ts'],
+    rules: { 'no-restricted-globals': 'off' },
   },
   {
     // The one exception to "nothing persists": the date the no-cookies notice was last closed

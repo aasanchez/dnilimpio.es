@@ -11,8 +11,8 @@
 //   can rewrite Cache Storage, so a hit counts only if its bytes still match the manifest. A mismatch
 //   is deleted and the same fixed URL is downloaded again with its integrity (or refused offline).
 //   Every other request from the page or its workers (OCR) is refused and never reaches the
-//   network: another origin, another path, a query string, a method other than GET (route()). There is
-//   no exception (ADR 0023).
+//   network: another origin, another path, a query string, a method other than GET (route()). The one
+//   exception is the opt-in usage stats, sent only by the photo-free thanks page (ADR 0029).
 // - Activate: deletes the caches of older builds. A new build activates once no tab runs the old
 //   one, or earlier when an idle page asks for it ('activate' message) and every other window of the
 //   app answers that it is idle too, or when the person presses "Update now" (src/offline/takeover.ts).
@@ -20,7 +20,7 @@
 // The build (scripts/vite-plugins.ts) replaces the manifest placeholder below with the file list.
 
 import { ANSWER_TIMEOUT_MS, mayTakeOver, type WindowAnswer } from './offline/takeover.ts'
-import { CACHE_PREFIX, WORKER_SCRIPTS, cacheName, parseManifest, route, sriOf, workerCsp } from './offline/precache.ts'
+import { CACHE_PREFIX, WORKER_SCRIPTS, addPageHeaders, cacheName, parseManifest, route, sriOf, workerCsp } from './offline/precache.ts'
 
 const sw = self as unknown as ServiceWorkerGlobalScope
 
@@ -37,30 +37,16 @@ const FILES = new Map(manifest.files.map((f): [string, BuildFile] => [urlOf(f.pa
 const KNOWN = { files: new Set(FILES.keys()), onDemand: new Set(ON_DEMAND.keys()) }
 const WORKERS = new Set(WORKER_SCRIPTS.map(urlOf))
 
+/** index.html with PAGE_HEADERS added to the host's headers (addPageHeaders()). */
+function withPageHeaders (res: Response): Response {
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: addPageHeaders(res.headers) })
+}
+
 /**
  * The worker scripts get their own CSP header (workerCsp()): a Web Worker takes its policy from its
  * script's response, not from the page. The OCR engine never runs without this worker (ocr.ts), so
  * the policy always applies. The cached copy stays unchanged; only the response given out carries it.
  */
-/**
- * Headers GitHub Pages cannot send, added to every page load the worker answers. frame-ancestors only
- * works as a header (a <meta> CSP ignores it): no same-site page may show the app in a frame. A frame
- * on another site gets its own, partitioned worker registration, so it never sees these headers; there
- * the page's own check refuses to start the app (src/security/lockdown.ts), as on a first visit.
- */
-const PAGE_HEADERS: Readonly<Record<string, string>> = {
-  'Content-Security-Policy': "frame-ancestors 'none'",
-  'X-Frame-Options': 'DENY',
-  'X-Content-Type-Options': 'nosniff',
-  'Referrer-Policy': 'no-referrer',
-}
-
-function withPageHeaders (res: Response): Response {
-  const headers = new Headers(res.headers)
-  for (const [k, v] of Object.entries(PAGE_HEADERS)) headers.set(k, v)
-  return new Response(res.body, { status: res.status, statusText: res.statusText, headers })
-}
-
 function withWorkerCsp (url: string, res: Response): Response {
   if (!WORKERS.has(url)) return res
   const headers = new Headers(res.headers)
@@ -212,15 +198,21 @@ sw.addEventListener('message', (event) => {
 
 sw.addEventListener('fetch', (event) => {
   const req = event.request
-  const to = route(req.method, req.url, req.mode, sw.registration.scope, KNOWN)
   event.respondWith((async () => {
+    // Who sent it matters only for a POST: the one allowed is the thanks page's stats (route()).
+    const client = req.method === 'POST' && event.clientId !== '' ? await sw.clients.get(event.clientId) : undefined
+    const to = route(req.method, req.url, req.mode, sw.registration.scope, KNOWN, client?.url ?? '')
     switch (to.kind) {
       case 'deny':
         // A network error, as if the request had been blocked: nothing is sent.
         return Response.error()
+      case 'stats':
+        // The opt-in stats of the thanks page (ADR 0029), as the page sent them, without cookies.
+        return await fetch(req, { credentials: 'omit' })
       case 'on-demand':
         return withWorkerCsp(to.url, await ensureOnDemand(to.url))
       case 'index':
+      case 'thanks':
       case 'file': {
         const url = to.kind === 'index' ? INDEX : to.url
         const file = FILES.get(url)
@@ -229,7 +221,7 @@ sw.addEventListener('fetch', (event) => {
         // against its hash. Offline, that fails, and the request gets a network error.
         const cache = await caches.open(CACHE)
         const res = await verifiedHit(cache, file.url, file.integrity) ?? await download(cache, file.url, file.integrity)
-        return to.kind === 'index' ? withPageHeaders(res) : res
+        return to.kind === 'file' ? res : withPageHeaders(res)
       }
     }
   })())
