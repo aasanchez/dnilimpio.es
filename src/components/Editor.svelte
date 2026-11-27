@@ -35,8 +35,8 @@
     phase: Phase
     onAdjust: (side: Side) => void
     onReset: () => void
-    /** After "Download and clear" or "Share and clear" (Review.svelte): clear, then open the thanks page. */
-    onFinish: (delay?: number) => void
+    /** "Send anonymous data" on the review screen, once the PDF has left (Review.svelte). */
+    onFinish: () => void
     /** Called after the phase changes, so the shell can move focus to the new heading. */
     onPhase: () => void
     /** Opens the card guide on this field's entry. */

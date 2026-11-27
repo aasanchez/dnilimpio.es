@@ -4,8 +4,8 @@
 - Status: accepted
 - Date: 2026-11-27
 - Decided by: Alexis
-- Updated 2026-11-27 (Alexis): the done screen is gone. "Download and clear" and "Share and clear"
-  on the review screen open the thanks page (point 1).
+- Updated 2026-11-27 (Alexis): no done screen. A small "Send anonymous data" link on the review
+  screen opens the page, once the PDF has left (point 1). After a send, the button says thank you.
 
 ## Context
 
@@ -33,15 +33,14 @@ Options considered:
 3. **Send on "Start again" by navigation:** no CSP change, but no confirmation for the person, and no
    data from people who close the tab.
 4. **Local only:** show the stats with copy and email buttons. Very little data would reach us.
-5. **"Clear everything", then a separate thanks page that sends on opt-in.** Chosen.
+5. **Clear the photos, then a separate thanks page that sends on opt-in.** Chosen.
 
 ## Decision
 
-1. **"Download and clear" and "Share and clear" on the review screen** (`#download`,
-   `#share-file`) take the session's figures once the PDF has left, clear everything (as Reset does),
-   then open `thanks.html`. A download waits `DOWNLOAD_HANDOFF_MS` (1.5 s) first, so the browser can
-   read the file; a closed share sheet clears nothing. (Until this update, a separate done screen had
-   a "Clear everything" button, `#reset-done`.) The figures travel in the address fragment
+1. **"Send anonymous data"** (`#stats-link`), a small link below Download and Share on the review
+   screen, appears once the PDF has been downloaded or shared. It takes the session's figures,
+   clears everything (as Reset does), then opens `thanks.html`. Download and Share clear nothing.
+   (Before this update, a done screen had a "Clear everything" button, `#reset-done`.) The figures travel in the address fragment
    (after `#`), which browsers never send to a server (`src/stats/thanks-link.ts`).
 2. **`thanks.html` is a page of its own.** It is a new document, so it never holds a photo. It loads
    none of the app's image, AI or PDF code: only Svelte, the translations, the stats list and its own

@@ -104,9 +104,10 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
     expect(text).not.toContain(forbidden)
   }
   await expect(page.locator('#download-status')).toHaveText('PDF creado. Búscalo en tu carpeta de descargas.')
-  // No done screen: the app clears itself and opens the thanks page, which says where the PDF is.
-  await expect(page.locator('#thanks-title')).toHaveText('Tu documento ya no está aquí')
-  await expect(page.getByText('Tu PDF está en tu carpeta de descargas o en la app con la que lo compartiste.')).toBeVisible()
+  // No done screen: the review stays, with the small link to the optional stats below the buttons.
+  await expect(page.locator('#review-title')).toBeVisible()
+  await expect(page.locator('#stats-link')).toHaveText('Enviar datos anónimos')
+  await expect(page.locator('#stats-link-hint')).toHaveText('Abre una página sin tu documento. Las fotos se borran de la app.')
 
   const [front, back] = jpegs(pdf)
   if (!front || !back) throw new Error('expected two images')

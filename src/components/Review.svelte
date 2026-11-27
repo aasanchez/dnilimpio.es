@@ -1,15 +1,14 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Review before download (spec §17): final sanitised images, summary, warning, explicit confirmation.
-     Then "Download and clear", or "Share and clear" where the browser can share files: the system
-     share sheet gets the PDF on the device, and the user picks the app (WhatsApp, Telegram, Gmail,
-     Mail…) and the person. The app never sends the PDF. Once the PDF has left, everything is cleared
-     and the photo-free thanks page opens (onFinish, ADR 0029): there is no separate done screen. -->
+     Then Download, or Share where the browser can share files: the system share sheet gets the PDF
+     on the device, and the user picks the app (WhatsApp, Telegram, Gmail, Mail…) and the person.
+     The app never sends the PDF. The person stays on the review. Once the PDF has left, a small link
+     offers the optional anonymous stats: it opens the photo-free stats page (onFinish, ADR 0029). -->
 <script lang="ts">
   import { saveFile } from '../engine/render.ts'
   import { loadExport } from '../engine/load-export.ts'
   import { normaliseWatermark } from '../engine/watermark.ts'
   import { shrink } from '../engine/wipe.ts'
-  import { DOWNLOAD_HANDOFF_MS } from '../engine/downloads.ts'
   import { t, tf, type Lang } from '../i18n/index.ts'
   import type { Side } from '../zones/dni.ts'
 
@@ -23,17 +22,19 @@
     watermark: string
     greyscale: boolean
     onReset: () => void
-    /** Once the PDF is saved or shared: clears everything and opens the thanks page (ADR 0029), after `delay` ms. */
-    onFinish: (delay?: number) => void
+    /** "Send anonymous data", once the PDF has left: clears the photos and opens the stats page (ADR 0029). */
+    onFinish: () => void
   } = $props()
 
   let confirmed = $state(false)
   let busy = $state(false)
-  /** 'downloaded': the PDF was handed to the browser, and the app clears itself in a moment. */
-  let status = $state<'idle' | 'downloaded' | 'error'>('idle')
+  /** How the PDF left the review: saved to the downloads folder or handed to the share sheet. */
+  let status = $state<'idle' | 'downloaded' | 'shared' | 'error'>('idle')
   let shareStatus = $state<'idle' | 'error'>('idle')
   /** The PDF, kept in memory only for this review; dropped when the review closes. */
   let pdf: File | null = null
+  /** The PDF was downloaded or shared at least once: the stats link appears. */
+  let left = $state(false)
   let pending: Promise<File> | null = null
   const mark = $derived(normaliseWatermark(watermark))
   /** The back photo was skipped: the copy has the front only. */
@@ -93,12 +94,10 @@
       if (!mounted) return
       saveFile(file, file.name)
       status = 'downloaded'
-      // The browser reads the download link a moment after the click (Safari's download prompt
-      // later still); opening the thanks page ends this document and its link. The buttons stay off.
-      // The shell keeps the timer, so leaving the review meanwhile still clears everything.
-      onFinish(DOWNLOAD_HANDOFF_MS)
+      left = true
     } catch {
       status = 'error'
+    } finally {
       busy = false
     }
   }
@@ -114,11 +113,12 @@
       const file = pdf ?? await makePdf()
       if (!mounted) return
       await navigator.share({ files: [file], title: t(lang, 'shareSubject') })
-      // The share sheet has handed the file to the app the person chose: clear now.
-      onFinish()
+      status = 'shared'
+      left = true
     } catch (e) {
-      // Closing the share sheet is not an error: the review stays, nothing is cleared.
+      // Closing the share sheet is not an error.
       if (!(e instanceof DOMException && e.name === 'AbortError')) shareStatus = 'error'
+    } finally {
       busy = false
     }
   }
@@ -148,7 +148,7 @@
     </ul>
     <p class="notice-warn" id="review-warning">{t(lang, oneSide ? 'reviewWarningFront' : 'reviewWarning')}</p>
     <label class="flex min-h-14.5 items-center gap-3 rounded-lg border-2 border-ink bg-surface px-3.5 py-2.5 has-checked:bg-sunk"><input type="checkbox" class="check" id="review-confirm" bind:checked={confirmed} /> {t(lang, oneSide ? 'reviewConfirmFront' : 'reviewConfirm')}</label>
-    <p class={status === 'error' ? 'notice-warn' : 'lead'} id="download-status" role={status === 'error' ? 'alert' : 'status'}>{status === 'error' ? t(lang, 'errExport') : status === 'downloaded' ? t(lang, 'downloaded') : ''}</p>
+    <p class={status === 'error' ? 'notice-warn' : 'lead empty:hidden'} id="download-status" role={status === 'error' ? 'alert' : 'status'}>{status === 'error' ? t(lang, 'errExport') : status === 'downloaded' ? t(lang, 'downloaded') : status === 'shared' ? t(lang, 'shared') : ''}</p>
     <button type="button" class="link-button" id="reset-review" onclick={onReset}>{t(lang, 'reset')}</button>
   </div>
 
@@ -156,13 +156,18 @@
     {#if shareStatus === 'error'}<p class="notice-warn" id="share-error" role="alert">{t(lang, 'errShare')}</p>{/if}
     <div class="flex flex-col gap-2.5 lg:flex-row lg:*:flex-1">
       {#if shareable}
-        <button type="button" class="button primary" id="share-file" disabled={!confirmed || busy} onclick={share}>{@render shareIcon()}{t(lang, 'shareClear')}</button>
+        <button type="button" class="button primary" id="share-file" disabled={!confirmed || busy} onclick={share}>{@render shareIcon()}{t(lang, 'shareFile')}</button>
       {/if}
       <button type="button" class={shareable ? 'button' : 'button primary'} id="download" disabled={!confirmed || busy} onclick={download}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
-        {t(lang, 'downloadClear')}
+        {t(lang, 'downloadPdf')}
       </button>
     </div>
+    {#if left}
+      <!-- Optional, small, only once the PDF has left: opening the stats page clears the photos. -->
+      <button type="button" class="link-button -mb-2" id="stats-link" onclick={onFinish}>{t(lang, 'statsLink')}</button>
+      <p class="hint" id="stats-link-hint">{t(lang, 'statsLinkHint')}</p>
+    {/if}
   </div>
 </section>
 

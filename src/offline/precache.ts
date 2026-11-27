@@ -17,7 +17,7 @@ export const cacheName = (version: string): string => `${CACHE_PREFIX}${version}
 export const SW_FILE = 'sw.js'
 
 /**
- * The thanks page (ADR 0029): the photo-free page the app opens after "Clear everything". It is the
+ * The thanks page (ADR 0029): the photo-free page the app opens from "Send anonymous data". It is the
  * only page that may send anything: the opt-in usage stats, to STATS_ENDPOINT.
  */
 export const THANKS_PAGE = 'thanks.html'
