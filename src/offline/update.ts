@@ -19,48 +19,58 @@
 // applies the new build at once. A window that is busy keeps its page and its photos, and reloads
 // into the new build when it is back on the start screen.
 
-let idle = false
+import { INITIAL_STATE, idleAnswer, step, wasActivated, type Facts, type UpdateEvent } from './update-rules.ts'
+
+// The decisions are in update-rules.ts (pure, unit-tested). This file connects them to the browser.
+
+let state = INITIAL_STATE
 let registration: ServiceWorkerRegistration | undefined
-let reloading = false
-/** Another window applied the new build while this page was busy: reload once it is idle. */
-let reloadWhenIdle = false
-/** The waiting build did not take over by itself: the start screen offers "Update now". */
-let ready = false
-let lastCheck = 0
 
 const listeners = new Set<() => void>()
 
-/** Minimum time between update checks triggered by the tab becoming visible again. */
-const CHECK_INTERVAL_MS = 15 * 60 * 1000
-
-function setReady (value: boolean): void {
-  if (ready === value) return
-  ready = value
-  for (const l of listeners) l()
-}
-
-function reload (): void {
-  if (reloading) return
-  reloading = true
-  location.reload()
-}
-
-/** Asks a waiting new build to take over, if the page is idle. */
-function offer (): void {
-  const waiting = registration?.waiting
-  if (!idle || !waiting || navigator.serviceWorker.controller === null) return
-  const channel = new MessageChannel()
-  channel.port1.onmessage = (e: MessageEvent<unknown>) => {
-    if ((e.data as { activated?: unknown } | null)?.activated === true) return
-    // Another window is busy or did not answer: the new build waits, and the person may apply it.
-    if (registration?.waiting === waiting) setReady(true)
+function facts (): Facts {
+  return {
+    waiting: registration?.waiting != null,
+    controlled: registration !== undefined && navigator.serviceWorker.controller !== null,
   }
-  waiting.postMessage({ type: 'activate' }, [channel.port2])
+}
+
+/** Feeds one event to the rules and carries out what they decide. */
+function dispatch (event: UpdateEvent): void {
+  const before = state.ready
+  const result = step(state, event, facts())
+  state = result.state
+  if (state.ready !== before) for (const l of listeners) l()
+  for (const effect of result.effects) run(effect)
+}
+
+function run (effect: 'offer' | 'force' | 'reload' | 'check'): void {
+  const reg = registration
+  switch (effect) {
+    case 'reload':
+      location.reload()
+      return
+    case 'check':
+      void reg?.update().catch(() => undefined)
+      return
+    case 'force':
+      reg?.waiting?.postMessage({ type: 'activate', force: true })
+      return
+    case 'offer': {
+      const waiting = reg?.waiting
+      if (!waiting) return
+      const channel = new MessageChannel()
+      channel.port1.onmessage = (e: MessageEvent<unknown>) => {
+        dispatch({ type: 'answer', activated: wasActivated(e.data), stillWaiting: registration?.waiting === waiting })
+      }
+      waiting.postMessage({ type: 'activate' }, [channel.port2])
+    }
+  }
 }
 
 /** True when a new build is ready and waits for the person ("Update now" on the start screen). */
 export function updateReady (): boolean {
-  return ready
+  return state.ready
 }
 
 /** Calls fn whenever updateReady() changes. Returns a function that stops it. */
@@ -71,17 +81,12 @@ export function onUpdateReady (fn: () => void): () => void {
 
 /** The person pressed "Update now": the waiting build takes over at once, and this page reloads. */
 export function applyUpdate (): void {
-  const waiting = registration?.waiting
-  if (!waiting) { setReady(false); return }
-  waiting.postMessage({ type: 'activate', force: true })
+  dispatch({ type: 'apply' })
 }
 
 /** The app tells whether it is idle: start screen with no photos. */
 export function setAppIdle (value: boolean): void {
-  idle = value
-  if (!idle) return
-  if (reloadWhenIdle) reload()
-  else offer()
+  dispatch({ type: 'idle', idle: value })
 }
 
 /** Starts watching for new builds. Call once, after the service worker is registered. */
@@ -92,7 +97,8 @@ export async function watchForUpdates (): Promise<void> {
   // A waiting new build asks each window whether it is idle before it takes over (sw.ts).
   sw.addEventListener('message', (e: MessageEvent<unknown>) => {
     const port = e.ports[0]
-    if ((e.data as { type?: unknown } | null)?.type === 'idle?' && port) port.postMessage({ idle })
+    const answer = idleAnswer(e.data, state.idle)
+    if (answer && port) port.postMessage(answer)
   })
   sw.startMessages()
 
@@ -100,35 +106,21 @@ export async function watchForUpdates (): Promise<void> {
   if (registration === undefined) return
   const reg = registration
 
-  // The new build took over: show it. The first worker taking control of a page that had none (first
-  // visit) is the same build: no reload then. A page that is busy now is never reloaded, even if it
-  // asked for the switch: a reload would drop its photos (pagehide). It keeps its page as it is and
-  // reloads when it is back on the start screen. Until then, a part it had not loaded yet may be
-  // missing (the new build deleted the old build's files); AI parts fall back to the manual path.
-  let hadController = sw.controller !== null
-  sw.addEventListener('controllerchange', () => {
-    if (!hadController) { hadController = true; return }
-    setReady(false)
-    if (idle) reload()
-    else reloadWhenIdle = true
-  })
+  // The new build took over: show it, unless the page is busy (update-rules.ts).
+  sw.addEventListener('controllerchange', () => { dispatch({ type: 'controllerchange' }) })
 
   reg.addEventListener('updatefound', () => {
     const worker = reg.installing
     worker?.addEventListener('statechange', () => {
-      if (worker.state === 'installed') offer()
+      if (worker.state === 'installed') dispatch({ type: 'installed' })
     })
   })
 
   // A tab left open for hours: look for a new build when it comes back to the foreground. A build
   // that is already waiting (held back earlier by another window) is offered again.
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return
-    offer()
-    if (Date.now() - lastCheck < CHECK_INTERVAL_MS) return
-    lastCheck = Date.now()
-    void reg.update().catch(() => undefined)
+    if (document.visibilityState === 'visible') dispatch({ type: 'visible', now: Date.now() })
   })
 
-  offer()
+  dispatch({ type: 'watch' })
 }

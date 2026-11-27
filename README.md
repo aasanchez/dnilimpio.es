@@ -342,7 +342,8 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   window of the tool is on the start screen with no photos, they switch to the new version and reload
   once. A tab with photos keeps its version until it returns to the start screen. When another window
   cannot answer (a tab or the installed app frozen in the background), the start screen shows
-  **Update now** instead ([`src/offline/update.ts`](src/offline/update.ts),
+  **Update now** instead ([`src/offline/update.ts`](src/offline/update.ts), rules in
+  [`src/offline/update-rules.ts`](src/offline/update-rules.ts),
   [ADR 0030](docs/adr/0030-update-with-other-windows-open.md)).
 - **Camera stays on the device.** The live camera (capture coach) is analysed frame by frame in
   memory. No frame is stored or sent, and the camera turns off when you close the view, finish both
@@ -747,6 +748,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
 | Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns, 429 above the rate limit with one key for all senders), the service worker route open only to the thanks page |
+| App updates | `update-rules` | An idle page offers a waiting build and reloads once into it; a busy page is never reloaded and reloads back on the start screen; no reload on the first visit; "Update now" when another window holds the build back, which forces it; an update check at most every 15 minutes when the tab comes back; the answer to "idle?" (also from the thanks page) |
 | Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `notice-memory`, `install`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal, frame guard and frame check, the photo step's policy (built from the page, added once, fonts loaded first with a time limit) and the service worker check, the notice's one stored date (4 days, blocked storage), iPhone and iPad detection and installed mode for the install link, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off:
