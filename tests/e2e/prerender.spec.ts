@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Prerendered start screen (ADR 0040): the served index.html already holds the Spanish start screen,
+// Prerendered start screen (ADR 0041): the served index.html already holds the Spanish start screen,
 // for search engines, link previews and a first paint before any script runs. The live app replaces
 // it on start; it is never doubled, and it never answers a tap.
 import { readFileSync } from 'node:fs'

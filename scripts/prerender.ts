@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Prerendered start screen (ADR 0040). At build time the app's own App.svelte is rendered once, in
+// Prerendered start screen (ADR 0041). At build time the app's own App.svelte is rendered once, in
 // Spanish, to plain HTML, and that HTML goes inside <main id="app"> in dist/index.html. Search
 // engines and link previews that run no JavaScript then read the real start screen, and the browser
 // paints the heading before any script runs. src/main.ts clears it and mounts the live app.
