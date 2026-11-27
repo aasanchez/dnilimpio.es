@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Offline support (spec phase 2): after one visit the whole app, including the PDF code loaded on
 // demand, works with the network off. Service workers are on here (blocked in the other specs).
+import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { adjustFront, fixture, loadBoth, openCapture, toEditor } from './helpers.ts'
 
@@ -40,6 +41,23 @@ test('works offline after one visit, through to the PDF download', async ({ page
   await page.locator('#download').click()
   expect((await download).suggestedFilename()).toBe('protected-document.pdf')
   expect(violations).toEqual([])
+})
+
+test('works offline with the front alone (the back is optional), through to a one-page PDF', async ({ page, context }) => {
+  await page.goto('/')
+  await offlineReady(page)
+  await context.setOffline(true)
+  await page.reload()
+  await openCapture(page)
+  await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
+  await page.locator('#capture-skip-back').click()
+  await page.locator('#doc-dni').check()
+  await page.locator('#doc-continue').click()
+  await expect(page.locator('#front-only')).toBeVisible()
+  await page.locator('#review').click()
+  await page.locator('#review-confirm').check()
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
+  expect(readFileSync(await download.path()).toString('latin1')).toMatch(/\/Count 1\b/)
 })
 
 test('the card guide opens offline, in another language too', async ({ page, context }) => {

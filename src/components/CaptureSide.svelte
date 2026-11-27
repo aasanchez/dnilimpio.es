@@ -5,9 +5,11 @@
   import type { Side } from '../zones/dni.ts'
   import GhostCard from './GhostCard.svelte'
 
-  let { lang, side, loaded, isCurrent, message, isError, onSelect, zone = $bindable() }: {
+  let { lang, side, optional = false, loaded, isCurrent, message, isError, onSelect, zone = $bindable() }: {
     lang: Lang
     side: Side
+    /** The back photo is optional: its tile says so instead of "to do". */
+    optional?: boolean
     loaded: boolean
     isCurrent: boolean
     /** Status for screen readers: loaded, or the decode error. */
@@ -17,7 +19,7 @@
     zone?: HTMLElement | undefined
   } = $props()
 
-  const progress = $derived(loaded ? t(lang, 'statusReady') : isCurrent ? t(lang, 'statusNow') : t(lang, 'statusPending'))
+  const progress = $derived(loaded ? t(lang, 'statusReady') : isCurrent ? t(lang, 'statusNow') : t(lang, optional ? 'statusOptional' : 'statusPending'))
 </script>
 
 <div class="dropzone" class:is-current={isCurrent} class:is-done={loaded} bind:this={zone}>

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { defaultHidden, fieldsOf, hasField, masksFor, mrzLeaks, placeZones, sideRects, zoneKey } from '../../src/engine/fields.ts'
+import { defaultHidden, fieldsOf, fieldsOn, hasField, masksFor, mrzLeaks, placeZones, sideRects, zoneKey } from '../../src/engine/fields.ts'
 import { DOCUMENTS } from '../../src/zones/documents.ts'
 import { TIE } from '../../src/zones/tie.ts'
 import { DNI_4_0, type ZoneId } from '../../src/zones/dni.ts'
@@ -30,6 +30,21 @@ describe('fields', () => {
     const noMrz = { ...DNI_4_0, zones: DNI_4_0.zones.filter((z) => z.id !== 'mrz') }
     expect(hasField(noMrz, 'mrz')).toBe(false)
     expect(mrzLeaks(noMrz, new Set<ZoneId>(['dateOfBirth', 'supportNumber']))).toBe(false)
+  })
+  it('with the front alone, lists only front fields and never warns about the MRZ on the back', () => {
+    const front = fieldsOn(DNI_4_0, ['front'])
+    expect(front.map((f) => f.id)).not.toContain('mrz')
+    expect(front.map((f) => f.id)).not.toContain('address')
+    // A field printed on both sides lists only the side in use.
+    expect(front.find((f) => f.id === 'supportNumber')?.sides).toEqual(['front'])
+    expect(fieldsOn(DNI_4_0, ['front', 'back'])).toEqual(fieldsOf(DNI_4_0))
+    expect(hasField(DNI_4_0, 'mrz', ['front'])).toBe(false)
+    expect(hasField(DNI_4_0, 'can', ['front'])).toBe(true)
+    expect(mrzLeaks(DNI_4_0, new Set<ZoneId>(['dateOfBirth']), ['front'])).toBe(false)
+    expect(mrzLeaks(DNI_4_0, new Set<ZoneId>(['dateOfBirth']), ['front', 'back'])).toBe(true)
+  })
+  it.each(DOCUMENTS.map((d) => [d.model, d] as const))('%s has front fields to hide by default, for a front-only copy', (_, d) => {
+    expect(fieldsOn(d, ['front']).filter((f) => f.hiddenByDefault).length).toBeGreaterThan(0)
   })
   it.each(DOCUMENTS.map((d) => [d.model, d] as const))('%s hides data by default and keeps every field togglable', (_, d) => {
     const hidden = defaultHidden(d)

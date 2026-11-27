@@ -15,12 +15,14 @@
   import GhostCard from './GhostCard.svelte'
   import SideBadge from './SideBadge.svelte'
 
-  const { lang, side, onShot, onClose, onFail }: {
+  const { lang, side, onShot, onClose, onFail, onSkip }: {
     lang: Lang
     side: Side
     onShot: (bitmap: ImageBitmap) => void
     onClose: () => void
     onFail: (reason: CameraFailure) => void
+    /** Set when the front is in and the back is not: closes the camera and goes on without the back. */
+    onSkip?: (() => void) | undefined
   } = $props()
 
   /** Analysis frames: about 8 per second, 480 px on the long side. */
@@ -195,5 +197,9 @@
     <button type="button" class="col-start-2 row-start-1 size-18 rounded-full border-4 border-cream bg-orange shadow-[inset_0_0_0_3px_var(--color-coal)] focus-visible:outline-cream disabled:cursor-not-allowed disabled:opacity-40" id="live-shutter" disabled={!size || busy} onclick={() => { void shoot() }}>
       <span class="sr-only">{t(lang, 'liveShutter')}</span>
     </button>
+    {#if onSkip && side === 'back'}
+      <!-- The back is optional: go on with the front alone. -->
+      <button type="button" class="chip col-start-3 row-start-1 min-h-11 justify-self-end border-cream text-center whitespace-normal text-cream" id="live-skip-back" onclick={onSkip}>{t(lang, 'skipBack')}</button>
+    {/if}
   </div>
 </dialog>

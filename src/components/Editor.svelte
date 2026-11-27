@@ -3,7 +3,7 @@
      and download (Review.svelte). The editor owns the sanitised rasters that both screens show. -->
 <script lang="ts">
   import { untrack } from 'svelte'
-  import { defaultHidden, fieldsOf, hasField, masksFor, mrzLeaks, placeZones, sideRects } from '../engine/fields.ts'
+  import { fieldsOn, hasField, masksFor, mrzLeaks, placeZones, sideRects } from '../engine/fields.ts'
   import { renderSecure } from '../engine/render.ts'
   import { canRedo, canUndo, commit, redo, undo } from '../engine/history.ts'
   import { HANDLES, centredBox, fromPoints, grow, handlePoint, hitTest, isUsable, move, resize, type Handle, type Point } from '../engine/masks.ts'
@@ -41,7 +41,6 @@
   } = $props()
 
   type Tool = 'fields' | 'boxes' | 'mark'
-  const SIDES = ['front', 'back'] as const
   const TOOLS: ReadonlyArray<{ id: Tool; key: Key }> = [
     { id: 'fields', key: 'toolFields' },
     { id: 'boxes', key: 'toolBoxes' },
@@ -49,10 +48,20 @@
   ]
   // The shell re-creates the editor for another document, so these never change while it is mounted.
   const model = untrack(() => doc)
-  const fields = fieldsOf(model)
-  const recommended = [...defaultHidden(model)]
+  /**
+   * The sides with a straightened card, front first. The back is optional: with the front alone, the
+   * editor, the review and the PDF have one side. The shell re-creates the editor when this changes.
+   */
+  const SIDES = untrack(() => (['front', 'back'] as const).filter((s) => align.warped[s] !== null))
+  const fields = fieldsOn(model, SIDES)
+  const fieldIds = new Set(fields.map((f) => f.id))
+  const recommended = fields.filter((f) => f.hiddenByDefault).map((f) => f.id)
   const docName = $derived(t(lang, `doc_${model.model}`))
-  const hidden = $derived(new Set<ZoneId>(edit.hidden))
+  /**
+   * Hidden fields on the sides in use. `edit.hidden` keeps choices for a side left out (a back-only
+   * field stays ticked), so they apply again if the back photo is added later.
+   */
+  const hidden = $derived(new Set<ZoneId>(edit.hidden.filter((id) => fieldIds.has(id))))
   let side = $state<Side>('front')
   let tool = $state<Tool>('fields')
   const sideFields = $derived(fields.filter((f) => f.sides.includes(side)))
@@ -301,6 +310,14 @@
 
   const fieldKey = (id: ZoneId): Key => `field_${id}`
 
+  /**
+   * A preset (Recommended, Hide all, Show all) for the fields on the sides in use. Choices for a side
+   * left out (a skipped back) stay as they are, so adding the back later keeps its protection.
+   */
+  function setHere (ids: readonly ZoneId[]): void {
+    edit.hidden = [...edit.hidden.filter((id) => !fieldIds.has(id)), ...ids]
+  }
+
   function toggle (id: ZoneId, on: boolean): void {
     edit.hidden = on ? [...new Set([...edit.hidden, id])] : edit.hidden.filter((x) => x !== id)
   }
@@ -417,11 +434,16 @@
         <h2>{t(lang, 'hideTitle')}</h2>
         <span class="count font-mono text-xs text-muted" id="hidden-count">{tf(lang, 'hiddenCount', { hidden: hidden.size, total: fields.length })}</span>
       </div>
-      <div class="segmented" role="group" aria-label={t(lang, 'sides')}>
-        {#each SIDES as s (s)}
-          <button type="button" id="tab-{s}" aria-pressed={side === s} onclick={() => { side = s; selected = null; selectedZone = null }}>{sideName(s)}</button>
-        {/each}
-      </div>
+      {#if SIDES.length > 1}
+        <div class="segmented" role="group" aria-label={t(lang, 'sides')}>
+          {#each SIDES as s (s)}
+            <button type="button" id="tab-{s}" aria-pressed={side === s} onclick={() => { side = s; selected = null; selectedZone = null }}>{sideName(s)}</button>
+          {/each}
+        </div>
+      {:else}
+        <!-- The back photo was skipped: one side only, so no side tabs. -->
+        <p class="hint" id="front-only">{t(lang, 'frontOnly')}</p>
+      {/if}
     </div>
 
     <div class="area-stage flex flex-col gap-3">
@@ -454,9 +476,9 @@
 
       <div class="flex flex-col gap-3" id="panel-fields" role="tabpanel" aria-labelledby="tool-fields" hidden={tool !== 'fields'}>
         <div class="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none]" role="group" aria-label={t(lang, 'presets')}>
-          <button type="button" class="chip" id="preset-recommended" aria-pressed={sameSet(edit.hidden, recommended)} onclick={() => { edit.hidden = [...recommended] }}>{t(lang, 'presetRecommended')}</button>
-          <button type="button" class="chip" id="hide-all" aria-pressed={hidden.size === fields.length} onclick={() => { edit.hidden = fields.map((f) => f.id) }}>{t(lang, 'hideAll')}</button>
-          <button type="button" class="chip" id="restore-all" aria-pressed={hidden.size === 0} onclick={() => { edit.hidden = [] }}>{t(lang, 'restoreAll')}</button>
+          <button type="button" class="chip" id="preset-recommended" aria-pressed={sameSet([...hidden], recommended)} onclick={() => { setHere(recommended) }}>{t(lang, 'presetRecommended')}</button>
+          <button type="button" class="chip" id="hide-all" aria-pressed={hidden.size === fields.length} onclick={() => { setHere(fields.map((f) => f.id)) }}>{t(lang, 'hideAll')}</button>
+          <button type="button" class="chip" id="restore-all" aria-pressed={hidden.size === 0} onclick={() => { setHere([]) }}>{t(lang, 'restoreAll')}</button>
         </div>
         <ul class="rows" aria-label={t(lang, 'fieldsToHide')}>
           {#each sideFields as f (f.id)}
@@ -478,8 +500,8 @@
           {/each}
         </ul>
         <div aria-live="polite" class="flex flex-col gap-3 empty:hidden">
-          {#if hasField(model, 'can') && !hidden.has('can')}<p class="notice-warn" id="can-warning">{t(lang, 'canWarning')}</p>{/if}
-          {#if mrzLeaks(model, hidden)}<p class="notice-warn" id="mrz-warning">{t(lang, 'mrzWarning')}</p>{/if}
+          {#if hasField(model, 'can', SIDES) && !hidden.has('can')}<p class="notice-warn" id="can-warning">{t(lang, 'canWarning')}</p>{/if}
+          {#if mrzLeaks(model, hidden, SIDES)}<p class="notice-warn" id="mrz-warning">{t(lang, 'mrzWarning')}</p>{/if}
         </div>
         <p class="hint">{tf(lang, 'positionsHint', { doc: docName })}</p>
         {#if isDni(model.model)}
@@ -588,6 +610,6 @@
     </div>
   </section>
 {:else}
-  <Review {lang} {secure} {phase} hiddenCount={hidden.size} boxCount={edit.boxes.present.front.length + edit.boxes.present.back.length} watermark={edit.watermark} greyscale={edit.greyscale}
+  <Review {lang} {secure} sides={SIDES} {phase} hiddenCount={hidden.size} boxCount={SIDES.reduce((n, s) => n + edit.boxes.present[s].length, 0)} watermark={edit.watermark} greyscale={edit.greyscale}
     onDone={() => { setPhase('done') }} {onReset} />
 {/if}
