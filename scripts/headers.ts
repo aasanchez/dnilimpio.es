@@ -3,7 +3,7 @@
 // file next to the site's files. On a host that sends no headers (a fork, a local copy) the <meta>
 // CSP and the service worker's PAGE_HEADERS remain the only policy (fallback).
 //
-//   node scripts/headers.ts <dist dir>    writes <dist dir>/_headers for the build in that folder
+//   node scripts/headers.ts <dist dir>    writes <dist dir>/_headers and _redirects for that build
 //
 // The file is written at deploy time only, not by `pnpm build`: the tested, attested `dist` artifact
 // stays exactly the files that are served, and `_headers` is never itself a page of the site.
@@ -14,6 +14,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { THANKS_CSP, cspWithScriptHashes } from './csp.ts'
 import { SECURITY_HEADERS, SW_FILE, THANKS_PAGE, WORKER_SCRIPTS } from '../src/offline/precache.ts'
+import { LANGS } from '../src/i18n/langs.ts'
 
 /** One rule of the `_headers` file: a path, headers it removes (set by an earlier rule), headers it adds. */
 export interface HeaderRule {
@@ -24,6 +25,33 @@ export interface HeaderRule {
 
 /** The file the host reads its headers from. */
 export const HEADERS_FILE = '_headers'
+
+/** The file the host reads its redirects from. Like `_headers`, written at deploy time, never served. */
+export const REDIRECTS_FILE = '_redirects'
+
+/**
+ * Redirects of the language addresses (ADR 0038), the same as languageRedirect() in the service
+ * worker: `/en/` to `/en` (no trailing slash, so the page's relative URLs point at the site's
+ * folder), and `/es`, `/es/` to `/`, the Spanish address. Permanent, so search engines keep one URL.
+ */
+export function redirectsFile (): string {
+  const lines = ['/es / 301', '/es/ / 301']
+  for (const lang of LANGS) {
+    if (lang === 'es') continue
+    const seg = lang.toLowerCase()
+    lines.push(`/${seg}/ /${seg} 301`)
+  }
+  return `${lines.join('\n')}\n`
+}
+
+/** Where the host redirects `path` (`_redirects`, exact match), or null. For the preview server and tests. */
+export function redirectFor (path: string): string | null {
+  for (const line of redirectsFile().trim().split('\n')) {
+    const [from, to] = line.split(' ')
+    if (from === path && to !== undefined) return to
+  }
+  return null
+}
 
 /** Sent with every file: HSTS and the security headers the service worker also sets (SECURITY_HEADERS). */
 export const COMMON_HEADERS: Readonly<Record<string, string>> = {
@@ -154,4 +182,6 @@ if (import.meta.main) {
   const rules = hostHeaderRules(readFileSync(join(dist, 'index.html'), 'utf8'))
   writeFileSync(join(dist, HEADERS_FILE), renderHeadersFile(rules))
   console.log(`Wrote ${join(dist, HEADERS_FILE)} (${String(rules.length)} rules).`)
+  writeFileSync(join(dist, REDIRECTS_FILE), redirectsFile())
+  console.log(`Wrote ${join(dist, REDIRECTS_FILE)}.`)
 }

@@ -27,7 +27,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { cspWithScriptHashes } from './csp.ts'
-import { HEADERS_FILE, cookiesSetBy, headersFor, hostHeaderRules, reportingProblems } from './headers.ts'
+import { HEADERS_FILE, REDIRECTS_FILE, cookiesSetBy, headersFor, hostHeaderRules, reportingProblems } from './headers.ts'
 import { STATS_ENDPOINT, SW_FILE, THANKS_PAGE, WORKER_SCRIPTS, parseManifest } from '../src/offline/precache.ts'
 
 const [siteArg = '', expectedSha = '', distDir] = process.argv.slice(2)
@@ -135,8 +135,8 @@ async function check (): Promise<string> {
 
   // Byte for byte against the artifact CI built.
   if (distDir !== undefined) {
-    // `_headers` is read by the host, never served (scripts/headers.ts).
-    const paths = listFiles(distDir).filter((p) => !p.startsWith('.') && p !== HEADERS_FILE)
+    // `_headers` and `_redirects` are read by the host, never served (scripts/headers.ts).
+    const paths = listFiles(distDir).filter((p) => !p.startsWith('.') && p !== HEADERS_FILE && p !== REDIRECTS_FILE)
     const diff = await each(paths, async (p) => {
       const served = p === 'index.html' ? html.bytes : (await get(p === SW_FILE ? fresh(p) : new URL(p, site))).bytes
       if (sha384(served) !== sha384(readFileSync(join(distDir, p)))) throw new Error(`${p}: differs from the CI build`)

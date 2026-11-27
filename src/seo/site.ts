@@ -7,7 +7,7 @@
 // need absolute URLs in a sitemap, robots.txt and og:image. The app itself keeps relative URLs, so
 // the same build still works under a subpath (CLAUDE.md rule 6); a fork sets SITE_URL to its address.
 
-import type { Lang } from '../i18n/index.ts'
+import { LANGS, type Lang } from '../i18n/langs.ts'
 
 /** The product name. Not translated: it is the brand and the domain. */
 export const BRAND = 'DNI Tapado.es'
@@ -73,6 +73,8 @@ export function staticHead (site: string, text: HeadText): string {
     `<meta property="og:image:width" content="${String(OG_IMAGE_SIZE.width)}" />`,
     `<meta property="og:image:height" content="${String(OG_IMAGE_SIZE.height)}" />`,
     '<meta name="twitter:card" content="summary_large_image" />',
+    // The same list on every language version (ADR 0038), so it can live in the static HTML.
+    ...hreflangAlternates(site).map((a) => `<link rel="alternate" hreflang="${escapeAttr(a.hreflang)}" href="${escapeAttr(a.href)}" />`),
   ].join('\n    ')
 }
 
@@ -97,5 +99,29 @@ export function sitemapXml (urls: readonly SitemapUrl[]): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${body}\n</urlset>\n`
 }
 
-/** Canonical address of the start page. */
-export const canonicalUrl = (site: string): string => site
+/**
+ * The start page's address in `lang` (ADR 0038): the site address for Spanish, `<site><tag>` in
+ * lowercase for every other language (src/i18n/url.ts). Each language version is its own canonical page.
+ */
+export const langUrl = (site: string, lang: Lang): string => lang === 'es' ? site : `${site}${lang.toLowerCase()}`
+
+/** Canonical address of the start page in `lang`: itself, so search engines keep every language. */
+export const canonicalUrl = (site: string, lang: Lang): string => langUrl(site, lang)
+
+/**
+ * Languages listed as hreflang alternates. Search engines accept a language and a region, not the
+ * variant subtag of `ca-ES-valencia`, so Valencian keeps its address but is not listed: it would be
+ * read as an error or as Catalan.
+ */
+export const HREFLANG_LANGS: readonly Lang[] = LANGS.filter((l) => l !== 'ca-ES-valencia')
+
+/** The start page's language versions as hreflang alternates, plus x-default: the Spanish address. */
+export function hreflangAlternates (site: string): ReadonlyArray<{ readonly hreflang: string; readonly href: string }> {
+  return [...HREFLANG_LANGS.map((l) => ({ hreflang: l, href: langUrl(site, l) })), { hreflang: 'x-default', href: site }]
+}
+
+/** Sitemap entries of the start page: one per language, each listing every alternate. */
+export function startPageSitemap (site: string): SitemapUrl[] {
+  const alternates = hreflangAlternates(site)
+  return LANGS.map((l) => ({ loc: langUrl(site, l), alternates: HREFLANG_LANGS.includes(l) ? alternates : [] }))
+}

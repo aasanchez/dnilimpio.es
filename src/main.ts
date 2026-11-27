@@ -10,12 +10,13 @@ import { watchForUpdates } from './offline/update.ts'
 import { watchInstall } from './offline/install.ts'
 import { installTrustedTypesPolicy } from './security/trusted-types.ts'
 import { loadAllFonts } from './security/intake-lockdown.ts'
-import { loadLang, pickLang, t } from './i18n/index.ts'
+import { loadLang, t } from './i18n/index.ts'
+import { startLang } from './i18n/url.ts'
 import { revealFocus } from './ui/focus-rescue.ts'
 
 /** Inside another page's frame the app does not start: it only offers to open itself in a tab. */
 function showFramed (target: HTMLElement): void {
-  const lang = pickLang(navigator.languages)
+  const lang = startLang(location.href)
   const p = document.createElement('p')
   const a = document.createElement('a')
   a.href = location.href
@@ -38,9 +39,9 @@ revealFocus()
 // Before mounting: Chromium can offer installation as soon as the page loads (offline/install.ts).
 watchInstall()
 
-// The browser's language, before the first render (the start page holds Spanish only). Waits at most
-// a few seconds; on a failure the page starts in Spanish.
-await loadLang(pickLang(navigator.languages))
+// The address's language (/en, ADR 0038), before the first render (the start page holds Spanish
+// only). Waits at most a few seconds; on a failure the page starts in Spanish.
+await loadLang(startLang(location.href))
 
 const target = document.getElementById('app')
 if (target && isFramed(window)) showFramed(target)
