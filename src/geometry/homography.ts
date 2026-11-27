@@ -35,8 +35,26 @@ export function solve (a: number[][], b: number[]): number[] | null {
   return x
 }
 
-/** Homography H with H·src[i] ≅ dst[i]. Null if three of the points are collinear. */
+/**
+ * True if three of the four corners lie on one line (or two coincide). The test is relative to the
+ * quad's size: points that are collinear in exact maths rarely are in floating point, and an absolute
+ * threshold would let them through for photo-sized coordinates.
+ */
+export function hasCollinearCorners (q: Quad): boolean {
+  let span = 0
+  for (const a of q) for (const b of q) span = Math.max(span, (a.x - b.x) ** 2 + (a.y - b.y) ** 2)
+  if (!(span > 0)) return true
+  for (let skip = 0; skip < 4; skip++) {
+    const [a, b, c] = q.filter((_, i) => i !== skip) as [Point, Point, Point]
+    const cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
+    if (Math.abs(cross) <= 1e-9 * span) return true
+  }
+  return false
+}
+
+/** Homography H with H·src[i] ≅ dst[i]. Null if three of the points of either quad are collinear. */
 export function homography (src: Quad, dst: Quad): Mat3 | null {
+  if (hasCollinearCorners(src) || hasCollinearCorners(dst)) return null
   const a: number[][] = []
   const b: number[] = []
   for (let i = 0; i < 4; i++) {
