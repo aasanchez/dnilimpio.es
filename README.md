@@ -727,16 +727,22 @@ Runtime dependencies, all bundled and served from this site:
 
 Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm build`).
 
+The property tests draw their inputs from a seeded generator ([`tests/unit/property.ts`](tests/unit/property.ts)),
+so every run checks the same cases. A failure prints its seed and the command that repeats it. To try
+new cases, run `PROPERTY_SEED=random pnpm test tests/unit/redaction.property.test.ts`; to run more
+cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
+
 **Unit** ([`tests/unit/`](tests/unit/), Vitest):
 
 | Area | Files | What is checked |
 |---|---|---|
 | Capture | `input`, `decode`, `sniff`, `live`, `coach`, `capture-state` | Sides in use with an optional back, file picker and camera modes, type by first bytes (name and MIME type ignored, AVIF refused), size in pixels from JPEG, PNG, WebP and HEIC headers, size and pixel limits (decompression bomb), decode errors, live camera needs and failures, coach metrics (blur, light, framing) |
-| Geometry | `homography`, `quad-edit` | Homography round trips and degenerate quads, corner editing |
+| Geometry | `homography`, `quad-edit` | Homography round trips and degenerate quads (also collinear corners at photo scale), corner editing |
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type`, `doc-text` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates, document type from the front's printed text (accents, case and OCR misreads ignored) |
 | OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans`, `ocr-ask`, `ready-memo` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink, a silent service worker turns OCR off after a time limit (15 s to check the files, 3 minutes to download them), "OCR is ready" kept per service worker and asked again after an update or a failure |
 | Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black (also after the watermark, checked on the final pixels), Fit to the text (a box only grows, by at most half its size, and stays on the card) |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output |
+| Property tests | `redaction.property`, `geometry.property`, `pdf.property` | Generated inputs, hundreds per property: manual boxes stay on the card; zones to pixels cover the whole rectangle and add less than a pixel; every pixel a mask touches, plus its margin, is opaque black and the rest of the photo is unchanged; after a watermark every masked pixel is still black, and a canvas that leaves one pixel grey is caught; every hidden field of every document, side and box placement exports black; homography corners, round trips and degenerate quads; the warp reads the card only from inside its corners; the PDF layout for any image size; no metadata from any JPEG segment reaches the PDF |
 | Audit prompt | `audit-prompt` | Every file the prompt names exists, its list of stats fields is the list the thanks page sends, in order, and it stays short and asks for findings, not a verdict |
 | Editor redraws | `redraw` | One render per animation frame, only the side on screen, only when its choices changed; every changed side rendered at once before the review; a failed render is retried; nothing runs after the editor closes |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
