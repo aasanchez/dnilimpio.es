@@ -29,6 +29,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { cspWithScriptHashes } from './csp.ts'
 import { ARTICLE_CONTENT_TYPE, HEADERS_FILE, REDIRECTS_FILE, cookiesSetBy, headersFor, hostHeaderRules, reportingProblems } from './headers.ts'
+import { NOT_FOUND_FILE } from '../src/notfound/file.ts'
 import { GUIDE_PAGES, STATS_ENDPOINT, SW_FILE, THANKS_PAGE, LANGUAGE_SEGMENTS, WORKER_SCRIPTS, languagePage, parseManifest } from '../src/offline/precache.ts'
 import { INDEX_FILE, isArticlePage } from '../src/articles/paths.ts'
 
@@ -158,6 +159,21 @@ async function check (): Promise<string> {
       if (sha384((await get(new URL(seg, site))).bytes) !== file.integrity) throw new Error(`/${seg}: does not show ${languagePage(seg)}`)
     })
     if (wrong.length > 0) throw new Error(`language addresses are not served as built:\n  ${wrong.join('\n  ')}`)
+  }
+
+  // Not-found pages (ADR 0045): an unknown address gets status 404 and the not-found page of its
+  // nearest folder. Without `not_found_handling: "404-page"` the host sends an empty 404 instead.
+  if (checkHostHeaders) {
+    const probe = `smoke-${String(Date.now())}`
+    const cases = [['', NOT_FOUND_FILE], ['articles/', `articles/${NOT_FOUND_FILE}`], ['en/', `en/${NOT_FOUND_FILE}`], ['en/articles/', `en/articles/${NOT_FOUND_FILE}`]] as const
+    const wrong = await each(cases, async ([folder, page]) => {
+      const file = listed.find((f) => f.path === page)
+      if (file === undefined) throw new Error(`${page}: not in the ${SW_FILE} manifest`)
+      const res = await fetch(new URL(`${folder}${probe}`, site), { headers: { 'cache-control': 'no-cache' } })
+      if (res.status !== 404) throw new Error(`/${folder}${probe}: HTTP ${String(res.status)}, expected 404`)
+      if (sha384(Buffer.from(await res.arrayBuffer())) !== file.integrity) throw new Error(`/${folder}${probe}: does not show ${page}`)
+    })
+    if (wrong.length > 0) throw new Error(`unknown addresses are not answered with the not-found page:\n  ${wrong.join('\n  ')}`)
   }
 
   // Byte for byte against the artifact CI built.

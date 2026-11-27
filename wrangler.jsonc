@@ -16,8 +16,9 @@
     // Every file at its own path, with no redirect: the service worker downloads `index.html` by name,
     // and a page load must never be answered with a redirected response.
     "html_handling": "none",
-    // `/` (and any unknown path) answers with index.html, as GitHub Pages does for `/`.
-    "not_found_handling": "single-page-application"
+    // An unknown path gets the nearest `404.html` with status 404 (ADR 0045). `/` and each language's
+    // address show their page through `_redirects` (scripts/headers.ts).
+    "not_found_handling": "404-page"
   },
   // Opt-in usage stats (ADR 0029): one row per send, no IP address, no cookie.
   "analytics_engine_datasets": [

@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0039. Articles: Markdown written by the build into static pages with no script
 
-- Status: proposed
+- Status: proposed. Changed by [ADR 0045](0045-not-found-pages.md): an unknown address gets a not-found page with status 404.
 - Date: 2026-11-27
 - Decided by: Alexis
 
@@ -82,5 +82,6 @@ not every article exists in every language.
 - One more dev dependency, `marked`, pinned exactly. It runs only during the build.
 - An address in an articles folder that names no article gets the app's `index.html`, as any
   unknown address does. Its relative links do not work at that depth, so the page shows unstyled.
-  The host and the service worker behave the same. A real "not found" page is separate work.
+  The host and the service worker behave the same. A real "not found" page is separate work
+  (done in [ADR 0045](0045-not-found-pages.md)).
 - Each new article makes the site one file larger, but the install does not grow.

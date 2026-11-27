@@ -2,6 +2,7 @@
 // Pure helpers shared by the service worker and the build: no DOM, no worker globals, tested in Node.
 
 import { INDEX_FILE, articleRoute, isArticleFile, isArticlePage } from '../articles/paths.ts'
+import { NOT_FOUND_FILE } from '../notfound/file.ts'
 
 export interface PrecacheFile { readonly path: string; readonly integrity: string }
 export interface PrecacheManifest {
@@ -53,19 +54,17 @@ export interface StaticPage {
 }
 
 /**
- * Whether a window can answer the service worker's "idle?" question (src/sw.ts). A guide page runs
- * no script, so it never answers; it holds no photo and loads nothing later, so it counts as idle
- * and never holds an update back. Every other window of the site runs the app's code and answers.
+ * Whether a window can answer the service worker's "idle?" question (src/sw.ts): whether its address
+ * shows the app (index.html or a language page) or the thanks page, which run the app's code. A guide
+ * page, an article and a not-found page run no script, so they never answer; they hold no photo and
+ * load nothing later, so they count as idle and never hold an update back.
  */
-export function answersIdle (url: string, scope: string): boolean {
-  const key = url.split('#')[0] ?? url
-  if (GUIDE_PAGES.some((p) => key === `${scope}${p}`)) return false
-  // An article or a list of articles (ADR 0039) runs no script either. An address in an articles
-  // folder that names no article gets index.html, whose files do not load at that depth: it holds no
-  // photo either.
-  const rest = key.startsWith(scope) && !key.includes('?') ? key.slice(scope.length) : null
-  const article = rest === null ? null : articleRoute(rest)
-  return article === null || 'redirect' in article
+export function answersIdle (url: string, scope: string, known: KnownFiles): boolean {
+  const to = route('GET', url, 'navigate', scope, known)
+  if (to.kind === 'index') return true
+  if (to.kind !== 'page') return false
+  const file = to.url.slice(scope.length)
+  return file === THANKS_PAGE || (LANGUAGE_SEGMENTS as readonly string[]).some((s) => languagePage(s) === file)
 }
 
 /** Every static page of the site. Every other page load inside the scope gets index.html. */
@@ -278,6 +277,11 @@ export type Route =
    * gets that language's start page (ADR 0044): answer with that page.
    */
   | { readonly kind: 'page'; readonly url: string; readonly onDemand: boolean }
+  /**
+   * A page load of an address the build does not have: answer with that not-found page (ADR 0045),
+   * with status 404.
+   */
+  | { readonly kind: 'not-found'; readonly url: string }
   /** The thanks page sends the opt-in stats: passed on to the network, unchanged (ADR 0029). */
   | { readonly kind: 'stats' }
   /** A file of this build, saved at install. */
@@ -315,6 +319,40 @@ export function languageRedirect (url: string, scope: string): string | null {
 }
 
 /**
+ * What the host has at `rest` (a path inside the scope, no query), for a page load: an article or a
+ * list of articles (ADR 0039), a static page (STATIC_PAGES) or another file of this build. Null when
+ * the build has nothing there.
+ */
+function hostPage (rest: string, scope: string, known: KnownFiles): Route | null {
+  // `articles` goes to `articles/`, which is the file `articles/index.html`.
+  const article = articleRoute(rest)
+  if (article !== null) {
+    if ('redirect' in article) return { kind: 'redirect', url: `${scope}${article.redirect}` }
+    const file = `${scope}${article.file}`
+    return known.onDemand.has(file) ? { kind: 'page', url: file, onDemand: true } : null
+  }
+  const url = `${scope}${rest}`
+  const isPage = STATIC_PAGES.some((p) => p.path === rest)
+  if (known.files.has(url)) return isPage ? { kind: 'page', url, onDemand: false } : { kind: 'file', url }
+  if (known.onDemand.has(url)) return isPage ? { kind: 'page', url, onDemand: true } : { kind: 'on-demand', url }
+  return null
+}
+
+/**
+ * The not-found page for `rest` (ADR 0045): the `404.html` of the nearest folder above it that has
+ * one, as the host picks it. A build with none (an older one) gets the app, as before.
+ */
+function notFound (rest: string, scope: string, known: KnownFiles): Route {
+  let folder = rest.slice(0, rest.lastIndexOf('/') + 1)
+  for (;;) {
+    const url = `${scope}${folder}${NOT_FOUND_FILE}`
+    if (known.files.has(url)) return { kind: 'not-found', url }
+    if (folder === '') return { kind: 'index' }
+    folder = folder.slice(0, folder.slice(0, -1).lastIndexOf('/') + 1)
+  }
+}
+
+/**
  * Deny by default: the worker answers only the files of this build, listed in its manifest, and page
  * loads inside its scope. Every other request from the page or its workers (another origin, another
  * path, a query string, a method other than GET) is refused without touching the network, so no code
@@ -328,30 +366,27 @@ export function route (method: string, url: string, mode: string, scope: string,
   if (method === 'POST' && mode !== 'navigate' && url === `${scope}${STATS_ENDPOINT}` && client.split('#')[0] === thanks) return { kind: 'stats' }
   if (method !== 'GET' || !url.startsWith(scope)) return { kind: 'deny' }
   const key = url.split('#')[0] ?? url
-  // A page load may carry a query string or a path of its own: it gets index.html, unless it is a
-  // language's address or exactly a static page of this build (the thanks page, a guide page).
+  // A page load is answered as the host answers it (ADR 0045): the app, a language's page, a static
+  // page or another file of this build, and the nearest not-found page for anything else.
   if (mode === 'navigate') {
     const to = languageRedirect(key, scope)
     if (to !== null) return { kind: 'redirect', url: to }
+    const q = key.indexOf('?')
+    const rest = (q === -1 ? key : key.slice(0, q)).slice(scope.length)
     // A language's address, as the host answers it: its own start page (ADR 0044). The query does
-    // not count, as on the host.
-    const path = key.split('?')[0] ?? key
-    const segment = path.slice(scope.length)
+    // not count, as on the host. Its file name shows the same page.
+    const segment = rest.endsWith('.html') ? rest.slice(0, -'.html'.length) : rest
     if ((LANGUAGE_SEGMENTS as readonly string[]).includes(segment) && known.files.has(`${scope}${languagePage(segment)}`)) {
       return { kind: 'page', url: `${scope}${languagePage(segment)}`, onDemand: false }
     }
-    // An article or a list of articles (ADR 0039), as the host answers it: `articles` goes to
-    // `articles/`, which is the file `articles/index.html`.
-    const article = key.includes('?') ? null : articleRoute(key.slice(scope.length))
-    if (article !== null) {
-      if ('redirect' in article) return { kind: 'redirect', url: `${scope}${article.redirect}` }
-      const file = `${scope}${article.file}`
-      return known.onDemand.has(file) ? { kind: 'page', url: file, onDemand: true } : { kind: 'index' }
+    // The app's own address, with any query.
+    if (rest === '' || rest === 'index.html') return { kind: 'index' }
+    const found = hostPage(rest, scope, known)
+    if (found !== null) {
+      // A query string can carry data: it gets the app, never another page or file.
+      return q === -1 ? found : { kind: 'index' }
     }
-    if (!STATIC_PAGES.some((p) => key === `${scope}${p.path}`)) return { kind: 'index' }
-    if (known.files.has(key)) return { kind: 'page', url: key, onDemand: false }
-    if (known.onDemand.has(key)) return { kind: 'page', url: key, onDemand: true }
-    return { kind: 'index' }
+    return notFound(rest, scope, known)
   }
   if (known.files.has(key)) return { kind: 'file', url: key }
   if (known.onDemand.has(key)) return { kind: 'on-demand', url: key }

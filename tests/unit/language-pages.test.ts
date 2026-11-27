@@ -69,7 +69,8 @@ describe('language addresses', () => {
       expect(rewriteFor(`/${seg}`)).toBe(`/${seg}.html`)
       expect(redirectFor(`/${seg}/`)).toBe(`/${seg}`)
     }
-    expect(rewriteFor('/')).toBeNull()
+    // The site address shows index.html (ADR 0045).
+    expect(rewriteFor('/')).toBe('/index.html')
     expect(rewriteFor('/es')).toBeNull()
   })
   it('the service worker answers a language address with its page, as the host does', () => {
@@ -82,8 +83,10 @@ describe('language addresses', () => {
       expect(route('GET', `${scope}${seg}?x=1#y`, 'navigate', scope, known)).toEqual({ kind: 'page', url, onDemand: false })
     }
     // Spanish, another case, an unknown tag, a deeper path, or a build without the page: index.html.
-    for (const path of ['', 'EN', 'de', 'en/x', 'en.html']) expect(route('GET', `${scope}${path}`, 'navigate', scope, known).kind).toBe('index')
+    for (const path of ['', 'EN', 'de', 'en/x']) expect(route('GET', `${scope}${path}`, 'navigate', scope, known).kind).toBe('index')
     expect(route('GET', `${scope}en`, 'navigate', scope, { files: new Set(), onDemand: new Set() }).kind).toBe('index')
+    // Its file name shows the same page, as on the host.
+    expect(route('GET', `${scope}en.html`, 'navigate', scope, known)).toEqual({ kind: 'page', url: `${scope}en.html`, onDemand: false })
     // Only page loads: a fetch of the address is not a file of the build.
     expect(route('GET', `${scope}en`, 'cors', scope, known).kind).toBe('deny')
   })
