@@ -47,6 +47,7 @@ pnpm typecheck                       # svelte-check, strict; warnings fail
 pnpm lint                            # ESLint (neostandard, typescript-eslint strict, security bans)
 pnpm format                          # ESLint --fix
 pnpm test                            # unit tests (Vitest), tests/unit/
+pnpm test:coverage                   # unit tests + coverage floor (vitest.config.ts), as CI runs them
 pnpm build                           # production build in dist/ (CSP, SRI, import map, SW manifest)
 pnpm test:e2e                        # Playwright in Chromium against `pnpm preview` of dist/ (build first)
 pnpm test:e2e:browsers               # the cross-browser specs in Firefox and WebKit (CI runs them too)
@@ -153,6 +154,8 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
   listed in [`REUSE.toml`](REUSE.toml) if it cannot hold a comment (JSON, images). CI runs
   `reuse lint`, which also parses SPDX tags quoted in prose, so do not write one inside Markdown.
 - Raise a bundle budget in `scripts/bundle-size.ts` only on purpose, and say why in the PR.
+- Never lower a coverage threshold in `vitest.config.ts`. When your change raises coverage, raise
+  the threshold to 1 point below the new value.
 - Write documentation and UI text in plain language (ISO 24495-1): short sentences, active voice,
   concrete words. Match the tone of the README.
 
