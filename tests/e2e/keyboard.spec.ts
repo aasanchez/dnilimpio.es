@@ -49,16 +49,20 @@ async function chooseWithKeys (page: Page): Promise<void> {
 }
 
 /**
- * Tabs through every control on the screen once and returns those without a visible focus ring:
- * no outline and no box shadow on the control, or on the label around a hidden input.
+ * Tabs through every control on the screen once and returns the problems found: a control with no
+ * visible focus ring (no outline and no box shadow, on it or on the label around a hidden input), or
+ * one hidden behind something else, such as a sticky bar, once focused (WCAG 2.4.7, 2.4.11).
  */
-async function withoutFocusRing (page: Page): Promise<string[]> {
-  const missing: string[] = []
+async function tabProblems (page: Page): Promise<string[]> {
+  const problems: string[] = []
   const seen = new Set<string>()
   await page.locator('body').evaluate((b) => { b.tabIndex = -1; b.focus(); b.removeAttribute('tabindex') })
   for (let i = 0; i < 80; i++) {
     await page.keyboard.press('Tab')
-    const r = await page.evaluate(() => {
+    const r = await page.evaluate(async () => {
+      // The app moves a covered control into view one frame after focus.
+      await new Promise(requestAnimationFrame)
+      await new Promise(requestAnimationFrame)
       const e = document.activeElement as HTMLElement | null
       if (e === null || e === document.body) return null
       const ring = (el: Element): boolean => {
@@ -66,14 +70,23 @@ async function withoutFocusRing (page: Page): Promise<string[]> {
         return (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 2) || s.boxShadow !== 'none'
       }
       const label = e.closest('label')
-      const key = `${e.tagName.toLowerCase()}#${e.id}`
-      return { key, ok: ring(e) || (label !== null && ring(label)) }
+      const shown = label ?? e
+      const b = shown.getBoundingClientRect()
+      // Hidden: the centre and two inner corners all show something that is neither the control nor
+      // inside it.
+      const points = [[b.left + b.width / 2, b.top + b.height / 2], [b.left + 2, b.top + 2], [b.right - 2, b.bottom - 2]] as const
+      const hidden = points.every(([x, y]) => {
+        const top = document.elementFromPoint(x, y)
+        return top !== null && !shown.contains(top) && !top.contains(shown)
+      })
+      return { key: `${e.tagName.toLowerCase()}#${e.id}`, ring: ring(e) || (label !== null && ring(label)), hidden }
     })
     if (r === null || seen.has(r.key)) break
     seen.add(r.key)
-    if (!r.ok) missing.push(r.key)
+    if (!r.ring) problems.push(`${r.key}: no focus ring`)
+    if (r.hidden) problems.push(`${r.key}: hidden when focused`)
   }
-  return missing
+  return problems
 }
 
 for (const { lang, locale, dir } of [{ lang: 'es', locale: 'es-ES', dir: 'ltr' }, { lang: 'ar', locale: 'ar', dir: 'rtl' }] as const) {
@@ -86,7 +99,7 @@ for (const { lang, locale, dir } of [{ lang: 'es', locale: 'es-ES', dir: 'ltr' }
       answerChoosers(page, ['synthetic-front.png', 'synthetic-back.png'])
       await page.goto('/')
       await expect(page.locator('html')).toHaveAttribute('dir', dir)
-      expect(await withoutFocusRing(page), 'start screen controls without a focus ring').toEqual([])
+      expect(await tabProblems(page), 'start screen').toEqual([])
 
       await tabTo(page, '#start')
       await page.keyboard.press('Enter')
@@ -99,7 +112,7 @@ for (const { lang, locale, dir } of [{ lang: 'es', locale: 'es-ES', dir: 'ltr' }
       await expectFocusHeld(page, 'the front photo')
       await chooseWithKeys(page)
       await expect(page.locator('#capture-continue')).toBeFocused()
-      expect(await withoutFocusRing(page), 'photo step controls without a focus ring').toEqual([])
+      expect(await tabProblems(page), 'photo step').toEqual([])
       await tabTo(page, '#capture-continue')
       await page.keyboard.press('Enter')
 
@@ -114,7 +127,7 @@ for (const { lang, locale, dir } of [{ lang: 'es', locale: 'es-ES', dir: 'ltr' }
       // Editor: the straightening ends here, with focus on the heading.
       await expect(page.locator('#preview')).toHaveJSProperty('width', 1712, { timeout: 30_000 })
       await expect(page.locator('.content h2')).toBeFocused()
-      expect(await withoutFocusRing(page), 'editor controls without a focus ring').toEqual([])
+      expect(await tabProblems(page), 'editor').toEqual([])
       await tabTo(page, '#field-dateOfBirth')
       const before = await page.locator('#field-dateOfBirth').isChecked()
       await page.keyboard.press('Space')
@@ -140,7 +153,7 @@ for (const { lang, locale, dir } of [{ lang: 'es', locale: 'es-ES', dir: 'ltr' }
       await tabTo(page, '#adjust-front')
       await page.keyboard.press('Enter')
       await expect(page.locator('.content h2')).toBeFocused()
-      expect(await withoutFocusRing(page), 'corner screen controls without a focus ring').toEqual([])
+      expect(await tabProblems(page), 'corner screen').toEqual([])
       await tabTo(page, 'canvas.corner-editor')
       await page.keyboard.press('ArrowRight')
       await tabTo(page, '#align-continue')
@@ -159,7 +172,33 @@ for (const { lang, locale, dir } of [{ lang: 'es', locale: 'es-ES', dir: 'ltr' }
       expect(download.suggestedFilename()).toBe('protected-document.pdf')
       await expect(page.locator('#stats-link')).toBeVisible()
       await expect(page.locator('#download')).toBeFocused()
-      expect(await withoutFocusRing(page), 'review controls without a focus ring').toEqual([])
+      expect(await tabProblems(page), 'review').toEqual([])
+    })
+  })
+}
+
+// Phones: the action bar sticks to the bottom and holds the no-cookies notice; the top bar sticks to
+// the top. Wide screens: the notice floats at the bottom. No focused control may hide behind them.
+for (const { name, size } of [{ name: 'phone', size: { width: 390, height: 844 } }, { name: 'wide screen', size: { width: 1280, height: 720 } }]) {
+  test.describe(`focused controls stay in view (${name})`, () => {
+    test.use({ locale: 'es-ES', viewport: size })
+
+    test('on the start screen with the notice, and in the editor', async ({ page }) => {
+      await blockModel(page)
+      await page.goto('/')
+      await expect(page.locator('#privacy-notice')).toBeVisible()
+      expect(await tabProblems(page), 'start screen').toEqual([])
+      await page.locator('#start').click()
+      await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
+      await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
+      await page.locator('#capture-continue').click()
+      await page.locator('#doc-dni').check()
+      await page.locator('#doc-continue').click()
+      await expect(page.locator('#preview')).toHaveJSProperty('width', 1712, { timeout: 30_000 })
+      for (const tool of ['#tool-fields', '#tool-boxes', '#tool-mark']) {
+        await page.locator(tool).click()
+        expect(await tabProblems(page), `editor, ${tool}`).toEqual([])
+      }
     })
   })
 }

@@ -265,7 +265,7 @@
 
   /* Lists of rows with a control: fields, documents. */
   .rows { @apply overflow-hidden rounded-lg border border-line bg-surface; }
-  .rows > li + li { @apply border-t border-hair; }
+  .rows > * + * { @apply border-t border-hair; }
   .toggle { @apply flex min-h-14.5 items-center gap-3 px-3.5 py-1.5; }
   .toggle-text { @apply flex flex-1 flex-col; }
   .toggle-label { @apply font-semibold; }

@@ -11,6 +11,7 @@ import { watchInstall } from './offline/install.ts'
 import { installTrustedTypesPolicy } from './security/trusted-types.ts'
 import { loadAllFonts } from './security/intake-lockdown.ts'
 import { loadLang, pickLang, t } from './i18n/index.ts'
+import { revealFocus } from './ui/focus-rescue.ts'
 
 /** Inside another page's frame the app does not start: it only offers to open itself in a tab. */
 function showFramed (target: HTMLElement): void {
@@ -30,6 +31,9 @@ installTrustedTypesPolicy()
 
 // A file dropped by mistake must never replace the app (and the user's work) in the tab.
 blockStrayDrops(window)
+
+// Keyboard focus is never hidden behind the sticky action bar or the fixed notice.
+revealFocus()
 
 // Before mounting: Chromium can offer installation as soon as the page loads (offline/install.ts).
 watchInstall()
