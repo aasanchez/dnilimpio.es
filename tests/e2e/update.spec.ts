@@ -234,3 +234,22 @@ test('an open thanks page does not hold the update back', async ({ page }) => {
   expect(await marked(thanks)).toBe('1')
   await expect(thanks.locator('#thanks-title')).toBeVisible()
 })
+
+// A card guide page (ADR 0040) runs no script, so it cannot answer the worker's "idle?" question. It
+// holds no photo, so the worker does not wait for it.
+test('an open guide page does not hold the update back', async ({ page }) => {
+  await page.goto(URL_)
+  await controlled(page)
+  const guide = await page.context().newPage()
+  await guide.goto(`${URL_}guia-tie.html`)
+  await controlled(guide)
+  await expect(guide.locator('h1')).toBeVisible()
+  await guide.evaluate(() => { document.documentElement.dataset['oldPage'] = '1' })
+  await page.evaluate(() => { document.documentElement.dataset['oldPage'] = '1' })
+  const reloaded = page.waitForEvent('load')
+  await deployNextBuild(page)
+  await reloaded
+  expect(await marked(page)).toBeUndefined()
+  await expect(page.locator('#update-ready')).toHaveCount(0)
+  expect(await marked(guide)).toBe('1')
+})

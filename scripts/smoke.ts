@@ -6,7 +6,7 @@
 //
 // On every host it fails if any response sets a cookie.
 // With SMOKE_HOST_HEADERS=1 (the Cloudflare host, ADR 0027) it also checks that the page, the service
-// worker, the OCR worker and the thanks page are served with exactly the HTTP headers of
+// worker, the OCR worker, the thanks page and the guide pages (ADR 0040) are served with exactly the HTTP headers of
 // scripts/headers.ts, that no response asks the browser for network error reports (NEL above 0,
 // Report-To, Reporting-Endpoints; ADR 0035), and that the stats endpoint refuses a request that is
 // not from the thanks page (ADR 0029). It never posts a row that would be stored.
@@ -28,7 +28,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { cspWithScriptHashes } from './csp.ts'
 import { HEADERS_FILE, REDIRECTS_FILE, cookiesSetBy, headersFor, hostHeaderRules, reportingProblems } from './headers.ts'
-import { STATS_ENDPOINT, SW_FILE, THANKS_PAGE, WORKER_SCRIPTS, parseManifest } from '../src/offline/precache.ts'
+import { GUIDE_PAGES, STATS_ENDPOINT, SW_FILE, THANKS_PAGE, WORKER_SCRIPTS, parseManifest } from '../src/offline/precache.ts'
 
 const [siteArg = '', expectedSha = '', distDir] = process.argv.slice(2)
 if (siteArg === '' || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(expectedSha)) {
@@ -57,7 +57,7 @@ async function get (url: URL): Promise<{ text: string, bytes: Buffer, headers: H
 async function checkServedHeaders (html: string, first: Headers): Promise<void> {
   const rules = hostHeaderRules(html)
   const pages: Array<[string, Headers]> = [['/', first]]
-  for (const p of [SW_FILE, THANKS_PAGE, ...WORKER_SCRIPTS]) pages.push([`/${p}`, (await get(fresh(p))).headers])
+  for (const p of [SW_FILE, THANKS_PAGE, ...GUIDE_PAGES, ...WORKER_SCRIPTS]) pages.push([`/${p}`, (await get(fresh(p))).headers])
   const wrong: string[] = []
   for (const [path, served] of pages) {
     for (const [k, v] of Object.entries(headersFor(rules, path))) {

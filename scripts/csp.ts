@@ -58,6 +58,25 @@ export const THANKS_CSP_DIRECTIVES: readonly string[] = [
 export const THANKS_CSP = THANKS_CSP_DIRECTIVES.join('; ')
 
 /**
+ * Policy of the card guide pages (ADR 0040): static text written at build time. They run no script at
+ * all, hold no photo and connect to nothing. They load only this site's stylesheet, its fonts and
+ * the icons.
+ */
+export const GUIDE_CSP_DIRECTIVES: readonly string[] = [
+  "default-src 'none'",
+  "script-src 'none'",
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'none'",
+  "form-action 'none'",
+  "base-uri 'none'",
+  "object-src 'none'",
+]
+
+export const GUIDE_CSP = GUIDE_CSP_DIRECTIVES.join('; ')
+
+/**
  * The policy with extra script hashes. The build adds one: the hash of the inline import map that
  * carries the integrity of chunks loaded on demand (see scripts/vite-plugins.ts).
  */

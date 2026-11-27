@@ -114,6 +114,10 @@ what the app does with it. Every statement cites the official text that says it 
 Doc 9303, Policía Nacional, PRADO, AEPD, INCIBE), with links that open in a new tab. When no official
 source was found, the guide says so instead of guessing ([ADR 0014](docs/adr/0014-card-guide.md),
 [source notes](docs/GUIDE-SOURCES.md)). The guide is bundled with the app, so it also opens offline.
+The same guide is also published as one page per document, in Spanish: `guia-dni-4.html`,
+`guia-dni-3.html` and `guia-tie.html`. The build writes them from the guide data, so they say exactly
+what the dialog says. They run no script at all, work offline, are listed in `sitemap.xml` and name
+their own canonical address ([ADR 0040](docs/adr/0040-card-guide-pages.md)).
 
 ## How to use it
 
@@ -668,6 +672,7 @@ show the current state.
 | PDF export: one A4 page, each side at 130% of card size, metadata-free | Done |
 | Download or share the PDF through the system share sheet | Done |
 | Card guide with official citations | Done |
+| Card guide pages: one static page per document, no script, built from the guide data (ADR 0040) | Done |
 | Offline mode with a verified service worker; automatic update of idle tabs | Done |
 | Memory clean-up: canvases, temporary buffers, download links, late results after a reset | Done |
 | Installable app: manifest, maskable and Apple icons, install link and iOS steps | Done |
@@ -778,7 +783,7 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
 | Usage stats | `stats`, `stats-send` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns, 429 above the rate limit with one key for all senders), the service worker route open only to the thanks page; the one request sent with no cookie, referrer, cache or redirect, and success only on 204 |
 | App updates | `update-rules` | An idle page offers a waiting build and reloads once into it; a busy page is never reloaded and reloads back on the start screen; no reload on the first visit; "Update now" when another window holds the build back, which forces it; an update check at most every 15 minutes when the tab comes back; the answer to "idle?" (also from the thanks page) |
-| Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `notice-memory`, `install`, `build-info`, `i18n`, `i18n-load`, `lang-url`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal, frame guard and frame check, the photo step's policy (built from the page, added once, fonts loaded first with a time limit) and the service worker check, the notice's one stored date (4 days, blocked storage), iPhone and iPad detection and installed mode for the install link, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, the language read from and written to the address path (any case, unknown paths ignored, subpath, query kept), language redirects equal on host and service worker, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
+| Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `notice-memory`, `install`, `build-info`, `i18n`, `i18n-load`, `lang-url`, `guide`, `guide-page`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal, frame guard and frame check, the photo step's policy (built from the page, added once, fonts loaded first with a time limit) and the service worker check, the notice's one stored date (4 days, blocked storage), iPhone and iPad detection and installed mode for the install link, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, the language read from and written to the address path (any case, unknown paths ignored, subpath, query kept), language redirects equal on host and service worker, guide citations, guide pages (every entry and citation of the dialog, no script, strict CSP, relative links, escaped text), dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off.
 
@@ -808,6 +813,7 @@ Every spec runs in Chromium. The specs marked **(all browsers)** also run in Fir
 | `no-trusted-types` (all browsers) | The page served as a browser without Trusted Types sees it (no `trustedTypes`, no Trusted Types directives): the app starts, the service worker registers, the OCR worker starts, the flow reaches the PDF, and the CSP alone still refuses another site's script |
 | `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; after a download or a share the review stays and the small Send anonymous data link appears; closing the sheet; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
+| `guide-pages` | Each guide page loads with its own CSP and no script, styled, in Spanish, every citation pointing to a source; the pages link to each other and to the app; the service worker serves them, offline too; the sitemap lists them and each names its canonical address |
 | `languages` | First render in the address's language (`/fr`) with no other dictionary loaded; `/` is Spanish whatever the browser; the address follows the selector without a history entry and survives a reload; `/en/` and `/es` redirect, on the host and offline; switching language after the photo step's policy is in force, and offline |
 | `privacy-notice` | Exact privacy wording (processing on the device, no upload), no accept step, 4-day memory, blocked storage, translations, audit prompt (short, asks to disprove the claims, checks the live site), 80 % of the screen width on phone, tablet and desktop |
 | `keyboard` | Keyboard only, in Spanish and in Arabic (right to left): the whole flow from Start to the PDF with Tab, Enter, Space and the arrow keys (file chooser, document choice, fields, a box, the watermark, the corners, confirm and download); each new screen focuses its heading; every control shows a focus ring; no focused control hides behind the sticky bars or the notice, on a phone and a wide screen; focus stays on a control after the last photo, Download, Delete, Undo, Redo and Remove the back; Escape closes the card guide and returns focus |
@@ -1105,7 +1111,7 @@ src/
   zones/             field positions and size per document, from official specimens; documents.ts lists them
   redact/            normalised zones to pixels
   engine/            fields, masks, secure raster, watermark, JPEG filter, PDF export, undo history
-  guide/             card guide: official sources, cited entries per document, text per language
+  guide/             card guide: official sources, cited entries per document, text per language, static page per document
   offline/           service worker registration, precache manifest, automatic update of idle tabs
   security/          Trusted Types policy, WebRTC and frame lockdown (frame guard), photo-step CSP (intake lockdown), audit prompt text
   version/           commit SHA and build time shown in the footer, relative time
@@ -1164,6 +1170,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0036](docs/adr/0036-visual-regression-in-pinned-container.md): screenshot tests of key phone screens in Spanish and Arabic run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual`, so the baselines match on every machine.
 - [0037](docs/adr/0037-firefox-service-worker-script-source.md): `sw.js` is a script source in the photo step's policy and the OCR worker's policy, because Firefox checks responses the service worker builds as if they came from `sw.js`; without it, OCR and the corner model do not run in Firefox.
 - [0038](docs/adr/0038-one-address-per-language.md): one address per language; `/` is Spanish and the others have their own path, such as `/en`; `/en/` and `/es` redirect; each is its own canonical page; hreflang links in the HTML and the sitemap, without Valencian.
+- [0040](docs/adr/0040-card-guide-pages.md): card guide pages; one static page per document, written by the build from the guide data, with no script (`script-src 'none'`), served and precached by the service worker.
 - [0041](docs/adr/0041-prerendered-start-screen.md): the build renders the Spanish start screen from `App.svelte` into `index.html`, inert until the app replaces it, so crawlers without JavaScript read it and the heading paints before any script; no font preload, because measurements showed it slows the first paint.
 - [0042](docs/adr/0042-axe-accessibility-scan.md): an axe-core scan of every screen, in Spanish and Arabic, on a phone and a wide screen, fails CI on any serious or critical accessibility finding. axe is a dev dependency and runs only in tests.
 

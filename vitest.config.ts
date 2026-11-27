@@ -27,8 +27,8 @@ export default defineConfig({
       thresholds: {
         statements: 81,
         branches: 78,
-        functions: 83,
-        lines: 81,
+        functions: 84,
+        lines: 82,
         // Masks, raster, PDF and JPEG export: what the user downloads.
         'src/engine/**': { statements: 80, branches: 84, functions: 85, lines: 81 },
         // Field positions and their conversion to pixels: what gets covered.

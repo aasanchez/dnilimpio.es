@@ -91,7 +91,7 @@ describe('renderHeadersFile', () => {
   const file = renderHeadersFile(rules)
   it('writes the Cloudflare `_headers` format, within its limits', () => {
     const lines = file.trimEnd().split('\n')
-    expect(lines.filter((l) => l.startsWith('/'))).toEqual(['/*', '/sw.js', '/thanks.html', '/ocr/worker.min.js'])
+    expect(lines.filter((l) => l.startsWith('/'))).toEqual(['/*', '/sw.js', '/thanks.html', '/guia-dni-4.html', '/guia-dni-3.html', '/guia-tie.html', '/ocr/worker.min.js'])
     expect(lines.every((l) => l.length <= 2000)).toBe(true)
     expect(lines.filter((l) => l.startsWith('/')).length).toBeLessThanOrEqual(100)
     expect(file).toContain('/sw.js\n  ! Content-Security-Policy\n  Content-Security-Policy: ')
