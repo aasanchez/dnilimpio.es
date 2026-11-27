@@ -257,6 +257,7 @@ export async function appElementsInFrame (page: Page, url: string): Promise<numb
   }, url)
   // Had the app run, its module scripts would have rendered before the frame's load event.
   const child = page.frames().find((f) => f !== page.mainFrame())
-  if (!child) return 0
+  // Firefox leaves a refused frame without an address, and evaluating in it never returns.
+  if (!child || !/^https?:/.test(child.url())) return 0
   return await child.evaluate(() => document.querySelectorAll('h1, #app').length).catch(() => 0)
 }
