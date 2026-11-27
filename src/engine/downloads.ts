@@ -9,6 +9,12 @@
 /** How long a download keeps its URL when nothing clears it sooner. */
 export const DOWNLOAD_URL_MS = 10_000
 
+/**
+ * How long "Download and clear" waits after the click before it clears and opens the thanks page,
+ * which ends this document and its download link. The browser starts reading the link at the click.
+ */
+export const DOWNLOAD_HANDOFF_MS = 1_500
+
 const open = new Map<string, ReturnType<typeof setTimeout>>()
 
 function revoke (url: string): void {

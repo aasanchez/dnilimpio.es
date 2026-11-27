@@ -34,7 +34,7 @@
     phase: Phase
     onAdjust: (side: Side) => void
     onReset: () => void
-    /** "Clear everything" on the done screen (Review.svelte). */
+    /** After "Download and clear" or "Share and clear" (Review.svelte): clear, then open the thanks page. */
     onFinish: () => void
     /** Called after the phase changes, so the shell can move focus to the new heading. */
     onPhase: () => void
@@ -611,6 +611,6 @@
     </div>
   </section>
 {:else}
-  <Review {lang} {secure} sides={SIDES} {phase} hiddenCount={hidden.size} boxCount={SIDES.reduce((n, s) => n + edit.boxes.present[s].length, 0)} watermark={edit.watermark} greyscale={edit.greyscale}
-    onDone={() => { setPhase('done') }} {onReset} {onFinish} />
+  <Review {lang} {secure} sides={SIDES} hiddenCount={hidden.size} boxCount={SIDES.reduce((n, s) => n + edit.boxes.present[s].length, 0)} watermark={edit.watermark} greyscale={edit.greyscale}
+    {onReset} {onFinish} />
 {/if}

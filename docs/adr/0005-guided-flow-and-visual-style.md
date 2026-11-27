@@ -24,7 +24,7 @@ Flow:
 - In **Hide**, the card stays at the top of the screen. The field list shows only the side on screen.
   Tapping a field on the card toggles it. Boxes and watermark live in tabs next to the field list.
 - The main action is always in a sticky bar at the bottom of the screen (thumb zone).
-- **Share** on the Done screen uses the Web Share API with the PDF file where the browser supports
+- **Share** on the Done screen (now "Share and clear" on the review screen, ADR 0029) uses the Web Share API with the PDF file where the browser supports
   sharing files, and is hidden elsewhere. Nothing leaves the device unless the person picks an app
   in the system share sheet.
 
