@@ -559,13 +559,13 @@ commit. A local build with `build.sourcemap` turned on is for reading only: its 
 hashes differ from the deployed build.
 
 **With an AI coding agent.** **Check it with your AI** on the start screen (in the footer and in the
-no-cookies notice) opens a ready-made audit prompt to copy into an AI coding agent. It asks for a
-deep review of this repository's privacy claim: image lifecycle, every network primitive, third-party
-scripts and frames, dependencies, CSP, the service worker and reproducibility, with a
-YES/NO verdict and file and line references. It describes the one intended send, the opt-in stats,
-so the agent checks each of its limits instead of reporting the send itself as a leak. It also asks the agent to check the live site at
-<https://dnitapado.es/>: its headers, its CSP against [`scripts/csp.ts`](scripts/csp.ts), the hash of
-every file it serves, and a rebuild of the commit shown in the footer. Copying uses the clipboard
+no-cookies notice) opens a short audit prompt to copy into an AI coding agent. It lists the privacy
+claims and where the evidence is, including the one intended send (the opt-in stats and their fixed
+fields), and asks the agent to try to disprove each claim. It does not argue for the claims. The agent
+must check the live site at <https://dnitapado.es/> as well as the source: its headers and CSP against
+[`scripts/csp.ts`](scripts/csp.ts) and [`scripts/headers.ts`](scripts/headers.ts), the hash of every
+file it serves, that no source map is served, and a rebuild of the commit shown in the footer. It asks
+for findings with a severity and evidence, not a pass or fail. Copying uses the clipboard
 only; nothing is sent. The text is in [`src/security/audit-prompt.ts`](src/security/audit-prompt.ts).
 
 **Check that the live files are the ones built from this repository**
@@ -733,6 +733,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans`, `ocr-ask`, `ready-memo` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink, a silent service worker turns OCR off after a time limit (15 s to check the files, 3 minutes to download them), "OCR is ready" kept per service worker and asked again after an update or a failure |
 | Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black, Fit to the text (a box only grows, by at most half its size, and stays on the card) |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output |
+| Audit prompt | `audit-prompt` | Every file the prompt names exists, its list of stats fields is the list the thanks page sends, in order, and it stays short and asks for findings, not a verdict |
 | Editor redraws | `redraw` | One render per animation frame, only the side on screen, only when its choices changed; every changed side rendered at once before the review; a failed render is retried; nothing runs after the editor closes |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
@@ -763,7 +764,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `share` | Share and clear only where files can be shared; the share sheet gets the PDF within the click, with no text or link, then the app clears and opens the thanks page; closing the sheet clears nothing; a failed share; Download and clear saves the whole PDF before it clears |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
-| `privacy-notice` | Exact privacy wording (processing on the device, no upload), no accept step, 4-day memory, blocked storage, translations, audit prompt, 80 % of the screen width on phone, tablet and desktop |
+| `privacy-notice` | Exact privacy wording (processing on the device, no upload), no accept step, 4-day memory, blocked storage, translations, audit prompt (short, asks to disprove the claims, checks the live site), 80 % of the screen width on phone, tablet and desktop |
 | `layout` | Phone: one column, main button in a sticky bar at the bottom, no sideways scroll. Wide screen: card on the left, tools and main button on the right, steps in the top bar |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, release version linked to its GitHub Release, build SHA and relative deploy time (also offline) |

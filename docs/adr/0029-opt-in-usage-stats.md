@@ -82,7 +82,7 @@ Options considered:
    is processed on the device and the app does not upload it, and the stats carry nothing from the
    document and are sent only on a tap (Alexis: the notice is not a disclaimer for an optional
    feature). The thanks page says what is sent and what is not, before anything is sent.
-   The audit prompt describes this send and asks the auditor to verify each limit above.
+   The audit prompt names this send and its fixed fields, and asks the auditor to try to disprove the claims.
 
 ## Consequences
 
