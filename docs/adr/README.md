@@ -33,3 +33,4 @@ project specification on purpose).
 | [0025](0025-intake-lockdown.md) | Intake lockdown: a stricter CSP while photos are in the page (exact build scripts, images from memory only, no connection); service worker check | accepted |
 | [0026](0026-recheck-cache-hits.md) | The service worker hashes every cache hit again; a rewritten entry is deleted and downloaded again | accepted |
 | [0028](0028-tie-fallback.md) | TIE preselected when detection reads the photos but cannot tell the document; nothing preselected without detection | accepted |
+| [0031](0031-photo-file-checks.md) | Photo files checked by content (JPEG, PNG, WebP, HEIC), at most 25 MB and 50 MP from the header, before decoding | accepted |

@@ -3,10 +3,10 @@
      The back is optional: once the front is in, the person can go on without it, or remove it. -->
 <script lang="ts">
   import { untrack } from 'svelte'
-  import type { DecodeError, DecodeResult } from '../capture/decode.ts'
+  import { MAX_BYTES, MAX_PIXELS, checkBitmap, type DecodeError, type DecodeResult } from '../capture/decode.ts'
   import { prefersCameraButton, wireCapture, wirePageDrop, wirePaste, type CaptureTarget } from '../capture/input.ts'
   import { canUseLiveCamera, type CameraFailure } from '../capture/live.ts'
-  import { t, type Key, type Lang } from '../i18n/index.ts'
+  import { t, tf, type Key, type Lang } from '../i18n/index.ts'
   import { canContinue, type CaptureState } from '../ui/capture-state.ts'
   import { shrink } from '../engine/wipe.ts'
   import type { Side } from '../zones/dni.ts'
@@ -30,6 +30,7 @@
     'not-an-image': 'errNotImage',
     'heic-unsupported': 'errHeic',
     'too-large': 'errTooLarge',
+    'too-many-pixels': 'errTooManyPixels',
     'decode-failed': 'errDecode',
   }
 
@@ -57,6 +58,9 @@
   let dragging = $state(false)
   const bitmap = $derived(photos[current])
   const sideName = (s: Side): string => t(lang, s === 'front' ? 'tabFront' : 'tabBack')
+  // The limits in the messages come from the checks themselves, so text and code cannot drift.
+  const LIMITS = { mb: MAX_BYTES / (1024 * 1024), mp: MAX_PIXELS / 1_000_000 }
+  const errorText = (key: Key): string => tf(lang, key, LIMITS)
 
   function onResult (side: Side, r: DecodeResult): void {
     if (!r.ok) {
@@ -73,7 +77,7 @@
 
   function onShot (bitmap: ImageBitmap): void {
     const side = current
-    onResult(side, { ok: true, bitmap })
+    onResult(side, checkBitmap(bitmap))
     // Stay open for the other side while it is still empty; otherwise we are done.
     if (current === side) liveOpen = false
   }
@@ -197,12 +201,12 @@
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-1">
       {#each SIDES as side (side)}
         <CaptureSide {lang} {side} optional={side === 'back'} loaded={photos[side] !== null} isCurrent={side === current}
-          message={errors[side] ? t(lang, errors[side]) : photos[side] ? t(lang, 'loaded') : ''} isError={errors[side] !== null}
+          message={errors[side] ? errorText(errors[side]) : photos[side] ? t(lang, 'loaded') : ''} isError={errors[side] !== null}
           onSelect={() => { current = side }} bind:zone={zones[side]} />
       {/each}
     </div>
     {#each SIDES as side (side)}
-      {#if errors[side]}<p class="notice-warn" id="error-{side}">{sideName(side)}: {t(lang, errors[side])}</p>{/if}
+      {#if errors[side]}<p class="notice-warn" id="error-{side}">{sideName(side)}: {errorText(errors[side])}</p>{/if}
     {/each}
     {#if photos.back !== null}
       <button type="button" class="link-button justify-self-start" id="capture-remove-back" onclick={removeBack}>{t(lang, 'removeBack')}</button>
