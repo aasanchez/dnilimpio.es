@@ -676,7 +676,7 @@ show the current state.
 | Custom domain `dnitapado.es`, HTTPS enforced; one host, the old address redirects | Done |
 | Security headers from the host (Cloudflare Workers): CSP with `frame-ancestors`, HSTS, Permissions-Policy, COOP, worker CSPs | Done |
 | Search metadata: title and description in every language, link preview image, canonical address, `robots.txt`, `sitemap.xml` | Done |
-| Start screen prerendered in Spanish in `index.html`, for search engines and a faster first paint (ADR 0040) | Done |
+| Start screen prerendered in Spanish in `index.html`, for search engines and a faster first paint (ADR 0041) | Done |
 | Languages: 31 in the specification | 13 today |
 
 ## Development
@@ -1138,7 +1138,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0034](docs/adr/0034-no-frames-no-fresh-webrtc.md): the page refuses every frame element and pop-up, so no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits until a browser implements it.
 - [0035](docs/adr/0035-no-network-error-logging.md): no Network Error Logging; every file turns NEL off, Cloudflare's NEL and `Report-To` headers are off in the zone settings, and the post-deploy check fails if they come back.
 - [0036](docs/adr/0036-visual-regression-in-pinned-container.md): screenshot tests of key phone screens in Spanish and Arabic run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual`, so the baselines match on every machine.
-- [0040](docs/adr/0040-prerendered-start-screen.md): the build renders the Spanish start screen from `App.svelte` into `index.html`, inert until the app replaces it, so crawlers without JavaScript read it and the heading paints before any script; no font preload, because measurements showed it slows the first paint.
+- [0041](docs/adr/0041-prerendered-start-screen.md): the build renders the Spanish start screen from `App.svelte` into `index.html`, inert until the app replaces it, so crawlers without JavaScript read it and the heading paints before any script; no font preload, because measurements showed it slows the first paint.
 
 ## Contributing
 

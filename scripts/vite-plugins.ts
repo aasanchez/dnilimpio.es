@@ -61,7 +61,7 @@ export function searchFiles (site: string): Plugin {
 }
 
 /**
- * Prerendered start screen (ADR 0040): the Spanish start screen as plain HTML inside <main id="app">
+ * Prerendered start screen (ADR 0041): the Spanish start screen as plain HTML inside <main id="app">
  * of index.html. The thanks page is left as it is.
  */
 export function prerenderStart (): Plugin {

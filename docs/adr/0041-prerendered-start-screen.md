@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-# 0040. Prerendered start screen: the Spanish start screen in index.html, replaced by the app
+# 0041. Prerendered start screen: the Spanish start screen in index.html, replaced by the app
 
 - Status: accepted
 - Date: 2026-11-27

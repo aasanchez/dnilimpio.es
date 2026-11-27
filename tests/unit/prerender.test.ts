@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Prerendered start screen (ADR 0040): what the build writes into <main id="app"> of index.html.
+// Prerendered start screen (ADR 0041): what the build writes into <main id="app"> of index.html.
 import { describe, expect, it } from 'vitest'
 import { checkPrerendered, insertIntoApp, renderHome, trimMarkup } from '../../scripts/prerender.ts'
 import es from '../../src/i18n/locales/es.json'

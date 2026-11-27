@@ -46,7 +46,7 @@ const target = document.getElementById('app')
 if (target && isFramed(window)) showFramed(target)
 else if (target) {
   // The build puts a static copy of the Spanish start screen here, for search engines and a fast
-  // first paint (ADR 0040). The live app replaces it; it does not hydrate it.
+  // first paint (ADR 0041). The live app replaces it; it does not hydrate it.
   target.replaceChildren()
   mount(App, { target })
 }

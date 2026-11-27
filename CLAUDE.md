@@ -129,7 +129,7 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 
 ## Code conventions
 
-- The build renders the start screen in Node (`scripts/prerender.ts`, ADR 0040). Code that runs while
+- The build renders the start screen in Node (`scripts/prerender.ts`, ADR 0041). Code that runs while
   App.svelte renders the start screen must not touch `window`, `document` or storage outside
   `$effect`, or the build fails.
 - Image, geometry, redaction and PDF logic are plain TypeScript modules with no Svelte import, so
