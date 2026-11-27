@@ -123,9 +123,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    - **What is on my card?**, the [card guide](#supported-documents).
    - The **no-cookies notice**, in the place where other sites put a cookie banner. It only informs:
      there is nothing to accept. English text: *"No cookies, no profiles, no data to sell. Your
-     document is processed on your device, and the app does not upload it. Visits are counted in an
-     isolated frame that cannot see your photos. Every Eurocrat's dream: this
-     banner only exists to tell you it isn't needed."* It stays short on purpose; this README lists
+     document is processed on your device, and the app does not upload it. When you finish, you can
+     send anonymous usage stats, only if you want to. Every Eurocrat's dream: this banner only
+     exists to tell you it isn't needed."* It stays short on purpose; this README lists
      exactly what is sent and stored ([Privacy and security](#privacy-and-security)). **I believe you** closes it; it comes back after 4 days at
      the earliest.
    - In the footer: **Source code** (this repository, in a new tab), **Check it with your AI** (see
@@ -215,7 +215,11 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    share sheet with the PDF on devices that support sharing files. On other devices they open
    WhatsApp or your email app with a fixed short message, and you attach `protected-document.pdf`
    from your downloads folder. **Clear everything** removes the photos and all your choices from the
-   page; closing the tab does the same.
+   page, then opens a thanks page that holds no document; closing the tab clears everything too.
+8. **Thanks page (optional stats).** It shows, line by line, the exact anonymous figures it could
+   send: document type, whether the AI got it right, which fields you covered, and your device type.
+   Nothing is sent unless you tap **Send anonymous stats**. **Start again** returns to the start
+   screen. See [Usage stats (opt-in)](#usage-stats-opt-in).
 
 ## Privacy and security
 
@@ -224,7 +228,8 @@ redaction, the watermark and the PDF all run in your browser. The app does not u
 document. The site sends no photo, file name or data read from the card to any server. It uses no
 cookies, trackers or profiles, and no third-party script runs in the page that holds your photos.
 The site has no analytics code: the host counts the requests it serves (see
-[Visit counts](#visit-counts)). The page downloads only its own files; once they
+[Visit counts](#visit-counts)). After you clear everything, a separate page that holds no document
+can send anonymous usage stats, only if you tap Send (see [Usage stats (opt-in)](#usage-stats-opt-in)). The page downloads only its own files; once they
 are on your device you can go offline. Your browser keeps those files and one date (see **No
 storage of your data** below). The PDF leaves the
 app only when you download or share it. An external security and privacy audit (25 November 2026)
@@ -232,9 +237,10 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 
 ### What the tool guarantees
 
-- **No upload.** Photos are processed in the browser with the Canvas API. The site is static and has
-  no server side.
-- **No network access from the page.** The Content Security Policy
+- **No upload.** Photos are processed in the browser with the Canvas API. The site is static. Its one
+  piece of server code receives the opt-in usage stats only, and accepts nothing else
+  ([`worker/index.ts`](worker/index.ts)).
+- **No network access from the app page.** The Content Security Policy
   ([`scripts/csp.ts`](scripts/csp.ts)) is `default-src 'none'` and `connect-src 'none'`: page code
   cannot send a request to any address. There is no `'self'`: page code cannot send a request to the site's own origin either, even before
   the service worker is in place ([ADR 0022](docs/adr/0022-no-published-source-maps.md)). The app
@@ -245,7 +251,8 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **Deny by default.** After the first visit, the service worker answers only the exact files of this
   build. Any other request from the page or its workers (another address, a query string, another
   method) is refused and never reaches the network, so even a same-origin request cannot carry data
-  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). There is no exception. An end-to-end test runs a whole document workflow with
+  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). The one exception is the opt-in stats
+  POST, and only from the thanks page ([ADR 0029](docs/adr/0029-opt-in-usage-stats.md)). An end-to-end test runs a whole document workflow with
   fictional card values and checks that no request is sent and none carries those values
   ([`tests/e2e/privacy.spec.ts`](tests/e2e/privacy.spec.ts)).
 - **Tighter rules while photos are in the page.** Before the photo step opens, the app loads every
@@ -410,6 +417,60 @@ The site has no analytics code: no script, no frame, no tracking pixel and no co
   from another site runs, that the page opens no frame and that nothing leaves for another site,
   from the start screen to a loaded card. The post-deploy check fails if the live site sets a cookie.
 
+### Usage stats (opt-in)
+
+The app can send anonymous usage figures, only when you ask, and only after your document is gone
+([ADR 0029](docs/adr/0029-opt-in-usage-stats.md)).
+
+- **When.** **Clear everything** on the done screen clears the photos and your choices, then opens
+  `thanks.html`. That is a separate page: it never holds a photo and loads none of the image, AI or
+  PDF code. It shows the exact text it would send. It sends it once, only when you tap **Send
+  anonymous stats**. Offline, the button is off.
+- **What.** A fixed list ([`src/stats/schema.ts`](src/stats/schema.ts)): the document model; whether
+  detection got it right (`right`, `wrong`, `none`, `off`); whether you added the back; the ids of
+  the fields you covered (for example `can`, `mrz`, `signature`); how many extra boxes you drew;
+  whether you added a watermark and used greyscale (never the watermark's text); the language; the
+  build; where the photos came from (`camera`, `file`, `paste`); whether OCR ran; and the device type,
+  system family, browser family and major version, and whether the app is installed.
+- **What not.** No text, image, position or file name from your document. Not the browser's full
+  identifier, screen size, time zone or hardware details: together they could single out a device.
+  No cookie and no ID.
+- **How it travels.** The app hands the figures to the thanks page after `#` in its address. Browsers
+  never send that part to a server. The thanks page checks it against the fixed list, removes it
+  from the address and drops anything else.
+- **Where it goes.** One `POST` to `/stats` on dnitapado.es. A small Cloudflare Worker
+  ([`worker/index.ts`](worker/index.ts), checks in [`src/stats/endpoint.ts`](src/stats/endpoint.ts)) accepts only the exact list and writes one row to Workers
+  Analytics Engine, with the country that Cloudflare reads from the request. It does not store the
+  IP address, sets no cookie and keeps no request log. Cloudflare still sees the IP address and
+  browser of every request at its edge, as for any page load.
+- **What stays locked.** The app page keeps `connect-src 'none'` and `form-action 'none'`, also
+  from the photo step on. Only `thanks.html` has its own policy, with `connect-src 'self'`
+  (`THANKS_CSP` in [`scripts/csp.ts`](scripts/csp.ts)). The service worker passes on the stats `POST`
+  only when the thanks page sends it.
+- **Limits.** Anyone can post a valid row, so the numbers are indications, not proof.
+- **Tests.** [`tests/unit/stats.test.ts`](tests/unit/stats.test.ts) checks the list, the device
+  classes, the Worker and the service worker route.
+  [`tests/e2e/stats.spec.ts`](tests/e2e/stats.spec.ts) checks that nothing is sent before the tap,
+  that the text sent is the text shown, that the app page still cannot connect, and the offline and
+  error cases.
+
+Example query (Workers Analytics Engine SQL API): how often each field is covered, per document.
+
+```sql
+SELECT blob2 AS doc, SUM(_sample_interval) AS uses,
+       SUM(_sample_interval * double9) AS signature, SUM(_sample_interval * double13) AS can,
+       SUM(_sample_interval * double14) AS mrz
+FROM dnitapado_usage
+WHERE timestamp > NOW() - INTERVAL '30' DAY
+GROUP BY doc
+```
+
+Columns: `blob1` list version, `blob2` document, `blob3` detection result, `blob4` language,
+`blob5` build, `blob6` photo source, `blob7` device, `blob8` system, `blob9` browser, `blob10`
+country, `blob11` covered fields; `double1` back, `double2` boxes, `double3` watermark, `double4`
+greyscale, `double5` OCR ran, `double6` browser version, `double7` installed, `double8` number of
+covered fields, `double9` to `double19` one per field in the order of `FIELDS`.
+
 ### Security reviews
 
 An external static review of the source (25 November 2026) found no upload or storage of documents
@@ -454,7 +515,8 @@ You do not have to trust the claims above. Each one can be checked.
 
 1. Open the browser's developer tools, **Network** tab, before you select a photo.
 2. Use the tool to the end. The only requests are the page's own files, all from the same origin.
-   No request goes to another site. The first time you
+   No request goes to another site. After **Clear everything**, the thanks page sends one `POST` to
+   `/stats`, and only if you tap **Send anonymous stats**; its body is the text the page shows. The first time you
    select a photo, the page also downloads the corner model (`assets/ml/`), and the first time OCR
    runs, the OCR files (`ocr/`), both from the same origin. These are plain downloads of the app's
    files and carry nothing from you.
@@ -473,7 +535,8 @@ hashes differ from the deployed build.
 no-cookies notice) opens a ready-made audit prompt to copy into an AI coding agent. It asks for a
 deep review of this repository's privacy claim: image lifecycle, every network primitive, third-party
 scripts and frames, dependencies, CSP, the service worker and reproducibility, with a
-YES/NO verdict and file and line references. It also asks the agent to check the live site at
+YES/NO verdict and file and line references. It describes the one intended send, the opt-in stats,
+so the agent checks each of its limits instead of reporting the send itself as a leak. It also asks the agent to check the live site at
 <https://dnitapado.es/>: its headers, its CSP against [`scripts/csp.ts`](scripts/csp.ts), the hash of
 every file it serves, and a rebuild of the commit shown in the footer. Copying uses the clipboard
 only; nothing is sent. The text is in [`src/security/audit-prompt.ts`](src/security/audit-prompt.ts).
@@ -560,6 +623,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
 | No third-party script in the page with photos (ADR 0023) | Done |
 | No analytics code: no third-party script, frame or cookie; the host counts requests (ADR 0027) | Done |
+| Opt-in anonymous usage stats from a photo-free thanks page (ADR 0029) | Done in code; live once Workers Analytics Engine is on ([Deployment](#deployment)) |
 | Stricter CSP while photos are in the page; service worker check on the photo step | Done |
 | Custom domain `dnitapado.es`, HTTPS enforced; one host, the old address redirects | Done |
 | Security headers from the host (Cloudflare Workers): CSP with `frame-ancestors`, HSTS, Permissions-Policy, COOP, worker CSPs | Done in code; live once Cloudflare is set up ([Deployment](#deployment)) |
@@ -633,6 +697,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, manual box maths, every masked pixel opaque black |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages, images, no metadata, no text, deterministic output |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
+| Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns), the service worker route open only to the thanks page |
 | Platform | `precache`, `headers`, `lockdown`, `intake-lockdown`, `build-info`, `i18n`, `guide`, `deps-report`, `verify-release` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal and frame check, the photo step's policy and the service worker check, version and relative time, translation keys and no absolute privacy claims in es/en, guide citations, dependency report, pinned provenance identity |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off:
@@ -642,6 +707,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `privacy` | A whole workflow sends no request and stores nothing. Canaries from the card text (OCR), the photos' file names and the watermark never appear in any request's address, headers or body, from the first visit on, nor as text in the PDF |
 | `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused by the host and, without headers, by the page, photos dropped on `pagehide` |
 | `headers` | The host's headers: page CSP equal to the `<meta>` CSP plus `frame-ancestors`, the worker CSPs, HSTS, Permissions-Policy (camera on; microphone, location, clipboard reading off), no COEP |
+| `stats` | Clear everything opens the photo-free thanks page; nothing is sent before the tap; the text sent is the text shown; its own CSP; the app page still cannot connect to `/stats`, with and without the service worker; a changed fragment shows nothing to send; offline and error states; Arabic layout |
 | `cleanup` | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
 | `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
 | `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers added next to the host's CSP, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
@@ -765,8 +831,8 @@ pull request) to one host:
 
 - `deploy` publishes it to **Cloudflare Workers** for <https://dnitapado.es> and
   `www.dnitapado.es`, with the `_headers` file of [`scripts/headers.ts`](scripts/headers.ts).
-  [`wrangler.jsonc`](wrangler.jsonc) sets the host: static files only, no Worker code, no redirects,
-  no `workers.dev` address.
+  [`wrangler.jsonc`](wrangler.jsonc) sets the host: static files, Worker code for `POST /stats` only
+  ([ADR 0029](docs/adr/0029-opt-in-usage-stats.md)), no redirects, no `workers.dev` address.
 - `smoke` then checks the files, the headers and that no response sets a cookie. `attest` signs the
   provenance of every file, `verify-provenance` checks those signatures, and `lighthouse-live`
   measures the live site.
@@ -802,6 +868,10 @@ CSP and the service worker's headers.
    is expected.
 5. Delete what the visit counter used: the Web Analytics site in Cloudflare and the repository
    `aasanchez/dnitapado-stats`.
+6. Turn on **Workers Analytics Engine** for the account (Workers & Pages, Analytics Engine) before
+   the first deploy with the opt-in stats. The first send creates the dataset `dnitapado_usage`.
+   To query it, create an API token with **Account Analytics: Read** and use the SQL API (example
+   query under [Usage stats (opt-in)](#usage-stats-opt-in)).
 
 Visit counts are in the Cloudflare dashboard, under the zone's **Analytics** (requests, unique
 visitors, countries). See [Visit counts](#visit-counts).
@@ -835,6 +905,8 @@ There is no downloadable offline package ([ADR 0002](docs/adr/0002-no-standalone
 ```text
 src/
   main.ts            removes WebRTC, refuses framing, mounts the app, registers the service worker
+  thanks/            the photo-free thanks page after Clear everything: shows and, on a tap, sends the opt-in stats
+  stats/             the fixed list of opt-in usage stats, device classes, session figures, the one send
   sw.ts              service worker: verified offline cache, deny by default, page headers
   App.svelte         screen flow, brand, clearing on pagehide
   components/        Svelte components, one per screen or control (start screen, notice, audit prompt, footer, editor, review…)
@@ -855,7 +927,9 @@ src/
 scripts/             CSP, host headers, build plugins (CSP, SRI, import map, offline file list), build manifest, smoke test,
                      bundle size, dependency report, test fixture generator
 deploy/              the deploy tool (wrangler) with its own lockfile, installed only by the CI deploy job
-wrangler.jsonc       Cloudflare Workers host: static files, custom domains, no workers.dev address
+wrangler.jsonc       Cloudflare Workers host: static files, custom domains, no workers.dev address, /stats Worker route
+worker/              the Cloudflare Worker for POST /stats only: checks the fixed list, writes one Analytics Engine row
+thanks.html          the thanks page's HTML entry (its own CSP)
 tests/               unit, e2e and synthetic fixtures
 docs/                plan, zone measurement method, guide sources, decision records, images
 LICENSES/            licence texts (REUSE)
@@ -892,6 +966,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0025](docs/adr/0025-intake-lockdown.md): a second, stricter CSP from the photo step on: exact build scripts, images only from memory, no fonts, styles or connections; a service worker check with a calm note when it is missing.
 - [0026](docs/adr/0026-recheck-cache-hits.md): the service worker hashes every cache hit again before it answers; a rewritten entry is deleted and downloaded again, or refused offline.
 - [0027](docs/adr/0027-security-headers-from-the-host.md): security headers from the host; dnitapado.es on Cloudflare Workers with a generated `_headers` file, the only host, no COEP; no analytics code, the host counts requests; nothing deployed to GitHub Pages.
+- [0029](docs/adr/0029-opt-in-usage-stats.md): opt-in anonymous usage stats; "Clear everything" opens a photo-free thanks page that shows the exact figures and sends them only on a tap; fixed list, Worker on `/stats` only, Workers Analytics Engine, no IP stored; the app page still has `connect-src 'none'`.
 
 ## Contributing
 

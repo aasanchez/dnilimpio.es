@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { CSP, cspWithScriptHashes } from '../../scripts/csp.ts'
-import { COMMON_HEADERS, HOST_WORKER_CSP, SERVICE_WORKER_CSP, cookiesSetBy, headersFor, hostHeaderRules, pageCsp, renderHeadersFile } from '../../scripts/headers.ts'
+import { CSP, THANKS_CSP, cspWithScriptHashes } from '../../scripts/csp.ts'
+import { COMMON_HEADERS, HOST_WORKER_CSP, SERVICE_WORKER_CSP, THANKS_PAGE_CSP, cookiesSetBy, headersFor, hostHeaderRules, pageCsp, renderHeadersFile } from '../../scripts/headers.ts'
 
 const MAP = '{"imports":{},"integrity":{"./assets/a.js":"sha384-x"}}'
 const HTML = `<html><head><script type="importmap">${MAP}</script></head></html>`
@@ -34,6 +34,17 @@ describe('hostHeaderRules', () => {
     expect(headersFor(rules, '/sw.js')['content-security-policy']).toBe(SERVICE_WORKER_CSP)
     expect(headersFor(rules, '/ocr/worker.min.js')['x-content-type-options']).toBe('nosniff')
   })
+  it('gives the thanks page its own CSP: own origin only, no framing (ADR 0029)', () => {
+    const h = headersFor(rules, '/thanks.html')
+    expect(h['content-security-policy']).toBe(THANKS_PAGE_CSP)
+    expect(THANKS_PAGE_CSP).toBe(`${THANKS_CSP}; frame-ancestors 'none'`)
+    expect(THANKS_CSP).toMatch(/^default-src 'none'/)
+    expect(THANKS_CSP).toContain("connect-src 'self'")
+    expect(THANKS_CSP).not.toMatch(/https?:|'unsafe-|\*|wasm|worker-src/)
+    // Every other page keeps the app's policy, which refuses every connection.
+    expect(headersFor(rules, '/thanks')['content-security-policy']).toBe(pageCsp(HTML))
+    expect(headersFor(rules, '/index.html')['content-security-policy']).toContain("connect-src 'none'")
+  })
   it('lets the workers load nothing from another origin, and no eval()', () => {
     for (const csp of [HOST_WORKER_CSP, SERVICE_WORKER_CSP]) {
       expect(csp).toMatch(/^default-src 'none'/)
@@ -50,7 +61,7 @@ describe('renderHeadersFile', () => {
   const file = renderHeadersFile(rules)
   it('writes the Cloudflare `_headers` format, within its limits', () => {
     const lines = file.trimEnd().split('\n')
-    expect(lines.filter((l) => l.startsWith('/'))).toEqual(['/*', '/sw.js', '/ocr/worker.min.js'])
+    expect(lines.filter((l) => l.startsWith('/'))).toEqual(['/*', '/sw.js', '/thanks.html', '/ocr/worker.min.js'])
     expect(lines.every((l) => l.length <= 2000)).toBe(true)
     expect(lines.filter((l) => l.startsWith('/')).length).toBeLessThanOrEqual(100)
     expect(file).toContain('/sw.js\n  ! Content-Security-Policy\n  Content-Security-Policy: ')

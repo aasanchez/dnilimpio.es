@@ -21,7 +21,7 @@
   import { fitSide } from '../engine/snap.ts'
   import { shrink } from '../engine/wipe.ts'
 
-  let { lang, doc, align, edit, dniFound, phase = $bindable(), onDniVersion, onAdjust, onReset, onPhase, onGuide }: {
+  let { lang, doc, align, edit, dniFound, phase = $bindable(), onDniVersion, onAdjust, onReset, onFinish, onPhase, onGuide }: {
     lang: Lang
     /** The document's zone data. The editor is re-created when the document changes. */
     doc: ModelZones
@@ -34,6 +34,8 @@
     phase: Phase
     onAdjust: (side: Side) => void
     onReset: () => void
+    /** "Clear everything" on the done screen (Review.svelte). */
+    onFinish: () => void
     /** Called after the phase changes, so the shell can move focus to the new heading. */
     onPhase: () => void
     /** Opens the card guide on this field's entry. */
@@ -589,5 +591,5 @@
   </section>
 {:else}
   <Review {lang} {secure} {phase} hiddenCount={hidden.size} boxCount={edit.boxes.present.front.length + edit.boxes.present.back.length} watermark={edit.watermark} greyscale={edit.greyscale}
-    onDone={() => { setPhase('done') }} {onReset} />
+    onDone={() => { setPhase('done') }} {onReset} {onFinish} />
 {/if}

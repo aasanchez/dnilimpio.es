@@ -14,6 +14,8 @@ test('informs that there are no cookies, with no accept step', async ({ page }) 
   // visits: no analytics code runs in the page (ADR 0027).
   await expect(notice).toContainText('Tu documento se procesa en tu dispositivo y la app no lo sube.')
   await expect(notice).not.toContainText(/visitas/i)
+  // The opt-in stats are named, as optional (ADR 0029).
+  await expect(notice).toContainText('Al terminar, puedes enviar estadísticas anónimas de uso, solo si tú quieres.')
   // No consent choice: one button closes it, the other opens the audit prompt.
   await expect(notice.getByRole('button')).toHaveText(['Compruébalo con tu IA →', 'Me lo creo'])
   await expect(page.getByRole('complementary', { name: 'Bruselas estaría orgullosa' })).toBeVisible()
@@ -88,7 +90,10 @@ test('offers an audit prompt to copy into an AI coding agent, from the notice an
   await reader.close()
   expect(copied).toContain("connect-src 'none', without 'self'")
   // It asks the agent to check the live site too, not only the repository.
-  expect(copied).toContain('5. Live Site Verification (https://dnitapado.es/)')
+  expect(copied).toContain('6. Live Site Verification (https://dnitapado.es/)')
+  // It describes the one intended send, so the agent verifies its limits instead of flagging it (ADR 0029).
+  expect(copied).toContain('3. The One Intended Send: Opt-in Usage Stats')
+  expect(copied).toContain("The app page (index.html) keeps connect-src 'none' and form-action 'none'")
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
 

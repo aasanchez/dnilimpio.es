@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0027. Security headers from the host: dnitapado.es on Cloudflare Workers, with no analytics code
 
-- Status: accepted
+- Status: accepted. Changed by [ADR 0029](0029-opt-in-usage-stats.md): the host runs Worker code for `POST /stats` only.
 - Date: 2026-11-26
 - Decided by: Alexis
 

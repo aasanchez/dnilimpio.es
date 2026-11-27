@@ -24,6 +24,8 @@
   import Editor from './components/Editor.svelte'
   import type CardGuideT from './components/CardGuide.svelte'
   import { emptyEditState, type Phase } from './ui/edit-state.ts'
+  import { sessionStats, type DetectOutcome, type PhotoVia } from './stats/session.ts'
+  import { openThanks } from './stats/thanks-link.ts'
 
   /** The product name. Not translated: it is the brand and the domain (dnitapado.es). */
   const BRAND = 'DNI Tapado.es'
@@ -45,6 +47,10 @@
    * when it is the default (4.0) because detection could not tell. The editor then says so.
    */
   let dniFound = $state(false)
+  /** What document detection answered, kept for the opt-in usage stats only (ADR 0029). */
+  let detectOutcome = $state<DetectOutcome | null>(null)
+  /** How each photo arrived (camera, file, paste), for the opt-in usage stats only. */
+  const photoVia: Record<Side, PhotoVia | null> = { front: null, back: null }
   /** True once the person confirmed a document for the current photos; automatic detection then stops preselecting. */
   let docConfirmed = $state(false)
   const doc = $derived(documentOf(docModel))
@@ -160,8 +166,10 @@
       capture[s] = null
       resetSide(align, s)
       aligned[s] = false
+      photoVia[s] = null
     }
     edit = emptyEditState(doc)
+    detectOutcome = null
     docConfirmed = false
     dniFound = false
     // The OCR worker keeps the last card it read: stop it (a new one starts if OCR is used again).
@@ -169,6 +177,29 @@
     // The PDF's download link, if it is still open (downloads.ts).
     revokeDownloads()
     go('capture', 'front')
+  }
+
+  /**
+   * "Clear everything" on the done screen: the usage figures of this session (ids and counts only,
+   * src/stats/session.ts) are taken first, then everything is cleared, then the photo-free thanks
+   * page opens. It sends nothing by itself; there the person may choose to send them (ADR 0029).
+   */
+  function finish (): void {
+    const ids = new Set(doc.zones.map((z) => z.id))
+    const stats = sessionStats({
+      doc: docModel,
+      outcome: detectOutcome,
+      back: capture.back !== null,
+      hidden: edit.hidden.filter((id) => ids.has(id)),
+      boxes: edit.boxes.present.front.length + edit.boxes.present.back.length,
+      watermark: edit.watermark,
+      greyscale: edit.greyscale,
+      lang,
+      sha: __BUILD_SHA__,
+      via: (['front', 'back'] as const).map((s) => photoVia[s]).filter((v): v is PhotoVia => v !== null),
+    })
+    reset()
+    openThanks(stats)
   }
 
   /**
@@ -218,9 +249,10 @@
   }
 
   /** A new photo for a side invalidates that side's corners and straightened card. */
-  function onLoaded (side: Side, bitmap: ImageBitmap): void {
+  function onLoaded (side: Side, bitmap: ImageBitmap, via: PhotoVia): void {
     if (capture[side] !== bitmap) capture[side]?.close()
     capture[side] = bitmap
+    photoVia[side] = via
     resetSide(align, side)
     aligned[side] = false
     docConfirmed = false
@@ -268,13 +300,13 @@
       {/key}
     {:else if step === 'edit' && align.warped.front && align.warped.back}
       {#key docModel}
-        <Editor {lang} {doc} {align} {edit} {dniFound} bind:phase onDniVersion={(v: DniVersion) => { setDniVersion(v); dniFound = true }} onAdjust={(side: Side) => { go('align', side) }} onReset={reset} onPhase={focusHeading}
+        <Editor {lang} {doc} {align} {edit} {dniFound} bind:phase onDniVersion={(v: DniVersion) => { setDniVersion(v); dniFound = true }} onAdjust={(side: Side) => { go('align', side) }} onReset={reset} onFinish={finish} onPhase={focusHeading}
           onGuide={(field: ZoneId) => { void openGuide(docModel, field) }} />
       {/key}
     {:else if step === 'auto'}
       <StraightenStep {lang} {doc} {size} photos={capture} {align} onDone={onStraightened} onManual={() => { missed = []; go('align', 'front') }} />
     {:else if step === 'doc'}
-      <DocStep {lang} bind:doc={docPick} bind:dniFound photos={capture} preselect={!docConfirmed} onContinue={chooseDoc} />
+      <DocStep {lang} bind:doc={docPick} bind:dniFound bind:outcome={detectOutcome} photos={capture} preselect={!docConfirmed} onContinue={chooseDoc} />
     {:else if step === 'capture'}
       {#key session}
         <CaptureStep {lang} state={capture} {onLoaded} onContinue={() => { go('doc') }} />
