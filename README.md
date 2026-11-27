@@ -523,6 +523,10 @@ country, `blob11` covered fields; `double1` back, `double2` boxes, `double3` wat
 greyscale, `double5` OCR ran, `double6` browser version, `double7` installed, `double8` number of
 covered fields, `double9` to `double19` one per field in the order of `FIELDS`.
 
+To see these figures as charts, use the Grafana dashboard in [`docs/grafana/`](docs/grafana/): setup in
+[`docs/GRAFANA.md`](docs/GRAFANA.md). Grafana reads the dataset with a read-only token; the site
+sends nothing more.
+
 ### Security reviews
 
 An external static review of the source (25 November 2026) found no upload or storage of documents
@@ -749,6 +753,7 @@ show the current state.
 | No third-party script in the page with photos (ADR 0023) | Done |
 | No analytics code: no third-party script, frame or cookie; the host counts requests (ADR 0027) | Done |
 | Opt-in anonymous usage stats from a photo-free thanks page (ADR 0029) | Done |
+| Grafana Cloud dashboard of the opt-in stats, read-only through the Analytics Engine SQL API | Done |
 | Stricter CSP while photos are in the page; service worker check on the photo step | Done |
 | Custom domain `dnitapado.es`, HTTPS enforced; one host, the old address redirects | Done |
 | Security headers from the host (Cloudflare Workers): CSP with `frame-ancestors`, HSTS, Permissions-Policy, COOP, worker CSPs | Done |
@@ -855,7 +860,7 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | Search metadata | `seo` | Site address checks, escaped static head with no script or style, title and description length, Open Graph locale for every language, language addresses, canonical per language, hreflang list (no Valencian, `x-default`), the structured data block (one data block, a free `WebApplication` at the site address in every language, nothing can close it), `robots.txt` and sitemap (one entry per language, hreflang alternates, escaping), crawl files served by the service worker |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
-| Usage stats | `stats`, `stats-send` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns, 429 above the rate limit with one key for all senders), the service worker route open only to the thanks page; the one request sent with no cookie, referrer, cache or redirect, and success only on 204 |
+| Usage stats | `stats`, `stats-send`, `grafana` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns, 429 above the rate limit with one key for all senders), the service worker route open only to the thanks page; the one request sent with no cookie, referrer, cache or redirect, and success only on 204; the Grafana dashboard reads only `dnitapado_usage` within its time range, weighted by `_sample_interval`, with each column named as the Worker writes it |
 | App updates | `update-rules` | An idle page offers a waiting build and reloads once into it; a busy page is never reloaded and reloads back on the start screen; no reload on the first visit; "Update now" when another window holds the build back, which forces it; an update check at most every 15 minutes when the tab comes back; the answer to "idle?" (also from the thanks page) |
 | Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `notice-memory`, `install`, `build-info`, `i18n`, `i18n-load`, `lang-url`, `guide`, `guide-page`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, a fixed Content-Type for every kind of build file, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal and the check that nothing was left, frame guard and frame check, the photo step's policy (built from the page, added once, fonts loaded first with a time limit) and the service worker check, the notice's one stored date (4 days, blocked storage), iPhone and iPad detection and installed mode for the install link, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, the language read from and written to the address path (any case, unknown paths ignored, subpath, query kept), language redirects equal on host and service worker, guide citations, guide pages (every entry and citation of the dialog, no script, strict CSP, relative links, escaped text), dependency report, pinned provenance identity, which `gh` errors are retried, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
 
@@ -1113,7 +1118,8 @@ dnitapado.es on 27 November 2026. They are kept here for a new account or a fork
 5. Turn on **Workers Analytics Engine** for the account (Workers & Pages, Analytics Engine) before
    the first deploy with the opt-in stats. The first send creates the dataset `dnitapado_usage`.
    To query it, create an API token with **Account Analytics: Read** and use the SQL API (example
-   query under [Usage stats (opt-in)](#usage-stats-opt-in)).
+   query under [Usage stats (opt-in)](#usage-stats-opt-in)). For charts, connect Grafana Cloud
+   with that token ([`docs/GRAFANA.md`](docs/GRAFANA.md)).
 6. Redirect `www` to the bare domain, so search engines see one site. In the zone, open **Rules >
    Overview**, create a **Redirect Rule** from the template "Redirect from WWW to root", or by hand
    with these values:
@@ -1210,7 +1216,7 @@ worker/              the Cloudflare Worker for POST /stats only: checks the fixe
 thanks.html          the thanks page's HTML entry (its own CSP)
 content/articles/    the articles, in Markdown, one folder per language (CC BY-SA 4.0)
 tests/               unit, e2e and synthetic fixtures
-docs/                plan, zone measurement method, guide sources, decision records, images
+docs/                plan, zone measurement method, guide sources, decision records, images, Grafana dashboard of the usage stats
 LICENSES/            licence texts (REUSE)
 ```
 
