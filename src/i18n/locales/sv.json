@@ -234,6 +234,7 @@
   "findFailed": "Automatisk sökning fungerade inte den här gången. Dölj uppgifterna för hand.",
   "framed": "Av säkerhetsskäl fungerar verktyget bara i en egen flik. Öppna det här.",
   "guideOpen": "Vad står det på mitt kort?",
+  "guidePagesLead": "Fullständig guide för varje dokument (på spanska):",
   "guideAbout": "Om: {field}",
   "seoTitle": "Dölj uppgifter på ditt DNI och lägg till vattenstämpel",
   "seoDescription": "Dölj uppgifterna på ditt spanska DNI eller TIE och lägg till en vattenstämpel innan du skickar en kopia. Gratis, utan konto. Dokumentet behandlas på din enhet.",

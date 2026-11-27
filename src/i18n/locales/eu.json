@@ -234,6 +234,7 @@
   "findFailed": "Bilaketa automatikoak ez du funtzionatu oraingoan. Estali datuak eskuz.",
   "framed": "Segurtasunagatik, tresna honek bere fitxan bakarrik funtzionatzen du. Ireki hemen.",
   "guideOpen": "Zer dago nire txartelean?",
+  "guidePagesLead": "Dokumentu bakoitzaren gida osoa (gaztelaniaz):",
   "guideAbout": "Zer da: {field}",
   "seoTitle": "NANaren datuak estali eta ur-marka jarri",
   "seoDescription": "Estali zure NANaren edo TIEaren datuak eta gehitu ur-marka bat kopia bat bidali aurretik. Doan eta erregistrorik gabe. Dokumentua zure gailuan prozesatzen da.",

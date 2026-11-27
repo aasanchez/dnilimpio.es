@@ -79,3 +79,26 @@ test('the sitemap lists each page, and each page names its own address as canoni
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://dnitapado.es/${file}`)
   }
 })
+
+test('the start screen links each page, also before the app starts, in a new tab', async ({ page, request }) => {
+  // The prerendered start screen (ADR 0041) holds the links, so a crawler that runs no script finds them.
+  const html = await (await request.get('./')).text()
+  for (const file of GUIDE_PAGES) expect(html).toContain(`href="./${file}"`)
+  for (const [path, label, hreflang] of [['./', 'Guía completa de cada documento', null], ['./en', 'Full guide for each document (in Spanish)', 'es']] as const) {
+    await page.goto(path)
+    const box = page.locator('#guide-pages')
+    await expect(box).toContainText(label)
+    const links = box.locator('a')
+    await expect(links).toHaveCount(GUIDE_PAGES.length)
+    for (const [i, file] of GUIDE_PAGES.entries()) {
+      const a = links.nth(i)
+      await expect(a).toHaveAttribute('href', `./${file}`)
+      await expect(a).toHaveAttribute('target', '_blank')
+      if (hreflang === null) await expect(a).not.toHaveAttribute('hreflang')
+      else await expect(a).toHaveAttribute('hreflang', hreflang)
+    }
+  }
+  const [guide] = await Promise.all([page.waitForEvent('popup'), page.locator('#guide-pages a', { hasText: 'TIE' }).click()])
+  await expect(guide).toHaveURL(/\/guia-tie\.html$/)
+  await expect(guide.locator('h1')).toContainText(': qué es cada dato')
+})

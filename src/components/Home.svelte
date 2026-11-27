@@ -10,6 +10,11 @@
   import NagwaraBand from './NagwaraBand.svelte'
   import InstallApp from './InstallApp.svelte'
   import UpdateReady from './UpdateReady.svelte'
+  import { GUIDE_PAGE, GUIDE_PAGE_LANG } from '../guide/pages.ts'
+  import type { DocModel } from '../zones/types.ts'
+
+  /** The card guide pages (ADR 0040), in the order of the document picker. */
+  const guidePages = Object.entries(GUIDE_PAGE) as Array<[DocModel, string]>
 
   const { lang, onStart, notice, onNoticeDismiss, onGuide }: { lang: Lang; onStart: () => void; notice: boolean; onNoticeDismiss: () => void; onGuide: () => void } = $props()
 </script>
@@ -25,6 +30,16 @@
     </div>
     <p class="lead lg:text-xl">{t(lang, 'homeLead')}</p>
     <button type="button" class="link-btn -mt-2 self-start" id="guide-open" onclick={onGuide}>{t(lang, 'guideOpen')} <span class="flip" aria-hidden="true">→</span></button>
+    <!-- Plain links to the guide pages, so search engines and readers find them from the start page.
+         New tab: leaving this page clears the photos (pagehide in App.svelte). -->
+    <nav class="-mt-3 text-sm text-muted" id="guide-pages" aria-labelledby="guide-pages-lead">
+      <p id="guide-pages-lead">{t(lang, 'guidePagesLead')}</p>
+      <ul class="flex flex-wrap gap-x-4">
+        {#each guidePages as [doc, file] (doc)}
+          <li><a class="inline-flex min-h-6 items-center text-accent-text underline underline-offset-3" href="./{file}" hreflang={lang === GUIDE_PAGE_LANG ? undefined : GUIDE_PAGE_LANG} target="_blank" rel="noopener">{t(lang, `doc_${doc}`)}</a></li>
+        {/each}
+      </ul>
+    </nav>
   </div>
 
   <div class="panel area-stage" aria-hidden="true">

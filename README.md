@@ -118,7 +118,9 @@ source was found, the guide says so instead of guessing ([ADR 0014](docs/adr/001
 The same guide is also published as one page per document, in Spanish: `guia-dni-4.html`,
 `guia-dni-3.html` and `guia-tie.html`. The build writes them from the guide data, so they say exactly
 what the dialog says. They run no script at all, work offline, are listed in `sitemap.xml` and name
-their own canonical address ([ADR 0040](docs/adr/0040-card-guide-pages.md)).
+their own canonical address ([ADR 0040](docs/adr/0040-card-guide-pages.md)). The start screen links
+each page under the guide button, in every language; outside Spanish the link says the page is in
+Spanish and carries `hreflang="es"`.
 
 ## How to use it
 
@@ -880,7 +882,7 @@ Every spec runs in Chromium. The specs marked **(all browsers)** also run in Fir
 | `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; after a download or a share the review stays and the small Send anonymous data link appears; closing the sheet; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `articles` | An article loads as HTML at its clean address with the article CSP and no script, and an inline script cannot run; the list shows only that language's articles and links back to the app; a language with no articles has no list and no link; the prerendered start screen links the list; the sitemap names the list and every article; the service worker serves an article and the list after one visit, offline too, never the app |
-| `guide-pages` | Each guide page loads with its own CSP and no script, styled, in Spanish, every citation pointing to a source; the pages link to each other and to the app; the service worker serves them, offline too; the sitemap lists them and each names its canonical address |
+| `guide-pages` | Each guide page loads with its own CSP and no script, styled, in Spanish, every citation pointing to a source; the pages link to each other and to the app; the start screen links each page, also in the prerendered copy, in a new tab; the service worker serves them, offline too; the sitemap lists them and each names its canonical address |
 | `languages` | First render in the address's language (`/fr`) with no other dictionary loaded; `/` is Spanish whatever the browser; the address follows the selector without a history entry and survives a reload; `/en/` and `/es` redirect, on the host and offline; switching language after the photo step's policy is in force, and offline |
 | `privacy-notice` | Exact privacy wording (processing on the device, no upload), no accept step, 4-day memory, blocked storage, translations, audit prompt (short, asks to disprove the claims, checks the live site), 80 % of the screen width on phone, tablet and desktop |
 | `keyboard` | Keyboard only, in Spanish and in Arabic (right to left): the whole flow from Start to the PDF with Tab, Enter, Space and the arrow keys (file chooser, document choice, fields, a box, the watermark, the corners, confirm and download); each new screen focuses its heading; every control shows a focus ring; no focused control hides behind the sticky bars or the notice, on a phone and a wide screen; focus stays on a control after the last photo, Download, Delete, Undo, Redo and Remove the back; Escape closes the card guide and returns focus |
