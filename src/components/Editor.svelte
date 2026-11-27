@@ -3,6 +3,7 @@
      and download (Review.svelte). The editor owns the sanitised rasters that both screens show. -->
 <script lang="ts">
   import { untrack } from 'svelte'
+  import { byId, keepFocus } from '../ui/focus-rescue.ts'
   import { fieldsOn, hasField, masksFor, mrzLeaks, placeZones, sideRects } from '../engine/fields.ts'
   import { renderSecure, type RenderOptions } from '../engine/render.ts'
   import { createRedraw } from '../engine/redraw.ts'
@@ -555,7 +556,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" /></svg>
               {t(lang, 'adjustZones')}
             </button>
-            <button type="button" class="button small" id="reset-zones" disabled={!moved} onclick={resetPlacement}>{t(lang, 'resetZones')}</button>
+            <button type="button" class="button small" id="reset-zones" disabled={!moved} onclick={resetPlacement} {@attach keepFocus(() => [byId('adjust-zones'), display])}>{t(lang, 'resetZones')}</button>
           </div>
           <FitZones {lang} {cards} disabled={finalPreview || hidden.size === 0} onFit={fitToText} />
           {#if adjusting}
@@ -581,13 +582,13 @@
             </button>
             <button type="button" class="button small" id="add-box" disabled={finalPreview} onclick={addBox}>{t(lang, 'addBox')}</button>
             <span class="flex-1"></span>
-            <button type="button" class="icon-btn" id="delete-box" aria-label={t(lang, 'deleteBox')} disabled={selected === null || finalPreview} onclick={deleteBox}>
+            <button type="button" class="icon-btn" id="delete-box" aria-label={t(lang, 'deleteBox')} disabled={selected === null || finalPreview} onclick={deleteBox} {@attach keepFocus(() => [byId('undo'), display])}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
             </button>
-            <button type="button" class="icon-btn" id="undo" aria-label={t(lang, 'undo')} disabled={!canUndo(edit.boxes)} onclick={() => { history('undo') }}>
+            <button type="button" class="icon-btn" id="undo" aria-label={t(lang, 'undo')} disabled={!canUndo(edit.boxes)} onclick={() => { history('undo') }} {@attach keepFocus(() => [byId('redo'), display])}>
               <svg class="flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 010 12h-3" /></svg>
             </button>
-            <button type="button" class="icon-btn" id="redo" aria-label={t(lang, 'redo')} disabled={!canRedo(edit.boxes)} onclick={() => { history('redo') }}>
+            <button type="button" class="icon-btn" id="redo" aria-label={t(lang, 'redo')} disabled={!canRedo(edit.boxes)} onclick={() => { history('redo') }} {@attach keepFocus(() => [byId('undo'), display])}>
               <svg class="flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5" /><path d="M20 9H10a6 6 0 000 12h3" /></svg>
             </button>
           </div>
