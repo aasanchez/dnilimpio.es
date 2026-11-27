@@ -19,6 +19,13 @@ export type DocChoice = 'dni' | 'tie'
 /** Picker options, in order. */
 export const CHOICES: readonly DocChoice[] = ['dni', 'tie']
 
+/**
+ * Preselected when detection ran but found no answer. DNI detection is reliable and the TIE is the
+ * card it sometimes misses, so an unrecognised card is most likely a TIE (ADR 0028). Without
+ * detection (offline, old browser, OCR failure) nothing is preselected. The person can change it.
+ */
+export const FALLBACK_CHOICE: DocChoice = 'tie'
+
 /** DNI layouts, newest first. The first one is used when the version cannot be detected. */
 export const DNI_VERSIONS = ['dni-4.0', 'dni-3.0'] as const satisfies readonly DocModel[]
 export type DniVersion = (typeof DNI_VERSIONS)[number]

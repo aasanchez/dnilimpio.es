@@ -98,7 +98,7 @@ test('a choice made by hand is never overridden', async ({ page }) => {
   await expect(page.locator('#doc-dni')).toBeChecked()
 })
 
-test('offline without the OCR files: a note, and the manual choice', async ({ page, context }) => {
+test('offline without the OCR files: a note, nothing preselected, and the manual choice', async ({ page, context }) => {
   await controlled(page)
   await context.setOffline(true)
   await openCapture(page)
@@ -106,6 +106,8 @@ test('offline without the OCR files: a note, and the manual choice', async ({ pa
   await page.locator('#file-back').setInputFiles(fixture('synthetic-back.png'))
   await page.locator('#capture-continue').click()
   await expect(page.locator('#detect-status')).toHaveText('Sin conexión no se puede descargar la detección automática. Elige el documento.')
+  // Detection did not run, so it did not fail: no TIE fallback (ADR 0028).
+  await expect(page.locator('input[name="doc"]:checked')).toHaveCount(0)
   await expect(page.locator('#doc-continue')).toBeDisabled()
   await page.locator('#doc-tie').check()
   await page.locator('#doc-continue').click()
@@ -182,4 +184,34 @@ test('a DNI whose version cannot be told: DNI, the 4.0 layout, and the switch', 
   await expect(page.locator('#dni-older')).not.toBeChecked()
   await expect(page.locator('#dni-guessed')).toBeVisible()
   await expect(page.locator('#panel-fields')).toContainText('DNI 4.0')
+})
+
+test('when nothing on the photos tells the document, TIE is preselected', async ({ page }) => {
+  test.setTimeout(180_000)
+  await controlled(page)
+  await openCapture(page)
+  // Blank cards: no MRZ and no printed text, so detection has no answer.
+  await page.locator('#file-front').setInputFiles(await front(page, []))
+  await page.locator('#file-back').setInputFiles(await back(page, []))
+  await page.locator('#capture-continue').click()
+  // While the photos are read, nothing is selected.
+  await expect(page.locator('input[name="doc"]:checked')).toHaveCount(0)
+  await expect(page.locator('#doc-continue')).toBeDisabled()
+  await expect(page.locator('#detect-status')).toHaveText('No se ha podido reconocer el documento. Se ha elegido TIE. Si es un DNI, cámbialo.', { timeout: 120_000 })
+  await expect(page.locator('#doc-tie')).toBeChecked()
+  await page.locator('#doc-continue').click()
+  await expect(page.locator('h2')).toHaveText('Elige qué tapar', { timeout: 30_000 })
+  await expect(page.locator('#panel-fields')).toContainText('TIE')
+})
+
+test('a choice made by hand before detection fails is kept', async ({ page }) => {
+  test.setTimeout(180_000)
+  await controlled(page)
+  await openCapture(page)
+  await page.locator('#file-front').setInputFiles(await front(page, []))
+  await page.locator('#file-back').setInputFiles(await back(page, []))
+  await page.locator('#capture-continue').click()
+  await page.locator('#doc-dni').check()
+  await expect(page.locator('#detect-status')).toHaveText('No se ha podido reconocer el documento.', { timeout: 120_000 })
+  await expect(page.locator('#doc-dni')).toBeChecked()
 })
