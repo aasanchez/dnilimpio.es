@@ -62,6 +62,13 @@ describe('trimMarkup', () => {
   it('drops comments, hydration markers and closed dialogs', () => {
     expect(trimMarkup('<!--[--><p>a</p><!---->b<dialog class="x"><p>long</p></dialog><!--]-->')).toBe('<p>a</p>b')
   })
+  it('removes pieces that join after a removal; what it cannot remove fails the check', () => {
+    expect(trimMarkup('<!-<!--x-->-- y -->a')).toBe('a')
+    expect(trimMarkup('<dia<dialog></dialog>log>x</dialog>b')).toBe('b')
+    const left = trimMarkup('<!<!--x-->--<!--y-->>a')
+    expect(left).toBe('<!-->a')
+    expect(() => checkPrerendered(`<div><h1>x</h1>${left}</div>`)).toThrow('comment')
+  })
 })
 
 describe('checkPrerendered', () => {
@@ -71,6 +78,8 @@ describe('checkPrerendered', () => {
   })
   it.each([
     ['<script>alert(1)</script>', 'script'],
+    ['<!-- x -->', 'comment'],
+    ['<dialog></dialog>', 'dialog'],
     ['<p style="color:red">x</p>', 'style attribute'],
     ['<style>p{}</style>', 'style element'],
     ['<button onclick="go()">x</button>', 'event handler'],
