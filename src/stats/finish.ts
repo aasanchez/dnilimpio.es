@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Loaded on demand by "Clear everything" (App.svelte finish()), so the start page does not carry the
+// Loaded on demand by "Send anonymous data" (App.svelte finish()), so the start page does not carry the
 // stats code (ADR 0029). Builds the session figures and opens the thanks page.
 
 import { sessionStats, type SessionInput } from './session.ts'

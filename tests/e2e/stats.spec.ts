@@ -25,9 +25,10 @@ async function toThanks (page: Page): Promise<void> {
   await toEditor(page)
   await page.locator('#review').click()
   await page.locator('#review-confirm').check()
-  // "Download and clear": no done screen, no second tap.
   await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
-  await expect(page.locator('#thanks-title')).toHaveText('Tu documento ya no está aquí')
+  // The small link appears only once the PDF has left; it opens the stats page.
+  await page.locator('#stats-link').click()
+  await expect(page.locator('#thanks-title')).toHaveText('Datos de uso anónimos')
 }
 
 test('Clear everything opens the photo-free thanks page; nothing is sent until the person taps Send', async ({ page }) => {
@@ -54,7 +55,9 @@ test('Clear everything opens the photo-free thanks page; nothing is sent until t
   expect(post.postData()).toBe(shown)
   expect(post.headers()['cookie']).toBeUndefined()
   expect(post.headers()['referer']).toBeUndefined()
-  await expect(page.locator('#stats-status')).toHaveText('Enviado. ¡Gracias!')
+  // The button itself turns into the thank-you and stays off: one send per visit.
+  await expect(page.locator('#stats-send')).toHaveText('✓ ¡Gracias!')
+  await expect(page.locator('#stats-send')).toBeDisabled()
   expect(sent).toHaveLength(1)
 
   // Start again: back to the app's start screen.
@@ -116,7 +119,7 @@ test.describe('with the service worker', () => {
     await expect.poll(async () => await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true)
     await page.locator('#stats-send').click()
     // The preview answers with the Worker's own code: 204 only for the exact list.
-    await expect(page.locator('#stats-status')).toHaveText('Enviado. ¡Gracias!')
+    await expect(page.locator('#stats-send')).toHaveText('✓ ¡Gracias!')
     // The same POST from the app page: refused (its CSP first, the worker's route() second).
     await page.goto('./')
     await expect.poll(async () => await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true)
