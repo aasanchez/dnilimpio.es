@@ -54,3 +54,32 @@ test.describe('Spanish browser', () => {
     await expect(page.locator('meta[name="description"]')).toHaveCount(1)
   })
 })
+
+test.describe('with the service worker', () => {
+  test.use({ serviceWorkers: 'allow' })
+
+  test('a controlled page still reaches robots.txt, sitemap.xml and the preview image', async ({ page }) => {
+    await page.goto('/')
+    await page.evaluate(async () => { await navigator.serviceWorker.ready })
+    await page.reload()
+    expect(await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true)
+    for (const file of ['robots.txt', 'sitemap.xml', 'icons/og-image.png']) {
+      const res = await page.context().request.get(file) // baseline: the host serves it
+      expect(res.status()).toBe(200)
+      // From the page: answered through the worker's route(), not refused.
+      const status = await page.evaluate(async (f) => {
+        const img = f.endsWith('.png')
+        if (img) {
+          return await new Promise<number>((resolve) => {
+            const i = new Image()
+            i.onload = () => { resolve(200) }
+            i.onerror = () => { resolve(0) }
+            i.src = f
+          })
+        }
+        return (await caches.match(new URL(f, location.href).href)) ? 200 : 0
+      }, file)
+      expect(status, file).toBe(200)
+    }
+  })
+})
