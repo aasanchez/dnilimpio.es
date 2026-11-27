@@ -12,6 +12,10 @@
 //
 // gh downloads the attestations from GitHub and checks the signatures against GitHub's Sigstore
 // trust root. It needs a token (GH_TOKEN) to read the attestations. Exit code 1 if any file fails.
+//
+// gh sometimes fails before it checks anything: it cannot load the Sigstore trust root or reach
+// GitHub. Such a check is tried again, up to ATTEMPTS times. A check that ran and found a wrong or
+// missing attestation is never tried again.
 import { execFile } from 'node:child_process'
 import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -33,6 +37,23 @@ export function verifyArgs (file: string, sha: string): string[] {
     '--deny-self-hosted-runners',
     '--predicate-type', 'https://slsa.dev/provenance/v1',
   ]
+}
+
+/** Tries per file when gh fails before it checks the attestation. */
+export const ATTEMPTS = 3
+
+/**
+ * True when gh's error says it could not start the check (trust root, network, GitHub API), not
+ * that the attestation is wrong. Only these errors are tried again.
+ */
+export function isTransient (stderr: string): boolean {
+  return [
+    /verifier is not available/i,
+    /initialization may have failed/i,
+    /failed to (?:create|load|fetch|update) (?:the )?(?:TUF|trusted root)/i,
+    /\b(?:timeout|timed out|connection reset|connection refused|EOF|TLS handshake)\b/i,
+    /HTTP (?:429|5\d\d)/,
+  ].some((re) => re.test(stderr))
 }
 
 /** Every file under `dir`, sorted, as paths that include `dir`. */
@@ -58,13 +79,22 @@ async function main (): Promise<void> {
   await Promise.all(Array.from({ length: 4 }, async () => {
     while (next < files.length) {
       const file = files[next++] as string
-      try {
-        await run('gh', verifyArgs(file, sha))
-        console.log(`ok      ${file}`)
-      } catch (e) {
-        failed.push(file)
-        const err = e as { stderr?: string }
-        console.error(`FAILED  ${file}\n${err.stderr ?? String(e)}`)
+      for (let attempt = 1; ; attempt++) {
+        try {
+          await run('gh', verifyArgs(file, sha))
+          console.log(`ok      ${file}`)
+          break
+        } catch (e) {
+          const stderr = (e as { stderr?: string }).stderr ?? String(e)
+          if (attempt < ATTEMPTS && isTransient(stderr)) {
+            console.error(`retry   ${file} (attempt ${String(attempt)}): ${stderr.trim()}`)
+            await new Promise((resolve) => setTimeout(resolve, 2000 * attempt))
+            continue
+          }
+          failed.push(file)
+          console.error(`FAILED  ${file}\n${stderr}`)
+          break
+        }
       }
     }
   }))
