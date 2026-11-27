@@ -15,7 +15,7 @@ document.
 > check below uses that name.
 
 > [!IMPORTANT]
-> Automatic detection can miss data. Always check both sides of the result before you share it.
+> Automatic detection can miss data. Always check every side of the result before you share it.
 
 ## Contents
 
@@ -40,7 +40,7 @@ document.
 When a landlord, employer or company asks for a copy of your DNI or TIE, they usually need only
 some of the data. This tool makes a copy that shows only what you choose:
 
-1. **Select** a photo of the front and of the back. On a phone, the **capture coach** gives live
+1. **Select** a photo of the front and, if you need it, of the back. The back is optional. On a phone, the **capture coach** gives live
    tips and takes the photo by itself when the card is sharp. On a computer, drag and drop, choose a
    file or paste.
 2. **Confirm the document**: DNI or TIE. The app reads the card on your device and preselects it,
@@ -54,7 +54,7 @@ some of the data. This tool makes a copy that shows only what you choose:
    diagonal rows over the whole card, so every part of the image carries it. Text size and opacity
    are adjustable; at 100 % opacity the text is solid black.
 6. **Convert to black and white** (optional).
-7. **Review** both sides and **download a PDF**: `protected-document.pdf`.
+7. **Review** the result and **download a PDF**: `protected-document.pdf`, one page per side.
 8. **Share it yourself** (optional) through WhatsApp, email or the system share sheet. The app
    never sends anything.
 
@@ -137,6 +137,10 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    Optional: disconnect from the Internet once the page has loaded. After the first visit, the tool
    also opens with no connection. Press **Start**.
 2. **Photos.** Take or choose a photo of the front. The app then moves to the back by itself.
+   The back is optional: many requests need only the front. **Continue without the back** goes on
+   with the front alone, and the rest of the flow works on that one side: the editor shows only the
+   front's fields, and the PDF has one page. **Remove the photo of the back** drops a back you added
+   by mistake. In the capture coach, **Continue without the back** closes the camera after the front.
    - On a phone, **Take a photo** opens the capture coach (see below) and **Gallery** opens your
      pictures.
    - On a computer, the photo area is an upload area: drag an image onto it, use **Choose a file**,
@@ -180,8 +184,8 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    corners of the card; a magnifier shows the area under your finger. On a keyboard, arrow keys move
    the selected corner and <kbd>N</kbd> selects the next one. **Rotate** turns the frame a quarter
    turn, **Reset** puts the circles back. The button straightens the card again and takes you on.
-5. **Hide.** The card stays on screen. Choose **Front** or **Back**; the list below shows that
-   side's fields as switches. You can also tap a field on the card itself to cover or uncover it.
+5. **Hide.** The card stays on screen. Choose **Front** or **Back** (only with a back photo); the
+   list below shows that side's fields as switches. You can also tap a field on the card itself to cover or uncover it.
    The recommended fields start covered (see [Supported documents](#supported-documents)). Fields
    left visible get a dashed orange outline; **Final preview** hides the outlines. A warning appears
    if the CAN stays visible, or if the MRZ stays visible while data it repeats is hidden.
@@ -213,7 +217,7 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
      card updates as you type. Long text wraps onto a few short lines (at most 120 characters).
      **Text size** (50 % to 300 %) and **Opacity** (5 % to 100 %, default 16 %) apply live; at 100 %
      the text is solid black. **Convert to black and white** is here too.
-6. **Download.** Check both final images and the summary, tick **I have checked both sides**, then
+6. **Download.** Check the final images (one per side) and the summary, tick **I have checked both sides** (or **I have checked the front**), then
    **Download PDF**. The file is called `protected-document.pdf`.
 7. **Done.** Under **Send it yourself**, **Share via WhatsApp** and **Share via email** open the system
    share sheet with the PDF on devices that support sharing files. On other devices they open
@@ -535,7 +539,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 
 | Part | State |
 |---|---|
-| Select front and back photos (file, drag and drop, paste, camera) | Done |
+| Select front and back photos (file, drag and drop, paste, camera); the back is optional | Done |
 | Capture coach: live camera tips and automatic shot | Done |
 | DNI 4.0, DNI 3.0 and TIE, with a two-choice picker (DNI, TIE); DNI version detected, 4.0 fallback with a switch | Done |
 | Document type detection from the MRZ (preselects the picker) | Done |
@@ -623,12 +627,12 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 
 | Area | Files | What is checked |
 |---|---|---|
-| Capture | `input`, `decode`, `live`, `coach` | File picker and camera modes, decode errors (HEIC, size, not an image), live camera needs and failures, coach metrics (blur, light, framing) |
+| Capture | `input`, `decode`, `live`, `coach`, `capture-state` | Sides in use with an optional back, file picker and camera modes, decode errors (HEIC, size, not an image), live camera needs and failures, coach metrics (blur, light, framing) |
 | Geometry | `homography`, `quad-edit` | Homography round trips and degenerate quads, corner editing |
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates |
 | OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
-| Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, manual box maths, every masked pixel opaque black |
-| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages, images, no metadata, no text, deterministic output |
+| Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black |
+| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF pages (two, or one with the front alone), images, no metadata, no text, deterministic output |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
 | Platform | `precache`, `lockdown`, `intake-lockdown`, `stats-frame`, `build-info`, `i18n`, `guide`, `deps-report`, `verify-release` | Service worker manifest and deny-by-default routes (Cloudflare refused), WebRTC removal and frame check, the photo step's policy and the service worker check, counter frame hosts, sandbox and CSP, version and relative time, translation keys and no absolute privacy claims in es/en, guide citations, dependency report, pinned provenance identity |
 
@@ -640,10 +644,11 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused, photos dropped on `pagehide` |
 | `cleanup` | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
 | `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
-| `offline` | Full flow to the PDF offline, deny-by-default service worker, page headers, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
+| `offline` | Full flow to the PDF offline, also with the front alone, deny-by-default service worker, page headers, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
 | `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; page code that gathers the canary file names, OCR text and watermark cannot send them by beacon, fetch, image, style sheet, font, frame or form; the counter frame is cross-site, sandboxed, given nothing, gone before any photo, not shown offline, under GPC or DNT, or on other hosts |
 | `update` | An idle single tab switches to a new build; a tab with photos, or a second tab, holds it back |
-| `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks |
+| `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks, and skipping the back from it |
+| `front-only` | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, done screen and share actions, adding the back later |
 | `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, TIE when detection finds no answer, offline note with nothing preselected |
 | `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases; smart field finding |

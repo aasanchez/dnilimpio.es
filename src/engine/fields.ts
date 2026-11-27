@@ -23,6 +23,17 @@ export function fieldsOf (model: ModelZones): Field[] {
   return [...out].map(([id, f]) => ({ id, sides: f.sides, hiddenByDefault: f.hidden }))
 }
 
+/**
+ * The fields printed on the given sides, each listing only those sides. With the front alone (the
+ * back is optional), fields printed only on the back are left out: there is nothing to hide.
+ */
+export function fieldsOn (model: ModelZones, sides: readonly Side[]): Field[] {
+  return fieldsOf(model).flatMap((f) => {
+    const on = f.sides.filter((s) => sides.includes(s))
+    return on.length > 0 ? [{ ...f, sides: on }] : []
+  })
+}
+
 export function defaultHidden (model: ModelZones): Set<ZoneId> {
   return new Set(fieldsOf(model).filter((f) => f.hiddenByDefault).map((f) => f.id))
 }
@@ -59,11 +70,15 @@ export function sideRects (model: ModelZones, side: Side): PlacedRect[] {
 /** Data the MRZ repeats (docs/ZONES.md). Name and DNI number are also there but are not fields yet. */
 export const MRZ_REPEATS: readonly ZoneId[] = ['supportNumber', 'dateOfBirth', 'expiryDate']
 
-/** True when the document has an MRZ, it stays visible, and the user hides data that it repeats. */
-export function mrzLeaks (model: ModelZones, hidden: ReadonlySet<ZoneId>): boolean {
-  return hasField(model, 'mrz') && !hidden.has('mrz') && MRZ_REPEATS.some((id) => hidden.has(id))
+/**
+ * True when the document has an MRZ on one of the given sides, it stays visible, and the user hides
+ * data that it repeats. Without the back photo there is no MRZ to leak.
+ */
+export function mrzLeaks (model: ModelZones, hidden: ReadonlySet<ZoneId>, sides: readonly Side[] = ['front', 'back']): boolean {
+  return hasField(model, 'mrz', sides) && !hidden.has('mrz') && MRZ_REPEATS.some((id) => hidden.has(id))
 }
 
-export function hasField (model: ModelZones, id: ZoneId): boolean {
-  return model.zones.some((z) => z.id === id)
+/** True when the document prints this field on one of the given sides (both by default). */
+export function hasField (model: ModelZones, id: ZoneId, sides: readonly Side[] = ['front', 'back']): boolean {
+  return model.zones.some((z) => z.id === id && sides.includes(z.side))
 }

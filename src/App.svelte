@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- App shell: top bar, progress, one screen at a time.
-     Flow: start → photos → document → straighten (automatic) → hide → download. The corner screen opens
+     Flow: start → photos → document → straighten (automatic) → hide → download. The back photo is
+     optional: with the front alone, every step works on one side and the PDF has one page. The corner screen opens
      only when a card is not found, when the person asks for it, or from "Adjust corners". -->
 <script lang="ts">
   import { tick } from 'svelte'
@@ -12,7 +13,7 @@
   import Home from './components/Home.svelte'
   import DocStep from './components/DocStep.svelte'
   import CaptureStep from './components/CaptureStep.svelte'
-  import type { CaptureState } from './ui/capture-state.ts'
+  import { sidesOf, type CaptureState } from './ui/capture-state.ts'
   import AlignStep from './components/AlignStep.svelte'
   import StraightenStep from './components/StraightenStep.svelte'
   import { prefetchCornerModel } from './detect/corners.ts'
@@ -59,6 +60,10 @@
   // Large canvases: kept out of reactivity on purpose. `aligned` mirrors which sides are done.
   const align = emptyAlignState()
   const aligned = $state<Record<Side, boolean>>({ front: false, back: false })
+  /** The sides with a photo, front first. The back is optional: the person may skip it. */
+  const sides = $derived(sidesOf(capture))
+  /** Every side with a photo is straightened: the editor can open. */
+  const allAligned = $derived(sides.length > 0 && sides.every((s) => aligned[s]))
   /** Sides whose card automatic straightening did not find: their corner screen says so. */
   let missed = $state<Side[]>([])
   // Field choices, watermark and greyscale survive going back to adjust corners; Reset clears them.
@@ -142,7 +147,7 @@
   function back (): void {
     if (step === 'edit' && phase === 'done') phase = 'review'
     else if (step === 'edit' && phase === 'review') phase = 'edit'
-    else if (step === 'edit' || step === 'auto') { go('doc'); return } else if (step === 'align') { go(aligned.front && aligned.back ? 'edit' : 'doc'); return } else if (step === 'doc') { go('capture'); return } else { go('home'); return }
+    else if (step === 'edit' || step === 'auto') { go('doc'); return } else if (step === 'align') { go(allAligned ? 'edit' : 'doc'); return } else if (step === 'doc') { go('capture'); return } else { go('home'); return }
     void focusHeading()
   }
 
@@ -186,9 +191,9 @@
   function chooseDoc (): void {
     const pick = docPick
     if (pick === null) return
-    // Same card and both sides already straightened (e.g. back from the editor): keep them. The two
+    // Same card and every side already straightened (e.g. back from the editor): keep them. The two
     // DNI versions are the same card shape, so only the field positions change.
-    if (choiceOf(pick) === choiceOf(docModel) && aligned.front && aligned.back) {
+    if (choiceOf(pick) === choiceOf(docModel) && allAligned) {
       if (pick !== docModel) setDniVersion(pick as DniVersion)
       docConfirmed = true
       go('edit')
@@ -236,10 +241,20 @@
     prefetchCornerModel()
   }
 
+  /** The person removed a photo (only the back can be removed: it is optional). */
+  function onRemoved (side: Side): void {
+    capture[side]?.close()
+    capture[side] = null
+    resetSide(align, side)
+    aligned[side] = false
+    docConfirmed = false
+  }
+
   function onAligned (side: Side): void {
     aligned[side] = true
-    const other: Side = side === 'front' ? 'back' : 'front'
-    if (!aligned[other]) go('align', other)
+    // The other side, if it has a photo and is not straightened yet; a skipped back has nothing to do.
+    const other = sides.find((s) => !aligned[s])
+    if (other) go('align', other)
     else go('edit')
   }
 </script>
@@ -271,10 +286,10 @@
     {#if step === 'align' && alignBitmap}
       {@const bitmap = alignBitmap}
       {#key alignSide}
-        <AlignStep {lang} side={alignSide} {size} {bitmap} {align} {aligned} missed={missed.includes(alignSide)}
+        <AlignStep {lang} side={alignSide} {sides} {size} {bitmap} {align} {aligned} missed={missed.includes(alignSide)}
           onSide={(s: Side) => { go('align', s) }} onDone={() => { onAligned(alignSide) }} />
       {/key}
-    {:else if step === 'edit' && align.warped.front && align.warped.back}
+    {:else if step === 'edit' && allAligned && align.warped.front}
       {#key docModel}
         <Editor {lang} {doc} {align} {edit} {dniFound} bind:phase onDniVersion={(v: DniVersion) => { setDniVersion(v); dniFound = true }} onAdjust={(side: Side) => { go('align', side) }} onReset={reset} onPhase={focusHeading}
           onGuide={(field: ZoneId) => { void openGuide(docModel, field) }} />
@@ -285,7 +300,7 @@
       <DocStep {lang} bind:doc={docPick} bind:dniFound photos={capture} preselect={!docConfirmed} onContinue={chooseDoc} />
     {:else if step === 'capture'}
       {#key session}
-        <CaptureStep {lang} state={capture} {onLoaded} onContinue={() => { go('doc') }} />
+        <CaptureStep {lang} state={capture} {onLoaded} {onRemoved} onContinue={() => { go('doc') }} />
       {/key}
     {:else}
       <Home {lang} {notice} onGuide={() => { void openGuide() }} onNoticeDismiss={() => { notice = false; rememberNoticeClosed() }} onStart={() => { void startCapture() }} />

@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Between the document choice and the editor: finds, turns and straightens both photos by itself
+<!-- Between the document choice and the editor: finds, turns and straightens the photos by itself
      (ADR 0012). A side whose card is not found goes to the manual corner screen; so does "Place the
      corners myself". Works offline: without the model, classic edge detection answers. -->
 <script lang="ts">
@@ -19,7 +19,7 @@
     size: { readonly w: number; readonly h: number }
     photos: CaptureState
     align: AlignState
-    /** Called when both sides are done; `missed` lists the sides whose card was not found. */
+    /** Called when every side with a photo is done; `missed` lists the sides whose card was not found. */
     onDone: (missed: Side[]) => void
     /** The person chose to place the corners by hand. */
     onManual: () => void
@@ -32,7 +32,8 @@
     const missed: Side[] = []
     for (const side of ['front', 'back'] as const) {
       const bitmap = photos[side]
-      if (!bitmap) { missed.push(side); continue }
+      // No photo: the back is optional and was skipped. Nothing to straighten on that side.
+      if (!bitmap) continue
       // Already straightened for this document and photo (e.g. corners the person confirmed, then
       // only the other photo was replaced): keep it. A new photo or document clears it (App.svelte).
       if (align.warped[side]) continue

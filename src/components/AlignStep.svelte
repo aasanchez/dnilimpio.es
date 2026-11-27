@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Step 2 (spec §4.2): mark the four card corners on one side. Front first, then back. -->
+<!-- Step 2 (spec §4.2): mark the four card corners on one side. Front first, then the back if it has a photo. -->
 <script lang="ts">
   import { untrack } from 'svelte'
   import { isConvex, type Quad } from '../geometry/homography.ts'
@@ -12,9 +12,11 @@
   import { findCorners } from '../detect/corners.ts'
   import type { Side } from '../zones/types.ts'
 
-  const { lang, side, size, bitmap, align, aligned, missed = false, onSide, onDone }: {
+  const { lang, side, sides, size, bitmap, align, aligned, missed = false, onSide, onDone }: {
     lang: Lang
     side: Side
+    /** The sides with a photo, front first. The back is optional: without it, this side is the last. */
+    sides: readonly Side[]
     /** Size of the straightened document in pixels; also sets the starting frame's shape. */
     size: { readonly w: number; readonly h: number }
     bitmap: ImageBitmap
@@ -27,7 +29,6 @@
     onDone: () => void
   } = $props()
 
-  const SIDES = ['front', 'back'] as const
   // Corners are looked for only the first time a photo reaches this step; after that the user's own
   // corners are kept.
   const fresh = untrack(() => align.quads[side] === null)
@@ -44,7 +45,8 @@
   const sideName = (s: Side): string => t(lang, s === 'front' ? 'tabFront' : 'tabBack')
   const label = $derived(`${t(lang, 'editorLabel')}: ${sideName(side)}`)
   const other: Side = untrack(() => (side === 'front' ? 'back' : 'front'))
-  const last = $derived(aligned[other])
+  // The last side to do: the other one is done, or has no photo (a skipped back).
+  const last = $derived(aligned[other] || !sides.includes(other))
   let editor: CornerEditor | undefined
 
   function setQuad (q: Quad): void {
@@ -118,13 +120,15 @@
       <h2>{t(lang, side === 'front' ? 'alignFront' : 'alignBack')}</h2>
       <p class="lead">{t(lang, 'alignLead')}</p>
     </div>
-    <div class="segmented" role="group" aria-label={t(lang, 'sides')}>
-      {#each SIDES as s (s)}
-        <button type="button" id="align-tab-{s}" aria-pressed={s === side} onclick={() => { if (s !== side) onSide(s) }}>
-          {#if aligned[s]}<span class="font-bold text-accent" aria-hidden="true">✓</span>{/if}{sideName(s)}
-        </button>
-      {/each}
-    </div>
+    {#if sides.length > 1}
+      <div class="segmented" role="group" aria-label={t(lang, 'sides')}>
+        {#each sides as s (s)}
+          <button type="button" id="align-tab-{s}" aria-pressed={s === side} onclick={() => { if (s !== side) onSide(s) }}>
+            {#if aligned[s]}<span class="font-bold text-accent" aria-hidden="true">✓</span>{/if}{sideName(s)}
+          </button>
+        {/each}
+      </div>
+    {/if}
   </div>
   <div class="area-stage flex flex-col gap-3">
     <div class="win">
