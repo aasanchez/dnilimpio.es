@@ -47,6 +47,12 @@ function withPageHeaders (res: Response): Response {
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: addPageHeaders(res.headers) })
 }
 
+/** The same response with status 404. A network error stays one. */
+function asNotFound (res: Response): Response {
+  if (res.type === 'error') return res
+  return new Response(res.body, { status: 404, statusText: 'Not Found', headers: res.headers })
+}
+
 /**
  * The worker scripts get their own CSP header (workerCsp()): a Web Worker takes its policy from its
  * script's response, not from the page. The OCR engine never runs without this worker (ocr.ts), so
@@ -163,8 +169,9 @@ sw.addEventListener('message', (event) => {
       let answers: WindowAnswer[] = []
       if (msg.force !== true) {
         const windows = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true })
-        // A guide page runs no script, so it cannot answer; it holds nothing an update could break.
-        answers = await Promise.all(windows.filter((c) => c.id !== from?.id && answersIdle(c.url, sw.registration.scope)).map(askWindow))
+        // A guide page, an article or a not-found page runs no script, so it cannot answer; it holds
+        // nothing an update could break.
+        answers = await Promise.all(windows.filter((c) => c.id !== from?.id && answersIdle(c.url, sw.registration.scope, KNOWN)).map(askWindow))
         // The asking page too, last: it may have left the start screen while the others answered.
         if (from !== undefined) answers.push(await askWindow(from))
       }
@@ -233,6 +240,9 @@ sw.addEventListener('fetch', (event) => {
         return withPageHeaders(to.onDemand ? await ensureOnDemand(to.url) : await fromCache(to.url))
       case 'index':
         return withPageHeaders(await fromCache(INDEX))
+      case 'not-found':
+        // The nearest not-found page (ADR 0045), with the status the host sends with it.
+        return withPageHeaders(asNotFound(await fromCache(to.url)))
       case 'file':
         return await fromCache(to.url)
     }

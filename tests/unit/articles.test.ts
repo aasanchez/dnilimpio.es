@@ -327,9 +327,10 @@ describe('service worker routes for articles', () => {
     expect(isOnDemand('assets/app-x.css')).toBe(false)
   })
   it('an article window runs no script, so the update does not wait for its answer', () => {
-    expect(answersIdle(`${scope}articles/hola`, scope)).toBe(false)
-    expect(answersIdle(`${scope}en/articles/`, scope)).toBe(false)
-    expect(answersIdle(`${scope}articles`, scope)).toBe(true)
-    expect(answersIdle(`${scope}en`, scope)).toBe(true)
+    const with404 = { ...known, files: new Set([...known.files, `${scope}en.html`, `${scope}404.html`, `${scope}en/articles/404.html`]) }
+    expect(answersIdle(`${scope}articles/hola`, scope, with404)).toBe(false)
+    // No English list: the not-found page, which runs no script either (ADR 0045).
+    expect(answersIdle(`${scope}en/articles/`, scope, with404)).toBe(false)
+    expect(answersIdle(`${scope}en`, scope, with404)).toBe(true)
   })
 })

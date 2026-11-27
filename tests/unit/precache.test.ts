@@ -94,8 +94,29 @@ describe('route (deny by default)', () => {
     expect(route('GET', `${scope}ocr/ppocrv6-tiny-rec.onnx`, 'same-origin', scope, known)).toEqual({ kind: 'on-demand', url: `${scope}ocr/ppocrv6-tiny-rec.onnx` })
     expect(get(`${scope}assets/a.js#x`)).toBe('file')
   })
-  it('answers every page load inside the scope with index.html', () => {
-    for (const url of [scope, `${scope}?lang=es`, `${scope}anything`]) expect(get(url, 'navigate')).toBe('index')
+  it('answers a page load of the app address with index.html, with any query', () => {
+    for (const url of [scope, `${scope}?lang=es`, `${scope}index.html`, `${scope}index.html?x=1#y`]) expect(get(url, 'navigate')).toBe('index')
+    // A build with no not-found page (an older one): every other address gets the app, as before.
+    expect(get(`${scope}anything`, 'navigate')).toBe('index')
+  })
+  it('answers an unknown address with the nearest not-found page, as the host does (ADR 0045)', () => {
+    const with404 = { ...known, files: new Set([...known.files, ...['404.html', 'en/404.html', 'en/articles/404.html', 'articles/404.html'].map((p) => `${scope}${p}`)]) }
+    const nf = (path: string): unknown => route('GET', `${scope}${path}`, 'navigate', scope, with404)
+    expect(nf('anything')).toEqual({ kind: 'not-found', url: `${scope}404.html` })
+    expect(nf('anything?x=1')).toEqual({ kind: 'not-found', url: `${scope}404.html` })
+    expect(nf('a/b/c')).toEqual({ kind: 'not-found', url: `${scope}404.html` })
+    expect(nf('en/x')).toEqual({ kind: 'not-found', url: `${scope}en/404.html` })
+    expect(nf('en/articles/x')).toEqual({ kind: 'not-found', url: `${scope}en/articles/404.html` })
+    expect(nf('en/articles/')).toEqual({ kind: 'not-found', url: `${scope}en/articles/404.html` })
+    expect(nf('en/other/x')).toEqual({ kind: 'not-found', url: `${scope}en/404.html` })
+    expect(nf('articles/nope')).toEqual({ kind: 'not-found', url: `${scope}articles/404.html` })
+    expect(nf('fr/x')).toEqual({ kind: 'not-found', url: `${scope}404.html` })
+    // A file of the build opened as a page is that file, as on the host; with a query, the app.
+    expect(nf('assets/a.js')).toEqual({ kind: 'file', url: `${scope}assets/a.js` })
+    expect(nf('assets/a.js?x=1')).toEqual({ kind: 'index' })
+    expect(nf('404.html')).toEqual({ kind: 'file', url: `${scope}404.html` })
+    // Only page loads: a fetch of an unknown address is still refused.
+    expect(route('GET', `${scope}anything`, 'cors', scope, with404).kind).toBe('deny')
   })
   it('answers a load of a guide page of this build with that page, and nothing else (ADR 0040)', () => {
     const page = `${scope}guia-dni-4.html`
@@ -117,14 +138,16 @@ describe('route (deny by default)', () => {
     for (const p of paths) expect(p).toMatch(/^[a-z0-9-]+\.html$/)
     for (const p of STATIC_PAGES) expect(isOnDemand(p.path)).toBe(p.onDemand === true)
   })
-  it('does not wait for an answer from a guide page, which runs no script (ADR 0040)', () => {
+  it('does not wait for an answer from a guide page or a not-found page, which run no script (ADR 0040, 0045)', () => {
+    const known = { files: new Set([...GUIDE_PAGES, 'thanks.html', 'index.html', 'en.html', '404.html'].map((p) => `${scope}${p}`)), onDemand: new Set<string>() }
     for (const p of GUIDE_PAGES) {
-      expect(answersIdle(`${scope}${p}`, scope)).toBe(false)
-      expect(answersIdle(`${scope}${p}#mrz`, scope)).toBe(false)
+      expect(answersIdle(`${scope}${p}`, scope, known)).toBe(false)
+      expect(answersIdle(`${scope}${p}#mrz`, scope, known)).toBe(false)
       // With a query string, the page load got the app, which answers.
-      expect(answersIdle(`${scope}${p}?x=1`, scope)).toBe(true)
+      expect(answersIdle(`${scope}${p}?x=1`, scope, known)).toBe(true)
     }
-    for (const url of [scope, `${scope}thanks.html`, `${scope}?lang=en`]) expect(answersIdle(url, scope)).toBe(true)
+    for (const url of [scope, `${scope}thanks.html`, `${scope}?lang=en`, `${scope}en`, `${scope}index.html`]) expect(answersIdle(url, scope, known)).toBe(true)
+    for (const url of [`${scope}nope`, `${scope}a/b`, `${scope}404.html`]) expect(answersIdle(url, scope, known)).toBe(false)
   })
   it('refuses everything else', () => {
     expect(get(`${scope}assets/b.js`)).toBe('deny') // not in the manifest

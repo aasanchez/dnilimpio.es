@@ -756,6 +756,7 @@ show the current state.
 | One address per language (`/en`, `/fr` and so on), with hreflang links and sitemap entries | Done |
 | Start screen prerendered in Spanish in `index.html`, for search engines and a faster first paint (ADR 0041) | Done |
 | Each language's address sends its own page: `lang`, title, description, Open Graph, canonical and start screen in that language, for link previews and crawlers without JavaScript (ADR 0044) | Done |
+| An unknown address gets status 404 and a styled not-found page with no script, in the language of its folder, from the host and the service worker, offline too (ADR 0045) | Done |
 | Languages: 31 in the specification | 13 today |
 
 ## Development
@@ -845,6 +846,7 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | Property tests | `redaction.property`, `geometry.property`, `pdf.property` | Generated inputs, hundreds per property: manual boxes stay on the card; zones to pixels cover the whole rectangle and add less than a pixel; every pixel a mask touches, plus its margin, is opaque black and the rest of the photo is unchanged; after a watermark every masked pixel is still black, and a canvas that leaves one pixel grey is caught; every hidden field of every document, side and box placement exports black; homography corners, round trips and degenerate quads; the warp reads the card only from inside its corners; the PDF layout for any image size; no metadata from any JPEG segment reaches the PDF |
 | Prerender | `prerender` | The build's copy of the start screen is `App.svelte` rendered in Spanish for a first visit (heading, lead, chips, Start, notice); no comments or dialogs; a script, style, event handler or file-loading element fails the build; the copy goes into an empty `<main id="app">` only, marked `inert`; no browser object is left set after the render |
 | Language pages | `language-pages` | Each language page is `index.html` with its own `lang`, `dir`, head, canonical, noscript and start screen, and the same scripts and CSP; the build fails when a piece is missing; one page per language but Spanish; the host and the service worker show it at the language's address (not another case, a deeper path or a build without it); the start screen renders in each language |
+| Not-found pages | `not-found` | One page at the root, in the Spanish articles folder and two per other language; each in its language (Arabic right to left), not indexed, with no script, only relative links and the start page linked from its depth; text escaped; the preview server picks the 404.html of the nearest folder, never one outside the build |
 | Audit prompt | `audit-prompt` | Every file the prompt names exists, its list of stats fields is the list the thanks page sends, in order, and it stays short and asks for findings, not a verdict |
 | Keyboard focus | `focus-rescue` | Focus that falls back to the page (also while it still sits on a control that just disabled or removed itself) moves to the first control that takes it; how far to scroll so a focused control clears the sticky top bar, the sticky action bar or the floating notice, without leaving the window |
 | Editor redraws | `redraw` | One render per animation frame, only the side on screen, only when its choices changed; every changed side rendered at once before the review; a failed render is retried; nothing runs after the editor closes |
@@ -891,6 +893,7 @@ Every spec runs in Chromium. The specs marked **(all browsers)** also run in Fir
 | `keyboard` | Keyboard only, in Spanish and in Arabic (right to left): the whole flow from Start to the PDF with Tab, Enter, Space and the arrow keys (file chooser, document choice, fields, a box, the watermark, the corners, confirm and download); each new screen focuses its heading; every control shows a focus ring; no focused control hides behind the sticky bars or the notice, on a phone and a wide screen; focus stays on a control after the last photo, Download, Delete, Undo, Redo and Remove the back; Escape closes the card guide and returns focus |
 | `prerender` | The served HTML holds the Spanish start screen as text, with no script or style; without JavaScript it shows in Spanish; the app replaces it (one heading, one Start button that works) in a Spanish and an English browser; before the app starts, the copy takes no focus |
 | `language-pages` | The HTML at `/en` is English (lang, title, description, Open Graph, canonical, start screen) with the same CSP as `/`; every language address sends its own language, Arabic right to left; `/` names its canonical in the HTML; without JavaScript `/en` shows English; the app replaces the copy and switches language; the service worker serves the page at its address, offline too |
+| `not-found` | An unknown address (`/nope`, `/a/b/c`, `/articles/nope`, `/en/nope`, `/en/articles/nope`, `/ar/x`, an articles folder with no articles) gets status 404 and the not-found page of its folder's language, styled, with no script and the page CSP; its button goes to the start page in that language; known addresses keep status 200; the service worker answers with the same page and status, offline too |
 | `a11y` | axe-core scan ([ADR 0042](docs/adr/0042-axe-accessibility-scan.md)) of every screen, from the start screen and its dialogs to the review and the thanks page, in Spanish and Arabic, on a wide screen in light mode and a phone in dark mode: no serious or critical finding against WCAG 2.2 A and AA and axe's best practices |
 | `layout` | Phone: one column, main button in a sticky bar at the bottom, no sideways scroll. Wide screen: card on the left, tools and main button on the right, steps in the top bar |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
@@ -1110,9 +1113,16 @@ dnitapado.es on 27 November 2026. They are kept here for a new account or a fork
    the first deploy with the opt-in stats. The first send creates the dataset `dnitapado_usage`.
    To query it, create an API token with **Account Analytics: Read** and use the SQL API (example
    query under [Usage stats (opt-in)](#usage-stats-opt-in)).
-6. Redirect `www` to the bare domain, so search engines see one site: in the zone, **Rules >
-   Redirect Rules**, create a rule for the hostname `www.dnitapado.es` with a dynamic redirect to
-   `concat("https://dnitapado.es", http.request.uri.path)`, status 301, query string kept.
+6. Redirect `www` to the bare domain, so search engines see one site. In the zone, open **Rules >
+   Overview**, create a **Redirect Rule** from the template "Redirect from WWW to root", or by hand
+   with these values:
+   - When incoming requests match: wildcard pattern, request URL `https://www.dnitapado.es/*`.
+   - Then: target URL `https://dnitapado.es/${1}`, status code **301**, **Preserve query string**
+     on.
+
+   The rule runs before the Worker, so `www` never serves the site itself. Check:
+   `curl -sI 'https://www.dnitapado.es/en?x=1'` answers `301` with
+   `location: https://dnitapado.es/en?x=1`.
 
 Visit counts are in the Cloudflare dashboard, under the zone's **Analytics** (requests, unique
 visitors, countries). See [Visit counts](#visit-counts).
@@ -1249,6 +1259,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0040](docs/adr/0040-card-guide-pages.md): card guide pages; one static page per document, written by the build from the guide data, with no script (`script-src 'none'`), served and precached by the service worker.
 - [0041](docs/adr/0041-prerendered-start-screen.md): the build renders the Spanish start screen from `App.svelte` into `index.html`, inert until the app replaces it, so crawlers without JavaScript read it and the heading paints before any script; no font preload, because measurements showed it slows the first paint.
 - [0044](docs/adr/0044-language-pages.md): the build writes one start page per language, `<tag>.html`, from the final `index.html`, with only the text changed (language, head, canonical, start screen); the host and the service worker show it at `/<tag>`, so link previews and crawlers without JavaScript read each language.
+- [0045](docs/adr/0045-not-found-pages.md): an unknown address gets status 404 and a static not-found page with no script; the build writes one per folder people reach, in its language, so it is styled there; the host and the service worker send the nearest one.
 - [0042](docs/adr/0042-axe-accessibility-scan.md): an axe-core scan of every screen, in Spanish and Arabic, on a phone and a wide screen, fails CI on any serious or critical accessibility finding. axe is a dev dependency and runs only in tests.
 - [0043](docs/adr/0043-one-field-list.md): one field list: **Find automatically** covers the data of the fields switched to covered, with no list of its own; name and DNI/NIE number become fields, visible by default; the MRZ tells the dates apart.
 

@@ -5,6 +5,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
 import { normalizeSha, normalizeVersion } from './src/version/build-info.ts'
 import { guidePages } from './scripts/guide-pages.ts'
+import { notFoundPagesPlugin } from './scripts/not-found-pages.ts'
 import { CONTENT_DIR, articleLangs, articleSitemap, articles, dayOf, loadArticles } from './scripts/articles.ts'
 import { base64Import, hostHeadersInPreview, ocrAssets, prerenderStart, searchFiles, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
 import { languagePages } from './scripts/language-pages.ts'
@@ -92,5 +93,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [base64Import(), tailwindcss(), svelte(), searchFiles(SITE_URL, articleSitemap(SITE_URL, ARTICLES)), securityHeaders(), prerenderStart(prerendered), guidePages(SITE_URL), articles(import.meta.dirname, SITE_URL, ARTICLES), ocrAssets(), subresourceIntegrity({ pages: (html) => languagePages(html, SITE_URL, prerendered) }), hostHeadersInPreview()],
+  plugins: [base64Import(), tailwindcss(), svelte(), searchFiles(SITE_URL, articleSitemap(SITE_URL, ARTICLES)), securityHeaders(), prerenderStart(prerendered), guidePages(SITE_URL), notFoundPagesPlugin(), articles(import.meta.dirname, SITE_URL, ARTICLES), ocrAssets(), subresourceIntegrity({ pages: (html) => languagePages(html, SITE_URL, prerendered) }), hostHeadersInPreview()],
 })

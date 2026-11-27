@@ -92,3 +92,9 @@ export function cspWithScriptHashes (hashes: readonly string[]): string {
   if (hashes.length === 0) return CSP
   return CSP_DIRECTIVES.map((d) => (d.startsWith('script-src ') ? `${d} ${hashes.map((h) => `'${h}'`).join(' ')}` : d)).join('; ')
 }
+
+/**
+ * Policy of the not-found pages (ADR 0045): static text written at build time, like the guide pages.
+ * No script, no connection; only this site's stylesheet, fonts and icons.
+ */
+export const NOT_FOUND_CSP = GUIDE_CSP

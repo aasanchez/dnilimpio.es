@@ -50,3 +50,4 @@ project specification on purpose).
 | [0042](0042-axe-accessibility-scan.md) | Automatic accessibility scan: axe-core (dev dependency) on every screen, Spanish and Arabic, phone and wide screen; serious and critical findings fail | accepted |
 | [0043](0043-one-field-list.md) | One field list: **Find automatically** covers what the field switches hide, with no list of its own; name and DNI/NIE number become fields (visible by default); the MRZ tells the dates apart | accepted |
 | [0044](0044-language-pages.md) | Language pages: the build writes `<tag>.html` per language from the final `index.html` (own `lang`, head, canonical and prerendered start screen); host and service worker show it at `/<tag>` | proposed |
+| [0045](0045-not-found-pages.md) | Not-found pages: a static `404.html` with no script in every folder people reach, in its language; host and service worker send the nearest one with status 404 | proposed |
