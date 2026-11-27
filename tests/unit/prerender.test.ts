@@ -65,8 +65,9 @@ describe('trimMarkup', () => {
   it('removes pieces that join after a removal; what it cannot remove fails the check', () => {
     expect(trimMarkup('<!-<!--x-->-- y -->a')).toBe('a')
     expect(trimMarkup('<dia<dialog></dialog>log>x</dialog>b')).toBe('b')
-    const left = trimMarkup('<!<!--x-->--<!--y-->>a')
-    expect(left).toBe('<!-->a')
+    expect(trimMarkup('<!<!--x-->--<!--y-->>a')).toBe('>a')
+    const left = trimMarkup('a<!-- never closed')
+    expect(left).toBe('a<!-- never closed')
     expect(() => checkPrerendered(`<div><h1>x</h1>${left}</div>`)).toThrow('comment')
   })
 })

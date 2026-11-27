@@ -29,13 +29,25 @@ const FORBIDDEN: ReadonlyArray<readonly [RegExp, string]> = [
  *   long English text would only make the page larger and dilute the Spanish text for search.
  */
 export function trimMarkup (html: string): string {
-  // Repeated until nothing changes: removing one piece can join two halves into a new one.
+  return cutAll(cutAll(html, '<!--', '-->'), '<dialog', '</dialog>')
+}
+
+/**
+ * Removes every piece from `open` to the next `close`, both included, scanning the result again
+ * from where the cut was made, so a piece that two cuts join together is removed too. An `open`
+ * with no `close` after it is left, and checkPrerendered() then fails the build.
+ */
+function cutAll (html: string, open: string, close: string): string {
   let out = html
-  for (let before = ''; before !== out;) {
-    before = out
-    out = out.replace(/<!--[\s\S]*?-->/g, '').replace(/<dialog\b[\s\S]*?<\/dialog>/g, '')
+  let from = 0
+  for (;;) {
+    const start = out.indexOf(open, Math.max(0, from - open.length))
+    if (start === -1) return out
+    const end = out.indexOf(close, start + open.length)
+    if (end === -1) return out
+    out = out.slice(0, start) + out.slice(end + close.length)
+    from = start
   }
-  return out
 }
 
 /** Throws when the markup holds anything the strict CSP would refuse or that loads a file. */
