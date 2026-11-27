@@ -7,6 +7,9 @@
 - Changed by [ADR 0027](0027-security-headers-from-the-host.md): the visit counter frame of ADR 0024
   is removed, so the first policy has no `frame-src` either and forbids every frame from the start.
   `frame-src 'none'` stays in the second policy; it now repeats the first.
+- Completed by [ADR 0034](0034-no-frames-no-fresh-webrtc.md): `frame-src 'none'` does not stop the
+  empty `about:blank` document every frame starts with, which brought back WebRTC. The page now
+  refuses every frame element and pop-up. The policies are unchanged.
 
 ## Context
 
