@@ -61,7 +61,7 @@
         <h2 class="text-lg font-extrabold" id="stats-title">{t(lang, 'statsTitle')}</h2>
         <p class="hint">{t(lang, 'statsLead')}</p>
         <p class="hint">{t(lang, 'statsPayload')}</p>
-        <pre class="term overflow-x-auto" id="stats-payload" dir="ltr">{lines.join('\n')}</pre>
+        <pre class="term whitespace-pre-wrap break-all" id="stats-payload" dir="ltr">{lines.join('\n')}</pre>
         {#if status === 'sent'}
           <p class="lead" id="stats-status" role="status">{t(lang, 'statsSent')}</p>
         {:else}
