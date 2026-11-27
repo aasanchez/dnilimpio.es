@@ -233,6 +233,7 @@
   "findUnsupported": "La recherche automatique n'est pas disponible dans ce navigateur. Masquez les données à la main.",
   "findFailed": "La recherche automatique n'a pas fonctionné cette fois. Masquez les données à la main.",
   "framed": "Pour votre sécurité, cet outil ne fonctionne que dans son propre onglet. Ouvrez-le ici.",
+  "webrtcOpen": "Pour votre sécurité, ce navigateur ne peut pas ouvrir de photos ici : il ne permet pas de désactiver WebRTC, qui pourrait envoyer des données hors de la page. Essayez un autre navigateur ou mettez celui-ci à jour.",
   "guideOpen": "Qu'y a-t-il sur ma carte ?",
   "guidePagesLead": "Guide complet de chaque document (en espagnol) :",
   "guideAbout": "À propos : {field}",

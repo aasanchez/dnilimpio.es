@@ -233,6 +233,7 @@
   "findUnsupported": "Automatic finding is not available in this browser. Hide the data by hand.",
   "findFailed": "Automatic finding did not work this time. Hide the data by hand.",
   "framed": "For your security, this tool only works in its own tab. Open it here.",
+  "webrtcOpen": "For your security, this browser cannot open photos here: it does not let the app turn off WebRTC, which could send data out of the page. Try another browser, or update this one.",
   "guideOpen": "What is on my card?",
   "guidePagesLead": "Full guide for each document (in Spanish):",
   "guideAbout": "About: {field}",

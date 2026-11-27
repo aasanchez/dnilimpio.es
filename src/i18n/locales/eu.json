@@ -233,6 +233,7 @@
   "findUnsupported": "Bilaketa automatikoa ez dago erabilgarri nabigatzaile honetan. Estali datuak eskuz.",
   "findFailed": "Bilaketa automatikoak ez du funtzionatu oraingoan. Estali datuak eskuz.",
   "framed": "Segurtasunagatik, tresna honek bere fitxan bakarrik funtzionatzen du. Ireki hemen.",
+  "webrtcOpen": "Segurtasunagatik, nabigatzaile honek ezin ditu argazkiak hemen ireki: ez du uzten WebRTC desaktibatzen, eta horrek datuak orritik kanpo bidal ditzake. Probatu beste nabigatzaile bat edo eguneratu hau.",
   "guideOpen": "Zer dago nire txartelean?",
   "guidePagesLead": "Dokumentu bakoitzaren gida osoa (gaztelaniaz):",
   "guideAbout": "Zer da: {field}",

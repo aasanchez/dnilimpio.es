@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { BLOCKED_GLOBALS, blockGlobals, isFramed } from '../../src/security/lockdown.ts'
+import { BLOCKED_GLOBALS, blockGlobals, exposedGlobals, isFramed } from '../../src/security/lockdown.ts'
 import { FRAME_TAGS, INSERTERS, guardWindow, holdsFrame, nativesOf, refuseFramesIn } from '../../src/security/frames.ts'
 
 describe('blockGlobals', () => {
@@ -17,6 +17,31 @@ describe('blockGlobals', () => {
     expect(blockGlobals({})).toEqual([])
     expect(blockGlobals(Object.freeze({ RTCPeerConnection: 1 }))).toEqual([])
     expect(BLOCKED_GLOBALS).toContain('RTCPeerConnection')
+  })
+})
+
+describe('exposedGlobals (audit F-14)', () => {
+  const Fake = (): void => undefined
+  it('is empty once blockGlobals() removed everything', () => {
+    const scope: Record<string, unknown> = { RTCPeerConnection: Fake, RTCDataChannel: Fake, fetch: Fake }
+    blockGlobals(scope)
+    expect(exposedGlobals(scope)).toEqual([])
+    expect(exposedGlobals({})).toEqual([])
+  })
+  it('names a constructor that could not be replaced', () => {
+    const scope: Record<string, unknown> = { RTCDataChannel: Fake }
+    Object.defineProperty(scope, 'RTCPeerConnection', { value: Fake, writable: false, configurable: false, enumerable: true })
+    expect(blockGlobals(scope)).toEqual(['RTCDataChannel'])
+    expect(exposedGlobals(scope)).toEqual(['RTCPeerConnection'])
+  })
+  it('counts a property that throws when read as present', () => {
+    const scope = {}
+    Object.defineProperty(scope, 'RTCPeerConnection', { get () { throw new Error('no') }, configurable: false })
+    expect(exposedGlobals(scope)).toEqual(['RTCPeerConnection'])
+  })
+  it('sees an inherited constructor too', () => {
+    const scope = Object.create(Object.freeze({ webkitRTCPeerConnection: Fake })) as object
+    expect(exposedGlobals(scope)).toEqual(['webkitRTCPeerConnection'])
   })
 })
 

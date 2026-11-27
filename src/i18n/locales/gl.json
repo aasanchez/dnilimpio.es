@@ -233,6 +233,7 @@
   "findUnsupported": "A busca automática non está dispoñible neste navegador. Tapa os datos a man.",
   "findFailed": "A busca automática non funcionou esta vez. Tapa os datos a man.",
   "framed": "Por seguridade, esta ferramenta só funciona na súa propia lapela. Ábrea aquí.",
+  "webrtcOpen": "Por seguridade, este navegador non pode abrir fotos aquí: non permite desactivar WebRTC, que podería enviar datos fóra da páxina. Proba outro navegador ou actualiza este.",
   "guideOpen": "Que hai na miña tarxeta?",
   "guidePagesLead": "Guía completa de cada documento (en castelán):",
   "guideAbout": "Que é: {field}",

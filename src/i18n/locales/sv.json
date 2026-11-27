@@ -233,6 +233,7 @@
   "findUnsupported": "Automatisk sökning är inte tillgänglig i den här webbläsaren. Dölj uppgifterna för hand.",
   "findFailed": "Automatisk sökning fungerade inte den här gången. Dölj uppgifterna för hand.",
   "framed": "Av säkerhetsskäl fungerar verktyget bara i en egen flik. Öppna det här.",
+  "webrtcOpen": "Av säkerhetsskäl kan den här webbläsaren inte öppna foton här: den låter inte appen stänga av WebRTC, som kan skicka data ut från sidan. Prova en annan webbläsare eller uppdatera den här.",
   "guideOpen": "Vad står det på mitt kort?",
   "guidePagesLead": "Fullständig guide för varje dokument (på spanska):",
   "guideAbout": "Om: {field}",

@@ -171,6 +171,17 @@ test.describe('hardening (security audit of 2026-11-25)', () => {
     }))).toEqual({ peer: 'undefined', webkit: 'undefined', channel: 'undefined', camera: 'function' })
   })
 
+  test('when a browser keeps WebRTC, the app does not start and opens no photo (audit F-14)', async ({ page }) => {
+    // A browser whose RTCPeerConnection cannot be replaced: the lockdown's defineProperty fails.
+    await page.addInitScript(() => {
+      Object.defineProperty(window, 'RTCPeerConnection', { value: function Fake () {}, writable: false, configurable: false })
+    })
+    await page.goto('/')
+    await expect(page.locator('#webrtc-open')).toContainText('WebRTC')
+    await expect(page.locator('#start')).toHaveCount(0)
+    await expect(page.locator('input[type="file"]')).toHaveCount(0)
+  })
+
   test('the host refuses to show the app inside another page\'s frame (frame-ancestors, ADR 0027)', async ({ page, baseURL }) => {
     // Not even the page's own frame guard (#app with a link to itself): the host refused the page.
     expect(await appElementsInFrame(page, baseURL ?? '')).toBe(0)

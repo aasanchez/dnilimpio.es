@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0034. No frames, no pop-ups: no new window brings back WebRTC
 
-- Status: accepted
+- Status: accepted; fails closed since 2026-11-27 (audit F-14, see the end)
 - Date: 2026-11-27
 - Decided by: Alexis (external audit of v0.1.4, finding 2: "WebRTC through a blank frame")
 - Completes [ADR 0025](0025-intake-lockdown.md); no CSP change
@@ -89,3 +89,13 @@ in review); the test now covers both.
   code already running in the page keeps the page's privileges: it can navigate the tab away. What
   keeps such code out is that only this build's verified code runs.
 - Tests run in Chromium only. Firefox and Safari have the same DOM methods.
+
+## Amendment: fail closed (27 November 2026, audit F-14)
+
+An audit noted that `blockGlobals()` skips a constructor it cannot replace (a non-configurable
+property) and the app then ran anyway. No supported browser does this today, but the removal
+failed open. Now `main.ts` checks with `exposedGlobals()` after the lockdown. If any blocked
+constructor is still reachable, the app does not start: it shows a short message (`webrtcOpen`)
+and opens no photo. `tests/unit/lockdown.test.ts` covers the check, and
+`tests/e2e/security.spec.ts` makes `RTCPeerConnection` non-configurable before the app loads and
+checks that the start screen never appears.

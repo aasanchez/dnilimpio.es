@@ -39,7 +39,7 @@ project specification on purpose).
 | [0031](0031-photo-file-checks.md) | Photo files checked by content (JPEG, PNG, WebP, HEIC), at most 25 MB and 50 MP from the header, before decoding | accepted |
 | [0032](0032-semver-releases.md) | Automatic patch releases: version from the latest tag, tag and GitHub Release after the deploy, version in the footer | accepted |
 | [0033](0033-ocr-ready-once-per-worker.md) | The page keeps the service worker's "OCR is ready" answer per worker; a new worker or a failed OCR job asks again; files are still hashed when served | accepted |
-| [0034](0034-no-frames-no-fresh-webrtc.md) | No frames, no pop-ups: no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits for browser support | accepted |
+| [0034](0034-no-frames-no-fresh-webrtc.md) | No frames, no pop-ups: no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits for browser support | accepted, fails closed since audit F-14 |
 | [0035](0035-no-network-error-logging.md) | No Network Error Logging: `NEL: {"max_age":0}` on every file, NEL off in the zone settings, no `Report-To`; the post-deploy check fails otherwise | accepted |
 | [0036](0036-visual-regression-in-pinned-container.md) | Screenshot tests (12 phone screens, Spanish and Arabic) run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual` | accepted |
 | [0037](0037-firefox-service-worker-script-source.md) | `sw.js` by its exact address in the photo step's `script-src` and the OCR worker's `script-src` and `connect-src`, because Firefox checks responses the service worker builds as if they came from `sw.js` | proposed |

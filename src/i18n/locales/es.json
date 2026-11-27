@@ -233,6 +233,7 @@
   "findUnsupported": "La búsqueda automática no está disponible en este navegador. Tapa los datos a mano.",
   "findFailed": "La búsqueda automática no ha funcionado esta vez. Tapa los datos a mano.",
   "framed": "Por seguridad, esta herramienta solo funciona en su propia pestaña. Ábrela aquí.",
+  "webrtcOpen": "Por seguridad, este navegador no puede abrir fotos aquí: no permite desactivar WebRTC, que podría enviar datos fuera de la página. Prueba con otro navegador o actualiza este.",
   "guideOpen": "¿Qué hay en mi tarjeta?",
   "guidePagesLead": "Guía completa de cada documento:",
   "guideAbout": "Qué es: {field}",
