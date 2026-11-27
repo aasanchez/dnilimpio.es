@@ -5,6 +5,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
 import { normalizeSha, normalizeVersion } from './src/version/build-info.ts'
 import { guidePages } from './scripts/guide-pages.ts'
+import { CONTENT_DIR, articleLangs, articleSitemap, articles, dayOf, loadArticles } from './scripts/articles.ts'
 import { base64Import, hostHeadersInPreview, ocrAssets, prerenderStart, searchFiles, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
 import { DEFAULT_SITE_URL, normalizeSiteUrl } from './src/seo/site.ts'
 
@@ -30,6 +31,9 @@ const BUILD_VERSION = normalizeVersion(process.env['RELEASE_VERSION'])
 const epoch = Number(process.env['SOURCE_DATE_EPOCH'])
 const BUILD_TIME = Number.isFinite(epoch) && epoch > 0 ? epoch * 1000 : Date.now()
 
+// Articles (ADR 0039): read and checked once. The app links to the list only in languages that have one.
+const ARTICLES = loadArticles(CONTENT_DIR, dayOf(BUILD_TIME))
+
 // The corner model (src/detect/model.ts) and its runtime go to assets/ml/: the service worker caches
 // that folder on first use instead of at install (src/offline/precache.ts).
 const isModelPart = (ids: readonly string[]): boolean => ids.some((id) => /[\\/](scanic-ml|onnxruntime-(web|common))[\\/]|[\\/]src[\\/]detect[\\/]model\.ts$/.test(id))
@@ -41,6 +45,7 @@ export default defineConfig({
     __BUILD_SHA__: JSON.stringify(BUILD_SHA),
     __BUILD_VERSION__: JSON.stringify(BUILD_VERSION),
     __BUILD_TIME__: JSON.stringify(BUILD_TIME),
+    __ARTICLE_LANGS__: JSON.stringify(articleLangs(ARTICLES)),
   },
   // Relative base: the same dist/ works on the GitHub Pages subpath and when opened from disk.
   base: './',
@@ -81,5 +86,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [base64Import(), tailwindcss(), svelte(), searchFiles(SITE_URL), securityHeaders(), prerenderStart(), guidePages(SITE_URL), ocrAssets(), subresourceIntegrity(), hostHeadersInPreview()],
+  plugins: [base64Import(), tailwindcss(), svelte(), searchFiles(SITE_URL, articleSitemap(SITE_URL, ARTICLES)), securityHeaders(), prerenderStart(), guidePages(SITE_URL), articles(import.meta.dirname, SITE_URL, ARTICLES), ocrAssets(), subresourceIntegrity(), hostHeadersInPreview()],
 })

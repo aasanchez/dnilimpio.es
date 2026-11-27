@@ -25,8 +25,8 @@ export default defineConfig({
       // Set 2026-11-27 at 1 point below the measured value, rounded down. Each glob is checked on
       // its files together, and those files count in the global values too.
       thresholds: {
-        statements: 81,
-        branches: 78,
+        statements: 82,
+        branches: 79,
         functions: 84,
         lines: 82,
         // Masks, raster, PDF and JPEG export: what the user downloads.

@@ -93,10 +93,14 @@ jobs:
               - '!**/*.md'
               - '!docs/**'
               - '!LICENSES/**'
+            # Articles are Markdown, but the build turns them into pages and stops on a mistake
+            # (ADR 0039), so a change to them runs the code checks.
+            articles:
+              - 'content/articles/**'
       - id: mode
         env:
           RELEASE: ${{ github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
-          CODE: ${{ github.event_name != 'pull_request' || steps.filter.outputs.code == 'true' }}
+          CODE: ${{ github.event_name != 'pull_request' || steps.filter.outputs.code == 'true' || steps.filter.outputs.articles == 'true' }}
         run: |
           echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
           echo "code=$CODE" >> "$GITHUB_OUTPUT"

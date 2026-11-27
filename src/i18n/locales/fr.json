@@ -235,5 +235,18 @@
   "guideOpen": "Qu'y a-t-il sur ma carte ?",
   "guideAbout": "À propos : {field}",
   "seoTitle": "Masquer les données du DNI et ajouter un filigrane",
-  "seoDescription": "Masquez les données de votre DNI ou TIE espagnol et ajoutez un filigrane avant d'en envoyer une copie. Gratuit, sans inscription. Le document est traité sur votre appareil."
+  "seoDescription": "Masquez les données de votre DNI ou TIE espagnol et ajoutez un filigrane avant d'en envoyer une copie. Gratuit, sans inscription. Le document est traité sur votre appareil.",
+  "articlesTitle": "Articles",
+  "articlesLead": "Actualités, guides et informations sur DNI Tapado.es et sur le partage d’une copie de votre pièce d’identité avec moins de risque.",
+  "articlesNews": "Actualités",
+  "articlesGuide": "Guides",
+  "articlesInfo": "Informations",
+  "articlesPublished": "Publié le {date}",
+  "articlesUpdated": "Mis à jour le {date}",
+  "articlesSources": "Sources",
+  "articlesOtherLangs": "Dans d’autres langues :",
+  "articlesAll": "Tous les articles",
+  "articlesCtaTitle": "Masquez votre pièce d’identité",
+  "articlesCta": "Ouvrir DNI Tapado.es",
+  "articlesLicence": "Le texte des articles est sous licence CC BY-SA 4.0. Le code du site est sous licence AGPL-3.0."
 }

@@ -18,6 +18,14 @@ path = ["src/i18n/locales/*.json", "src/guide/locales/*.json", "lighthouserc.jso
 SPDX-FileCopyrightText = "dnitapado.es contributors"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
 
+# Articles (ADR 0039): the text and images in content/articles/, under CC BY-SA 4.0. The code that
+# builds them stays AGPL-3.0-or-later.
+[[annotations]]
+path = "content/articles/**"
+precedence = "override"
+SPDX-FileCopyrightText = "dnitapado.es contributors"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
 # Self-hosted fonts (latin and latin-ext subsets from Fontsource 5.3.0), SIL Open Font License 1.1.
 [[annotations]]
 path = "src/ui/fonts/bricolage-grotesque-*.woff2"

@@ -235,5 +235,18 @@
   "guideOpen": "Ce conține cardul meu?",
   "guideAbout": "Despre: {field}",
   "seoTitle": "Acoperă datele din DNI și adaugă un filigran",
-  "seoDescription": "Acoperă datele din DNI-ul sau TIE-ul tău spaniol și adaugă un filigran înainte să trimiți o copie. Gratuit, fără cont. Documentul este procesat pe dispozitivul tău."
+  "seoDescription": "Acoperă datele din DNI-ul sau TIE-ul tău spaniol și adaugă un filigran înainte să trimiți o copie. Gratuit, fără cont. Documentul este procesat pe dispozitivul tău.",
+  "articlesTitle": "Articole",
+  "articlesLead": "Știri, ghiduri și informații despre DNI Tapado.es și despre cum să trimiți o copie a actului tău cu mai puțin risc.",
+  "articlesNews": "Știri",
+  "articlesGuide": "Ghiduri",
+  "articlesInfo": "Informații",
+  "articlesPublished": "Publicat pe {date}",
+  "articlesUpdated": "Actualizat pe {date}",
+  "articlesSources": "Surse",
+  "articlesOtherLangs": "În alte limbi:",
+  "articlesAll": "Toate articolele",
+  "articlesCtaTitle": "Acoperă datele din act",
+  "articlesCta": "Deschide DNI Tapado.es",
+  "articlesLicence": "Textul articolelor este licențiat CC BY-SA 4.0. Codul site-ului este licențiat AGPL-3.0."
 }

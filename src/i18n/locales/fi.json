@@ -235,5 +235,18 @@
   "guideOpen": "Mitä kortissani on?",
   "guideAbout": "Tietoa: {field}",
   "seoTitle": "Peitä DNI-kortin tiedot ja lisää vesileima",
-  "seoDescription": "Peitä espanjalaisen DNI- tai TIE-korttisi tiedot ja lisää vesileima ennen kuin lähetät kopion. Ilmainen, ei rekisteröitymistä. Asiakirja käsitellään laitteellasi."
+  "seoDescription": "Peitä espanjalaisen DNI- tai TIE-korttisi tiedot ja lisää vesileima ennen kuin lähetät kopion. Ilmainen, ei rekisteröitymistä. Asiakirja käsitellään laitteellasi.",
+  "articlesTitle": "Artikkelit",
+  "articlesLead": "Uutisia, oppaita ja tietoa DNI Tapado.esistä ja siitä, miten jaat henkilöllisyystodistuksesi kopion pienemmällä riskillä.",
+  "articlesNews": "Uutiset",
+  "articlesGuide": "Oppaat",
+  "articlesInfo": "Tietoa",
+  "articlesPublished": "Julkaistu {date}",
+  "articlesUpdated": "Päivitetty {date}",
+  "articlesSources": "Lähteet",
+  "articlesOtherLangs": "Muilla kielillä:",
+  "articlesAll": "Kaikki artikkelit",
+  "articlesCtaTitle": "Peitä henkilöllisyystodistuksesi tiedot",
+  "articlesCta": "Avaa DNI Tapado.es",
+  "articlesLicence": "Artikkelien teksti on lisensoitu CC BY-SA 4.0 -lisenssillä. Sivuston koodi on lisensoitu AGPL-3.0-lisenssillä."
 }

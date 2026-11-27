@@ -235,5 +235,18 @@
   "guideOpen": "Que hai na miña tarxeta?",
   "guideAbout": "Que é: {field}",
   "seoTitle": "Tapar datos do DNI e poñer marca de auga",
-  "seoDescription": "Tapa os datos do teu DNI ou TIE e engade unha marca de auga antes de enviar unha copia. Gratis e sen rexistro. O documento procésase no teu dispositivo."
+  "seoDescription": "Tapa os datos do teu DNI ou TIE e engade unha marca de auga antes de enviar unha copia. Gratis e sen rexistro. O documento procésase no teu dispositivo.",
+  "articlesTitle": "Artigos",
+  "articlesLead": "Novas, guías e información sobre DNI Tapado.es e sobre como compartir unha copia do teu documento con menos risco.",
+  "articlesNews": "Novas",
+  "articlesGuide": "Guías",
+  "articlesInfo": "Información",
+  "articlesPublished": "Publicado o {date}",
+  "articlesUpdated": "Actualizado o {date}",
+  "articlesSources": "Fontes",
+  "articlesOtherLangs": "Noutros idiomas:",
+  "articlesAll": "Todos os artigos",
+  "articlesCtaTitle": "Tapa o teu documento",
+  "articlesCta": "Abrir DNI Tapado.es",
+  "articlesLicence": "O texto dos artigos ten licenza CC BY-SA 4.0. O código da web ten licenza AGPL-3.0."
 }

@@ -271,6 +271,25 @@
   .toggle-label { @apply font-semibold; }
   .toggle-note { @apply text-[0.8125rem] text-muted; }
   .panel-box { @apply flex flex-col gap-3 rounded-lg border border-line bg-surface p-3.5; }
+
+  /* The body of an article (ADR 0039): HTML written by the build from Markdown, with no classes of
+     its own, so its pieces are styled here. */
+  .article-body { @apply flex flex-col gap-3 leading-relaxed; }
+  .article-body h2 { @apply mt-3 text-[1.2rem]; }
+  .article-body h3 { @apply mt-2 text-[1.05rem]; }
+  .article-body h4, .article-body h5, .article-body h6 { @apply mt-2 text-base; }
+  .article-body a { @apply text-accent-text underline underline-offset-3; }
+  .article-body ul { @apply m-0 list-disc ps-6; }
+  .article-body ol { @apply m-0 list-decimal ps-6; }
+  .article-body li + li { @apply mt-1; }
+  .article-body blockquote { @apply m-0 border-s-4 border-line ps-3 text-muted; }
+  .article-body code { @apply rounded-sm bg-sunk px-1 font-mono text-[0.875em]; }
+  .article-body pre { @apply overflow-x-auto rounded-md bg-sunk p-3; }
+  .article-body pre code { @apply bg-transparent p-0; }
+  .article-body img { @apply h-auto max-w-full rounded-md border border-hair; }
+  .article-body table { @apply block overflow-x-auto border-collapse text-sm; }
+  .article-body th, .article-body td { @apply border border-hair px-2 py-1 text-start; }
+  .article-body hr { @apply my-2 border-0 border-t border-hair; }
   .notice-warn { @apply rounded-lg border-[1.5px] border-dashed border-warn-line bg-warn-bg px-3.5 py-3 text-[0.9rem] text-warn-text; }
   .notice-warn:empty { @apply hidden; }
 

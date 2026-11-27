@@ -235,5 +235,18 @@
   "guideOpen": "Vad står det på mitt kort?",
   "guideAbout": "Om: {field}",
   "seoTitle": "Dölj uppgifter på ditt DNI och lägg till vattenstämpel",
-  "seoDescription": "Dölj uppgifterna på ditt spanska DNI eller TIE och lägg till en vattenstämpel innan du skickar en kopia. Gratis, utan konto. Dokumentet behandlas på din enhet."
+  "seoDescription": "Dölj uppgifterna på ditt spanska DNI eller TIE och lägg till en vattenstämpel innan du skickar en kopia. Gratis, utan konto. Dokumentet behandlas på din enhet.",
+  "articlesTitle": "Artiklar",
+  "articlesLead": "Nyheter, guider och information om DNI Tapado.es och om hur du delar en kopia av din id-handling med mindre risk.",
+  "articlesNews": "Nyheter",
+  "articlesGuide": "Guider",
+  "articlesInfo": "Information",
+  "articlesPublished": "Publicerad {date}",
+  "articlesUpdated": "Uppdaterad {date}",
+  "articlesSources": "Källor",
+  "articlesOtherLangs": "På andra språk:",
+  "articlesAll": "Alla artiklar",
+  "articlesCtaTitle": "Dölj uppgifter på din id-handling",
+  "articlesCta": "Öppna DNI Tapado.es",
+  "articlesLicence": "Artiklarnas text är licensierad under CC BY-SA 4.0. Webbplatsens kod är licensierad under AGPL-3.0."
 }

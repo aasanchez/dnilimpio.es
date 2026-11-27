@@ -235,5 +235,18 @@
   "guideOpen": "¿Qué hay en mi tarjeta?",
   "guideAbout": "Qué es: {field}",
   "seoTitle": "Tapar datos del DNI y poner marca de agua",
-  "seoDescription": "Tapa los datos de tu DNI o TIE y añade una marca de agua antes de enviar una copia. Gratis y sin registro. El documento se procesa en tu dispositivo."
+  "seoDescription": "Tapa los datos de tu DNI o TIE y añade una marca de agua antes de enviar una copia. Gratis y sin registro. El documento se procesa en tu dispositivo.",
+  "articlesTitle": "Artículos",
+  "articlesLead": "Noticias, guías e información sobre DNI Tapado.es y sobre cómo compartir una copia de tu documento con menos riesgo.",
+  "articlesNews": "Noticias",
+  "articlesGuide": "Guías",
+  "articlesInfo": "Información",
+  "articlesPublished": "Publicado el {date}",
+  "articlesUpdated": "Actualizado el {date}",
+  "articlesSources": "Fuentes",
+  "articlesOtherLangs": "En otros idiomas:",
+  "articlesAll": "Todos los artículos",
+  "articlesCtaTitle": "Tapa tu documento",
+  "articlesCta": "Abrir DNI Tapado.es",
+  "articlesLicence": "El texto de los artículos tiene licencia CC BY-SA 4.0. El código de la web tiene licencia AGPL-3.0."
 }

@@ -2,6 +2,7 @@
 <!-- Start screen: what the tool does, the privacy promise, one button, and the no-cookies notice. -->
 <script lang="ts">
   import { t, type Lang } from '../i18n/index.ts'
+  import { langSegment } from '../i18n/url.ts'
   import BuildVersion from './BuildVersion.svelte'
   import PrivacyNotice from './PrivacyNotice.svelte'
   import AuditPrompt from './AuditPrompt.svelte'
@@ -46,7 +47,14 @@
   <footer class="area-foot p-4 text-center font-mono text-xs lg:mt-8 lg:border-t lg:border-hair lg:pt-6 {notice ? 'max-lg:pb-14' : ''}">
     <InstallApp {lang} />
     <!-- New tab: leaving this page clears the photos (pagehide in App.svelte). -->
-    <a class="source-link inline-flex min-h-6 items-center gap-[0.4em] text-muted" id="source-link" href={__REPO_URL__} target="_blank" rel="noopener noreferrer"><GitHubMark />{t(lang, 'sourceCode')}</a>
+    <!-- One row, centred, so the links share a line and a baseline. -->
+    <div class="flex flex-wrap items-center justify-center gap-x-4">
+      <a class="source-link inline-flex min-h-6 items-center gap-[0.4em] text-muted" id="source-link" href={__REPO_URL__} target="_blank" rel="noopener noreferrer"><GitHubMark />{t(lang, 'sourceCode')}</a>
+      {#if __ARTICLE_LANGS__.includes(lang)}
+        <!-- Articles (ADR 0039): only in a language that has some. -->
+        <a class="inline-flex min-h-6 items-center text-muted" id="articles-link" href="./{lang === 'es' ? '' : `${langSegment(lang)}/`}articles/" target="_blank" rel="noopener">{t(lang, 'articlesTitle')}</a>
+      {/if}
+    </div>
     <AuditPrompt {lang} id="audit-footer" extra="mx-auto flex min-h-8 text-xs" />
     <BuildVersion {lang} />
     <NagwaraBand {lang} />

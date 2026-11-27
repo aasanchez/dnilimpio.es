@@ -77,6 +77,14 @@ export const GUIDE_CSP_DIRECTIVES: readonly string[] = [
 export const GUIDE_CSP = GUIDE_CSP_DIRECTIVES.join('; ')
 
 /**
+ * Policy of the article pages (ADR 0039): static pages written at build time from Markdown, like the
+ * guide pages. No script, no connection; only this site's stylesheet, fonts, icons and the articles'
+ * own images. The host sends the app's policy as a header on every path (scripts/headers.ts); the
+ * browser enforces both, so this stricter one decides.
+ */
+export const ARTICLE_CSP = GUIDE_CSP
+
+/**
  * The policy with extra script hashes. The build adds one: the hash of the inline import map that
  * carries the integrity of chunks loaded on demand (see scripts/vite-plugins.ts).
  */
