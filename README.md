@@ -475,7 +475,8 @@ The app can send anonymous usage figures, only when you ask, and only after your
   Cloudflare location and answers 429 above that. It uses one key for all senders, not the IP
   address, so a flood can also make real sends fail for that minute.
 - **Tests.** [`tests/unit/stats.test.ts`](tests/unit/stats.test.ts) checks the list, the device
-  classes, the Worker and the service worker route.
+  classes, the Worker (including a body over 600 bytes, also when it has no Content-Length) and the
+  service worker route.
   [`tests/e2e/stats.spec.ts`](tests/e2e/stats.spec.ts) checks that nothing is sent before the tap,
   that the text sent is the text shown, that the app page still cannot connect, and the offline and
   error cases.
