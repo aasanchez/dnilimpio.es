@@ -51,7 +51,7 @@ describe('ocrStatus with a silent service worker', () => {
   it('says OCR is unavailable after the limit instead of waiting forever', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     vi.stubGlobal('Worker', function Worker () {})
-    vi.stubGlobal('navigator', { onLine: true, serviceWorker: { controller: target(undefined) } })
+    vi.stubGlobal('navigator', { onLine: true, serviceWorker: { controller: target(undefined), addEventListener: () => {} } })
     const { ocrStatus } = await import('../../src/ocr/ocr.ts')
     const status = ocrStatus()
     await vi.advanceTimersByTimeAsync(ASK_TIMEOUT_MS.status)
@@ -60,7 +60,7 @@ describe('ocrStatus with a silent service worker', () => {
 
   it('still says "ready" when the worker answers in time', async () => {
     vi.stubGlobal('Worker', function Worker () {})
-    vi.stubGlobal('navigator', { onLine: true, serviceWorker: { controller: target({ ok: true, cached: true }) } })
+    vi.stubGlobal('navigator', { onLine: true, serviceWorker: { controller: target({ ok: true, cached: true }), addEventListener: () => {} } })
     const { ocrStatus } = await import('../../src/ocr/ocr.ts')
     expect(await ocrStatus()).toEqual({ state: 'ready' })
   })

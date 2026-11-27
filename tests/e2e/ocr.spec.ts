@@ -108,6 +108,71 @@ test.describe('without a service worker', () => {
   })
 })
 
+/** Counts the 'status' questions the page sends to its service worker (each one hashes the OCR files). */
+async function countStatusQuestions (page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const sw = navigator.serviceWorker.controller
+    if (!sw) throw new Error('no controller')
+    const send = sw.postMessage.bind(sw)
+    const w = window as unknown as { statusQuestions: number }
+    w.statusQuestions = 0
+    const counting = (msg: unknown, transfer: Transferable[]): void => {
+      if ((msg as { type?: unknown } | null)?.type === 'status') w.statusQuestions++
+      send(msg, transfer)
+    }
+    Object.defineProperty(sw, 'postMessage', { value: counting })
+  })
+}
+
+const statusQuestions = async (page: Page): Promise<number> => await page.evaluate(() => (window as unknown as { statusQuestions: number }).statusQuestions)
+
+test('"ready" is asked once per worker; a rewritten file is still refused and the status asked again (ADR 0033)', async ({ page, context }) => {
+  test.setTimeout(120_000)
+  await controlled(page)
+  const chunk = await ocrChunk(page)
+  await countStatusQuestions(page)
+  const lines = mrz()
+
+  const read = async (): Promise<string> => await page.evaluate(async ([path, text]) => {
+    const ocr = await import(path) as typeof import('../../src/ocr/ocr.ts')
+    const c = new OffscreenCanvas(1400, 260)
+    const ctx = c.getContext('2d')
+    if (!ctx) throw new Error('no 2d')
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, c.width, c.height)
+    ctx.fillStyle = '#000'
+    ctx.font = '48px monospace'
+    text.forEach((l, i) => { ctx.fillText(l, 30, 70 + i * 70) })
+    try {
+      return (await ocr.readMrz(c))?.valid === true ? 'read' : 'no mrz'
+    } catch {
+      return 'refused'
+    } finally {
+      await ocr.stopOcr()
+    }
+  }, [chunk, lines] as const)
+  const status = async (): Promise<unknown> => await page.evaluate(async (path) => await (await import(path) as typeof import('../../src/ocr/ocr.ts')).ocrStatus(), chunk)
+
+  expect(await read()).toBe('read')
+  const afterDownload = await statusQuestions(page)
+  // Three screens ask: the worker answered "ready" when it prepared the files, so none of them hashes again.
+  for (let i = 0; i < 3; i++) expect(await status()).toEqual({ state: 'ready' })
+  expect(await statusQuestions(page)).toBe(afterDownload)
+
+  // A rewritten model, offline: the kept "ready" leads only to a refusal, never to the forged bytes.
+  await page.evaluate(async () => {
+    const key = (await caches.keys()).find((k) => k.startsWith('dnilimpio-')) ?? ''
+    await (await caches.open(key)).put(new URL('ocr/ppocrv6-tiny-rec.onnx', document.baseURI).href, new Response('forged'))
+  })
+  await context.setOffline(true)
+  expect(await status()).toEqual({ state: 'ready' })
+  expect(await read()).toBe('refused')
+  expect(await page.evaluate(async () => await caches.match(new URL('ocr/ppocrv6-tiny-rec.onnx', document.baseURI).href) !== undefined)).toBe(false)
+  // The failure dropped the kept answer: the service worker is asked again and OCR is switched off.
+  expect(await status()).toEqual({ state: 'unavailable', reason: 'offline' })
+  expect(await statusQuestions(page)).toBe(afterDownload + 1)
+})
+
 test('a tampered OCR file is refused and nothing is cached', async ({ page, context }) => {
   test.setTimeout(30_000)
   await context.route('**/ocr/ppocrv6-tiny-rec.onnx', async (route) => {
