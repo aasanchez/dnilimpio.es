@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { defaultClientConditions, defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
-import { normalizeSha } from './src/version/build-info.ts'
+import { normalizeSha, normalizeVersion } from './src/version/build-info.ts'
 import { base64Import, ocrAssets, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
 
 // Override with REPO_URL for forks.
@@ -19,6 +19,9 @@ function gitSha (): string {
   }
 }
 const BUILD_SHA = normalizeSha(process.env['GITHUB_SHA'] ?? gitSha())
+// Release version (ADR 0030): CI computes it from the git tags (scripts/release-version.ts) and sets
+// RELEASE_VERSION. Without it, the footer shows no version, only the commit.
+const BUILD_VERSION = normalizeVersion(process.env['RELEASE_VERSION'])
 const epoch = Number(process.env['SOURCE_DATE_EPOCH'])
 const BUILD_TIME = Number.isFinite(epoch) && epoch > 0 ? epoch * 1000 : Date.now()
 
@@ -30,6 +33,7 @@ export default defineConfig({
   define: {
     __REPO_URL__: JSON.stringify(REPO_URL),
     __BUILD_SHA__: JSON.stringify(BUILD_SHA),
+    __BUILD_VERSION__: JSON.stringify(BUILD_VERSION),
     __BUILD_TIME__: JSON.stringify(BUILD_TIME),
   },
   // Relative base: the same dist/ works on the GitHub Pages subpath and when opened from disk.

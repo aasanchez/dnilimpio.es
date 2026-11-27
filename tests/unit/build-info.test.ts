@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { commitUrl, normalizeSha, relativeTime, shortSha } from '../../src/version/build-info.ts'
+import { commitUrl, normalizeSha, normalizeVersion, relativeTime, releaseUrl, shortSha } from '../../src/version/build-info.ts'
 
 const SHA = '2a07023b9f8c1d4e5f60718293a4b5c6d7e8f901'
 const MIN = 60_000
@@ -20,6 +20,19 @@ describe('commit SHA', () => {
     expect(commitUrl('https://github.com/aasanchez/dnilimpio.es', SHA)).toBe(`https://github.com/aasanchez/dnilimpio.es/commit/${SHA}`)
     expect(commitUrl('https://github.com/fork/x/', SHA)).toBe(`https://github.com/fork/x/commit/${SHA}`)
     expect(commitUrl('https://github.com/aasanchez/dnilimpio.es', '')).toBeUndefined()
+  })
+})
+
+describe('release version', () => {
+  it('accepts MAJOR.MINOR.PATCH only', () => {
+    expect(normalizeVersion('1.4.8')).toBe('1.4.8')
+    expect(normalizeVersion(' 10.0.12\n')).toBe('10.0.12')
+    for (const bad of [undefined, '', 'v1.4.8', '1.4', '1.4.8-rc.1', '01.4.8', '1.4.8<script>']) expect(normalizeVersion(bad)).toBe('')
+  })
+  it('links to the GitHub Release of its tag, and to nothing without a version', () => {
+    expect(releaseUrl('https://github.com/aasanchez/dnilimpio.es', '1.4.8')).toBe('https://github.com/aasanchez/dnilimpio.es/releases/tag/v1.4.8')
+    expect(releaseUrl('https://github.com/fork/x/', '1.0.0')).toBe('https://github.com/fork/x/releases/tag/v1.0.0')
+    expect(releaseUrl('https://github.com/aasanchez/dnilimpio.es', '')).toBeUndefined()
   })
 })
 

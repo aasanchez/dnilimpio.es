@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0013. CI pipeline: small single-purpose jobs in logical stages, one required check
 
-- Status: accepted
+- Status: accepted; a `release` job added by [ADR 0030](0030-semver-releases.md)
 - Date: 2026-11-25
 
 ## Context
