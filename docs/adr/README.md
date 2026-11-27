@@ -42,3 +42,4 @@ project specification on purpose).
 | [0034](0034-no-frames-no-fresh-webrtc.md) | No frames, no pop-ups: no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits for browser support | accepted |
 | [0035](0035-no-network-error-logging.md) | No Network Error Logging: `NEL: {"max_age":0}` on every file, NEL off in the zone settings, no `Report-To`; the post-deploy check fails otherwise | accepted |
 | [0036](0036-visual-regression-in-pinned-container.md) | Screenshot tests (12 phone screens, Spanish and Arabic) run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual` | accepted |
+| [0040](0040-prerendered-start-screen.md) | Prerendered start screen: the Spanish start screen rendered from `App.svelte` into `index.html` at build time, inert until the app replaces it; no font preload | accepted |

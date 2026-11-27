@@ -129,6 +129,9 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 
 ## Code conventions
 
+- The build renders the start screen in Node (`scripts/prerender.ts`, ADR 0040). Code that runs while
+  App.svelte renders the start screen must not touch `window`, `document` or storage outside
+  `$effect`, or the build fails.
 - Image, geometry, redaction and PDF logic are plain TypeScript modules with no Svelte import, so
   unit tests run them in Node. Svelte components stay thin.
 - Masked pixels must be opaque black in the exported raster, also under the watermark:
@@ -164,7 +167,7 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 | `src/stats/`, `src/thanks/`, `thanks.html`, `worker/` | Opt-in usage stats (ADR 0029): fixed list, thanks page, the Cloudflare Worker for `/stats` |
 | `src/security/` | Trusted Types policy, WebRTC and framing lockdown, photo-step CSP (intake lockdown), audit prompt |
 | `src/i18n/` | Dictionaries, language choice |
-| `scripts/` | CSP, Vite plugins (SRI, import map, SW manifest), smoke test, size, icons, fixtures |
+| `scripts/` | CSP, Vite plugins (SRI, import map, SW manifest, prerendered start screen), smoke test, size, icons, fixtures |
 | `tests/unit/`, `tests/e2e/` | Vitest and Playwright; the README lists what each file checks |
 | `docs/adr/` | Architecture decision records, with an index |
 | `.github/workflows/ci.yml` | CI; `ci-ok` is the single required check; deploy runs from `master` only |

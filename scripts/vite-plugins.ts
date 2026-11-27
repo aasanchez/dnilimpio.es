@@ -9,6 +9,7 @@ import { dirname, join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, THANKS_CSP, cspWithScriptHashes } from './csp.ts'
 import { headersFor, hostHeaderRules, type HeaderRule } from './headers.ts'
+import { insertIntoApp, renderHome } from './prerender.ts'
 import { STATS_PATH, handleStats } from '../src/stats/endpoint.ts'
 import { SW_FILE, THANKS_PAGE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 import { robotsTxt, sitemapXml, staticHead } from '../src/seo/site.ts'
@@ -55,6 +56,28 @@ export function searchFiles (site: string): Plugin {
     generateBundle () {
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(site) })
       this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml([{ loc: site }]) })
+    },
+  }
+}
+
+/**
+ * Prerendered start screen (ADR 0040): the Spanish start screen as plain HTML inside <main id="app">
+ * of index.html. The thanks page is left as it is.
+ */
+export function prerenderStart (): Plugin {
+  let config: ResolvedConfig
+  return {
+    name: 'dni-redactor:prerender',
+    apply: 'build',
+    configResolved (c) {
+      config = c
+    },
+    transformIndexHtml: {
+      order: 'post',
+      handler: async (html, ctx) => {
+        if (ctx.path.endsWith(`/${THANKS_PAGE}`)) return html
+        return insertIntoApp(html, await renderHome(config.root, config.define ?? {}))
+      },
     },
   }
 }
