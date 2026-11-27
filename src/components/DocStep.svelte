@@ -10,13 +10,19 @@
   import type { DocModel } from '../zones/types.ts'
   import type { CaptureState } from '../ui/capture-state.ts'
   import { loadDetect } from '../detect/load-detect.ts'
+  import type { DetectOutcome } from '../stats/session.ts'
 
-  let { lang, doc = $bindable(), dniFound = $bindable(), photos, preselect, onContinue }: {
+  let { lang, doc = $bindable(), dniFound = $bindable(), outcome = $bindable(), photos, preselect, onContinue }: {
     lang: Lang
     /** The layout to use: a DNI version or the TIE. */
     doc: DocModel | null
     /** True when the DNI version in `doc` was detected from the photos, false when it is the default. */
     dniFound: boolean
+    /**
+     * What detection answered, for the opt-in stats only (ADR 0029): the document it read, 'none' when
+     * it read the photos and found no answer, 'off' when it could not run. Null while it runs.
+     */
+    outcome: DetectOutcome | null
     photos: CaptureState
     /** False once the person confirmed a document for these photos: then detection only informs. */
     preselect: boolean
@@ -60,6 +66,7 @@
     try {
       const guess = await (await loadDetect()).detectDocument({ front: photos.front, back: photos.back })
       if (!alive()) return
+      outcome = guess?.kind === 'dni' || guess?.kind === 'tie' ? guess.kind : 'none'
       if (guess?.model) {
         auto = { s: 'found', model: guess.model }
         if (isDni(guess.model)) detected = guess.model
@@ -74,7 +81,10 @@
       }
     } catch {
       // OCR could not start (e.g. the connection dropped during the download): manual choice.
-      if (alive()) auto = { s: 'none' }
+      if (alive()) {
+        auto = { s: 'none' }
+        outcome = 'off'
+      }
     }
   }
 
@@ -85,7 +95,10 @@
     // Online first: the OCR files download by themselves (once, then they work offline too).
     if (status.state === 'ready') await run(null)
     else if (status.state === 'download') await run(status.megabytes)
-    else auto = { s: 'unavailable', key: status.reason === 'offline' ? 'detectOffline' : 'detectUnsupported' }
+    else {
+      auto = { s: 'unavailable', key: status.reason === 'offline' ? 'detectOffline' : 'detectUnsupported' }
+      outcome = 'off'
+    }
   })()
 
   const message = $derived.by((): string => {

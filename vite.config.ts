@@ -54,9 +54,16 @@ export default defineConfig({
       // so its scope covers the whole app.
       // The OCR module is its own entry so its public API keeps its names; the interface loads it
       // on demand (src/ocr/load-ocr.ts). It is not part of the first page load.
-      input: { index: 'index.html', sw: 'src/sw.ts', ocr: 'src/ocr/ocr.ts' },
+      // The thanks page (ADR 0029) is a page of its own, so it never shares a document with the photos.
+      input: { index: 'index.html', thanks: 'thanks.html', sw: 'src/sw.ts', ocr: 'src/ocr/ocr.ts' },
       preserveEntrySignatures: 'exports-only',
       output: {
+        // What the start page and the thanks page (ADR 0029) both use goes into one chunk with a fixed
+        // name, `app`: the Svelte runtime, the translations, the page lockdown and the
+        // stylesheet. The service worker shares nothing with them (it may import no chunk).
+        codeSplitting: {
+          groups: [{ name: 'app', test: /[\\/]node_modules[\\/](\.pnpm[\\/])?svelte[@\\/]|[\\/]src[\\/]i18n[\\/]|[\\/]src[\\/]security[\\/]lockdown\.ts$|[\\/]src[\\/]ui[\\/]styles\.css/ }],
+        },
         entryFileNames: (chunk) => (chunk.name === 'sw' ? 'sw.js' : 'assets/[name]-[hash].js'),
         chunkFileNames: (chunk) => (isModelPart(chunk.moduleIds) ? 'assets/ml/[name]-[hash].js' : 'assets/[name]-[hash].js'),
         assetFileNames: (asset) => (isModelPart(asset.originalFileNames) ? 'assets/ml/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),

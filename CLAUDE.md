@@ -15,7 +15,8 @@ promise. Public wording states only what is exactly true: the browser does keep 
 AI models (Cache Storage) and the notice's closing date, and the host sees each request. Say so;
 never write "nothing stored" or "never leaves" without that context.
 
-- Live site: <https://dnitapado.es> (Cloudflare Workers static assets, `wrangler.jsonc`, ADR 0027).
+- Live site: <https://dnitapado.es> (Cloudflare Workers static assets, `wrangler.jsonc`, ADR 0027;
+  Worker code for `POST /stats` only, ADR 0029).
   It is the only host. The old address <https://aasanchez.github.io/dnilimpio.es/> only redirects
   there; CI deploys nothing to GitHub Pages. The build must still work under a subpath (rule 6).
 - The repository is still named `aasanchez/dnilimpio.es`. Do not rename repository URLs, the cache
@@ -75,7 +76,10 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
    page that holds the photos (ADR 0023): `connect-src` is `'none'` and `tests/e2e/third-party.spec.ts`
    fails otherwise. The site has no analytics code: no script, frame, pixel or cookie. Visit counts
    come only from the host's own request statistics (ADR 0027). Never add Google Analytics, GTM, a
-   counter frame or any cookie-based tool.
+   counter frame or any cookie-based tool. The one exception (ADR 0029): the opt-in usage stats,
+   sent by one `fetch` in `src/stats/send.ts` from the photo-free `thanks.html`, only on a tap, with
+   the fixed list of `src/stats/schema.ts`. Never send them from the app page, never add a field
+   that can carry text, an image, a position or an identifier, and never send without the tap.
 2. **Nothing of the user's persists.** No cookies, no `localStorage`/`sessionStorage`/IndexedDB, except the
    notice's closing date in `src/ui/notice-memory.ts`. Photos are cleared on `pagehide`.
 3. **Strict CSP, single source.** The policy lives in `scripts/csp.ts`; the e2e test asserts the
@@ -148,6 +152,7 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 | `src/engine/` | Fields, masks, secure raster, watermark, JPEG filter, PDF export, undo history |
 | `src/guide/` | Card guide: sources, cited entries, text per language |
 | `src/offline/`, `src/sw.ts` | Service worker, precache manifest and `route()`, update of idle tabs, worker check |
+| `src/stats/`, `src/thanks/`, `thanks.html`, `worker/` | Opt-in usage stats (ADR 0029): fixed list, thanks page, the Cloudflare Worker for `/stats` |
 | `src/security/` | Trusted Types policy, WebRTC and framing lockdown, photo-step CSP (intake lockdown), audit prompt |
 | `src/i18n/` | Dictionaries, language choice |
 | `scripts/` | CSP, Vite plugins (SRI, import map, SW manifest), smoke test, size, icons, fixtures |

@@ -34,6 +34,30 @@ export const CSP_DIRECTIVES: readonly string[] = [
 export const CSP = CSP_DIRECTIVES.join('; ')
 
 /**
+ * Policy of the thanks page (thanks.html, ADR 0029): the page the app opens after "Clear everything".
+ * It never holds a photo: it is a new document, and it loads none of the app's image, AI or PDF code.
+ * It may connect to its own origin, where it sends the opt-in usage stats (one POST, src/stats/send.ts).
+ * 'self' and not a path: the same build is served at more than one address (dnitapado.es, www, a
+ * local preview). The service worker lets through only that one POST from this page (route()).
+ */
+export const THANKS_CSP_DIRECTIVES: readonly string[] = [
+  "default-src 'none'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "manifest-src 'self'",
+  "connect-src 'self'",
+  "form-action 'none'",
+  "base-uri 'none'",
+  "object-src 'none'",
+  "require-trusted-types-for 'script'",
+  "trusted-types 'none'",
+]
+
+export const THANKS_CSP = THANKS_CSP_DIRECTIVES.join('; ')
+
+/**
  * The policy with extra script hashes. The build adds one: the hash of the inline import map that
  * carries the integrity of chunks loaded on demand (see scripts/vite-plugins.ts).
  */

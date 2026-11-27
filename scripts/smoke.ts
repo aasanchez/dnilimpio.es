@@ -6,7 +6,9 @@
 //
 // On every host it fails if any response sets a cookie.
 // With SMOKE_HOST_HEADERS=1 (the Cloudflare host, ADR 0027) it also checks that the page, the service
-// worker and the OCR worker are served with exactly the HTTP headers of scripts/headers.ts.
+// worker, the OCR worker and the thanks page are served with exactly the HTTP headers of
+// scripts/headers.ts, and that the stats endpoint refuses a request that is not from the thanks page
+// (ADR 0029). It never posts a row that would be stored.
 //
 // It checks, on the live site:
 // - index.html carries exactly the CSP of scripts/csp.ts (with the hash of its own import map) and
@@ -25,7 +27,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { cspWithScriptHashes } from './csp.ts'
 import { HEADERS_FILE, cookiesSetBy, headersFor, hostHeaderRules } from './headers.ts'
-import { SW_FILE, WORKER_SCRIPTS, parseManifest } from '../src/offline/precache.ts'
+import { STATS_ENDPOINT, SW_FILE, THANKS_PAGE, WORKER_SCRIPTS, parseManifest } from '../src/offline/precache.ts'
 
 const [siteArg = '', expectedSha = '', distDir] = process.argv.slice(2)
 if (siteArg === '' || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(expectedSha)) {
@@ -54,7 +56,7 @@ async function get (url: URL): Promise<{ text: string, bytes: Buffer, headers: H
 async function checkServedHeaders (html: string, first: Headers): Promise<void> {
   const rules = hostHeaderRules(html)
   const pages: Array<[string, Headers]> = [['/', first]]
-  for (const p of [SW_FILE, ...WORKER_SCRIPTS]) pages.push([`/${p}`, (await get(fresh(p))).headers])
+  for (const p of [SW_FILE, THANKS_PAGE, ...WORKER_SCRIPTS]) pages.push([`/${p}`, (await get(fresh(p))).headers])
   const wrong: string[] = []
   for (const [path, served] of pages) {
     for (const [k, v] of Object.entries(headersFor(rules, path))) {
@@ -62,6 +64,11 @@ async function checkServedHeaders (html: string, first: Headers): Promise<void> 
     }
   }
   if (wrong.length > 0) throw new Error(`host headers differ from scripts/headers.ts:\n  ${wrong.join('\n  ')}`)
+  // The stats Worker (ADR 0029): Node sends no Sec-Fetch-Site, so a valid-looking post is refused
+  // and nothing is stored. Any other answer means the Worker or its route changed.
+  const stats = await fetch(new URL(STATS_ENDPOINT, site), { method: 'POST', body: 'v=1' })
+  if (stats.status !== 403) throw new Error(`POST /${STATS_ENDPOINT} without Sec-Fetch-Site: HTTP ${String(stats.status)}, expected 403`)
+  if (cookiesSetBy(stats.headers).length > 0) throw new Error(`POST /${STATS_ENDPOINT} sets a cookie`)
 }
 
 /** The query string bypasses the CDN's cached copy of files whose names carry no content hash. */

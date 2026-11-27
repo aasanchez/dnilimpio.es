@@ -11,8 +11,8 @@
 //   can rewrite Cache Storage, so a hit counts only if its bytes still match the manifest. A mismatch
 //   is deleted and the same fixed URL is downloaded again with its integrity (or refused offline).
 //   Every other request from the page or its workers (OCR) is refused and never reaches the
-//   network: another origin, another path, a query string, a method other than GET (route()). There is
-//   no exception (ADR 0023).
+//   network: another origin, another path, a query string, a method other than GET (route()). The one
+//   exception is the opt-in usage stats, sent only by the photo-free thanks page (ADR 0029).
 // - Activate: deletes the caches of older builds. A new build activates once no tab runs the old
 //   one, or earlier when the app's only tab is idle and asks for it ('activate' message), so no open
 //   page loses files it still needs.
@@ -169,15 +169,21 @@ sw.addEventListener('message', (event) => {
 
 sw.addEventListener('fetch', (event) => {
   const req = event.request
-  const to = route(req.method, req.url, req.mode, sw.registration.scope, KNOWN)
   event.respondWith((async () => {
+    // Who sent it matters only for a POST: the one allowed is the thanks page's stats (route()).
+    const client = req.method === 'POST' && event.clientId !== '' ? await sw.clients.get(event.clientId) : undefined
+    const to = route(req.method, req.url, req.mode, sw.registration.scope, KNOWN, client?.url ?? '')
     switch (to.kind) {
       case 'deny':
         // A network error, as if the request had been blocked: nothing is sent.
         return Response.error()
+      case 'stats':
+        // The opt-in stats of the thanks page (ADR 0029), as the page sent them, without cookies.
+        return await fetch(req, { credentials: 'omit' })
       case 'on-demand':
         return withWorkerCsp(to.url, await ensureOnDemand(to.url))
       case 'index':
+      case 'thanks':
       case 'file': {
         const url = to.kind === 'index' ? INDEX : to.url
         const file = FILES.get(url)
@@ -186,7 +192,7 @@ sw.addEventListener('fetch', (event) => {
         // against its hash. Offline, that fails, and the request gets a network error.
         const cache = await caches.open(CACHE)
         const res = await verifiedHit(cache, file.url, file.integrity) ?? await download(cache, file.url, file.integrity)
-        return to.kind === 'index' ? withPageHeaders(res) : res
+        return to.kind === 'file' ? res : withPageHeaders(res)
       }
     }
   })())
