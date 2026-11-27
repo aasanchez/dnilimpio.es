@@ -184,10 +184,10 @@
     go('capture', 'front')
   }
 
-   * "Download and clear" or "Share and clear", once the PDF has left: the usage figures of this session (ids and counts only,
-   * "Clear everything" on the done screen: the usage figures of this session (ids and counts only,
-   * src/stats/session.ts) are taken first, then everything is cleared, then the photo-free thanks
-   * page opens. It sends nothing by itself; there the person may choose to send them (ADR 0029).
+  /**
+   * "Download and clear" or "Share and clear", once the PDF has left: the usage figures of this
+   * session (ids and counts only, src/stats/session.ts) are taken first, then everything is cleared,
+   * then the photo-free thanks page opens. It sends nothing by itself; there the person may choose to send them (ADR 0029).
    */
   function finish (): void {
     const ids = new Set(doc.zones.map((z) => z.id))
