@@ -183,6 +183,8 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    corners of the card; a magnifier shows the area under your finger. On a keyboard, arrow keys move
    the selected corner and <kbd>N</kbd> selects the next one. **Rotate** turns the frame a quarter
    turn, **Reset** puts the circles back. The button straightens the card again and takes you on.
+   Switching to the other side with the **Front** and **Back** tabs saves the corners you moved,
+   with no button to press. Crossed corners stay on screen, but that side is not done yet.
 5. **Hide.** The card stays on screen. Choose **Front** or **Back** (only with a back photo); the
    list below shows that side's fields as switches. You can also tap a field on the card itself to cover or uncover it.
    The recommended fields start covered (see [Supported documents](#supported-documents)). Fields
@@ -654,7 +656,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks, and skipping the back from it |
 | `front-only` | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, done screen, adding the back later |
 | `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, TIE when detection finds no answer, offline note with nothing preselected |
-| `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard |
+| `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard, corners saved when you switch side |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases; smart field finding |
 | `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
 | `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, a real PDF decoded in the browser (hidden areas black, no metadata, no file name, no watermark text in the file), reset |
