@@ -14,7 +14,7 @@
   const { lang, secure, sides, phase, hiddenCount, boxCount, watermark, greyscale, onDone, onReset }: {
     lang: Lang
     secure: Readonly<Record<Side, HTMLCanvasElement>>
-    /** The sides to show and export, front first: one page each. The back is optional. */
+    /** The sides to show and export, front first, all on one PDF page. The back is optional. */
     sides: readonly Side[]
     phase: 'review' | 'done'
     hiddenCount: number

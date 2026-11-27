@@ -74,27 +74,139 @@ test('a tab with photos keeps its build; the new one waits', async ({ page }) =>
   await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
 })
 
-test('a second open tab of the app holds the update back', async ({ page, context }) => {
-  await page.goto(URL_)
-  await controlled(page)
-  const other = await context.newPage()
+const waiting = async (page: Page): Promise<boolean> => await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.waiting != null)
+
+/** Opens a second window of the app, controlled by the current build. */
+async function openOther (page: Page): Promise<Page> {
+  const other = await page.context().newPage()
   await other.goto(URL_)
   await controlled(other)
+  await other.evaluate(() => { document.documentElement.dataset['oldPage'] = '1' })
+  return other
+}
+
+test('a second idle window does not hold the update back: both switch to the new build', async ({ page }) => {
+  await page.goto(URL_)
+  await controlled(page)
+  const other = await openOther(page)
   await page.evaluate(() => { document.documentElement.dataset['oldPage'] = '1' })
+  const reloaded = page.waitForEvent('load')
+  const otherReloaded = other.waitForEvent('load')
   await deployNextBuild(page)
-  await expect.poll(async () => await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.waiting != null), { timeout: 15_000 }).toBe(true)
-  expect(await marked(page)).toBe('1')
+  await reloaded
+  await otherReloaded
+  expect(await marked(page)).toBeUndefined()
+  expect(await marked(other)).toBeUndefined()
+  await expect(page.locator('#update-ready')).toHaveCount(0)
 })
 
-test('once the other tab closes, the update is applied when the tab comes back to the foreground', async ({ page, context }) => {
+test('a second window that is busy holds the update back, and the start screen offers "Update now"', async ({ page }) => {
   await page.goto(URL_)
   await controlled(page)
-  const other = await context.newPage()
-  await other.goto(URL_)
-  await controlled(other)
+  const other = await openOther(page)
+  await other.locator('#start').click()
+  await expect(other.locator('#file-front')).toBeAttached()
   await page.evaluate(() => { document.documentElement.dataset['oldPage'] = '1' })
   await deployNextBuild(page)
-  await expect.poll(async () => await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.waiting != null), { timeout: 15_000 }).toBe(true)
+  await expect(page.locator('#update-ready')).toBeVisible({ timeout: 15_000 })
+  expect(await waiting(page)).toBe(true)
+  expect(await marked(page)).toBe('1')
+  expect(await marked(other)).toBe('1')
+})
+
+// The cause of "I have to clear the app's data to get the new version": any second window of the app
+// held every update back, even an idle one (a tab left open, the installed app). Now idle windows
+// answer and switch too. A window that cannot answer (frozen by the phone, or stuck) still holds the
+// automatic switch back, so the person sees "Update now", and pressing it applies the update.
+test('a window that cannot answer no longer blocks updates: "Update now" applies the new build', async ({ page }) => {
+  await page.goto(URL_)
+  await controlled(page)
+  const other = await openOther(page)
+  // Its page runs no code for 20 s, as if the phone had frozen it.
+  void other.evaluate(() => { const end = Date.now() + 20_000; while (Date.now() < end) { /* frozen */ } }).catch(() => undefined)
+  await page.evaluate(() => { document.documentElement.dataset['oldPage'] = '1' })
+  await deployNextBuild(page)
+  await expect(page.locator('#update-ready')).toBeVisible({ timeout: 15_000 })
+  expect(await marked(page)).toBe('1')
+  const reloaded = page.waitForEvent('load')
+  await page.locator('#update-now').click()
+  await reloaded
+  expect(await marked(page)).toBeUndefined()
+  expect(await waiting(page)).toBe(false)
+  await expect(page.locator('#update-ready')).toHaveCount(0)
+  // The stuck window was idle: once it runs again, it reloads into the new build too.
+  await expect.poll(async () => await other.evaluate(() => document.documentElement.dataset['oldPage']).catch(() => '1'), { timeout: 30_000 }).toBeUndefined()
+})
+
+test('a busy window keeps its photos when another window applies the update', async ({ page }) => {
+  await page.goto(URL_)
+  await controlled(page)
+  const other = await openOther(page)
+  await blockModel(other)
+  await other.locator('#start').click()
+  await other.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
+  await expect(other.locator('#status-front')).toHaveText('Imagen cargada.')
+  await deployNextBuild(page)
+  await expect(page.locator('#update-ready')).toBeVisible({ timeout: 15_000 })
+  const reloaded = page.waitForEvent('load')
+  await page.locator('#update-now').click()
+  await reloaded
+  // The busy window still holds its photo and its old page.
+  await expect.poll(async () => await other.evaluate(() => navigator.serviceWorker.controller?.scriptURL ?? '')).toContain('sw.js')
+  await other.waitForTimeout(500)
+  expect(await marked(other)).toBe('1')
+  await expect(other.locator('#status-front')).toHaveText('Imagen cargada.')
+})
+
+test('a window back on the start screen after another window applied the update reloads into it', async ({ page }) => {
+  await page.goto(URL_)
+  await controlled(page)
+  const other = await openOther(page)
+  await other.locator('#start').click()
+  await expect(other.locator('#file-front')).toBeAttached()
+  await deployNextBuild(page)
+  await expect(page.locator('#update-ready')).toBeVisible({ timeout: 15_000 })
+  const reloaded = page.waitForEvent('load')
+  await page.locator('#update-now').click()
+  await reloaded
+  await other.waitForTimeout(500)
+  expect(await marked(other)).toBe('1')
+  const otherReloaded = other.waitForEvent('load')
+  await other.locator('#back').click()
+  await otherReloaded
+  expect(await marked(other)).toBeUndefined()
+})
+
+test('a page that leaves the start screen while the other windows answer keeps its photos', async ({ page }) => {
+  await page.goto(URL_)
+  await controlled(page)
+  const other = await openOther(page)
+  await blockModel(page)
+  await page.locator('#start').click()
+  await expect(page.locator('#file-front')).toBeAttached()
+  await deployNextBuild(page)
+  await expect.poll(async () => await waiting(page), { timeout: 15_000 }).toBe(true)
+  await page.evaluate(() => { document.documentElement.dataset['oldPage'] = '1' })
+  // The other window answers late (its page is busy for 1 s), while this page asks and moves on.
+  void other.evaluate(() => { const end = Date.now() + 1000; while (Date.now() < end) { /* busy */ } }).catch(() => undefined)
+  await page.locator('#back').click()
+  await page.locator('#start').click()
+  await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
+  await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
+  await page.waitForTimeout(3000)
+  expect(await marked(page)).toBe('1')
+  await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
+})
+
+test('once the busy window closes, the update is applied by itself when the tab comes back to the foreground', async ({ page }) => {
+  await page.goto(URL_)
+  await controlled(page)
+  const other = await openOther(page)
+  await other.locator('#start').click()
+  await expect(other.locator('#file-front')).toBeAttached()
+  await page.evaluate(() => { document.documentElement.dataset['oldPage'] = '1' })
+  await deployNextBuild(page)
+  await expect(page.locator('#update-ready')).toBeVisible({ timeout: 15_000 })
   await other.close()
   const reloaded = page.waitForEvent('load')
   await page.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')) })
