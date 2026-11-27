@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { describe, expect, it } from 'vitest'
-import { AUTONYMS, LANGS, diffKeys, dir, pickLang, placeholders, t, tf, type Key } from '../../src/i18n/index.ts'
+import { beforeAll, describe, expect, it } from 'vitest'
+import { AUTONYMS, LANGS, diffKeys, dir, isLoaded, loadLang, pickLang, placeholders, t, tf, type Key } from '../../src/i18n/index.ts'
 import es from '../../src/i18n/locales/es.json'
 
 describe('i18n', () => {
+  beforeAll(async () => {
+    await Promise.all(LANGS.map(async (l) => { await loadLang(l) }))
+  })
+  it('loads every language', () => {
+    expect(LANGS.filter((l) => !isLoaded(l))).toEqual([])
+  })
   it.each(LANGS)('%s has exactly the keys of es.json', (lang) => {
     expect(diffKeys(lang)).toEqual({ missing: [], extra: [] })
   })
