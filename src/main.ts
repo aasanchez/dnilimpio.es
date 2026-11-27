@@ -10,7 +10,7 @@ import { watchForUpdates } from './offline/update.ts'
 import { watchInstall } from './offline/install.ts'
 import { installTrustedTypesPolicy } from './security/trusted-types.ts'
 import { loadAllFonts } from './security/intake-lockdown.ts'
-import { pickLang, t } from './i18n/index.ts'
+import { loadLang, pickLang, t } from './i18n/index.ts'
 
 /** Inside another page's frame the app does not start: it only offers to open itself in a tab. */
 function showFramed (target: HTMLElement): void {
@@ -33,6 +33,10 @@ blockStrayDrops(window)
 
 // Before mounting: Chromium can offer installation as soon as the page loads (offline/install.ts).
 watchInstall()
+
+// The browser's language, before the first render (the start page holds Spanish only). Waits at most
+// a few seconds; on a failure the page starts in Spanish.
+await loadLang(pickLang(navigator.languages))
 
 const target = document.getElementById('app')
 if (target && isFramed(window)) showFramed(target)
