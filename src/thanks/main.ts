@@ -4,6 +4,7 @@ import { isFramed } from '../security/lockdown.ts'
 import { mount } from 'svelte'
 import Thanks from './Thanks.svelte'
 import { readFragment } from './fragment.ts'
+import { idleAnswer } from '../offline/update-rules.ts'
 
 const target = document.getElementById('app')
 // The fragment is read once and removed from the address at once: the figures do not stay in the
@@ -18,7 +19,8 @@ if (target && !isFramed(window)) mount(Thanks, { target, props: { session } })
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (e: MessageEvent<unknown>) => {
     const port = e.ports[0]
-    if ((e.data as { type?: unknown } | null)?.type === 'idle?' && port) port.postMessage({ idle: true })
+    const answer = idleAnswer(e.data, true)
+    if (answer && port) port.postMessage(answer)
   })
   navigator.serviceWorker.startMessages()
 }

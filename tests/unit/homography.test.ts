@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { apply, homography, isConvex, solve, type Quad } from '../../src/geometry/homography.ts'
+import { apply, hasCollinearCorners, homography, isConvex, solve, type Quad } from '../../src/geometry/homography.ts'
 import { CARD_MM, CARD_PX, warpToCard } from '../../src/geometry/warp.ts'
 
 const unit: Quad = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]
@@ -40,6 +40,15 @@ describe('homography', () => {
   })
   it('rejects collinear points', () => {
     expect(homography(unit, [{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 2 }, { x: 0, y: 1 }])).toBeNull()
+  })
+  it('rejects collinear corners at photo scale, where float noise hides them from the solver', () => {
+    // Found by the property tests (seed 1592598566): the top-left corner on the line between its neighbours.
+    const tr = { x: 912.37, y: 140.11 }; const bl = { x: 60.91, y: 590.53 }
+    const tl = { x: bl.x + (tr.x - bl.x) * 0.37, y: bl.y + (tr.y - bl.y) * 0.37 }
+    const q: Quad = [tl, tr, { x: 870.2, y: 640.7 }, bl]
+    expect(hasCollinearCorners(q)).toBe(true)
+    expect(homography(unit, q)).toBeNull()
+    expect(hasCollinearCorners([{ x: 103, y: 87 }, tr, { x: 870.2, y: 640.7 }, bl])).toBe(false)
   })
 })
 
