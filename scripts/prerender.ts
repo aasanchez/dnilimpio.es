@@ -13,6 +13,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 /** What prerendered markup must never hold. Each one would break the CSP or the promise of rule 3. */
 const FORBIDDEN: ReadonlyArray<readonly [RegExp, string]> = [
   [/<script\b/i, 'a script element'],
+  [/<!--|<dialog\b/i, 'a comment or a dialog left after trimming'],
   [/\sstyle\s*=/i, 'a style attribute'],
   [/<style\b/i, 'a style element'],
   [/\son[a-z]+\s*=/i, 'an inline event handler'],
@@ -28,7 +29,13 @@ const FORBIDDEN: ReadonlyArray<readonly [RegExp, string]> = [
  *   long English text would only make the page larger and dilute the Spanish text for search.
  */
 export function trimMarkup (html: string): string {
-  return html.replace(/<!--[\s\S]*?-->/g, '').replace(/<dialog\b[\s\S]*?<\/dialog>/g, '')
+  // Repeated until nothing changes: removing one piece can join two halves into a new one.
+  let out = html
+  for (let before = ''; before !== out;) {
+    before = out
+    out = out.replace(/<!--[\s\S]*?-->/g, '').replace(/<dialog\b[\s\S]*?<\/dialog>/g, '')
+  }
+  return out
 }
 
 /** Throws when the markup holds anything the strict CSP would refuse or that loads a file. */
