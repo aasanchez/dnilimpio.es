@@ -162,13 +162,12 @@
   </div>
 
   <div class="area-stage flex flex-col gap-3">
-    <div class="win">
-      <div class="winbar"><i></i><i></i><i></i><span class="title">{sideName(current).toLowerCase()}.jpg</span></div>
+    <div class="panel">
       <div class="viewer relative flex min-h-52 items-center justify-center bg-coal lg:min-h-96" id="viewer" class:is-dragover={dragging}>
         {#if bitmap}
           <canvas class="block h-auto max-h-[50vh] max-w-full lg:max-h-[65vh]" bind:this={viewer} width="0" height="0" aria-hidden="true"></canvas>
         {:else}
-          <div class="flex aspect-[1.585] w-4/5 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-accent p-2 text-center font-mono text-xs text-cream lg:w-3/5">
+          <div class="flex aspect-[1.585] w-4/5 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-accent p-2 text-center text-sm text-cream lg:w-3/5">
             <svg class="h-auto w-[70%]" viewBox="0 0 100 63.1" aria-hidden="true"><GhostCard side={current} rect={{ x: 0, y: 0, w: 100, h: 63.1 }} dim={false} /></svg>
             {#if withCamera}
               {t(lang, 'frameHint')}
@@ -184,13 +183,13 @@
         {/if}
       </div>
     </div>
-    <p class="m-0 flex items-center gap-1.5 font-mono text-xs text-muted" id="local-note">
+    <p class="m-0 flex items-center gap-1.5 text-sm text-muted" id="local-note">
       <svg class="size-3.5 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
       {t(lang, 'localOnly')}
     </p>
     {#if filterOn === false}
       <!-- Without the service worker the app works the same; only its extra network filter is off. -->
-      <p class="m-0 font-mono text-xs text-muted" id="filter-note" role="status">{t(lang, 'filterOff')}</p>
+      <p class="m-0 text-sm text-muted" id="filter-note" role="status">{t(lang, 'filterOff')}</p>
     {/if}
   </div>
 

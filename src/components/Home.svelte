@@ -13,7 +13,7 @@
   const { lang, onStart, notice, onNoticeDismiss, onGuide }: { lang: Lang; onStart: () => void; notice: boolean; onNoticeDismiss: () => void; onGuide: () => void } = $props()
 </script>
 
-<!-- Wide screens: the promise and the start button on the left, the demo window on the right. -->
+<!-- Wide screens: the promise and the start button on the left, the sample card on the right. -->
 <section class="step home split flex-1 lg:grid-cols-2 lg:[grid-template-areas:'head_stage'_'side_stage'_'act_stage'_'foot_foot'] lg:pt-6">
   <div class="area-head flex flex-col gap-4">
     <div>
@@ -25,14 +25,12 @@
     <button type="button" class="link-btn -mt-2 self-start" id="guide-open" onclick={onGuide}>{t(lang, 'guideOpen')} <span class="flip" aria-hidden="true">→</span></button>
   </div>
 
-  <div class="win area-stage" aria-hidden="true">
-    <div class="winbar"><i></i><i></i><i></i><span class="title">copia.preview</span></div>
+  <div class="panel area-stage" aria-hidden="true">
     <div class="px-4 pb-4">
       <!-- Decorative card: blue-grey blocks, three of them already blacked out (positions in styles.css). -->
       <div class="mini-card relative mx-auto mt-5 mb-3.5 aspect-[1.585] w-[min(270px,80%)] -rotate-3 rounded-[10px] border-[1.5px] border-coal bg-card lg:w-[min(360px,80%)]">
         <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
-      <p class="term"><span class="p">$</span> dt.es --local<br />→ {t(lang, 'logSent')} · ok</p>
     </div>
   </div>
 

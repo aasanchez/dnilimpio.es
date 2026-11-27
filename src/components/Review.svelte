@@ -34,6 +34,8 @@
   let shareStatus = $state<'idle' | 'error'>('idle')
   /** The PDF, kept in memory only for this review; dropped when the review closes. */
   let pdf: File | null = null
+  /** Name of the built PDF, shown on the done screen. */
+  let fileName = $state('')
   let pending: Promise<File> | null = null
   const mark = $derived(normaliseWatermark(watermark))
   /** The back photo was skipped: the copy has the front only. */
@@ -68,7 +70,10 @@
       const { exportPdf, PDF_FILE_NAME } = await loadExport()
       const blob = await exportPdf(sides.map((s) => secure[s]))
       const file = new File([blob], PDF_FILE_NAME, { type: 'application/pdf' })
-      if (mounted) pdf = file
+      if (mounted) {
+        pdf = file
+        fileName = file.name
+      }
       return file
     })().catch((e: unknown) => {
       pending = null
@@ -132,19 +137,19 @@
     </div>
     <div class="area-stage flex flex-col gap-4">
       {#each sides as s (s)}
-        <figure class="win m-0">
-          <figcaption class="winbar"><i></i><i></i><i></i><span class="title">{sideName(s)}</span></figcaption>
-          <div class="winbody"><canvas class="block h-auto w-full rounded-md" id="review-{s}" {@attach copyOf(s)}></canvas></div>
+        <figure class="panel m-0">
+          <figcaption class="panel-caption">{sideName(s)}</figcaption>
+          <div class="panel-body"><canvas class="block h-auto w-full rounded-md" id="review-{s}" {@attach copyOf(s)}></canvas></div>
         </figure>
       {/each}
     </div>
     <div class="area-side flex flex-col gap-4">
-      <ul class="term" id="review-summary">
-        {#if oneSide}<li id="summary-front-only"><span class="p">✓</span> {t(lang, 'frontOnly')}</li>{/if}
-        <li><span class="p">✓</span> {tf(lang, 'summaryHidden', { n: hiddenCount })}</li>
-        <li><span class="p">✓</span> {tf(lang, 'summaryBoxes', { n: boxCount })}</li>
-        <li><span class="p">✓</span> {mark === '' ? t(lang, 'summaryNoWatermark') : tf(lang, 'summaryWatermark', { text: mark })}</li>
-        <li><span class="p">✓</span> {t(lang, greyscale ? 'summaryGreyscale' : 'summaryColour')}</li>
+      <ul class="summary" id="review-summary">
+        {#if oneSide}<li id="summary-front-only"><span class="tick" aria-hidden="true">✓</span> {t(lang, 'frontOnly')}</li>{/if}
+        <li><span class="tick" aria-hidden="true">✓</span> {tf(lang, 'summaryHidden', { n: hiddenCount })}</li>
+        <li><span class="tick" aria-hidden="true">✓</span> {tf(lang, 'summaryBoxes', { n: boxCount })}</li>
+        <li><span class="tick" aria-hidden="true">✓</span> {mark === '' ? t(lang, 'summaryNoWatermark') : tf(lang, 'summaryWatermark', { text: mark })}</li>
+        <li><span class="tick" aria-hidden="true">✓</span> {t(lang, greyscale ? 'summaryGreyscale' : 'summaryColour')}</li>
       </ul>
       <p class="notice-warn" id="review-warning">{t(lang, oneSide ? 'reviewWarningFront' : 'reviewWarning')}</p>
       <label class="flex min-h-14.5 items-center gap-3 rounded-lg border-2 border-ink bg-surface px-3.5 py-2.5 has-checked:bg-sunk"><input type="checkbox" class="check" id="review-confirm" bind:checked={confirmed} /> {t(lang, oneSide ? 'reviewConfirmFront' : 'reviewConfirm')}</label>
@@ -171,10 +176,10 @@
       <p class="kicker">{t(lang, 'doneKicker')}</p>
       <h2 class="text-[2rem] font-extrabold tracking-[-1px]">{t(lang, 'doneTitle')}</h2>
     </div>
-    <div class="win area-stage">
-      <div class="winbar"><i></i><i></i><i></i><span class="title">export.log</span></div>
-      <p class="term" aria-hidden="true"><span class="p">$</span> dt.es export<br />→ protected-document.pdf · {sides.length} pp · ok<br />→ {t(lang, 'logSent')}<br /><span class="p">_</span></p>
-    </div>
+    <ul class="summary area-stage" id="done-summary">
+      <li><span class="tick" aria-hidden="true">✓</span> {tf(lang, 'doneFile', { name: fileName })}</li>
+      <li><span class="tick" aria-hidden="true">✓</span> {t(lang, 'doneLocal')}</li>
+    </ul>
     <div class="area-side flex flex-col gap-4">
       <p class="lead" id="download-status" role="status">{status === 'downloaded' ? t(lang, 'downloaded') : status === 'shared' ? t(lang, 'shared') : ''}</p>
       <p class="hint">{t(lang, 'doneHint')}</p>

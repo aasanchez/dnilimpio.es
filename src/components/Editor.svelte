@@ -450,13 +450,12 @@
 
     <div class="area-stage flex flex-col gap-3">
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="win" onkeydown={onEditorKey}>
-        <div class="winbar">
-          <i></i><i></i><i></i><span class="title">{sideName(side).toLowerCase()}.jpg</span>
+      <div class="panel" onkeydown={onEditorKey}>
+        <div class="panel-bar">
           <label class="chip"><input type="checkbox" id="final-preview" class="sr-only" bind:checked={finalPreview} />{finalPreview ? '◉' : '○'} {t(lang, 'finalPreview')}</label>
           <button type="button" class="chip" id="adjust-{side}" onclick={() => { onAdjust(side) }}>{t(lang, 'adjust')}</button>
         </div>
-        <div class="winbody">
+        <div class="panel-body">
           <!-- role=application: the canvas is a pointer- and keyboard-operable editor (keys described in #box-hint). -->
           <!-- svelte-ignore a11y_no_interactive_element_to_noninteractive_role -->
           <canvas id="preview" class="block h-auto w-full cursor-pointer touch-none rounded-md select-none [&.is-drawing]:cursor-crosshair" class:is-drawing={drawMode} bind:this={display} tabindex="0" role="application"

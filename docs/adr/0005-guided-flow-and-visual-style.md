@@ -32,9 +32,14 @@ Visual style:
 
 - Cream paper with a faint dot grid, near-black ink, one orange accent (#f36716). Orange used as
   text is darkened to #b8480a so it reaches 4.5:1 contrast; #f36716 is only used for fills and lines.
-- Framed "window" panels with a mono title bar and a hard offset shadow, 2 px ink borders on buttons,
-  dashed chips.
-- Fonts: Bricolage Grotesque (text), JetBrains Mono (labels), Caveat (short hand-written notes).
+- Framed panels with a hard offset shadow, 2 px ink borders on buttons, dashed chips (amended
+  2026-11-27). The panels first looked like desktop windows: a title bar with three dots and a file
+  name such as `front.jpg`. Screens also showed fake terminal lines such as `$ dt.es export`. Alexis
+  found both misleading: people could think they must type commands or install a program. Panels
+  are now plain cards, and summaries are plain sentences. `tests/unit/plain-ui.test.ts` checks
+  that neither comes back.
+- Fonts: Bricolage Grotesque (text and messages), JetBrains Mono (labels and data, such as counts
+  and the version), Caveat (short hand-written notes).
 - A dark variant follows `prefers-color-scheme`.
 
 Fonts are self-hosted: the CSP allows `font-src 'self'` only, and the offline cache must hold every
