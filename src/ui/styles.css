@@ -193,8 +193,6 @@
 @utility area-stage { @variant lg { grid-area: stage; position: sticky; top: 5rem; } }
 
 @layer components {
-  /* Hidden visit counter frame (ADR 0024): loads, takes no space, cannot be focused or clicked. */
-  .stats-frame { @apply pointer-events-none absolute size-0 border-0 opacity-0; }
   /* Sticky action bar in the thumb zone on phones. On wide screens it sits under the controls, and
      stays at the bottom of the window while long controls (the editor) scroll. */
   .actionbar {

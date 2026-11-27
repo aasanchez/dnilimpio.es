@@ -21,6 +21,8 @@ async function logUrls (page: Page): Promise<void> {
     }
     URL.revokeObjectURL = (url: string): void => {
       log.revoked.push(url)
+      // Also on the console: "Clear everything" then leaves the page (thanks page, ADR 0029).
+      console.log(`revoked ${url}`)
       revoke(url)
     }
   })
@@ -41,9 +43,12 @@ test('Clear all revokes the PDF\'s download link at once', async ({ page }) => {
   // Still open: the browser may need it for a moment after the click (the delay is 10 s).
   expect(before.revoked).not.toContain(before.pdf[0])
 
+  const revoked: string[] = []
+  page.on('console', (m) => { if (m.text().startsWith('revoked ')) revoked.push(m.text().slice(8)) })
   await page.locator('#reset-done').click()
-  await expect(page.locator('h2')).toHaveText('Foto del anverso')
-  expect((await urlLog(page)).revoked).toContain(before.pdf[0])
+  // Cleared first, then the thanks page opens (ADR 0029).
+  await expect(page.locator('#thanks-title')).toBeVisible()
+  expect(revoked).toContain(before.pdf[0])
 })
 
 test('screens free their canvases when they close', async ({ page }) => {

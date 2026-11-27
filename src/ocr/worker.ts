@@ -29,7 +29,7 @@ function load (): Promise<PaddleOcrService> {
   service ??= (async () => {
     const base = new URL('./', scope.location.href).href
     ort.env.logLevel = 'error'
-    ort.env.wasm.numThreads = 1 // threads need cross-origin isolation, which GitHub Pages cannot set
+    ort.env.wasm.numThreads = 1 // threads need cross-origin isolation, which the site does not turn on (no COEP, ADR 0027)
     ort.env.wasm.proxy = false
     ort.env.wasm.wasmPaths = { mjs: `${base}${MODEL_FILES.ortGlue}`, wasm: `${base}${MODEL_FILES.ortWasm}` }
     const [det, rec, dict] = await Promise.all([

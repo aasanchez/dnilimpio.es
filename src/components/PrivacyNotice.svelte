@@ -1,8 +1,8 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Privacy notice in the place where sites put their cookie banner. It informs only: no cookies,
-     no third-party scripts in the app's page and no personal data, so there is no "accept" step
-     (ADR 0023). Visits are counted by a sandboxed frame from another site that sets no cookies
-     (ADR 0024; ADR 0015 records the legal reasoning).
+     no third-party scripts or frames and no personal data, so there is no "accept" step
+     (ADR 0023). No analytics code runs here: visits are counted by the host, from its own request
+     statistics (ADR 0027).
      Closing it stores only the date (src/ui/notice-memory.ts), so it shows at most every 4 days.
      Kept short on purpose: the full list of what is sent and stored is in the README. -->
 <script lang="ts">

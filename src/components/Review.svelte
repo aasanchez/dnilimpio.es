@@ -11,7 +11,7 @@
   import { t, tf, type Lang } from '../i18n/index.ts'
   import type { Side } from '../zones/dni.ts'
 
-  const { lang, secure, sides, phase, hiddenCount, boxCount, watermark, greyscale, onDone, onReset }: {
+  const { lang, secure, sides, phase, hiddenCount, boxCount, watermark, greyscale, onDone, onReset, onFinish }: {
     lang: Lang
     secure: Readonly<Record<Side, HTMLCanvasElement>>
     /** The sides to show and export, front first, all on one PDF page. The back is optional. */
@@ -23,6 +23,8 @@
     greyscale: boolean
     onDone: () => void
     onReset: () => void
+    /** "Clear everything" after the download: clears the photos and opens the thanks page (ADR 0029). */
+    onFinish: () => void
   } = $props()
 
   let confirmed = $state(false)
@@ -179,7 +181,7 @@
     </div>
 
     <div class="actionbar">
-      <button type="button" class="button primary" id="reset-done" onclick={onReset}>
+      <button type="button" class="button primary" id="reset-done" onclick={onFinish}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
         {t(lang, 'clearAll')}
       </button>

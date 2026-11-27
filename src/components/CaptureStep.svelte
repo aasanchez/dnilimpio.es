@@ -8,6 +8,7 @@
   import { canUseLiveCamera, type CameraFailure } from '../capture/live.ts'
   import { t, tf, type Key, type Lang } from '../i18n/index.ts'
   import { canContinue, type CaptureState } from '../ui/capture-state.ts'
+  import type { PhotoVia } from '../stats/session.ts'
   import { shrink } from '../engine/wipe.ts'
   import type { Side } from '../zones/dni.ts'
   import CaptureSide from './CaptureSide.svelte'
@@ -19,7 +20,7 @@
   const { lang, state: photos, onLoaded, onRemoved, onContinue }: {
     lang: Lang
     state: CaptureState
-    onLoaded: (side: Side, bitmap: ImageBitmap) => void
+    onLoaded: (side: Side, bitmap: ImageBitmap, via: PhotoVia) => void
     /** Drops a side's photo. Only the back offers it: the front is required. */
     onRemoved: (side: Side) => void
     onContinue: () => void
@@ -62,14 +63,14 @@
   const LIMITS = { mb: MAX_BYTES / (1024 * 1024), mp: MAX_PIXELS / 1_000_000 }
   const errorText = (key: Key): string => tf(lang, key, LIMITS)
 
-  function onResult (side: Side, r: DecodeResult): void {
+  function onResult (side: Side, r: DecodeResult, via: PhotoVia): void {
     if (!r.ok) {
       errors[side] = ERROR_KEY[r.error.kind]
       current = side
       return
     }
     errors[side] = null
-    onLoaded(side, r.bitmap)
+    onLoaded(side, r.bitmap, via)
     // Move on to the other side while it is still empty.
     const other: Side = side === 'front' ? 'back' : 'front'
     current = photos[other] === null ? other : side
@@ -77,7 +78,7 @@
 
   function onShot (bitmap: ImageBitmap): void {
     const side = current
-    onResult(side, checkBitmap(bitmap))
+    onResult(side, checkBitmap(bitmap), 'camera')
     // Stay open for the other side while it is still empty; otherwise we are done.
     if (current === side) liveOpen = false
   }
@@ -109,8 +110,8 @@
       if (!input || !dropZone) return
       const ac = new AbortController()
       const target: CaptureTarget = cameraInput
-        ? { input, cameraInput, dropZone, onResult: (r) => { onResult(side, r) } }
-        : { input, dropZone, onResult: (r) => { onResult(side, r) } }
+        ? { input, cameraInput, dropZone, onResult: (r, via) => { onResult(side, r, via) } }
+        : { input, dropZone, onResult: (r, via) => { onResult(side, r, via) } }
       wireCapture(target, ac.signal)
       targets[side] = target
       return () => { ac.abort() }

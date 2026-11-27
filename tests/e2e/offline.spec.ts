@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { adjustFront, fixture, loadBoth, openCapture, toEditor } from './helpers.ts'
+import { PAGE_HEADERS, SECURITY_HEADERS } from '../../src/offline/precache.ts'
 
 test.use({ locale: 'es-ES', serviceWorkers: 'allow' })
 
@@ -126,19 +127,24 @@ test('no source map is published, and the worker refuses any .map (ADR 0022)', a
   expect(leaked).toEqual([])
 })
 
-test('page loads from the worker carry the headers Pages cannot send; no page may frame the app', async ({ page, context, baseURL }) => {
-  await page.goto('/')
+test('page loads from the worker carry the security headers, whatever the cached entry held', async ({ page, context, baseURL }) => {
+  const first = await page.goto('/')
   await offlineReady(page)
+  const host = first?.headers() ?? {}
   const res = await page.reload()
   expect(res?.fromServiceWorker()).toBe(true)
   const h = res?.headers() ?? {}
-  expect([h['content-security-policy'], h['x-frame-options'], h['x-content-type-options'], h['referrer-policy']])
-    .toEqual(["frame-ancestors 'none'", 'DENY', 'nosniff', 'no-referrer'])
-  // Another site that frames the app. Its frame gets a partitioned (empty) worker registration, so
-  // the header does not reach it; the page's own check does: the app does not start there.
+  // The worker keeps no header of a cached entry (ADR 0026) and sets PAGE_HEADERS itself (ADR 0027).
+  for (const [k, v] of Object.entries(PAGE_HEADERS)) expect([k, h[k.toLowerCase()]]).toEqual([k, v])
+  // A returning visitor gets the same security headers as a first visit from the host. The full CSP
+  // is the page's <meta> policy, which equals the host's header apart from frame-ancestors.
+  for (const k of Object.keys(SECURITY_HEADERS)) expect([k, h[k.toLowerCase()]]).toEqual([k, host[k.toLowerCase()]])
+  const meta = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content')
+  expect(host['content-security-policy']).toBe(`${meta ?? ''}; frame-ancestors 'none'`)
+  // Another site that frames the app: the host's frame-ancestors refuses it, so nothing of the app runs.
   const framer = await context.newPage()
   await framer.setContent(`<iframe src="${baseURL ?? ''}"></iframe>`)
-  await expect(framer.frameLocator('iframe').locator('#app a[target="_blank"]')).toBeVisible()
+  await expect.poll(() => framer.frames()[1]?.url()).toMatch(/^chrome-error:/)
   await expect(framer.frameLocator('iframe').locator('h1')).toHaveCount(0)
 })
 

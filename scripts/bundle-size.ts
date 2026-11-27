@@ -35,10 +35,14 @@ const START = startScripts()
 // Current sizes plus about 10 % headroom (2026-11-25). Raise a limit only on purpose, in the same PR
 // that makes the bundle bigger, and say why.
 const BUDGETS: readonly Budget[] = [
-  // 86 kB since languages load on demand (2026-11-27): 77.9 kB, was 122.9 kB with all 13 dictionaries.
+  // The entry and every chunk preloaded with it, the `app` chunk shared with the thanks page included
+  // (ADR 0029). 86 kB since languages load on demand (2026-11-27), was 122.9 kB with all 13 dictionaries.
   { name: 'Start page JavaScript', match: (rel) => START.has(rel), limitKb: 86, measure: 'gzip' },
   // CSS: 12 kB since Tailwind CSS (ADR 0017): its base reset and the utility classes, about 10.3 kB.
-  { name: 'Start page CSS', match: /^assets\/index-[\w-]+\.css$/, limitKb: 12, measure: 'gzip' },
+  { name: 'Start page CSS', match: /^assets\/(index|app)-[\w-]+\.css$/, limitKb: 12, measure: 'gzip' },
+  // The thanks page's own code (ADR 0029). It also loads the shared `app` chunk and, since languages
+  // load on demand, all 13 dictionaries: it has no import map, so it loads nothing on demand.
+  { name: 'Thanks page JavaScript', match: /^assets\/thanks-[\w-]+\.js$/, limitKb: 5, measure: 'gzip' },
   { name: 'PDF export chunk', match: /^assets\/export-[\w-]+\.js$/, limitKb: 275, measure: 'gzip' },
   { name: 'Corner model (on demand)', match: /^assets\/ml\/.+\.js$/, limitKb: 2850, measure: 'gzip' },
   { name: 'OCR worker and data (on demand)', match: /^ocr\//, limitKb: 9600, measure: 'gzip' }, // PP-OCRv6 tiny and its runtime (ADR 0019)

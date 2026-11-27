@@ -7,8 +7,10 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
-import { CSP, cspWithScriptHashes } from './csp.ts'
-import { SW_FILE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
+import { CSP, THANKS_CSP, cspWithScriptHashes } from './csp.ts'
+import { headersFor, hostHeaderRules, type HeaderRule } from './headers.ts'
+import { STATS_PATH, handleStats } from '../src/stats/endpoint.ts'
+import { SW_FILE, THANKS_PAGE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 
 export function securityHeaders (): Plugin {
   return {
@@ -17,10 +19,11 @@ export function securityHeaders (): Plugin {
     transformIndexHtml: {
       order: 'pre',
       // Inserted right after <meta charset> so the policy applies before any script or stylesheet.
-      handler: (html) => {
+      // The thanks page (ADR 0029) gets its own policy; every other page the app's.
+      handler: (html, ctx) => {
         const anchor = '<meta charset="utf-8" />'
-        if (!html.includes(anchor)) throw new Error('index.html must contain <meta charset="utf-8" />')
-        const csp = CSP.replaceAll("'", '&#39;')
+        if (!html.includes(anchor)) throw new Error(`${ctx.path} must contain <meta charset="utf-8" />`)
+        const csp = (ctx.path.endsWith(`/${THANKS_PAGE}`) ? THANKS_CSP : CSP).replaceAll("'", '&#39;')
         return html.replace(
           anchor,
           `${anchor}\n    <meta http-equiv="Content-Security-Policy" content="${csp}" />\n    <meta name="referrer" content="no-referrer" />`
@@ -50,15 +53,22 @@ export function subresourceIntegrity (): Plugin {
     },
     closeBundle () {
       const outDir = resolve(config.root, config.build.outDir)
-      const htmlPath = join(outDir, 'index.html')
-      const html = readFileSync(htmlPath, 'utf8')
       const tagRe = /<(script|link)\b([^>]*?)\s(src|href)="([^"]+)"([^>]*)>/g
-      const out = html.replace(tagRe, (whole, tag: string, pre: string, attr: string, url: string, post: string) => {
+      const withSri = (html: string): string => html.replace(tagRe, (whole, tag: string, pre: string, attr: string, url: string, post: string) => {
         if (/^[a-z]+:|^\/\//i.test(url) || whole.includes('integrity=')) return whole
         if (tag === 'link' && !/rel="(stylesheet|modulepreload)"/.test(whole)) return whole
         const file = join(outDir, url.replace(/^\.?\//, '').replace(config.base.replace(/^\.?\//, ''), ''))
         return `<${tag}${pre} ${attr}="${url}" integrity="${sri(readFileSync(file))}"${post}>`
       })
+      // The thanks page (ADR 0029): its own scripts and styles, checked the same way. It loads nothing
+      // on demand, so it has no import map.
+      const thanksPath = join(outDir, THANKS_PAGE)
+      const thanks = withSri(readFileSync(thanksPath, 'utf8'))
+      if (thanks.includes('import(') || !thanks.includes('integrity=')) throw new Error(`${THANKS_PAGE}: unexpected scripts`)
+      writeFileSync(thanksPath, thanks)
+
+      const htmlPath = join(outDir, 'index.html')
+      const out = withSri(readFileSync(htmlPath, 'utf8'))
 
       // Chunks not referenced from the HTML are loaded with import(): list them in the import map.
       // That includes the corner model's files under assets/ml/ (the runtime's .mjs loader too).
@@ -117,6 +127,46 @@ function writePrecacheManifest (outDir: string): void {
   const json = JSON.stringify({ version, files, onDemand })
   parseManifest(json) // same checks as the worker runs
   writeFileSync(swPath, sw.replace(PLACEHOLDER, () => JSON.stringify(json)))
+}
+
+/**
+ * `vite preview` sends the same HTTP headers as the Cloudflare host (scripts/headers.ts, ADR 0027), so
+ * the e2e tests run under the host's CSP, Permissions-Policy and framing rules, not only the <meta> CSP.
+ * Set PREVIEW_HOST_HEADERS=0 to preview the build as GitHub Pages serves it (no headers).
+ * POST /stats is answered by the Worker's own checks (src/stats/endpoint.ts, ADR 0029), with no dataset: the
+ * preview checks the stats exactly as the host does and stores nothing.
+ */
+export function hostHeadersInPreview (): Plugin {
+  return {
+    name: 'dni-redactor:host-headers-preview',
+    apply: (_config, env) => env.isPreview === true && process.env['PREVIEW_HOST_HEADERS'] !== '0',
+    configurePreviewServer (server) {
+      let rules: HeaderRule[] | undefined
+      const outDir = resolve(server.config.root, server.config.build.outDir)
+      server.middlewares.use((req, res, next) => {
+        rules ??= hostHeaderRules(readFileSync(join(outDir, 'index.html'), 'utf8'))
+        const path = new URL(req.url ?? '/', 'http://preview').pathname
+        if (path === STATS_PATH) {
+          const chunks: Buffer[] = []
+          req.on('data', (c: Buffer) => { chunks.push(c) })
+          req.on('end', () => {
+            const headers = new Headers()
+            for (const [k, v] of Object.entries(req.headers)) if (typeof v === 'string') headers.set(k, v)
+            const method = req.method ?? 'GET'
+            const body = method === 'GET' || method === 'HEAD' ? null : Buffer.concat(chunks)
+            void handleStats(new Request(`http://preview${STATS_PATH}`, { method, headers, body }), {}).then((r) => {
+              res.statusCode = r.status
+              r.headers.forEach((v, k) => { res.setHeader(k, v) })
+              res.end()
+            })
+          })
+          return
+        }
+        for (const [k, v] of Object.entries(headersFor(rules, path))) res.setHeader(k, v)
+        next()
+      })
+    },
+  }
 }
 
 /**

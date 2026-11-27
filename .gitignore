@@ -161,3 +161,6 @@ dist/
 test-results/
 playwright-report/
 *.local
+
+# Cloudflare wrangler (local runs only)
+.wrangler/
