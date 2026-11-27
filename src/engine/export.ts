@@ -17,7 +17,7 @@ async function toJpeg (canvas: HTMLCanvasElement): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer())
 }
 
-/** Builds the PDF from already sanitised canvases (one page each, in order). */
+/** Builds the one-page PDF from already sanitised canvases, in order (front, back). */
 export async function exportPdf (sanitised: readonly HTMLCanvasElement[]): Promise<Blob> {
   const jpegs: Uint8Array[] = []
   let pdf: Uint8Array | undefined

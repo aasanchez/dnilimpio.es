@@ -25,7 +25,7 @@
 # Never re-run the legacy "pages build and deployment" workflow: it publishes unbuilt source.
 # Actions are pinned to full commit SHAs; the comment gives the release tag.
 #
-# Releases (ADR 0030): `changes` computes the version from the git tags (scripts/release-version.ts):
+# Releases (ADR 0032): `changes` computes the version from the git tags (scripts/release-version.ts):
 # the patch of the highest vMAJOR.MINOR.PATCH tag on master plus one, v1.0.0 when there is no tag.
 # Alexis sets major and minor by hand, by pushing a tag such as v1.5.0. The build carries the version
 # (footer). Once `deploy` succeeds, `release` creates the tag on the commit and its GitHub Release.
@@ -63,7 +63,7 @@ jobs:
       pull-requests: read
     outputs:
       release: ${{ steps.mode.outputs.release }}
-      # The version this commit's build carries, such as 1.4.8, and its tag, v1.4.8 (ADR 0030).
+      # The version this commit's build carries, such as 1.4.8, and its tag, v1.4.8 (ADR 0032).
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       build: ${{ steps.mode.outputs.release == 'true' || steps.mode.outputs.code == 'true' }}
@@ -131,7 +131,7 @@ jobs:
       # rebuild of this commit gives the same bytes (checked by the `reproducible` job).
       - name: Fix the build time to the commit time
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
-      # The release version goes into the footer (ADR 0030). `reproducible` builds with the same value.
+      # The release version goes into the footer (ADR 0032). `reproducible` builds with the same value.
       - run: pnpm build
         env:
           RELEASE_VERSION: ${{ needs.changes.outputs.version }}
@@ -531,7 +531,7 @@ jobs:
 
   # ── Stage 9: release (master only) ──────────────────────────────────────────────────────────────
   # Once the deploy succeeded, tags the commit with the version its build carries and publishes a
-  # GitHub Release, with the release evidence attached (ADR 0030). The tag means "this build was
+  # GitHub Release, with the release evidence attached (ADR 0032). The tag means "this build was
   # deployed". It runs beside smoke and attest; a failing smoke still shows on the run.
   # Safe to run again: a tag that already points at this commit is kept, and an existing release is
   # left as it is. A tag with this name on another commit fails the job and changes nothing.

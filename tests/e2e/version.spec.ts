@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The footer shows the running build: the release version linked to its GitHub Release (when the build
-// has one, ADR 0030), the short commit SHA linked to GitHub, and the deploy time as relative time in
+// has one, ADR 0032), the short commit SHA linked to GitHub, and the deploy time as relative time in
 // the page's language. All are part of the bundle, so they also work offline.
 import { expect, test, type Page } from '@playwright/test'
 

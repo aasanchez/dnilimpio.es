@@ -173,7 +173,7 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
   the live site and runs Lighthouse. To redeploy, run the "CI" workflow on `master`; never re-run
   the legacy "pages build and deployment" workflow, because it publishes unbuilt source. Actions
   are pinned to commit SHAs; keep them pinned.
-- **Releases** (ADR 0030). Each deploy from `master` is tagged `vMAJOR.MINOR.PATCH` and gets a
+- **Releases** (ADR 0032). Each deploy from `master` is tagged `vMAJOR.MINOR.PATCH` and gets a
   GitHub Release, after the deploy succeeds. The patch is automatic (`scripts/release-version.ts`);
   major and minor only change when Alexis pushes a tag. Never create or move a version tag yourself.
 

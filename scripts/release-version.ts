@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The version of the build of the current commit (ADR 0030), from the git tags:
+// The version of the build of the current commit (ADR 0032), from the git tags:
 //
 //   node scripts/release-version.ts          # prints version=1.4.8 and tag=v1.4.8, for $GITHUB_OUTPUT
 //

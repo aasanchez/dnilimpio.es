@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- The running build: release version (linked to its GitHub Release, ADR 0030), short commit SHA
+<!-- The running build: release version (linked to its GitHub Release, ADR 0032), short commit SHA
      (linked to the commit) and how long ago it was deployed. -->
 <script lang="ts">
   import { t, tf, type Lang } from '../i18n/index.ts'

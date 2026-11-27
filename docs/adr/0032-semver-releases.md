@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-# 0030. Automatic patch releases on deploy, with the version in the footer
+# 0032. Automatic patch releases on deploy, with the version in the footer
 
 - Status: accepted
 - Date: 2026-11-27

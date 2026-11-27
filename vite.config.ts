@@ -19,7 +19,7 @@ function gitSha (): string {
   }
 }
 const BUILD_SHA = normalizeSha(process.env['GITHUB_SHA'] ?? gitSha())
-// Release version (ADR 0030): CI computes it from the git tags (scripts/release-version.ts) and sets
+// Release version (ADR 0032): CI computes it from the git tags (scripts/release-version.ts) and sets
 // RELEASE_VERSION. Without it, the footer shows no version, only the commit.
 const BUILD_VERSION = normalizeVersion(process.env['RELEASE_VERSION'])
 const epoch = Number(process.env['SOURCE_DATE_EPOCH'])

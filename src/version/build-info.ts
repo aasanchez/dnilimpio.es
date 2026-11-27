@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The version this page runs: its release version (ADR 0030), the commit it was built from and when it
+// The version this page runs: its release version (ADR 0032), the commit it was built from and when it
 // was built. All are fixed at build time (vite.config.ts), inside the page's own code, so the footer shows the build that is
 // actually running, online or offline. After a service worker update, the new build's code brings
 // its own values. Nothing is fetched.
