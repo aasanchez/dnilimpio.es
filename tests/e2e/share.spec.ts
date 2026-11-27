@@ -66,7 +66,7 @@ test('Share hands the PDF to the system share sheet, within the click, with no t
   await expect(page.locator('#download-status')).toHaveText('PDF compartido. No se ha guardado ninguna copia en tu carpeta de descargas.')
   await expect(page.locator('#stats-link')).toBeVisible()
   const [call] = await shareCalls(page)
-  expect(call).toMatchObject({ names: ['protected-document.pdf'], types: ['application/pdf'], keys: ['files', 'title'], title: 'Documento con datos protegidos', active: true })
+  expect(call).toMatchObject({ names: ['redacted-dni.pdf'], types: ['application/pdf'], keys: ['files', 'title'], title: 'Documento con datos protegidos', active: true })
   expect((call?.sizes as number[])[0]).toBeGreaterThan(1000)
   expect(downloaded).toBe(false)
 })

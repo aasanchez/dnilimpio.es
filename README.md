@@ -55,7 +55,8 @@ some of the data. This tool makes a copy that shows only what you choose:
    diagonal rows over the whole card, so every part of the image carries it. Text size and opacity
    are adjustable; at 100 % opacity the text is solid black.
 6. **Convert to black and white** (optional).
-7. **Review** the result and **download a PDF**: `protected-document.pdf`, one A4 page. Each side is printed at 130% of the real card size
+7. **Review** the result and **download a PDF**: one A4 page, named after the document type
+   (`redacted-dni.pdf` or `redacted-tie.pdf`). Each side is printed at 130% of the real card size
    (about 111 × 70 mm); with both sides, the front is on top and the back below.
 8. **Download or share it**: **Share** opens your device's share sheet with the PDF, where you pick
    WhatsApp, Telegram, Gmail, Mail or another app. The app never sends anything.
@@ -227,9 +228,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 6. **Download or share.** Check the final images (one per side) and the summary, tick **I have
    checked both sides** (or **I have checked the front**), then press **Share** or **Download PDF**.
    **Share** appears only where the browser can share files (most phones, Safari on macOS, Chrome on
-   Windows and ChromeOS). It opens the system share sheet with `protected-document.pdf`: you pick
-   WhatsApp, Telegram, Gmail, Mail or another app, and the person. A shared PDF is not saved to your
-   downloads folder. **Download PDF** saves `protected-document.pdf`. You stay on the review, so you
+   Windows and ChromeOS). It opens the system share sheet with the PDF (`redacted-dni.pdf` or
+   `redacted-tie.pdf`): you pick WhatsApp, Telegram, Gmail, Mail or another app, and the person. A shared PDF is not saved to your
+   downloads folder. **Download PDF** saves the same file. You stay on the review, so you
    can download or share again. **Start again** or closing the tab clears everything.
 7. **Optional: send anonymous data.** Once the PDF is downloaded or shared, a small **Send anonymous
    data** link appears below the buttons. It clears the photos and opens a separate page that holds
@@ -736,7 +737,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type`, `doc-text` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates, document type from the front's printed text (accents, case and OCR misreads ignored) |
 | OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans`, `ocr-ask`, `ready-memo` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink, a silent service worker turns OCR off after a time limit (15 s to check the files, 3 minutes to download them), "OCR is ready" kept per service worker and asked again after an update or a failure |
 | Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black (also after the watermark, checked on the final pixels), Fit to the text (a box only grows, by at most half its size, and stays on the card) |
-| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output |
+| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output, file name `redacted-dni.pdf` or `redacted-tie.pdf` |
 | Audit prompt | `audit-prompt` | Every file the prompt names exists, its list of stats fields is the list the thanks page sends, in order, and it stays short and asks for findings, not a verdict |
 | Editor redraws | `redraw` | One render per animation frame, only the side on screen, only when its choices changed; every changed side rendered at once before the review; a failed render is retried; nothing runs after the editor closes |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
@@ -766,7 +767,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `accuracy` | Accuracy floor of the on-device AI on 42 fictional card photos drawn by [`scripts/make-fixtures.ts`](scripts/make-fixtures.ts) (DNI 4.0, DNI 3.0 and TIE, front and back, under seven conditions: plain, rotated, small, tilted, dim, blurred, and all at once). Per document: no wrong document or DNI version, at least 6 of 7 pairs detected exactly, at least 12 of 14 photos with every corner within 2 % of the card's width, median corner error at most 0.5 %. The true corners and documents are in `tests/fixtures/accuracy/expected.json` |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases, "ready" asked once per worker and asked again after a rewritten file is refused; smart field finding |
 | `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
-| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, no watermark over hidden fields, a change made with the front on screen reaching the back in the review and the PDF, review, the review stays after the download with the small stats link, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), reset |
+| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, no watermark over hidden fields, a change made with the front on screen reaching the back in the review and the PDF, review, the review stays after the download with the small stats link, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), the file named `redacted-dni.pdf` or `redacted-tie.pdf` after the document type, reset |
 | `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; after a download or a share the review stays and the small Send anonymous data link appears; closing the sheet; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |

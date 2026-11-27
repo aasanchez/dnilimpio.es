@@ -3,7 +3,7 @@
 import { inflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 import { stripJpeg } from '../../src/engine/jpeg.ts'
-import { A4_PT, CARD_BOX_PT, GAP_PT, ID1_MM, buildPdf, layout, type Placement } from '../../src/engine/pdf.ts'
+import { A4_PT, CARD_BOX_PT, GAP_PT, ID1_MM, buildPdf, layout, pdfFileName, type Placement } from '../../src/engine/pdf.ts'
 import { CANARIES, dirtyJpeg, latin1 } from './jpeg-fixture.ts'
 
 /** Dictionary text of every object, with stream bodies cut out. */
@@ -150,5 +150,12 @@ describe('buildPdf', () => {
     await expect(buildPdf([])).rejects.toThrow()
     await expect(buildPdf([dirtyJpeg(), dirtyJpeg(), dirtyJpeg()])).rejects.toThrow()
     await expect(buildPdf([new Uint8Array([1, 2, 3])])).rejects.toThrow()
+  })
+})
+
+describe('pdfFileName', () => {
+  it('names the file after the document type only, in ASCII', () => {
+    expect(pdfFileName('dni')).toBe('redacted-dni.pdf')
+    expect(pdfFileName('tie')).toBe('redacted-tie.pdf')
   })
 })

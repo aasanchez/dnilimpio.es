@@ -133,7 +133,7 @@ test.describe('with the service worker', () => {
     await page.locator('#review-confirm').check()
     const download = page.waitForEvent('download')
     await page.locator('#download').click()
-    expect((await download).suggestedFilename()).toBe('protected-document.pdf')
+    expect((await download).suggestedFilename()).toBe('redacted-dni.pdf')
     expect(await page.evaluate(() => (window as unknown as { violations: string[] }).violations)).toEqual([])
     // The listener does see a violation: a load the policy refuses.
     await page.evaluate(() => { new Image().src = './icons/favicon-32.png' })
