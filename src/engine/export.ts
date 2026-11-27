@@ -8,8 +8,8 @@ import { buildPdf } from './pdf.ts'
 /** JPEG quality for the export: high enough to keep small print readable. */
 export const JPEG_QUALITY = 0.92
 
-/** Generic file name (§16): never derived from the source file name. */
-export { PDF_FILE_NAME } from './pdf.ts'
+/** File name by document type (§16): never derived from the photo or its file name. */
+export { pdfFileName } from './pdf.ts'
 
 async function toJpeg (canvas: HTMLCanvasElement): Promise<Uint8Array> {
   const blob = await new Promise<Blob | null>((resolve) => { canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY) })

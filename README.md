@@ -55,7 +55,8 @@ some of the data. This tool makes a copy that shows only what you choose:
    diagonal rows over the whole card, so every part of the image carries it. Text size and opacity
    are adjustable; at 100 % opacity the text is solid black.
 6. **Convert to black and white** (optional).
-7. **Review** the result and **download a PDF**: `protected-document.pdf`, one A4 page. Each side is printed at 130% of the real card size
+7. **Review** the result and **download a PDF**: one A4 page, named after the document type
+   (`redacted-dni.pdf` or `redacted-tie.pdf`). Each side is printed at 130% of the real card size
    (about 111 × 70 mm); with both sides, the front is on top and the back below.
 8. **Download or share it**: **Share** opens your device's share sheet with the PDF, where you pick
    WhatsApp, Telegram, Gmail, Mail or another app. The app never sends anything.
@@ -227,9 +228,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 6. **Download or share.** Check the final images (one per side) and the summary, tick **I have
    checked both sides** (or **I have checked the front**), then press **Share** or **Download PDF**.
    **Share** appears only where the browser can share files (most phones, Safari on macOS, Chrome on
-   Windows and ChromeOS). It opens the system share sheet with `protected-document.pdf`: you pick
-   WhatsApp, Telegram, Gmail, Mail or another app, and the person. A shared PDF is not saved to your
-   downloads folder. **Download PDF** saves `protected-document.pdf`. You stay on the review, so you
+   Windows and ChromeOS). It opens the system share sheet with the PDF (`redacted-dni.pdf` or
+   `redacted-tie.pdf`): you pick WhatsApp, Telegram, Gmail, Mail or another app, and the person. A shared PDF is not saved to your
+   downloads folder. **Download PDF** saves the same file. You stay on the review, so you
    can download or share again. **Start again** or closing the tab clears everything.
 7. **Optional: send anonymous data.** Once the PDF is downloaded or shared, a small **Send anonymous
    data** link appears below the buttons. It clears the photos and opens a separate page that holds
@@ -538,6 +539,10 @@ GitHub Pages, so dnitapado.es moved to Cloudflare Workers, which sends them
 ([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)). COEP is not set: the page loads nothing from another site, so it would protect nothing more, and
 the app does not need cross-origin isolation.
 
+Cloudflare added Network Error Logging headers that ask the browser to report failed requests to
+Cloudflare. Every file now turns them off, the zone setting is off, and the post-deploy check fails
+if they come back ([ADR 0035](docs/adr/0035-no-network-error-logging.md)).
+
 ## Audit it yourself
 
 You do not have to trust the claims above. Each one can be checked.
@@ -733,11 +738,11 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Area | Files | What is checked |
 |---|---|---|
 | Capture | `input`, `decode`, `sniff`, `live`, `coach`, `capture-state` | Sides in use with an optional back, file picker and camera modes, type by first bytes (name and MIME type ignored, AVIF refused), size in pixels from JPEG, PNG, WebP and HEIC headers, size and pixel limits (decompression bomb), decode errors, live camera needs and failures, coach metrics (blur, light, framing) |
-| Geometry | `homography`, `quad-edit` | Homography round trips and degenerate quads, corner editing |
+| Geometry | `homography`, `quad-edit`, `corner-input` | Homography round trips and degenerate quads, corner editing, corner editor input (screen to photo pixels, hit radius per pointer kind, drag with grab offset and clamping, arrow keys and Shift, next corner, canvas size, magnifier side), switching side saves moved valid corners and never confirms crossed or untouched ones |
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type`, `doc-text` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates, document type from the front's printed text (accents, case and OCR misreads ignored) |
 | OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans`, `ocr-ask`, `ready-memo` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink, a silent service worker turns OCR off after a time limit (15 s to check the files, 3 minutes to download them), "OCR is ready" kept per service worker and asked again after an update or a failure |
 | Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black (also after the watermark, checked on the final pixels), Fit to the text (a box only grows, by at most half its size, and stays on the card) |
-| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output |
+| Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output, file name `redacted-dni.pdf` or `redacted-tie.pdf` |
 | Audit prompt | `audit-prompt` | Every file the prompt names exists, its list of stats fields is the list the thanks page sends, in order, and it stays short and asks for findings, not a verdict |
 | Keyboard focus | `focus-rescue` | Focus that falls back to the page (also while it still sits on a control that just disabled or removed itself) moves to the first control that takes it; how far to scroll so a focused control clears the sticky top bar, the sticky action bar or the floating notice, without leaving the window |
 | Editor redraws | `redraw` | One render per animation frame, only the side on screen, only when its choices changed; every changed side rendered at once before the review; a failed render is retried; nothing runs after the editor closes |
@@ -765,9 +770,10 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `front-only` | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, the stats link, adding the back later |
 | `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, TIE when detection finds no answer, offline note with nothing preselected |
 | `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard, corners saved when you switch side |
+| `accuracy` | Accuracy floor of the on-device AI on 42 fictional card photos drawn by [`scripts/make-fixtures.ts`](scripts/make-fixtures.ts) (DNI 4.0, DNI 3.0 and TIE, front and back, under seven conditions: plain, rotated, small, tilted, dim, blurred, and all at once). Per document: no wrong document or DNI version, at least 6 of 7 pairs detected exactly, at least 12 of 14 photos with every corner within 2 % of the card's width, median corner error at most 0.5 %. The true corners and documents are in `tests/fixtures/accuracy/expected.json` |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases, "ready" asked once per worker and asked again after a rewritten file is refused; smart field finding |
 | `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
-| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, no watermark over hidden fields, a change made with the front on screen reaching the back in the review and the PDF, review, the review stays after the download with the small stats link, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), reset |
+| `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, no watermark over hidden fields, a change made with the front on screen reaching the back in the review and the PDF, review, the review stays after the download with the small stats link, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), the file named `redacted-dni.pdf` or `redacted-tie.pdf` after the document type, reset |
 | `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; after a download or a share the review stays and the small Send anonymous data link appears; closing the sheet; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
@@ -827,7 +833,7 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 | acceptance | `lighthouse` | Lighthouse on the built site (performance, accessibility, best practices, SEO), thresholds in [`lighthouserc.json`](lighthouserc.json). Reports are a workflow artifact; nothing is uploaded elsewhere | PR | No, warns |
 | gate | `ci-ok` | Passes when every job above passed or was skipped on purpose | Both | Yes |
 | deploy | `deploy` | Adds the `_headers` file ([`scripts/headers.ts`](scripts/headers.ts)) to the built `dist/` and publishes it to Cloudflare Workers for dnitapado.es ([`wrangler.jsonc`](wrangler.jsonc)). `wrangler` comes from [`deploy/pnpm-lock.yaml`](deploy/pnpm-lock.yaml), installed without install scripts. Only a push or manual run on `master`, never a pull request or another branch. A running deploy is never cancelled | `master` | Yes |
-| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte. Also the exact HTTP headers of [`scripts/headers.ts`](scripts/headers.ts) on the page, `sw.js` and the OCR worker (`SMOKE_HOST_HEADERS=1`), and no cookie on any response. Retries for up to 5 minutes while the host updates | `master` | Yes |
+| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte. Also the exact HTTP headers of [`scripts/headers.ts`](scripts/headers.ts) on the page, `sw.js` and the OCR worker (`SMOKE_HOST_HEADERS=1`), no NEL policy above 0 and no `Report-To` (ADR 0035), and no cookie on any response. Retries for up to 5 minutes while the host updates | `master` | Yes |
 | post-deploy | `attest` | Signed build provenance for every deployed file and the release evidence ([artifact attestations](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)) | `master` | Yes |
 | post-deploy | `verify-provenance` | Checks those signatures as a third party would, with [`scripts/verify-release.ts`](scripts/verify-release.ts): every file must carry provenance for this repository, `ci.yml` on `master`, this commit and a GitHub-hosted runner. Also checks the evidence lists exactly the deployed files | `master` | Yes |
 | release | `release` | Once `deploy` succeeded: tags the commit with its version and publishes a GitHub Release with generated notes and the release evidence attached. Safe to re-run; fails if the tag exists on another commit | `master` | Yes |
@@ -900,6 +906,14 @@ pull request) to one host:
 Nothing is deployed to GitHub Pages any more. The old address
 <https://aasanchez.github.io/dnilimpio.es/> redirects to dnitapado.es, because the repository's
 Pages settings keep `dnitapado.es` as the custom domain.
+
+Cloudflare zone settings that the repository cannot set, and that `smoke` checks:
+
+- **Network Error Logging: off.** Otherwise Cloudflare adds `NEL` and `Report-To` headers, and
+  browsers send failed-request reports to Cloudflare
+  ([ADR 0035](docs/adr/0035-no-network-error-logging.md)).
+- Features that set a cookie or rewrite HTML stay off
+  ([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)).
 
 To redeploy without a new commit, run the **CI** workflow on `master` from the Actions tab.
 
@@ -995,7 +1009,7 @@ src/
   App.svelte         screen flow, brand, clearing on pagehide
   components/        Svelte components, one per screen or control (start screen, notice, audit prompt, footer, editor, review…)
   capture/           file input, drag and drop, paste, decoding, live camera and capture coach
-  geometry/          homography, perspective warp, corner editing (pure TypeScript)
+  geometry/          homography, perspective warp, corner editing and its input maths (pure TypeScript)
   detect/            corner finding (on-device model, classic edge detection, edge snapping), upright check,
                      automatic straightening, document type from the MRZ
   ocr/               on-device OCR (PP-OCRv6 tiny in a worker, loaded on demand), MRZ reader, smart field finding
@@ -1057,6 +1071,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0032](docs/adr/0032-semver-releases.md): every deploy from `master` is a release: the patch goes up by one from the latest tag, major and minor are set by hand with a tag, the tag and GitHub Release are created after the deploy, and the footer shows the version.
 - [0033](docs/adr/0033-ocr-ready-once-per-worker.md): the page asks the service worker once per worker whether OCR is ready; a new worker or a failed OCR job asks again; every file is still hashed when it is served.
 - [0034](docs/adr/0034-no-frames-no-fresh-webrtc.md): the page refuses every frame element and pop-up, so no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits until a browser implements it.
+- [0035](docs/adr/0035-no-network-error-logging.md): no Network Error Logging; every file turns NEL off, Cloudflare's NEL and `Report-To` headers are off in the zone settings, and the post-deploy check fails if they come back.
 
 ## Contributing
 
