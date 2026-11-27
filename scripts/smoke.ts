@@ -9,7 +9,8 @@
 // worker, the OCR worker, the thanks page and the guide pages (ADR 0040) are served with exactly the HTTP headers of
 // scripts/headers.ts, that no response asks the browser for network error reports (NEL above 0,
 // Report-To, Reporting-Endpoints; ADR 0035), and that the stats endpoint refuses a request that is
-// not from the thanks page (ADR 0029). It never posts a row that would be stored.
+// not from the thanks page (ADR 0029). It never posts a row that would be stored. Articles (ADR 0039)
+// must be sent as HTML, and each list must be shown at its folder's address.
 //
 // It checks, on the live site:
 // - index.html carries exactly the CSP of scripts/csp.ts (with the hash of its own import map) and
@@ -27,8 +28,9 @@ import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { cspWithScriptHashes } from './csp.ts'
-import { HEADERS_FILE, REDIRECTS_FILE, cookiesSetBy, headersFor, hostHeaderRules, reportingProblems } from './headers.ts'
+import { ARTICLE_CONTENT_TYPE, HEADERS_FILE, REDIRECTS_FILE, cookiesSetBy, headersFor, hostHeaderRules, reportingProblems } from './headers.ts'
 import { GUIDE_PAGES, STATS_ENDPOINT, SW_FILE, THANKS_PAGE, WORKER_SCRIPTS, parseManifest } from '../src/offline/precache.ts'
+import { INDEX_FILE, isArticlePage } from '../src/articles/paths.ts'
 
 const [siteArg = '', expectedSha = '', distDir] = process.argv.slice(2)
 if (siteArg === '' || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(expectedSha)) {
@@ -132,6 +134,20 @@ async function check (): Promise<string> {
     if (sha384(served) !== f.integrity) throw new Error(`${f.path}: does not match the ${SW_FILE} manifest`)
   })
   if (bad.length > 0) throw new Error(`${String(bad.length)} file(s) differ from the manifest:\n  ${bad.join('\n  ')}`)
+
+  // Articles (ADR 0039) are files with no extension: without the `_headers` rule the host sends no
+  // type, and the browser shows the page as text or downloads it. A list is shown at its folder.
+  if (checkHostHeaders) {
+    const articles = listed.filter((f) => isArticlePage(f.path))
+    const wrong = await each(articles, async (f) => {
+      const page = await get(new URL(f.path, site))
+      if (page.headers.get('content-type') !== ARTICLE_CONTENT_TYPE) throw new Error(`${f.path}: Content-Type ${page.headers.get('content-type') ?? '(none)'}, expected ${ARTICLE_CONTENT_TYPE}`)
+      if (!f.path.endsWith(INDEX_FILE)) return
+      const folder = f.path.slice(0, -INDEX_FILE.length)
+      if (sha384((await get(new URL(folder, site))).bytes) !== f.integrity) throw new Error(`${folder}: does not show ${f.path}`)
+    })
+    if (wrong.length > 0) throw new Error(`articles are not served as built:\n  ${wrong.join('\n  ')}`)
+  }
 
   // Byte for byte against the artifact CI built.
   if (distDir !== undefined) {
