@@ -676,6 +676,7 @@ show the current state.
 | Custom domain `dnitapado.es`, HTTPS enforced; one host, the old address redirects | Done |
 | Security headers from the host (Cloudflare Workers): CSP with `frame-ancestors`, HSTS, Permissions-Policy, COOP, worker CSPs | Done |
 | Search metadata: title and description in every language, link preview image, canonical address, `robots.txt`, `sitemap.xml` | Done |
+| Start screen prerendered in Spanish in `index.html`, for search engines and a faster first paint (ADR 0040) | Done |
 | Languages: 31 in the specification | 13 today |
 
 ## Development
@@ -753,6 +754,7 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black (also after the watermark, checked on the final pixels), Fit to the text (a box only grows, by at most half its size, and stays on the card) |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output, file name `redacted-dni.pdf` or `redacted-tie.pdf` |
 | Property tests | `redaction.property`, `geometry.property`, `pdf.property` | Generated inputs, hundreds per property: manual boxes stay on the card; zones to pixels cover the whole rectangle and add less than a pixel; every pixel a mask touches, plus its margin, is opaque black and the rest of the photo is unchanged; after a watermark every masked pixel is still black, and a canvas that leaves one pixel grey is caught; every hidden field of every document, side and box placement exports black; homography corners, round trips and degenerate quads; the warp reads the card only from inside its corners; the PDF layout for any image size; no metadata from any JPEG segment reaches the PDF |
+| Prerender | `prerender` | The build's copy of the start screen is `App.svelte` rendered in Spanish for a first visit (heading, lead, chips, Start, notice); no comments or dialogs; a script, style, event handler or file-loading element fails the build; the copy goes into an empty `<main id="app">` only, marked `inert`; no browser object is left set after the render |
 | Audit prompt | `audit-prompt` | Every file the prompt names exists, its list of stats fields is the list the thanks page sends, in order, and it stays short and asks for findings, not a verdict |
 | Keyboard focus | `focus-rescue` | Focus that falls back to the page (also while it still sits on a control that just disabled or removed itself) moves to the first control that takes it; how far to scroll so a focused control clears the sticky top bar, the sticky action bar or the floating notice, without leaving the window |
 | Editor redraws | `redraw` | One render per animation frame, only the side on screen, only when its choices changed; every changed side rendered at once before the review; a failed render is retried; nothing runs after the editor closes |
@@ -791,6 +793,7 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
 | `privacy-notice` | Exact privacy wording (processing on the device, no upload), no accept step, 4-day memory, blocked storage, translations, audit prompt (short, asks to disprove the claims, checks the live site), 80 % of the screen width on phone, tablet and desktop |
 | `keyboard` | Keyboard only, in Spanish and in Arabic (right to left): the whole flow from Start to the PDF with Tab, Enter, Space and the arrow keys (file chooser, document choice, fields, a box, the watermark, the corners, confirm and download); each new screen focuses its heading; every control shows a focus ring; no focused control hides behind the sticky bars or the notice, on a phone and a wide screen; focus stays on a control after the last photo, Download, Delete, Undo, Redo and Remove the back; Escape closes the card guide and returns focus |
+| `prerender` | The served HTML holds the Spanish start screen as text, with no script or style; without JavaScript it shows in Spanish; the app replaces it (one heading, one Start button that works) in a Spanish and an English browser; before the app starts, the copy takes no focus |
 | `layout` | Phone: one column, main button in a sticky bar at the bottom, no sideways scroll. Wide screen: card on the left, tools and main button on the right, steps in the top bar |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `seo` | The served HTML already holds the Spanish title, description and link preview tags; the preview image exists; `robots.txt` and `sitemap.xml` are real files with the site address; one canonical address; a language change updates title, description and preview text |
@@ -1064,7 +1067,7 @@ Every deploy from `master` is a release with a [semantic version](https://semver
 
 ```text
 src/
-  main.ts            removes WebRTC, refuses framing, mounts the app, registers the service worker
+  main.ts            removes WebRTC, refuses framing, replaces the prerendered start screen with the app, registers the service worker
   thanks/            the photo-free stats page after Send anonymous data: shows and, on a tap, sends the opt-in stats
   stats/             the fixed list of opt-in usage stats, device classes, session figures, the one send
   sw.ts              service worker: verified offline cache, deny by default, page headers
@@ -1084,7 +1087,7 @@ src/
   version/           commit SHA and build time shown in the footer, relative time
   i18n/              dictionaries, one JSON file per language
   ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state, notice memory
-scripts/             CSP, host headers, build plugins (CSP, SRI, import map, offline file list), build manifest, smoke test,
+scripts/             CSP, host headers, build plugins (CSP, SRI, import map, offline file list, prerendered start screen), build manifest, smoke test,
                      bundle size, dependency report, test fixture generator
 deploy/              the deploy tool (wrangler) with its own lockfile, installed only by the CI deploy job
 wrangler.jsonc       Cloudflare Workers host: static files, custom domains, no workers.dev address, /stats Worker route
@@ -1135,6 +1138,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0034](docs/adr/0034-no-frames-no-fresh-webrtc.md): the page refuses every frame element and pop-up, so no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits until a browser implements it.
 - [0035](docs/adr/0035-no-network-error-logging.md): no Network Error Logging; every file turns NEL off, Cloudflare's NEL and `Report-To` headers are off in the zone settings, and the post-deploy check fails if they come back.
 - [0036](docs/adr/0036-visual-regression-in-pinned-container.md): screenshot tests of key phone screens in Spanish and Arabic run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual`, so the baselines match on every machine.
+- [0040](docs/adr/0040-prerendered-start-screen.md): the build renders the Spanish start screen from `App.svelte` into `index.html`, inert until the app replaces it, so crawlers without JavaScript read it and the heading paints before any script; no font preload, because measurements showed it slows the first paint.
 
 ## Contributing
 
