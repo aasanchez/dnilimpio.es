@@ -134,9 +134,10 @@
 
   <p class="hint empty:hidden [&.busy]:before:content-['◌_']" class:busy={auto.s === 'reading'} id="detect-status" role="status" data-state={auto.s}>{message}</p>
 
-  <ul class="rows" role="radiogroup" aria-labelledby="doc-title">
+  <!-- A radio group, not a list: role="radiogroup" on a <ul> would orphan its <li> items. -->
+  <div class="rows" role="radiogroup" aria-labelledby="doc-title">
     {#each CHOICES as c (c)}
-      <li>
+      <div>
         <label class="toggle">
           <span class="h-6.75 w-10.5 flex-none rounded-sm border-[1.5px] border-ink bg-sunk" aria-hidden="true"></span>
           <span class="toggle-text">
@@ -146,9 +147,9 @@
           <input type="radio" class="radio" name="doc" id="doc-{c}" value={c} checked={choice === c}
             onclick={() => { touched = true }} onchange={() => { touched = true; choose(c) }} />
         </label>
-      </li>
+      </div>
     {/each}
-  </ul>
+  </div>
 
   <div class="actionbar">
     {#if doc === null}<p class="hint" id="doc-choose">{t(lang, 'docChoose')}</p>{/if}

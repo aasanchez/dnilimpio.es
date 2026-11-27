@@ -656,6 +656,7 @@ show the current state.
 | Secure raster engine: greyscale, opaque masks with margin, self-check | Done |
 | Fields to hide, live preview, hand-adjustable cover boxes | Done |
 | Extra black boxes: draw, move, resize, delete, undo and redo (mouse, touch, keyboard) | Done |
+| Keyboard use: the whole flow without a mouse, visible focus, focus never lost or hidden | Done |
 | Smart field finding with on-device OCR (self-hosted, loaded on first use) | Done |
 | OCR engine PP-OCRv6 tiny; document detection from the front's printed text | Done |
 | Fit to the text: cover boxes of the ticked fields grow to the words OCR finds | Done |
@@ -702,6 +703,8 @@ pnpm dev                                     # http://localhost:5173 (no CSP in 
 | `pnpm test` / `pnpm test:unit` | Unit tests (Vitest) |
 | `pnpm test:coverage` | Unit tests with a coverage report in `coverage/` |
 | `pnpm test:e2e` | End-to-end tests (Playwright, against the production build) |
+| `pnpm test:visual` | Screenshot comparisons in the pinned Playwright container (needs Docker); see [Visual regression](#visual-regression) |
+| `pnpm test:visual:update` | Write new screenshot baselines in that container |
 | `pnpm size` | Bundle size against its budgets (after `pnpm build`) |
 | `pnpm verify` | Type check, lint, unit tests, build and end-to-end tests, as CI runs them |
 
@@ -743,21 +746,22 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 
 | Area | Files | What is checked |
 |---|---|---|
-| Capture | `input`, `decode`, `sniff`, `live`, `coach`, `capture-state` | Sides in use with an optional back, file picker and camera modes, type by first bytes (name and MIME type ignored, AVIF refused), size in pixels from JPEG, PNG, WebP and HEIC headers, size and pixel limits (decompression bomb), decode errors, live camera needs and failures, coach metrics (blur, light, framing) |
+| Capture | `input`, `decode`, `sniff`, `live`, `coach`, `capture-state` | Sides in use with an optional back, file picker and camera modes, every way in (file picker, camera, drop on a tile or the page, paste) hands the file to the content checks unfiltered, a photo that arrives after its screen closed is freed, stray drops blocked, type by first bytes (name and MIME type ignored, AVIF refused), size in pixels from JPEG, PNG, WebP and HEIC headers, size and pixel limits (decompression bomb), decode errors, live camera needs and failures, coach metrics (blur, light, framing) |
 | Geometry | `homography`, `quad-edit`, `corner-input` | Homography round trips and degenerate quads (also collinear corners at photo scale), corner editing, corner editor input (screen to photo pixels, hit radius per pointer kind, drag with grab offset and clamping, arrow keys and Shift, next corner, canvas size, magnifier side), switching side saves moved valid corners and never confirms crossed or untouched ones |
-| Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type`, `doc-text` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates, document type from the front's printed text (accents, case and OCR misreads ignored) |
-| OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans`, `ocr-ask`, `ready-memo` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink, a silent service worker turns OCR off after a time limit (15 s to check the files, 3 minutes to download them), "OCR is ready" kept per service worker and asked again after an update or a failure |
+| Detection | `detect`, `detect-model`, `corner-model`, `corners`, `detect-doc`, `refine`, `upright`, `doc-type`, `doc-text` | Classic edge detection, model answer checks, the corner model with a fake ONNX session (runtime settings, normalised 224 × 224 input, second closer pass, tensors released and photo copies cleared also on failure), detector order (model, then edges after a failure, no answer or the 10 s limit), document detection with fake OCR (back's MRZ first, upside down, best check digits, swapped photos, front text, no answer for the TIE fallback, nothing preselected when OCR cannot start, each photo read once, canvases freed), edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates, document type from the front's printed text (accents, case and OCR misreads ignored) |
+| OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans`, `ocr-ask`, `ready-memo`, `ocr` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink, a silent service worker turns OCR off after a time limit (15 s to check the files, 3 minutes to download them), "OCR is ready" kept per service worker and asked again after an update or a failure, the OCR module with a fake service worker and worker (when OCR is offered, a timed-out status turns it off, a timed-out download fails clearly, pixels moved to the worker, one job at a time, `stopOcr()` drops queued results) |
 | Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black (also after the watermark, checked on the final pixels), Fit to the text (a box only grows, by at most half its size, and stays on the card) |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output, file name `redacted-dni.pdf` or `redacted-tie.pdf` |
 | Property tests | `redaction.property`, `geometry.property`, `pdf.property` | Generated inputs, hundreds per property: manual boxes stay on the card; zones to pixels cover the whole rectangle and add less than a pixel; every pixel a mask touches, plus its margin, is opaque black and the rest of the photo is unchanged; after a watermark every masked pixel is still black, and a canvas that leaves one pixel grey is caught; every hidden field of every document, side and box placement exports black; homography corners, round trips and degenerate quads; the warp reads the card only from inside its corners; the PDF layout for any image size; no metadata from any JPEG segment reaches the PDF |
 | Audit prompt | `audit-prompt` | Every file the prompt names exists, its list of stats fields is the list the thanks page sends, in order, and it stays short and asks for findings, not a verdict |
+| Keyboard focus | `focus-rescue` | Focus that falls back to the page (also while it still sits on a control that just disabled or removed itself) moves to the first control that takes it; how far to scroll so a focused control clears the sticky top bar, the sticky action bar or the floating notice, without leaving the window |
 | Editor redraws | `redraw` | One render per animation frame, only the side on screen, only when its choices changed; every changed side rendered at once before the review; a failed render is retried; nothing runs after the editor closes |
 | Search metadata | `seo` | Site address checks, escaped static head with no script or style, title and description length, Open Graph locale for every language, `robots.txt` and sitemap (hreflang alternates, escaping), crawl files served by the service worker |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
 | Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns, 429 above the rate limit with one key for all senders), the service worker route open only to the thanks page |
 | App updates | `update-rules` | An idle page offers a waiting build and reloads once into it; a busy page is never reloaded and reloads back on the start screen; no reload on the first visit; "Update now" when another window holds the build back, which forces it; an update check at most every 15 minutes when the tab comes back; the answer to "idle?" (also from the thanks page) |
-| Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `install`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal, frame guard and frame check, the photo step's policy and the service worker check, iPhone and iPad detection and installed mode for the install link, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
+| Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `notice-memory`, `install`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal, frame guard and frame check, the photo step's policy (built from the page, added once, fonts loaded first with a time limit) and the service worker check, the notice's one stored date (4 days, blocked storage), iPhone and iPad detection and installed mode for the install link, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off:
 
@@ -786,10 +790,41 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
 | `privacy-notice` | Exact privacy wording (processing on the device, no upload), no accept step, 4-day memory, blocked storage, translations, audit prompt (short, asks to disprove the claims, checks the live site), 80 % of the screen width on phone, tablet and desktop |
+| `keyboard` | Keyboard only, in Spanish and in Arabic (right to left): the whole flow from Start to the PDF with Tab, Enter, Space and the arrow keys (file chooser, document choice, fields, a box, the watermark, the corners, confirm and download); each new screen focuses its heading; every control shows a focus ring; no focused control hides behind the sticky bars or the notice, on a phone and a wide screen; focus stays on a control after the last photo, Download, Delete, Undo, Redo and Remove the back; Escape closes the card guide and returns focus |
 | `layout` | Phone: one column, main button in a sticky bar at the bottom, no sideways scroll. Wide screen: card on the left, tools and main button on the right, steps in the top bar |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `seo` | The served HTML already holds the Spanish title, description and link preview tags; the preview image exists; `robots.txt` and `sitemap.xml` are real files with the site address; one canonical address; a language change updates title, description and preview text |
 | `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, release version linked to its GitHub Release, build SHA and relative deploy time (also offline) |
+| `visual` | Screenshots of the start screen, its footer, the editor, the editor's tools, the review and the stats page at 390 × 844 px, in Spanish and Arabic, compared with the baselines. Runs only in the pinned container (see below, [ADR 0036](docs/adr/0036-visual-regression-in-pinned-container.md)) |
+
+### Visual regression
+
+[`tests/e2e/visual.spec.ts`](tests/e2e/visual.spec.ts) compares 12 screenshots with the PNG
+baselines in [`tests/e2e/__screenshots__/`](tests/e2e/__screenshots__/). Text rendering depends on
+the browser build and the system fonts (Arabic uses a system font), so the screenshots run only in
+the official Playwright Docker image, pinned by digest in
+[`scripts/visual.sh`](scripts/visual.sh) and in the CI job `visual`. `pnpm test:e2e` skips them.
+
+- The build version, commit SHA and deploy time in the footer, and the text the stats page would
+  send (it names the commit), are hidden before each screenshot. They keep their space.
+- The clock is fixed (the watermark presets show today's date) and the corner model and OCR are
+  blocked, so each screen shows the same state on every run.
+- Animations are stopped and the text caret is hidden.
+
+To check or update the baselines (Docker is needed):
+
+```bash
+pnpm test:visual                 # compare; differences go to test-results/
+pnpm test:visual:update          # write new baselines for the screens that changed
+pnpm test:visual -g "ar"         # only the Arabic screens
+```
+
+The script builds the app inside the container, with its own `node_modules` in a Docker volume.
+After an intended change to the interface, run `pnpm test:visual:update`, look at every changed PNG
+in the diff, and commit them with the change. When the CI job `visual` fails, its `visual-diff`
+artifact holds the expected, actual and diff image of each screen. When you bump
+`@playwright/test`, update the image tag and digest in both places and regenerate every baseline
+(`pnpm test:visual --update-snapshots=all`).
 
 ## Continuous integration
 
@@ -811,7 +846,8 @@ up to date with `master` before merging: the tree that lands on `master` is the 
 ```text
 Pull request
 changes ─ install ─┬─ build ──────┬─ e2e (4 shards) ─┐
-                   ├─ typecheck   ├─ bundle-size     │
+                   ├─ typecheck   ├─ visual          │
+                   │              ├─ bundle-size     │
                    ├─ lint        ├─ reproducible    │
                    │              └─ lighthouse      │
                    └─ unit                           ├─ ci-ok
@@ -832,6 +868,7 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 | build | `lint` | `pnpm lint` (ESLint) | PR | Yes |
 | build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. No threshold yet | PR | Yes |
 | test | `e2e (1/4)` to `e2e (4/4)` | `pnpm test:e2e`, split in four shards, against the built `dist/` | PR | Yes |
+| test | `visual` | Screenshot comparisons ([Visual regression](#visual-regression)) against the built `dist/`, inside the pinned Playwright image. On a difference, the `visual-diff` artifact holds the images | PR | Yes |
 | test | `reproducible` | Builds the same commit again on a fresh runner and compares the SHA-384 of every file with the `dist/` artifact ([`scripts/build-manifest.ts`](scripts/build-manifest.ts)). Any difference fails. Also runs on the release commit, because the squash merge makes a new commit; `deploy` waits for it | Both | Yes |
 | test | `bundle-size` | `pnpm size`: gzip size of the start page (entry and preloaded modules), PDF chunk, corner model and OCR files against budgets in [`scripts/bundle-size.ts`](scripts/bundle-size.ts) | PR | No, warns (`--strict` makes it fail) |
 | code analysis | `reuse` | Every file has copyright and licence information ([REUSE](https://reuse.software)) | PR | Yes |
@@ -1097,6 +1134,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0033](docs/adr/0033-ocr-ready-once-per-worker.md): the page asks the service worker once per worker whether OCR is ready; a new worker or a failed OCR job asks again; every file is still hashed when it is served.
 - [0034](docs/adr/0034-no-frames-no-fresh-webrtc.md): the page refuses every frame element and pop-up, so no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits until a browser implements it.
 - [0035](docs/adr/0035-no-network-error-logging.md): no Network Error Logging; every file turns NEL off, Cloudflare's NEL and `Report-To` headers are off in the zone settings, and the post-deploy check fails if they come back.
+- [0036](docs/adr/0036-visual-regression-in-pinned-container.md): screenshot tests of key phone screens in Spanish and Arabic run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual`, so the baselines match on every machine.
 
 ## Contributing
 
