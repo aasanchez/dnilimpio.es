@@ -1,69 +1,88 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Sending the PDF after the download: the user sends it, never the app. Where the browser can share
-// files, both buttons open the system share sheet with the PDF. Elsewhere they are plain links
-// (wa.me, mailto:) that carry a fixed message and no data from the document.
+// Download or share, on the download screen. The user sends the PDF, never the app. Where the browser
+// can share files, Share hands the PDF to the system share sheet on the device, with a title and no
+// text or link; the user picks the app and the person there. Elsewhere only Download is shown.
 import { expect, test, type Page } from '@playwright/test'
 import { toEditor } from './helpers.ts'
 
 test.use({ locale: 'es-ES' })
 
-async function toDone (page: Page): Promise<void> {
+async function toReview (page: Page): Promise<void> {
   await toEditor(page)
   await page.locator('#review').click()
-  await page.locator('#review-confirm').check()
-  await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
-  await expect(page.locator('#send-title')).toHaveText('Envíalo tú')
+  await expect(page.locator('#download')).toBeDisabled()
 }
 
-test('without file sharing, WhatsApp and email are links with a fixed message and no file', async ({ page }) => {
-  const sent: string[] = []
-  page.on('request', (r) => { if (!r.url().startsWith('http://localhost:4173/')) sent.push(r.url()) })
-  await page.addInitScript(() => { Object.defineProperty(navigator, 'canShare', { value: undefined }) })
-  await toDone(page)
-
-  await expect(page.locator('#send-lead')).toContainText('adjunta tú el PDF')
-  const message = 'Te envío mi documento con los datos protegidos (protected-document.pdf).'
-  const wa = page.locator('a#share-whatsapp')
-  await expect(wa).toHaveText('Compartir por WhatsApp')
-  await expect(wa).toHaveAttribute('href', `https://wa.me/?text=${encodeURIComponent(message)}`)
-  await expect(wa).toHaveAttribute('rel', 'noopener noreferrer')
-  const mail = page.locator('a#share-email')
-  await expect(mail).toHaveText('Compartir por email')
-  await expect(mail).toHaveAttribute('href', `mailto:?subject=${encodeURIComponent('Documento con datos protegidos')}&body=${encodeURIComponent(message)}`)
-  // Nothing went anywhere just by reaching this screen.
-  expect(sent).toEqual([])
-})
-
-test('with file sharing, both buttons hand the PDF to the system share sheet', async ({ page }) => {
-  await page.addInitScript(() => {
-    const calls: Array<{ names: string[]; types: string[]; title: string | undefined; text: string | undefined; url: string | undefined }> = []
+/** A share sheet stand-in: records each call, then answers as `answer` says. */
+async function fakeShare (page: Page, answer: 'ok' | 'AbortError' | 'NotAllowedError'): Promise<void> {
+  await page.addInitScript((a) => {
+    const calls: Array<{ names: string[]; types: string[]; sizes: number[]; keys: string[]; title: string | undefined; active: boolean }> = []
     Object.assign(window, { shareCalls: calls })
     Object.defineProperty(navigator, 'canShare', { value: (d: ShareData) => (d.files?.length ?? 0) > 0 })
     Object.defineProperty(navigator, 'share', {
       value: (d: ShareData): Promise<void> => {
-        calls.push({ names: (d.files ?? []).map((f) => f.name), types: (d.files ?? []).map((f) => f.type), title: d.title, text: d.text, url: d.url })
-        // The second call simulates the user closing the sheet: no error is shown.
-        return calls.length === 2 ? Promise.reject(new DOMException('closed', 'AbortError')) : Promise.resolve()
+        const files = d.files ?? []
+        calls.push({ names: files.map((f) => f.name), types: files.map((f) => f.type), sizes: files.map((f) => f.size), keys: Object.keys(d).sort(), title: d.title, active: navigator.userActivation.isActive })
+        return a === 'ok' ? Promise.resolve() : Promise.reject(new DOMException('no', a))
       },
     })
-  })
-  await toDone(page)
+  }, answer)
+}
 
-  await expect(page.locator('#send-lead')).toContainText('Se abre el menú de compartir')
-  await page.locator('button#share-whatsapp').click()
-  await page.locator('button#share-email').click()
-  const calls = await page.evaluate(() => (window as unknown as { shareCalls: unknown[] }).shareCalls)
-  const one = { names: ['protected-document.pdf'], types: ['application/pdf'], title: 'Documento con datos protegidos' }
-  expect(calls).toEqual([one, one])
-  await expect(page.locator('.send [role=alert]')).toHaveCount(0)
+const shareCalls = (page: Page): Promise<Array<Record<string, unknown>>> =>
+  page.evaluate(() => (window as unknown as { shareCalls: Array<Record<string, unknown>> }).shareCalls)
+
+test('without file sharing, only Download is shown and nothing leaves the page', async ({ page }) => {
+  const sent: string[] = []
+  page.on('request', (r) => { if (!r.url().startsWith('http://localhost:4173/')) sent.push(r.url()) })
+  await page.addInitScript(() => { Object.defineProperty(navigator, 'canShare', { value: undefined }) })
+  await toReview(page)
+
+  await expect(page.locator('#share-file')).toHaveCount(0)
+  await expect(page.locator('#download')).toHaveClass(/primary/)
+  await page.locator('#review-confirm').check()
+  await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
+  await expect(page.locator('#download-status')).toHaveText('PDF creado. Búscalo en tu carpeta de descargas.')
+  // No app links: the done screen has no way to send anything.
+  await expect(page.locator('.done a[href^="http"], .done a[href^="mailto:"]')).toHaveCount(0)
+  expect(sent).toEqual([])
 })
 
-test('a failed share says the PDF is still in the downloads folder', async ({ page }) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'canShare', { value: () => true })
-    Object.defineProperty(navigator, 'share', { value: (): Promise<void> => Promise.reject(new DOMException('denied', 'NotAllowedError')) })
-  })
-  await toDone(page)
-  await page.locator('#share-email').click()
-  await expect(page.locator('.send [role=alert]')).toHaveText('No se ha podido compartir. El PDF sigue en tu carpeta de descargas.')
+test('Share hands the PDF to the system share sheet, within the click, with no text or link', async ({ page }) => {
+  let downloaded = false
+  page.on('download', () => { downloaded = true })
+  await fakeShare(page, 'ok')
+  await toReview(page)
+
+  await expect(page.locator('#share-file')).toHaveText('Compartir')
+  await expect(page.locator('#share-file')).toBeDisabled()
+  await page.locator('#review-confirm').check()
+  await page.locator('#share-file').click()
+
+  await expect(page.locator('#download-status')).toHaveText('PDF compartido. No se ha guardado ninguna copia en tu carpeta de descargas.')
+  const [call] = await shareCalls(page)
+  expect(call).toMatchObject({ names: ['protected-document.pdf'], types: ['application/pdf'], keys: ['files', 'title'], title: 'Documento con datos protegidos', active: true })
+  expect((call?.sizes as number[])[0]).toBeGreaterThan(1000)
+  expect(downloaded).toBe(false)
+})
+
+test('closing the share sheet keeps the review open, with no error; Download still works', async ({ page }) => {
+  await fakeShare(page, 'AbortError')
+  await toReview(page)
+  await page.locator('#review-confirm').check()
+  await page.locator('#share-file').click()
+  await expect.poll(async () => (await shareCalls(page)).length).toBe(1)
+  await expect(page.locator('#review-title')).toBeVisible()
+  await expect(page.locator('#share-error')).toHaveCount(0)
+  await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
+  await expect(page.locator('#download-status')).toHaveText('PDF creado. Búscalo en tu carpeta de descargas.')
+})
+
+test('a failed share says so and offers Download', async ({ page }) => {
+  await fakeShare(page, 'NotAllowedError')
+  await toReview(page)
+  await page.locator('#review-confirm').check()
+  await page.locator('#share-file').click()
+  await expect(page.locator('#share-error')).toHaveText('No se ha podido compartir. Vuelve a intentarlo o descarga el PDF.')
+  await expect(page.locator('#download')).toBeEnabled()
 })

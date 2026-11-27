@@ -55,8 +55,8 @@ some of the data. This tool makes a copy that shows only what you choose:
    are adjustable; at 100 % opacity the text is solid black.
 6. **Convert to black and white** (optional).
 7. **Review** the result and **download a PDF**: `protected-document.pdf`, one page per side.
-8. **Share it yourself** (optional) through WhatsApp, email or the system share sheet. The app
-   never sends anything.
+8. **Download or share it**: **Share** opens your device's share sheet with the PDF, where you pick
+   WhatsApp, Telegram, Gmail, Mail or another app. The app never sends anything.
 
 ![A synthetic card with the watermark: one large diagonal text (before) and the small repeated rows the app draws (after)](docs/images/watermark-before-after.jpg)
 
@@ -217,12 +217,13 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
      card updates as you type. Long text wraps onto a few short lines (at most 120 characters).
      **Text size** (50 % to 300 %) and **Opacity** (5 % to 100 %, default 16 %) apply live; at 100 %
      the text is solid black. **Convert to black and white** is here too.
-6. **Download.** Check the final images (one per side) and the summary, tick **I have checked both sides** (or **I have checked the front**), then
-   **Download PDF**. The file is called `protected-document.pdf`.
-7. **Done.** Under **Send it yourself**, **Share via WhatsApp** and **Share via email** open the system
-   share sheet with the PDF on devices that support sharing files. On other devices they open
-   WhatsApp or your email app with a fixed short message, and you attach `protected-document.pdf`
-   from your downloads folder. **Clear everything** removes the photos and all your choices from the
+6. **Download or share.** Check the final images (one per side) and the summary, tick **I have
+   checked both sides** (or **I have checked the front**), then press **Share** or **Download PDF**.
+   **Share** appears only where the browser can share files (most phones, Safari on macOS, Chrome on
+   Windows and ChromeOS). It opens the system share sheet with `protected-document.pdf`: you pick
+   WhatsApp, Telegram, Gmail, Mail or another app, and the person. A shared PDF is not saved to your
+   downloads folder. **Download PDF** saves `protected-document.pdf`.
+7. **Done.** **Clear everything** removes the photos and all your choices from the
    page; closing the tab does the same.
 
 ## Privacy and security
@@ -377,10 +378,11 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **No browser rule can stop a page from navigating to a URL.** The protection there is that only
   this build's verified code runs (CSP, SRI, the locked dependency list) and that the code never
   navigates with your data (enforced by the linter).
-- **Sharing is your choice.** **Share via WhatsApp** and **Share via email** hand the PDF to the app
-  you pick through the system share sheet; what that app does with it is outside the tool. Where the
-  browser cannot share files, they are plain `wa.me` and `mailto:` links with a fixed message and no
-  file, and you attach the PDF yourself. No link carries data from your document.
+- **Sharing is your choice.** **Share** hands the PDF to the app you pick through the system share
+  sheet (Web Share API, on the device), with a title and no text or link. What that app does with it
+  is outside the tool. The page itself still sends nothing (`connect-src 'none'`). The PDF is built
+  when you tick the check box, so the share sheet opens within your tap; it stays in memory only
+  until you leave the review.
 - **Memory is released, not securely erased.** JavaScript cannot erase memory securely. Zeroing a
   buffer overwrites that buffer only; the browser, the graphics driver and the operating system may
   keep other copies (the decoded photo, GPU textures, the file you chose, swap or a crash report).
@@ -556,7 +558,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | Fit to the text: cover boxes of the ticked fields grow to the words OCR finds | Done |
 | Watermark with size and opacity controls; black and white | Done |
 | PDF export: A4, one side per page, metadata-free | Done |
-| Share via WhatsApp, email or the system share sheet | Done |
+| Download or share the PDF through the system share sheet | Done |
 | Card guide with official citations | Done |
 | Offline mode with a verified service worker; automatic update of idle tabs | Done |
 | Memory clean-up: canvases, temporary buffers, download links, late results after a reset | Done |
@@ -651,13 +653,13 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; page code that gathers the canary file names, OCR text and watermark cannot send them by beacon, fetch, image, style sheet, font, frame or form; the counter frame is cross-site, sandboxed, given nothing, gone before any photo, not shown offline, under GPC or DNT, or on other hosts |
 | `update` | An idle single tab switches to a new build; a tab with photos, or a second tab, holds it back |
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks, and skipping the back from it |
-| `front-only` | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, done screen and share actions, adding the back later |
+| `front-only` | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, done screen, adding the back later |
 | `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, TIE when detection finds no answer, offline note with nothing preselected |
 | `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases; smart field finding |
 | `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
 | `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, a real PDF decoded in the browser (hidden areas black, no metadata, no file name, no watermark text in the file), reset |
-| `share` | WhatsApp and email as share sheet or as plain links, and a failed share |
+| `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; closing the sheet; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
 | `languages` | First render in the browser's language with no other dictionary loaded; switching language after the photo step's policy is in force, and offline |
 | `privacy-notice` | Exact privacy wording (processing on the device, no upload, visit-count frame), no accept step, 4-day memory, blocked storage, translations, audit prompt |
