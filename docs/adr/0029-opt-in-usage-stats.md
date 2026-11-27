@@ -4,6 +4,8 @@
 - Status: accepted
 - Date: 2026-11-27
 - Decided by: Alexis
+- Amended by [ADR 0047](0047-moved-box-stats.md) (2026-11-27): the list also holds where cover
+  boxes were moved by hand on the card (`moved`), in 0.5% steps.
 - Updated 2026-11-27 (Alexis): no done screen. A small "Send anonymous data" link on the review
   screen opens the page, once the PDF has left (point 1). After a send, the button says thank you.
 

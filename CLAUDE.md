@@ -93,7 +93,8 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
    counter frame or any cookie-based tool. The one exception (ADR 0029): the opt-in usage stats,
    sent by one `fetch` in `src/stats/send.ts` from the photo-free `thanks.html`, only on a tap, with
    the fixed list of `src/stats/schema.ts`. Never send them from the app page, never add a field
-   that can carry text, an image, a position or an identifier, and never send without the tap.
+   that can carry text, an image, a position on the photo or an identifier, and never send without
+   the tap. The one position is `moved` (ADR 0047): boxes moved by hand, on the card, in 0.5% steps.
 2. **Nothing of the user's persists.** No cookies, no `localStorage`/`sessionStorage`/IndexedDB, except the
    notice's closing date in `src/ui/notice-memory.ts`. Photos are cleared on `pagehide`.
 3. **Strict CSP, single source.** The policy lives in `scripts/csp.ts`; the e2e test asserts the

@@ -475,9 +475,17 @@ The app can send anonymous usage figures, only when you ask, and only after your
   detection got it right (`right`, `wrong`, `none`, `off`); whether you added the back; the ids of
   the fields you covered (for example `can`, `mrz`, `signature`); how many extra boxes you drew;
   whether you added a watermark and used greyscale (never the watermark's text); the language; the
-  build; where the photos came from (`camera`, `file`, `paste`); whether OCR ran; and the device type,
+  build; where the photos came from (`camera`, `file`, `paste`); whether OCR ran; where you moved
+  or resized the cover boxes of covered fields by hand (`moved`, see below); and the device type,
   system family, browser family and major version, and whether the app is installed.
-- **What not.** No text, image, position or file name from your document. Not the browser's full
+- **Moved boxes** ([ADR 0047](docs/adr/0047-moved-box-stats.md)). One entry `field-box-x-y-w-h` per
+  box you moved by hand, for example `can-0-124-142-60-18`: the field id, the box's number among that field's boxes,
+  then its left edge, top edge, width and height on the straightened card, in steps of 0.5% (0 to
+  200). They help tune the default boxes of each document. Not the default box (the document and
+  build give it), not boxes placed by **Fit to the text**, not the name or DNI/NIE number boxes,
+  no position on the photo. A box fitted
+  tightly around printed text shows roughly how long that text is, never the text.
+- **What not.** No text, image, file name or position on the photo from your document. Not the browser's full
   identifier, screen size, time zone or hardware details: together they could single out a device.
   No cookie and no ID.
 - **How it travels.** The app hands the figures to the thanks page after `#` in its address. Browsers
@@ -500,11 +508,11 @@ The app can send anonymous usage figures, only when you ask, and only after your
   among them) to carry a few dozen bits. The app's own code sets each value from the session. It uses one key for all senders, not the IP
   address, so a flood can also make real sends fail for that minute.
 - **Tests.** [`tests/unit/stats.test.ts`](tests/unit/stats.test.ts) checks the list, the device
-  classes, the Worker (including a body over 600 bytes, also when it has no Content-Length) and the
+  classes, the moved boxes, the Worker (including a body over 1,200 bytes, also when it has no Content-Length) and the
   service worker route.
   [`tests/e2e/stats.spec.ts`](tests/e2e/stats.spec.ts) checks that nothing is sent before the tap,
-  that the text sent is the text shown, that the app page still cannot connect, and the offline and
-  error cases.
+  that the text sent is the text shown, that a box moved by hand is listed as its new place on the
+  card, that the app page still cannot connect, and the offline and error cases.
 
 Example query (Workers Analytics Engine SQL API): how often each field is covered, per document.
 
@@ -517,11 +525,20 @@ WHERE timestamp > NOW() - INTERVAL '30' DAY
 GROUP BY doc
 ```
 
+Moved boxes, to compare with the defaults of that document and build (`src/zones/` at that commit):
+
+```sql
+SELECT blob2 AS doc, blob5 AS build, blob12 AS moved
+FROM dnitapado_usage
+WHERE blob1 = '2' AND double20 > 0 AND timestamp > NOW() - INTERVAL '30' DAY
+```
+
 Columns: `blob1` list version, `blob2` document, `blob3` detection result, `blob4` language,
 `blob5` build, `blob6` photo source, `blob7` device, `blob8` system, `blob9` browser, `blob10`
-country, `blob11` covered fields; `double1` back, `double2` boxes, `double3` watermark, `double4`
+country, `blob11` covered fields, `blob12` moved boxes; `double1` back, `double2` boxes, `double3` watermark, `double4`
 greyscale, `double5` OCR ran, `double6` browser version, `double7` installed, `double8` number of
-covered fields, `double9` to `double19` one per field in the order of `FIELDS`.
+covered fields, `double9` to `double19` one per field in the order of `FIELDS`. From list version 2
+(ADR 0047): `blob12` moved boxes, `double20` number of moved boxes.
 
 ### Security reviews
 
@@ -749,6 +766,7 @@ show the current state.
 | No third-party script in the page with photos (ADR 0023) | Done |
 | No analytics code: no third-party script, frame or cookie; the host counts requests (ADR 0027) | Done |
 | Opt-in anonymous usage stats from a photo-free thanks page (ADR 0029) | Done |
+| Opt-in stats list cover boxes moved by hand, in 0.5% steps of the card, to tune the defaults (ADR 0047) | Done |
 | Stricter CSP while photos are in the page; service worker check on the photo step | Done |
 | Custom domain `dnitapado.es`, HTTPS enforced; one host, the old address redirects | Done |
 | Security headers from the host (Cloudflare Workers): CSP with `frame-ancestors`, HSTS, Permissions-Policy, COOP, worker CSPs | Done |
@@ -868,7 +886,7 @@ Every spec runs in Chromium. The specs marked **(all browsers)** also run in Fir
 | `privacy` (all browsers) | A whole workflow sends no request and stores nothing. Canaries from the card text (OCR), the photos' file names and the watermark never appear in any request's address, headers or body, from the first visit on, nor as text in the PDF |
 | `security` (all browsers) | Exact CSP and referrer policy, SRI on every asset, no inline code but the import map and one JSON-LD data block (the same on `/`, `/en` and `/ar`, never run), no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, no start when it cannot be removed, framing refused by the host and, without headers, by the page, photos dropped on `pagehide` |
 | `headers` | The host's headers: page CSP equal to the `<meta>` CSP plus `frame-ancestors`, the worker CSPs, HSTS, Permissions-Policy (camera on; microphone, location, clipboard reading off), no COEP |
-| `stats` | The small Send anonymous data link opens the photo-free stats page; nothing is sent before the tap; the text sent is the text shown; its own CSP; the app page still cannot connect to `/stats`, with and without the service worker; a changed fragment shows nothing to send; offline and error states; Arabic layout |
+| `stats` | The small Send anonymous data link opens the photo-free stats page; nothing is sent before the tap; the text sent is the text shown; a box moved by hand is listed in 0.5% steps of the card; its own CSP; the app page still cannot connect to `/stats`, with and without the service worker; a changed fragment shows nothing to send; offline and error states; Arabic layout |
 | `cleanup` (all browsers) | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
 | `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
 | `webrtc-frames` | Canary: in a page without the app, a blank frame (each DOM insertion method, also disguised with a shadowed `nodeType` or with built-ins replaced), `srcdoc`, `innerHTML`, `document.write`, a nested frame and `window.open` each reach a working data channel; in the app, on the start screen and with photos loaded, none of these routes does, nor a frameset, object, embed or three-argument `document.open` |
@@ -882,7 +900,7 @@ Every spec runs in Chromium. The specs marked **(all browsers)** also run in Fir
 | `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard, corners saved when you switch side |
 | `accuracy` | Accuracy floor of the on-device AI on 42 fictional card photos drawn by [`scripts/make-fixtures.ts`](scripts/make-fixtures.ts) (DNI 4.0, DNI 3.0 and TIE, front and back, under seven conditions: plain, rotated, small, tilted, dim, blurred, and all at once). Per document: no wrong document or DNI version, at least 6 of 7 pairs detected exactly, at least 12 of 14 photos with every corner within 2 % of the card's width, median corner error at most 0.5 %. The true corners and documents are in `tests/fixtures/accuracy/expected.json` |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases, "ready" asked once per worker and asked again after a rewritten file is refused; smart field finding |
-| `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
+| `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked; a fitted box is not listed as hand-moved in the opt-in stats |
 | `export` (all browsers) | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, no watermark over hidden fields, a change made with the front on screen reaching the back in the review and the PDF, review, the review stays after the download with the small stats link, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), the file named `redacted-dni.pdf` or `redacted-tie.pdf` after the document type, reset |
 | `no-trusted-types` (all browsers) | The page served as a browser without Trusted Types sees it (no `trustedTypes`, no Trusted Types directives): the app starts, the service worker registers, the OCR worker starts, the flow reaches the PDF, and the CSP alone still refuses another site's script |
 | `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; after a download or a share the review stays and the small Send anonymous data link appears; closing the sheet; a failed share |
@@ -1262,6 +1280,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0044](docs/adr/0044-language-pages.md): the build writes one start page per language, `<tag>.html`, from the final `index.html`, with only the text changed (language, head, canonical, start screen); the host and the service worker show it at `/<tag>`, so link previews and crawlers without JavaScript read each language.
 - [0045](docs/adr/0045-not-found-pages.md): an unknown address gets status 404 and a static not-found page with no script; the build writes one per folder people reach, in its language, so it is styled there; the host and the service worker send the nearest one.
 - [0046](docs/adr/0046-structured-data.md): one JSON-LD data block in the start pages tells search engines the site is a free web app; the browser never runs it, so the CSP does not change; the one exception to "no inline scripts".
+- [0047](docs/adr/0047-moved-box-stats.md): the opt-in stats also list the cover boxes moved by hand, as their new place on the straightened card in 0.5% steps, so the default boxes can be tuned from real cards; never the default, a pixel position or anything from the image.
 - [0042](docs/adr/0042-axe-accessibility-scan.md): an axe-core scan of every screen, in Spanish and Arabic, on a phone and a wide screen, fails CI on any serious or critical accessibility finding. axe is a dev dependency and runs only in tests.
 - [0043](docs/adr/0043-one-field-list.md): one field list: **Find automatically** covers the data of the fields switched to covered, with no list of its own; name and DNI/NIE number become fields, visible by default; the MRZ tells the dates apart.
 
