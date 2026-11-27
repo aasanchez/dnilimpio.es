@@ -56,6 +56,19 @@ test.describe('language selector', () => {
     expect(problems).toEqual([])
   })
 
+  test('keeps the current language when a dictionary cannot load', async ({ page }) => {
+    const problems = watch(page)
+    await page.goto('/')
+    await pick(page, 'en')
+    // French cannot load, as offline before its file was cached.
+    await page.route(/\/assets\/fr-[\w-]+\.js$/, (route) => route.abort('internetdisconnected'))
+    await page.locator('#lang').selectOption('fr')
+    await expect(page.locator('#lang')).toHaveValue('en')
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+    await expect(page.locator('label[for="lang"]')).toHaveText(label('en'))
+    expect(problems).toEqual([])
+  })
+
   test('switches language offline once the app is cached', async ({ browser }) => {
     const context = await browser.newContext({ locale: 'es-ES', serviceWorkers: 'allow' })
     const page = await context.newPage()
