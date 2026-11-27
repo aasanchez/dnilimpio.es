@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-# 0034. No Network Error Logging: NEL off for every file, no Report-To
+# 0035. No Network Error Logging: NEL off for every file, no Report-To
 
 - Status: accepted. Amends [ADR 0027](0027-security-headers-from-the-host.md).
 - Date: 2026-11-27

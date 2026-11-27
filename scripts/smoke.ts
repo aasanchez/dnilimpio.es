@@ -8,7 +8,7 @@
 // With SMOKE_HOST_HEADERS=1 (the Cloudflare host, ADR 0027) it also checks that the page, the service
 // worker, the OCR worker and the thanks page are served with exactly the HTTP headers of
 // scripts/headers.ts, that no response asks the browser for network error reports (NEL above 0,
-// Report-To, Reporting-Endpoints; ADR 0034), and that the stats endpoint refuses a request that is
+// Report-To, Reporting-Endpoints; ADR 0035), and that the stats endpoint refuses a request that is
 // not from the thanks page (ADR 0029). It never posts a row that would be stored.
 //
 // It checks, on the live site:
@@ -63,7 +63,7 @@ async function checkServedHeaders (html: string, first: Headers): Promise<void> 
     for (const [k, v] of Object.entries(headersFor(rules, path))) {
       if (served.get(k) !== v) wrong.push(`${path} ${k}:\n    served:   ${served.get(k) ?? '(none)'}\n    expected: ${v}`)
     }
-    // No network error reports to the host or anyone else (ADR 0034).
+    // No network error reports to the host or anyone else (ADR 0035).
     for (const p of reportingProblems(served)) wrong.push(`${path} ${p}. Turn off Network Error Logging for the zone`)
   }
   if (wrong.length > 0) throw new Error(`host headers differ from scripts/headers.ts:\n  ${wrong.join('\n  ')}`)

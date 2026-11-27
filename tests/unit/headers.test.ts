@@ -57,7 +57,7 @@ describe('hostHeaderRules', () => {
   })
 })
 
-describe('Network Error Logging (ADR 0034)', () => {
+describe('Network Error Logging (ADR 0035)', () => {
   it('turns NEL off on every file, which also clears a policy a browser cached earlier', () => {
     expect(COMMON_HEADERS['NEL']).toBe('{"max_age":0}')
     expect(JSON.parse(COMMON_HEADERS['NEL'] ?? '')).toEqual({ max_age: 0 })
