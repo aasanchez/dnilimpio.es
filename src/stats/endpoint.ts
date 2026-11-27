@@ -17,7 +17,21 @@ export interface Env {
   readonly STATS?: AnalyticsDataset
   /** The static files (wrangler.jsonc, assets.binding). */
   readonly ASSETS?: { fetch: (req: Request) => Promise<Response> }
+  /** Workers rate-limit binding (wrangler.jsonc, ratelimits). */
+  readonly STATS_LIMIT?: RateLimit
 }
+
+/** The part of the Workers rate-limit binding used here. */
+export interface RateLimit {
+  limit: (options: { key: string }) => Promise<{ success: boolean }>
+}
+
+/**
+ * The one key of the rate limit: every send shares it, so the limit caps the rows a Cloudflare
+ * location accepts per minute (wrangler.jsonc). No IP address or other detail of the sender is
+ * used, so the limit cannot tell senders apart, and a flood can make real sends fail for a minute.
+ */
+export const RATE_LIMIT_KEY = 'stats'
 
 export const STATS_PATH = '/stats'
 
@@ -48,14 +62,17 @@ function countryOf (req: Request): string {
 
 export async function handleStats (req: Request, env: Env): Promise<Response> {
   if (req.method !== 'POST') return reply(405)
-  // Only the site's own thanks page: browsers mark a request from another site, and a form or a link
-  // from elsewhere cannot set this header to same-origin.
+  // Blocks cross-site requests from browsers only: a browser marks a request from another site, and a
+  // page elsewhere cannot set this header. A script outside a browser (curl) can send any value, so
+  // this is no proof of origin; the rate limit below caps how many such rows are stored.
   if (req.headers.get('Sec-Fetch-Site') !== 'same-origin') return reply(403)
   if (Number(req.headers.get('Content-Length') ?? '0') > MAX_STATS_LENGTH) return reply(413)
   const text = await req.text()
   if (text.length > MAX_STATS_LENGTH) return reply(413)
   const stats = parseStats(text)
   if (stats === undefined) return reply(400)
+  // Checked last, so only valid rows count. No binding (a local run): no limit.
+  if (env.STATS_LIMIT && !(await env.STATS_LIMIT.limit({ key: RATE_LIMIT_KEY })).success) return reply(429)
   // No dataset (a local run without the binding): accepted, not stored.
   env.STATS?.writeDataPoint(dataPoint(stats, countryOf(req)))
   return reply(204)

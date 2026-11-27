@@ -25,8 +25,8 @@ async function toThanks (page: Page): Promise<void> {
   await toEditor(page)
   await page.locator('#review').click()
   await page.locator('#review-confirm').check()
+  // "Download and clear": no done screen, no second tap.
   await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
-  await page.locator('#reset-done').click()
   await expect(page.locator('#thanks-title')).toHaveText('Tu documento ya no está aquí')
 }
 

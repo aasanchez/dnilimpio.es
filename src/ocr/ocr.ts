@@ -11,6 +11,7 @@
 //
 // This module is loaded on demand (its own chunk): the first page load does not include the engine.
 
+import { AskTimeout, askWorker, type AskMessage, type AskReply } from './ask.ts'
 import { MIN_WORD_CONFIDENCE, findSensitive, namesFromText, type Found, type Rect } from './find.ts'
 import { fromWire, type OcrLine } from './lines.ts'
 import { parseMrz, type Mrz } from './mrz.ts'
@@ -45,16 +46,11 @@ const simd = (): boolean => {
   }
 }
 
-/** Sends one message to the controlling service worker and waits for its answer. */
-async function ask (msg: { type: 'status' | 'prepare'; paths: string[] }): Promise<{ ok: boolean; cached?: boolean; error?: string }> {
+/** Sends one message to the controlling service worker and waits for its answer, within a time limit (ask.ts). */
+async function ask (msg: AskMessage): Promise<AskReply> {
   const controller = navigator.serviceWorker.controller
   if (!controller) throw new Error('OCR unavailable: no-service-worker')
-  const { port1, port2 } = new MessageChannel()
-  const reply = new Promise<{ ok: boolean; cached?: boolean; error?: string }>((resolve) => {
-    port1.onmessage = (e) => { resolve(e.data as { ok: boolean; cached?: boolean; error?: string }) }
-  })
-  controller.postMessage(msg, [port2])
-  try { return await reply } finally { port1.close() }
+  return await askWorker(controller, msg)
 }
 
 /**
@@ -71,7 +67,15 @@ export async function ocrStatus (): Promise<OcrStatus> {
   if (typeof WebAssembly !== 'object' || typeof Worker === 'undefined' || !simd()) return { state: 'unavailable', reason: 'unsupported' }
   if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return { state: 'unavailable', reason: 'no-service-worker' }
   // Ask the controlling service worker: only its own build's cache counts.
-  const reply = await ask({ type: 'status', paths: neededFiles() }).catch(() => ({ ok: false, cached: false }))
+  let reply: AskReply
+  try {
+    reply = await ask({ type: 'status', paths: neededFiles() })
+  } catch (e) {
+    // A worker that does not answer (stopped, or being replaced) cannot check the files: OCR is off
+    // until a worker takes control again (the screens check again on 'controllerchange').
+    if (e instanceof AskTimeout) return { state: 'unavailable', reason: 'no-service-worker' }
+    reply = { ok: false, cached: false }
+  }
   if (reply.cached === true) return { state: 'ready' }
   return navigator.onLine ? { state: 'download', megabytes: OCR_DOWNLOAD_MB } : { state: 'unavailable', reason: 'offline' }
 }
