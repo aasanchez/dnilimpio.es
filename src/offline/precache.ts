@@ -31,6 +31,17 @@ export const THANKS_PAGE = 'thanks.html'
 export const GUIDE_PAGES = ['guia-dni-4.html', 'guia-dni-3.html', 'guia-tie.html'] as const
 export type GuidePage = (typeof GUIDE_PAGES)[number]
 
+/**
+ * The address of every language but Spanish (ADR 0038): its tag in lowercase. Each has a start page
+ * of its own, `<segment>.html`, with the start screen and head in that language (ADR 0044). The list
+ * is written out here because sw.js may share no module with the app; a unit test checks that it
+ * equals LANGS in src/i18n/langs.ts.
+ */
+export const LANGUAGE_SEGMENTS = ['ca', 'ca-es-valencia', 'gl', 'eu', 'en', 'fr', 'nl', 'sv', 'fi', 'uk', 'ro', 'ar'] as const
+
+/** File name of a language's start page, next to index.html: `en.html` for the address `en`. */
+export const languagePage = (segment: string): string => `${segment}.html`
+
 /** A page of its own next to index.html: a page load of exactly its path gets it, not the app. */
 export interface StaticPage {
   readonly path: string
@@ -262,7 +273,10 @@ export type Route =
    * address (`en`, or the site address for Spanish, ADR 0038), as the host does.
    */
   | { readonly kind: 'redirect'; readonly url: string }
-  /** A page load of a static page (STATIC_PAGES) of this build: answer with that page. */
+  /**
+   * A page load of a static page (STATIC_PAGES) of this build, or of a language's address, which
+   * gets that language's start page (ADR 0044): answer with that page.
+   */
   | { readonly kind: 'page'; readonly url: string; readonly onDemand: boolean }
   /** The thanks page sends the opt-in stats: passed on to the network, unchanged (ADR 0029). */
   | { readonly kind: 'stats' }
@@ -314,11 +328,18 @@ export function route (method: string, url: string, mode: string, scope: string,
   if (method === 'POST' && mode !== 'navigate' && url === `${scope}${STATS_ENDPOINT}` && client.split('#')[0] === thanks) return { kind: 'stats' }
   if (method !== 'GET' || !url.startsWith(scope)) return { kind: 'deny' }
   const key = url.split('#')[0] ?? url
-  // A page load may carry a query string or a path of its own: it gets index.html, unless it is
-  // exactly a static page of this build (the thanks page, a guide page).
+  // A page load may carry a query string or a path of its own: it gets index.html, unless it is a
+  // language's address or exactly a static page of this build (the thanks page, a guide page).
   if (mode === 'navigate') {
     const to = languageRedirect(key, scope)
     if (to !== null) return { kind: 'redirect', url: to }
+    // A language's address, as the host answers it: its own start page (ADR 0044). The query does
+    // not count, as on the host.
+    const path = key.split('?')[0] ?? key
+    const segment = path.slice(scope.length)
+    if ((LANGUAGE_SEGMENTS as readonly string[]).includes(segment) && known.files.has(`${scope}${languagePage(segment)}`)) {
+      return { kind: 'page', url: `${scope}${languagePage(segment)}`, onDemand: false }
+    }
     // An article or a list of articles (ADR 0039), as the host answers it: `articles` goes to
     // `articles/`, which is the file `articles/index.html`.
     const article = key.includes('?') ? null : articleRoute(key.slice(scope.length))

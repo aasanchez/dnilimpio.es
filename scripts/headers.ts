@@ -13,7 +13,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { GUIDE_CSP, THANKS_CSP, cspWithScriptHashes } from './csp.ts'
-import { GUIDE_PAGES, SECURITY_HEADERS, SW_FILE, THANKS_PAGE, WORKER_SCRIPTS } from '../src/offline/precache.ts'
+import { GUIDE_PAGES, SECURITY_HEADERS, SW_FILE, THANKS_PAGE, WORKER_SCRIPTS, languagePage } from '../src/offline/precache.ts'
 import { LANGS } from '../src/i18n/langs.ts'
 import { INDEX_FILE, articleFolder } from '../src/articles/paths.ts'
 
@@ -40,6 +40,8 @@ export const REDIRECTS_FILE = '_redirects'
  * Redirects of the language addresses (ADR 0038), the same as languageRedirect() in the service
  * worker: `/en/` to `/en` (no trailing slash, so the page's relative URLs point at the site's
  * folder), and `/es`, `/es/` to `/`, the Spanish address. Permanent, so search engines keep one URL.
+ * Then each language's address shows its own start page, `/en.html` at `/en` (200, a rewrite, not a
+ * redirect; ADR 0044), as route() in the service worker does.
  */
 export function redirectsFile (): string {
   const lines = ['/es / 301', '/es/ / 301']
@@ -47,6 +49,7 @@ export function redirectsFile (): string {
     if (lang === 'es') continue
     const seg = lang.toLowerCase()
     lines.push(`/${seg}/ /${seg} 301`)
+    lines.push(`/${seg} /${languagePage(seg)} 200`)
   }
   // Articles (ADR 0039): `/en/articles` goes to `/en/articles/`, which shows the file
   // `/en/articles/index.html` at that address (200, a rewrite, not a redirect). The same for every

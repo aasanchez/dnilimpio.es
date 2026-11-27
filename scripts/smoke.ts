@@ -29,7 +29,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { cspWithScriptHashes } from './csp.ts'
 import { ARTICLE_CONTENT_TYPE, HEADERS_FILE, REDIRECTS_FILE, cookiesSetBy, headersFor, hostHeaderRules, reportingProblems } from './headers.ts'
-import { GUIDE_PAGES, STATS_ENDPOINT, SW_FILE, THANKS_PAGE, WORKER_SCRIPTS, parseManifest } from '../src/offline/precache.ts'
+import { GUIDE_PAGES, STATS_ENDPOINT, SW_FILE, THANKS_PAGE, LANGUAGE_SEGMENTS, WORKER_SCRIPTS, languagePage, parseManifest } from '../src/offline/precache.ts'
 import { INDEX_FILE, isArticlePage } from '../src/articles/paths.ts'
 
 const [siteArg = '', expectedSha = '', distDir] = process.argv.slice(2)
@@ -147,6 +147,17 @@ async function check (): Promise<string> {
       if (sha384((await get(new URL(folder, site))).bytes) !== f.integrity) throw new Error(`${folder}: does not show ${f.path}`)
     })
     if (wrong.length > 0) throw new Error(`articles are not served as built:\n  ${wrong.join('\n  ')}`)
+  }
+
+  // Language pages (ADR 0044): each language's address shows its own page, not index.html. Without
+  // the `_redirects` rewrite the host answers with index.html, which is Spanish.
+  if (checkHostHeaders) {
+    const wrong = await each(LANGUAGE_SEGMENTS, async (seg) => {
+      const file = listed.find((f) => f.path === languagePage(seg))
+      if (file === undefined) throw new Error(`${languagePage(seg)}: not in the ${SW_FILE} manifest`)
+      if (sha384((await get(new URL(seg, site))).bytes) !== file.integrity) throw new Error(`/${seg}: does not show ${languagePage(seg)}`)
+    })
+    if (wrong.length > 0) throw new Error(`language addresses are not served as built:\n  ${wrong.join('\n  ')}`)
   }
 
   // Byte for byte against the artifact CI built.

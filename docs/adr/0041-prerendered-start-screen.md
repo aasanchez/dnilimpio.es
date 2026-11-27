@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0041. Prerendered start screen: the Spanish start screen in index.html, replaced by the app
 
-- Status: accepted
+- Status: accepted; extended to every language by [ADR 0044](0044-language-pages.md)
 - Date: 2026-11-27
 - Decided by: Alexis (SEO analysis of 27 November 2026, items 1 and 8)
 

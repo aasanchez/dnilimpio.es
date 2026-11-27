@@ -239,6 +239,7 @@
   "guideAbout": "À propos : {field}",
   "seoTitle": "Masquer les données du DNI et ajouter un filigrane",
   "seoDescription": "Masquez les données de votre DNI ou TIE espagnol et ajoutez un filigrane avant d'en envoyer une copie. Gratuit, sans inscription. Le document est traité sur votre appareil.",
+  "noScript": "Cette application a besoin de JavaScript. Activez-le dans votre navigateur pour l'utiliser.",
   "articlesTitle": "Articles",
   "articlesLead": "Actualités, guides et informations sur DNI Tapado.es et sur le partage d’une copie de votre pièce d’identité avec moins de risque.",
   "articlesNews": "Actualités",

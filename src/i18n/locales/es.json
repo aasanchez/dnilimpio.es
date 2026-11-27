@@ -239,6 +239,7 @@
   "guideAbout": "Qué es: {field}",
   "seoTitle": "Tapar datos del DNI y poner marca de agua",
   "seoDescription": "Tapa los datos de tu DNI o TIE y añade una marca de agua antes de enviar una copia. Gratis y sin registro. El documento se procesa en tu dispositivo.",
+  "noScript": "Esta aplicación necesita JavaScript. Actívalo en tu navegador para usarla.",
   "articlesTitle": "Artículos",
   "articlesLead": "Noticias, guías e información sobre DNI Tapado.es y sobre cómo compartir una copia de tu documento con menos riesgo.",
   "articlesNews": "Noticias",

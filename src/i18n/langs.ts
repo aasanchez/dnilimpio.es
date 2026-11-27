@@ -5,3 +5,8 @@
 /** BCP 47 tags. `ca-ES-valencia` is the registered tag for Valencian. */
 export const LANGS = ['es', 'ca', 'ca-ES-valencia', 'gl', 'eu', 'en', 'fr', 'nl', 'sv', 'fi', 'uk', 'ro', 'ar'] as const
 export type Lang = (typeof LANGS)[number]
+
+/** Text direction per language. Arabic is Modern Standard Arabic, written right to left. */
+export function dir (lang: Lang): 'ltr' | 'rtl' {
+  return lang === 'ar' ? 'rtl' : 'ltr'
+}

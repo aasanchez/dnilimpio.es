@@ -11,9 +11,9 @@ export type Key = keyof typeof es
 export type Dictionary = Readonly<Record<Key, string>>
 type Translation = Readonly<Record<string, string>>
 
-import { LANGS, type Lang } from './langs.ts'
+import { LANGS, dir, type Lang } from './langs.ts'
 
-export { LANGS, type Lang }
+export { LANGS, dir, type Lang }
 
 /** Each language's own name, shown in the selector. */
 export const AUTONYMS: Readonly<Record<Lang, string>> = {
@@ -30,11 +30,6 @@ export const AUTONYMS: Readonly<Record<Lang, string>> = {
   uk: 'Українська',
   ro: 'Română',
   ar: 'العربية',
-}
-
-/** Text direction per language. Arabic is Modern Standard Arabic, written right to left. */
-export function dir (lang: Lang): 'ltr' | 'rtl' {
-  return lang === 'ar' ? 'rtl' : 'ltr'
 }
 
 /** The other languages, each loaded on demand (one chunk per file). */

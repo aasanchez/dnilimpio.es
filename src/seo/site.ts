@@ -55,10 +55,11 @@ const escapeText = (s: string): string => s.replaceAll('&', '&amp;').replaceAll(
 export interface HeadText { readonly seoTitle: string; readonly seoDescription: string }
 
 /**
- * The static <head> tags of the start page, in Spanish (the page's default language): title,
- * description, Open Graph and Twitter card. Every value is escaped; no tag carries a script or a style.
+ * The static <head> tags of the start page in `lang` (ADR 0044): title, description, Open Graph,
+ * Twitter card, the page's own canonical address and the hreflang list. Every value is escaped; no tag
+ * carries a script or a style. src/seo/head.ts keeps them in step when the person changes language.
  */
-export function staticHead (site: string, text: HeadText): string {
+export function staticHead (site: string, text: HeadText, lang: Lang = 'es'): string {
   const title = escapeAttr(pageTitle(text.seoTitle))
   const description = escapeAttr(text.seoDescription)
   return [
@@ -68,11 +69,12 @@ export function staticHead (site: string, text: HeadText): string {
     `<meta property="og:site_name" content="${BRAND}" />`,
     `<meta property="og:title" content="${title}" />`,
     `<meta property="og:description" content="${description}" />`,
-    `<meta property="og:locale" content="${OG_LOCALE.es}" />`,
+    `<meta property="og:locale" content="${OG_LOCALE[lang]}" />`,
     `<meta property="og:image" content="${escapeAttr(new URL(OG_IMAGE, site).href)}" />`,
     `<meta property="og:image:width" content="${String(OG_IMAGE_SIZE.width)}" />`,
     `<meta property="og:image:height" content="${String(OG_IMAGE_SIZE.height)}" />`,
     '<meta name="twitter:card" content="summary_large_image" />',
+    `<link rel="canonical" href="${escapeAttr(canonicalUrl(site, lang))}" />`,
     // The same list on every language version (ADR 0038), so it can live in the static HTML.
     ...hreflangAlternates(site).map((a) => `<link rel="alternate" hreflang="${escapeAttr(a.hreflang)}" href="${escapeAttr(a.href)}" />`),
   ].join('\n    ')
