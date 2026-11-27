@@ -17,6 +17,7 @@
   import StraightenStep from './components/StraightenStep.svelte'
   import { prefetchCornerModel } from './detect/corners.ts'
   import { stopOcrIfLoaded } from './ocr/load-ocr.ts'
+  import { clearOcrRan, ocrRan } from './ocr/ran.ts'
   import { revokeDownloads } from './engine/downloads.ts'
   import { noticeDue, rememberNoticeClosed } from './ui/notice-memory.ts'
   import { setAppIdle } from './offline/update.ts'
@@ -169,6 +170,7 @@
     }
     edit = emptyEditState(doc)
     detectOutcome = null
+    clearOcrRan()
     docConfirmed = false
     dniFound = false
     // The OCR worker keeps the last card it read: stop it (a new one starts if OCR is used again).
@@ -196,6 +198,7 @@
       lang,
       sha: __BUILD_SHA__,
       via: (['front', 'back'] as const).map((s) => photoVia[s]).filter((v): v is PhotoVia => v !== null),
+      ocr: ocrRan(),
     }
     reset()
     // The stats code is its own small chunk (precached like the rest), so the start page does not

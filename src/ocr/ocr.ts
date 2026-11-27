@@ -15,6 +15,7 @@ import { MIN_WORD_CONFIDENCE, findSensitive, namesFromText, type Found, type Rec
 import { fromWire, type OcrLine } from './lines.ts'
 import { parseMrz, type Mrz } from './mrz.ts'
 import { MODEL_FILES, type Reply, type Request } from './protocol.ts'
+import { markOcrRan } from './ran.ts'
 
 export type { OcrBox, OcrLine, OcrWord } from './lines.ts'
 
@@ -163,6 +164,7 @@ export async function recognise (image: HTMLCanvasElement | OffscreenCanvas): Pr
     const w = await live(worker())
     const result = await live(readPixels(w, pixelsOf(image)))
     if (mine !== generation) throw new OcrStopped()
+    markOcrRan()
     return result
   })
   queue = job.then(() => undefined, () => undefined)

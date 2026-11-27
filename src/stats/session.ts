@@ -26,6 +26,8 @@ export interface SessionInput {
   /** Full commit SHA of the build, or '' when unknown. */
   readonly sha: string
   readonly via: readonly PhotoVia[]
+  /** OCR read a photo in this session (detection, Find my data or Fit to the text): src/ocr/ran.ts. */
+  readonly ocr: boolean
 }
 
 export function aiResult (doc: DocModel, outcome: DetectOutcome | null): AiResult {
@@ -51,6 +53,6 @@ export function sessionStats (i: SessionInput): SessionStats {
     lang: i.lang,
     app: i.sha === '' ? 'dev' : shortSha(i.sha),
     src: photoSource(i.via),
-    ocr: i.outcome !== null && i.outcome !== 'off',
+    ocr: i.ocr,
   }
 }

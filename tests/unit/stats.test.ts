@@ -12,6 +12,7 @@ import { LANGS } from '../../src/i18n/index.ts'
 import { STATS_ENDPOINT, THANKS_PAGE, route } from '../../src/offline/precache.ts'
 import worker from '../../worker/index.ts'
 import { dataPoint, handleStats, type AnalyticsDataset } from '../../src/stats/endpoint.ts'
+import { clearOcrRan, markOcrRan, ocrRan } from '../../src/ocr/ran.ts'
 
 const SESSION: SessionStats = { doc: 'tie', ai: 'right', back: true, fields: ['signature', 'can', 'mrz'], boxes: 2, mark: true, grey: false, lang: 'es', app: '1a2b3c4', src: 'camera', ocr: true }
 const FULL: UsageStats = { ...SESSION, device: 'phone', os: 'android', browser: 'chrome', bv: 131, pwa: false }
@@ -90,10 +91,22 @@ describe('session figures', () => {
     expect(photoSource([])).toBe('file')
   })
   it('keeps ids and counts only: never the watermark text or the commit in full', () => {
-    const s = sessionStats({ doc: 'dni-4.0', outcome: 'dni', back: false, hidden: ['mrz', 'can'], boxes: 0, watermark: 'Solo para Banco X', greyscale: true, lang: 'en', sha: 'a'.repeat(40), via: ['file'] })
+    const s = sessionStats({ doc: 'dni-4.0', outcome: 'dni', back: false, hidden: ['mrz', 'can'], boxes: 0, watermark: 'Solo para Banco X', greyscale: true, lang: 'en', sha: 'a'.repeat(40), via: ['file'], ocr: true })
     expect(s).toEqual({ doc: 'dni-4.0', ai: 'right', back: false, fields: ['can', 'mrz'], boxes: 0, mark: true, grey: true, lang: 'en', app: 'aaaaaaa', src: 'file', ocr: true })
     expect(encodeSession(s)).not.toContain('Banco')
-    expect(sessionStats({ doc: 'tie', outcome: null, back: true, hidden: [], boxes: 0, watermark: '  ', greyscale: false, lang: 'es', sha: '', via: [] })).toMatchObject({ mark: false, app: 'dev', ocr: false, ai: 'off' })
+    expect(sessionStats({ doc: 'tie', outcome: null, back: true, hidden: [], boxes: 0, watermark: '  ', greyscale: false, lang: 'es', sha: '', via: [], ocr: false })).toMatchObject({ mark: false, app: 'dev', ocr: false, ai: 'off' })
+  })
+  it('counts OCR that ran after the document step, also when detection was left early', () => {
+    // Detection still reading when the person picked the document: no outcome, but Find my data ran.
+    expect(sessionStats({ doc: 'tie', outcome: null, back: true, hidden: [], boxes: 0, watermark: '', greyscale: false, lang: 'es', sha: '', via: [], ocr: true })).toMatchObject({ ai: 'off', ocr: true })
+  })
+  it('the OCR flag is set by a read and cleared by Reset', () => {
+    clearOcrRan()
+    expect(ocrRan()).toBe(false)
+    markOcrRan()
+    expect(ocrRan()).toBe(true)
+    clearOcrRan()
+    expect(ocrRan()).toBe(false)
   })
 })
 
