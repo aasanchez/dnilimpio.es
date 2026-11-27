@@ -44,10 +44,11 @@ test.describe('a Spanish browser', () => {
   })
 })
 
-test.describe('an English browser', () => {
+test.describe('the English address', () => {
   test.use({ locale: 'en-US' })
   test('the app starts in English and no Spanish copy remains', async ({ page }) => {
-    await page.goto('/')
+    // The language comes from the address (ADR 0038): /en, not the browser.
+    await page.goto('/en')
     await expect(page.locator('h1')).toHaveText(en['homeTitle'] ?? '')
     await expect(page.locator('[data-prerendered]')).toHaveCount(0)
     await expect(page.locator('main')).not.toContainText(es['homeLead'] ?? '')

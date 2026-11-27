@@ -97,7 +97,7 @@ for (const { lang, locale, dir } of [{ lang: 'es', locale: 'es-ES', dir: 'ltr' }
       test.setTimeout(90_000)
       await blockModel(page)
       answerChoosers(page, ['synthetic-front.png', 'synthetic-back.png'])
-      await page.goto('/')
+      await page.goto(lang === 'es' ? '/' : `/${lang}`)
       await expect(page.locator('html')).toHaveAttribute('dir', dir)
       expect(await tabProblems(page), 'start screen').toEqual([])
 
