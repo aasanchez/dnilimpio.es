@@ -105,8 +105,8 @@ and you always confirm it ([ADR 0011](docs/adr/0011-document-detection.md)):
   DNI number sits ([ADR 0019](docs/adr/0019-ppocr-and-text-detection.md)). The MRZ wins when both answer.
 - Detection needs OCR. Online, the first time, it downloads the OCR files by itself (about 9 MB; the
   status line says so). After that it also runs offline. When OCR cannot run (offline before the
-  first download, no service worker, an old browser), a note says so and you choose by hand. A
-  choice you make yourself is never changed.
+  first download, no service worker or one that does not answer, an old browser), a note says so
+  and you choose by hand. A choice you make yourself is never changed.
 
 **Card guide.** "What is on my card?" on the start screen, and the ⓘ beside each field in the
 editor, open a guide to every element of each card (one DNI tab with a 4.0/3.0 switch, and the TIE): what it is, how a copy of it can be misused, and
@@ -320,7 +320,7 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   never from a third party. Its files are downloaded only the first time OCR is used and are checked
   against their hash before use. The worker runs under its own strict CSP: it can read its own files in `ocr/` and
   cannot send requests anywhere. If OCR cannot run (offline before the first download, or no service
-  worker), it is switched off and you choose by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md),
+  worker, or one that does not answer in time), it is switched off and you choose by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md),
   [ADR 0019](docs/adr/0019-ppocr-and-text-detection.md)).
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
@@ -729,7 +729,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Capture | `input`, `decode`, `sniff`, `live`, `coach`, `capture-state` | Sides in use with an optional back, file picker and camera modes, type by first bytes (name and MIME type ignored, AVIF refused), size in pixels from JPEG, PNG, WebP and HEIC headers, size and pixel limits (decompression bomb), decode errors, live camera needs and failures, coach metrics (blur, light, framing) |
 | Geometry | `homography`, `quad-edit` | Homography round trips and degenerate quads, corner editing |
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type`, `doc-text` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates, document type from the front's printed text (accents, case and OCR misreads ignored) |
-| OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink |
+| OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans`, `ocr-ask` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink, a silent service worker turns OCR off after a time limit (15 s to check the files, 3 minutes to download them) |
 | Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black, Fit to the text (a box only grows, by at most half its size, and stays on the card) |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
