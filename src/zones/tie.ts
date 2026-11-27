@@ -43,6 +43,14 @@ export const TIE: ModelZones = {
     },
     { id: 'dateOfBirth', side: 'front', default: 'visible', rects: [box(0.735, 0.405, 0.99, 0.49)], note: '"FECHA NAC. 01 01 1980"' },
     {
+      id: 'name',
+      side: 'front',
+      default: 'visible',
+      rects: [box(0.405, 0.21, 0.82, 0.375)],
+      note: 'Surnames and name ("MUESTRA SAMPLE Carmen", three lines) under "APELLIDOS Nombres"; stops left of the small ghost photo',
+    },
+    { id: 'idNumber', side: 'front', default: 'visible', rects: [box(0.665, 0.69, 0.99, 0.77)], note: '"NIE:X1234567P", right of "NIE / PERSONAL NUMBER"' },
+    {
       id: 'permitType',
       side: 'front',
       default: 'visible',

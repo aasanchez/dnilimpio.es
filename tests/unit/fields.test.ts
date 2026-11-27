@@ -25,6 +25,9 @@ describe('fields', () => {
     expect(mrzLeaks(DNI_4_0, new Set<ZoneId>(['dateOfBirth', 'mrz']))).toBe(false)
     expect(mrzLeaks(DNI_4_0, new Set<ZoneId>(['signature']))).toBe(false)
     expect(mrzLeaks(TIE, new Set<ZoneId>(['expiryDate']))).toBe(true)
+    // The MRZ also repeats the name and the DNI/NIE number.
+    expect(mrzLeaks(DNI_4_0, new Set<ZoneId>(['name']))).toBe(true)
+    expect(mrzLeaks(TIE, new Set<ZoneId>(['idNumber']))).toBe(true)
   })
   it('never warns about an MRZ the document does not have', () => {
     const noMrz = { ...DNI_4_0, zones: DNI_4_0.zones.filter((z) => z.id !== 'mrz') }

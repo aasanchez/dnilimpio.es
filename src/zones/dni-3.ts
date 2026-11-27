@@ -41,6 +41,14 @@ export const DNI_3_0: ModelZones = {
       note: '"NUM SOPORT BAA000431" and the same number in the clear window, top right',
     },
     { id: 'dateOfBirth', side: 'front', default: 'visible', rects: [box(0.38, 0.61, 0.585, 0.68)], note: '"FECHA DE NACIMIENTO 01 01 1980"' },
+    {
+      id: 'name',
+      side: 'front',
+      default: 'visible',
+      rects: [box(0.395, 0.295, 0.72, 0.395), box(0.395, 0.435, 0.72, 0.49)],
+      note: 'Surnames ("ESPAÑOLA ESPAÑOLA", two lines) and name ("CARMEN"), below their labels; widened for long names',
+    },
+    { id: 'idNumber', side: 'front', default: 'visible', rects: [box(0.04, 0.875, 0.37, 0.96)], note: '"DNI 99999999R", bottom left under the photo' },
     // Back
     { id: 'mrz', side: 'back', default: 'hidden', rects: [box(0.03, 0.665, 0.97, 0.925)], note: 'Three MRZ lines (support number, DNI, birth and expiry dates, name)' },
     { id: 'supportNumber', side: 'back', default: 'hidden', rects: [box(0.115, 0.135, 0.245, 0.255)], note: 'Back of the clear window (mirror of the front)' },

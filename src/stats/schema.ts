@@ -23,8 +23,10 @@ export const DOCS = ['dni-4.0', 'dni-3.0', 'tie'] as const
  */
 export const AI_RESULTS = ['right', 'wrong', 'none', 'off'] as const
 /**
- * Every field id of src/zones/types.ts (ZoneId). Append only, never reorder: the Worker stores one
- * number per field in this order (dataPoint() in src/stats/endpoint.ts).
+ * Field ids of src/zones/types.ts (ZoneId) that the stats count. Append only, never reorder: the
+ * Worker stores one number per field in this order (dataPoint() in src/stats/endpoint.ts). The name
+ * and DNI/NIE number fields (ADR 0043) are not counted: a data point holds at most 20 numbers, and
+ * this list is part of the fixed list of ADR 0029.
  */
 export const FIELDS = ['signature', 'issueDate', 'expiryDate', 'supportNumber', 'can', 'mrz', 'address', 'placeOfBirth', 'parents', 'dateOfBirth', 'permitType'] as const
 export const LANG_TAGS = ['es', 'ca', 'ca-ES-valencia', 'gl', 'eu', 'en', 'fr', 'nl', 'sv', 'fi', 'uk', 'ro', 'ar'] as const

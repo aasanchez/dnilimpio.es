@@ -7,11 +7,11 @@ test.use({ locale: 'es-ES' })
 
 test('TIE: permit type is a field, the hint names the document', async ({ page }) => {
   await toEditor(page, 'tie')
-  await expect(page.locator('#hidden-count')).toHaveText('6 de 10')
+  await expect(page.locator('#hidden-count')).toHaveText('6 de 12')
   await expect(page.locator('#field-permitType')).not.toBeChecked()
   await expect(page.locator('#panel-fields')).toContainText('TIE (tarjeta de extranjero)')
   await page.locator('#field-permitType').check()
-  await expect(page.locator('#hidden-count')).toHaveText('7 de 10')
+  await expect(page.locator('#hidden-count')).toHaveText('7 de 12')
 })
 
 test('DNI 3.0: the Older DNI switch changes the layout and keeps the choices', async ({ page }) => {
@@ -19,11 +19,11 @@ test('DNI 3.0: the Older DNI switch changes the layout and keeps the choices', a
   await expect(page.locator('#dni-older')).not.toBeChecked()
   await expect(page.locator('#panel-fields')).toContainText('DNI 4.0')
   await page.locator('#field-dateOfBirth').check()
-  await expect(page.locator('#hidden-count')).toHaveText('7 de 10')
+  await expect(page.locator('#hidden-count')).toHaveText('7 de 12')
   await page.locator('#dni-older').check()
   await expect(page.locator('#preview')).toHaveJSProperty('height', 1080)
   await expect(page.locator('#panel-fields')).toContainText('DNI 3.0')
-  await expect(page.locator('#hidden-count')).toHaveText('7 de 10')
+  await expect(page.locator('#hidden-count')).toHaveText('7 de 12')
   // Chosen in the editor: the "version not detected" note goes.
   await expect(page.locator('#dni-guessed')).toHaveCount(0)
   // Back to the picker and on again: still DNI, still 3.0, the photos stay straightened.

@@ -24,7 +24,7 @@ describe('DNI 4.0 zone data', () => {
     expect(d('can')).toEqual(['mandatory'])
     for (const id of ['signature', 'issueDate', 'expiryDate', 'mrz'] as const) expect(d(id)).toEqual(['hidden'])
     expect(d('supportNumber')).toEqual(['hidden', 'hidden'])
-    for (const id of ['address', 'placeOfBirth', 'parents', 'dateOfBirth'] as const) expect(d(id)).toEqual(['visible'])
+    for (const id of ['address', 'placeOfBirth', 'parents', 'dateOfBirth', 'name', 'idNumber'] as const) expect(d(id)).toEqual(['visible'])
   })
   it('cites its source', () => {
     expect(DNI_4_0.source.url).toMatch(/^https:\/\/www\.dnielectronico\.es\//)
@@ -64,8 +64,13 @@ describe.each(DOCUMENTS.map((d) => [d.model, d] as const))('%s zone data', (_, d
       for (const def of defaultsOf(d, id)) expect(def).toBe('hidden')
     }
     for (const def of defaultsOf(d, 'can')) expect(def).toBe('mandatory')
-    for (const id of ['address', 'placeOfBirth', 'parents', 'dateOfBirth', 'permitType'] as const) {
+    for (const id of ['address', 'placeOfBirth', 'parents', 'dateOfBirth', 'permitType', 'name', 'idNumber'] as const) {
       for (const def of defaultsOf(d, id)) expect(def).toBe('visible')
+    }
+  })
+  it('has a name and a DNI/NIE number box on the front, so their switches match the search (ADR 0043)', () => {
+    for (const id of ['name', 'idNumber'] as const) {
+      expect(d.zones.filter((z) => z.id === id).map((z) => z.side)).toEqual(['front'])
     }
   })
   it('keeps the CAN zone clear of the other default-hidden zones', () => {

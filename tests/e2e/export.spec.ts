@@ -41,14 +41,14 @@ const at = (f: [number, number]): [number, number] => [Math.round(f[0] * 1712), 
 
 test('checklist: recommended fields hidden, live preview, warnings, hide all and show all', async ({ page }) => {
   await toEditor(page)
-  await expect(page.locator('#hidden-count')).toHaveText('6 de 10')
+  await expect(page.locator('#hidden-count')).toHaveText('6 de 12')
   await expect(page.locator('#field-can')).toBeChecked()
   // The CAN is black in the preview.
   expect(await pixel(page, '#preview', Math.round(CAN[0] * 1712), Math.round(CAN[1] * 1080))).toEqual([0, 0, 0])
 
   await page.locator('#field-can').uncheck()
   await expect(page.locator('#can-warning')).toBeVisible()
-  await expect(page.locator('#hidden-count')).toHaveText('5 de 10')
+  await expect(page.locator('#hidden-count')).toHaveText('5 de 12')
   expect((await pixel(page, '#preview', Math.round(CAN[0] * 1712), Math.round(CAN[1] * 1080)))[0]).toBeGreaterThan(0)
 
   // The list shows the fields of the side on screen; the MRZ is on the back.
@@ -58,11 +58,11 @@ test('checklist: recommended fields hidden, live preview, warnings, hide all and
   await expect(page.locator('#mrz-warning')).toBeVisible()
 
   await page.locator('#hide-all').click()
-  await expect(page.locator('#hidden-count')).toHaveText('10 de 10')
+  await expect(page.locator('#hidden-count')).toHaveText('12 de 12')
   await expect(page.locator('#can-warning')).toHaveCount(0)
   await expect(page.locator('#mrz-warning')).toHaveCount(0)
   await page.locator('#restore-all').click()
-  await expect(page.locator('#hidden-count')).toHaveText('0 de 10')
+  await expect(page.locator('#hidden-count')).toHaveText('0 de 12')
 })
 
 test('tapping a field on the card covers and uncovers it', async ({ page }) => {
@@ -302,7 +302,8 @@ test('manual black boxes: draw, move, undo, redo, delete, keyboard, and they rea
   // Keyboard: Add box puts a box in the centre; arrows move it onto the photo block.
   await page.locator('#add-box').click()
   await expect(page.locator('#preview')).toBeFocused()
-  await expect.poll(async () => await pixel(page, '#preview', 856, 540)).toEqual([0, 0, 0])
+  // Probed below the centre: the dashed outline of the visible name field runs along y = 50 %.
+  await expect.poll(async () => await pixel(page, '#preview', 856, 562)).toEqual([0, 0, 0])
   // Arrow keys move it by 0.5 % of the width; 50 presses take its left edge from 40 % to 15 %.
   for (let i = 0; i < 50; i++) await page.keyboard.press('ArrowLeft')
   await expect.poll(async () => await pixel(page, '#preview', ...photo)).toEqual([0, 0, 0])

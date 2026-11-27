@@ -47,6 +47,20 @@ export const DNI_4_0: ModelZones = {
       note: '"NUM SOPORTE CAA000000" and the laser-engraved clear window (illegible on the specimen; hidden as a precaution)',
     },
     { id: 'dateOfBirth', side: 'front', default: 'visible', rects: [box(0.785, 0.505, 0.985, 0.6)], note: '"NACIMIENTO 01 01 1980"' },
+    {
+      id: 'name',
+      side: 'front',
+      default: 'visible',
+      rects: [box(0.395, 0.3, 0.78, 0.41), box(0.395, 0.435, 0.78, 0.5)],
+      note: 'Surnames ("ESPAÑOLA ESPAÑOLA", two lines) and name ("CARMEN"), below their labels; widened for long names',
+    },
+    {
+      id: 'idNumber',
+      side: 'front',
+      default: 'visible',
+      rects: [box(0.395, 0.18, 0.77, 0.265), box(0.02, 0.195, 0.16, 0.245)],
+      note: '"DNI 99999999R" and the small copy of the number top left',
+    },
     // Back
     { id: 'mrz', side: 'back', default: 'hidden', rects: [box(0.03, 0.665, 0.97, 0.935)], note: 'Three MRZ lines (support number, DNI, birth and expiry dates, name)' },
     {

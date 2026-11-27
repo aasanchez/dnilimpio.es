@@ -67,8 +67,8 @@ export function sideRects (model: ModelZones, side: Side): PlacedRect[] {
   return model.zones.flatMap((z, zi) => (z.side === side ? z.rects.map((rect, ri) => ({ key: zoneKey(zi, ri), id: z.id, rect })) : []))
 }
 
-/** Data the MRZ repeats (docs/ZONES.md). Name and DNI number are also there but are not fields yet. */
-export const MRZ_REPEATS: readonly ZoneId[] = ['supportNumber', 'dateOfBirth', 'expiryDate']
+/** Data the MRZ repeats (docs/ZONES.md). */
+export const MRZ_REPEATS: readonly ZoneId[] = ['supportNumber', 'dateOfBirth', 'expiryDate', 'name', 'idNumber']
 
 /**
  * True when the document has an MRZ on one of the given sides, it stays visible, and the user hides
