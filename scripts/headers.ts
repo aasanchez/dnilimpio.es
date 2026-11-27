@@ -30,6 +30,25 @@ export const COMMON_HEADERS: Readonly<Record<string, string>> = {
   // One year, also for subdomains. No `preload`: getting off the browsers' preload list takes months.
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
   ...SECURITY_HEADERS,
+  // Network Error Logging off (ADR 0035). max_age 0 also makes browsers forget a policy they cached
+  // from an earlier visit. Cloudflare adds its own NEL and Report-To headers unless the zone setting
+  // is off; the post-deploy check fails while they are sent (reportingProblems below).
+  NEL: '{"max_age":0}',
+}
+
+/**
+ * Headers that would make the browser send reports to some address outside the CSP (ADR 0035):
+ * a NEL policy with a max_age above 0, Report-To or Reporting-Endpoints. Returns one line per problem.
+ */
+export function reportingProblems (headers: Headers): string[] {
+  const out: string[] = []
+  const nel = headers.get('nel')
+  if (nel !== null && nel !== COMMON_HEADERS['NEL']) out.push(`NEL: ${nel} (expected ${COMMON_HEADERS['NEL'] ?? ''} or none)`)
+  for (const name of ['report-to', 'reporting-endpoints']) {
+    const v = headers.get(name)
+    if (v !== null) out.push(`${name}: ${v}`)
+  }
+  return out
 }
 
 /**
