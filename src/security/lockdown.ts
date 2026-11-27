@@ -10,16 +10,21 @@
 import { guardWindow } from './frames.ts'
 
 /** Constructors that open peer-to-peer connections outside the CSP. */
+const defineProperty = Object.defineProperty
+
 export const BLOCKED_GLOBALS = ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCDataChannel', 'RTCRtpSender', 'RTCRtpReceiver', 'RTCRtpTransceiver', 'RTCIceTransport', 'RTCDtlsTransport', 'RTCSctpTransport'] as const
 
 /** Replaces each blocked constructor on `scope` with a read-only undefined. Returns the names removed. */
 export function blockGlobals (scope: object): string[] {
   const removed: string[] = []
-  for (const name of BLOCKED_GLOBALS) {
-    if (!(name in scope)) continue
+  // Indexed loop and a captured defineProperty: this also runs on a new frame's window, after page
+  // code could have replaced Array iterators or Object.defineProperty (ADR 0034).
+  for (let i = 0; i < BLOCKED_GLOBALS.length; i++) {
+    const name = BLOCKED_GLOBALS[i]
+    if (name === undefined || !(name in scope)) continue
     try {
-      Object.defineProperty(scope, name, { value: undefined, writable: false, configurable: false, enumerable: false })
-      removed.push(name)
+      defineProperty(scope, name, { value: undefined, writable: false, configurable: false, enumerable: false })
+      removed[removed.length] = name
     } catch {
       // A non-configurable property cannot be replaced; nothing else to do.
     }

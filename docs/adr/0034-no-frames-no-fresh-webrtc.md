@@ -42,7 +42,11 @@ the photo step: code that got a fresh copy on the start screen could keep it for
    `insertAdjacentElement`, `moveBefore`, `Range.insertNode`, `Range.surroundContents`, and the
    `document.body` setter) throws `NotSupportedError` when the node is, or holds, an `iframe`,
    `frame`, `object`, `embed`, `fencedframe` or `frameset`. A frame element outside a document has
-   no window. The wrappers cannot be replaced. HTML parsers stay closed by Trusted Types.
+   no window. The wrappers cannot be replaced. The check reads a node only through the native
+   `nodeType`, `localName` and `querySelector` captured at start-up, never through the node's own
+   properties, which page code could shadow (`Object.defineProperty(frame, 'nodeType', …)`), and it
+   uses no `Array`, `Set` or `String` method that page code could replace. HTML parsers stay
+   closed by Trusted Types.
 2. `window.open()` and `document.open()` with three arguments return `null`, as a blocked pop-up does.
 3. A second line, for a path not listed in 1: the `contentWindow` and `contentDocument` getters lock
    the frame's window (WebRTC removed, rules 1 to 3 applied there too) before they return it, and a
@@ -58,10 +62,14 @@ the photo step's policy (`tests/e2e/corners.spec.ts` rightly fails on any consol
 directive that only adds an error is not worth it. Add it to `scripts/csp.ts` and
 `src/security/intake-lockdown.ts` (with an ADR update) when a browser ships it.
 
-**A canary test** (`tests/e2e/webrtc-frames.spec.ts`) tries 24 routes and fails if any of them opens
+**A canary test** (`tests/e2e/webrtc-frames.spec.ts`) tries 27 routes, including a frame that
+shadows its own `nodeType` and built-ins replaced before the insertion, and reads each new window
+through `window[i]`, which no getter guards. It fails if any of them opens
 a peer connection with a data channel. It first runs the same routes in a page without the app and
 requires the main ones to work there, so it cannot pass by testing nothing. Without rules 1 and 2,
-20 routes reach WebRTC in the app; with them, none does.
+20 of the first 24 routes reached WebRTC in the app; with them, none does. A first version that
+read the node's own properties let the disguised frame and the replaced built-ins through (found
+in review); the test now covers both.
 
 ## Consequences
 

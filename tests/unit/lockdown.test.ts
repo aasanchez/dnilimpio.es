@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
 import { BLOCKED_GLOBALS, blockGlobals, isFramed } from '../../src/security/lockdown.ts'
-import { FRAME_TAGS, INSERTERS, guardWindow, holdsFrame, refuseFramesIn } from '../../src/security/frames.ts'
+import { FRAME_TAGS, INSERTERS, guardWindow, holdsFrame, nativesOf, refuseFramesIn } from '../../src/security/frames.ts'
 
 describe('blockGlobals', () => {
   it('replaces the WebRTC constructors with a read-only undefined and leaves the rest', () => {
@@ -37,7 +37,6 @@ describe('frame guard (ADR 0034)', () => {
 
   it('finds a frame element, alone or inside an element or fragment', () => {
     for (const tag of FRAME_TAGS) expect(holdsFrame(el(tag)), tag).toBe(true)
-    expect(holdsFrame(el('IFRAME'))).toBe(true)
     expect(holdsFrame(el('div', 'iframe'))).toBe(true)
     expect(holdsFrame({ nodeType: 11, querySelector: () => ({}) })).toBe(true)
   })
@@ -47,6 +46,32 @@ describe('frame guard (ADR 0034)', () => {
     expect(holdsFrame('<iframe>')).toBe(false)
     expect(holdsFrame(null)).toBe(false)
     expect(holdsFrame(undefined)).toBe(false)
+  })
+  it('reads nodes only through the native accessors, so a node cannot disguise itself', () => {
+    // A fake DOM: the "native" getters read a hidden slot, as the browser reads an internal slot.
+    const slot = new WeakMap<object, { type: number, name: string }>()
+    const read = (o: unknown): { type: number, name: string } => { const v = slot.get(o as object); if (v === undefined) throw new TypeError('Illegal invocation'); return v }
+    class Node { get nodeType (): number { return read(this).type } }
+    class Element extends Node {
+      get localName (): string { return read(this).name }
+      querySelector (): null { return null }
+      querySelectorAll (): never[] { return [] }
+      remove (): void {}
+    }
+    class DocumentFragment extends Node { querySelector (): null { return null } }
+    const natives = nativesOf({ Node, Element, DocumentFragment })
+    expect(natives).not.toBeNull()
+    const frame = new Element()
+    slot.set(frame, { type: 1, name: 'iframe' })
+    Object.defineProperty(frame, 'nodeType', { value: 3 })
+    Object.defineProperty(frame, 'localName', { value: 'p' })
+    expect(holdsFrame(frame, natives)).toBe(true)
+    expect(holdsFrame(frame)).toBe(false) // what the disguise did to a check that trusts the node
+    const div = new Element()
+    slot.set(div, { type: 1, name: 'div' })
+    expect(holdsFrame(div, natives)).toBe(false)
+    expect(holdsFrame({ nodeType: 1, localName: 'iframe' }, natives)).toBe(false) // not a node: the native method refuses it
+    expect(nativesOf({})).toBeNull()
   })
   it('refuses a node that cannot be searched', () => {
     expect(holdsFrame({ nodeType: 1, localName: 'div', querySelector: () => { throw new Error('x') } })).toBe(true)
