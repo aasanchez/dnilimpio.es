@@ -249,7 +249,7 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 redaction, the watermark and the PDF all run in your browser. The app does not upload your
 document. The site sends no photo, file name or data read from the card to any server. It uses no
 cookies, trackers or profiles, and no third-party script runs in the page that holds your photos.
-The site has no analytics code: the host counts the requests it serves (see
+The site has no automatic analytics: the host counts the requests it serves (see
 [Visit counts](#visit-counts)). After you clear everything, a separate page that holds no document
 can send anonymous usage stats, only if you tap Send (see [Usage stats (opt-in)](#usage-stats-opt-in)). The page downloads only its own files; once they
 are on your device you can go offline. Your browser keeps those files and one date (see **No
@@ -275,8 +275,9 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   ([ADR 0034](docs/adr/0034-no-frames-no-fresh-webrtc.md)). The CSP `webrtc 'block'` directive
   would do this in the policy itself, but no browser implements it yet.
 - **Deny by default.** After the first visit, the service worker answers only the exact files of this
-  build. Any other request from the page or its workers (another address, a query string, another
-  method) is refused and never reaches the network, so even a same-origin request cannot carry data
+  build. A page load inside the site gets the cached app page, a static page of the build or a
+  language redirect, never the network. Any other request from the page or its workers (another
+  address, a query string, another method) is refused and never reaches the network, so even a same-origin request cannot carry data
   out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). The one exception is the opt-in stats
   POST, and only from the thanks page ([ADR 0029](docs/adr/0029-opt-in-usage-stats.md)). An end-to-end test runs a whole document workflow with
   fictional card values and checks that no request is sent and none carries those values
@@ -328,7 +329,7 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   your browser. The OCR engine (PP-OCRv6 tiny on ONNX Runtime, about 9 MB) comes from this site,
   never from a third party. Its files are downloaded only the first time OCR is used and are checked
   against their hash before use. The worker runs under its own strict CSP: it can read its own files in `ocr/` and
-  cannot send requests anywhere. If OCR cannot run (offline before the first download, or no service
+  cannot send requests anywhere else. If OCR cannot run (offline before the first download, or no service
   worker, or one that does not answer in time), it is switched off and you choose by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md),
   [ADR 0019](docs/adr/0019-ppocr-and-text-detection.md)).
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
@@ -415,7 +416,8 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **The service worker does not protect against code already in the page.** Code running with the
   page's privileges could unregister the worker, delete its caches or navigate away. The worker
   stops a missing or foreign worker setup from going unnoticed, not a compromised page.
-- **No browser rule can stop a page from navigating to a URL.** The protection there is that only
+- **No browser rule can stop a page from navigating to a URL.** The CSP stops the page from loading
+  anything from, or connecting to, another site, but not from opening one. The protection there is that only
   this build's verified code runs (CSP, SRI, the locked dependency list) and that the code never
   navigates with your data (enforced by the linter).
 - **Sharing is your choice.** **Share** hands the PDF to the app you pick through the system share
@@ -438,7 +440,7 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 
 ### Visit counts
 
-The site has no analytics code: no script, no frame, no tracking pixel and no cookie
+The site has no automatic analytics: no script, no frame, no tracking pixel and no cookie
 ([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)).
 
 - **Where the counts come from.** The host counts the requests it serves, as every web server does.
@@ -484,7 +486,9 @@ The app can send anonymous usage figures, only when you ask, and only after your
 - **Limits.** Anyone can post a valid row, so the numbers are indications, not proof. The
   `Sec-Fetch-Site` check stops other sites' pages only, not scripts. A rate limit
   (`ratelimits` in [`wrangler.jsonc`](wrangler.jsonc)) caps valid rows at 60 per minute per
-  Cloudflare location and answers 429 above that. It uses one key for all senders, not the IP
+  Cloudflare location and answers 429 above that. The fixed list limits what a row can say, not who
+  wrote it: code running on the thanks page could pick values (the 7-character `build` field
+  among them) to carry a few dozen bits. The app's own code sets each value from the session. It uses one key for all senders, not the IP
   address, so a flood can also make real sends fail for that minute.
 - **Tests.** [`tests/unit/stats.test.ts`](tests/unit/stats.test.ts) checks the list, the device
   classes, the Worker (including a body over 600 bytes, also when it has no Content-Length) and the
@@ -549,6 +553,13 @@ the app does not need cross-origin isolation.
 Cloudflare added Network Error Logging headers that ask the browser to report failed requests to
 Cloudflare. Every file now turns them off, the zone setting is off, and the post-deploy check fails
 if they come back ([ADR 0035](docs/adr/0035-no-network-error-logging.md)).
+
+An audit made with the start screen's audit prompt (27 November 2026, findings F-01 to F-16) found
+no document data leaving the device. It found claims stated more strongly than the code supports:
+the page cannot load from or connect to another site but can still navigate to one; the stats
+receiver also stores the country; the opt-in stats are usage analytics; and the service worker
+answers page loads with the app page instead of refusing them. The audit prompt, this README and
+the stats text now say exactly that.
 
 ## Audit it yourself
 

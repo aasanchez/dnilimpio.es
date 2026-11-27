@@ -190,7 +190,7 @@
   "thanksTitle": "Anonyma användningsdata",
   "thanksLead": "Bilderna, PDF-filen och dina val är rensade från appen.",
   "statsTitle": "Vill du hjälpa oss bli bättre?",
-  "statsLead": "Frivilligt. Anonyma siffror: vilka fält du täckte, om AI:n gissade rätt dokument och typ av enhet. Inget från ditt dokument: ingen text, ingen bild, inga positioner. Vi sparar inte din IP-adress och använder inga kakor.",
+  "statsLead": "Frivilligt. Anonyma siffror: vilka fält du täckte, om AI:n gissade rätt dokument och typ av enhet. Inget från ditt dokument: ingen text, ingen bild, inga positioner. Från anslutningen sparar vi bara landet, inte din IP-adress. Inga kakor.",
   "statsPayload": "Det här är exakt vad som skickas:",
   "statsSend": "Skicka anonym statistik",
   "statsSent": "Tack!",

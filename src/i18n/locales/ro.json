@@ -190,7 +190,7 @@
   "thanksTitle": "Date de utilizare anonime",
   "thanksLead": "Fotografiile, PDF-ul și alegerile tale au fost șterse din aplicație.",
   "statsTitle": "Ne ajuți să ne îmbunătățim?",
-  "statsLead": "Opțional. Date anonime: ce câmpuri ai acoperit, dacă AI-ul a recunoscut corect documentul și tipul de dispozitiv. Nimic din documentul tău: fără text, fără imagine, fără poziții. Nu păstrăm adresa ta IP și nu folosim cookie-uri.",
+  "statsLead": "Opțional. Date anonime: ce câmpuri ai acoperit, dacă AI-ul a recunoscut corect documentul și tipul de dispozitiv. Nimic din documentul tău: fără text, fără imagine, fără poziții. Din conexiune păstrăm doar țara, nu adresa ta IP. Fără cookie-uri.",
   "statsPayload": "Exact asta se trimite:",
   "statsSend": "Trimite statistici anonime",
   "statsSent": "Mulțumim!",

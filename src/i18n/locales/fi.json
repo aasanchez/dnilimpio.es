@@ -190,7 +190,7 @@
   "thanksTitle": "Nimettömät käyttötiedot",
   "thanksLead": "Kuvat, PDF ja valintasi on tyhjennetty sovelluksesta.",
   "statsTitle": "Autatko meitä parantamaan?",
-  "statsLead": "Vapaaehtoista. Nimettömiä lukuja: mitkä kentät peitit, tunnistiko tekoäly asiakirjan oikein ja laitteen tyyppi. Ei mitään asiakirjastasi: ei tekstiä, ei kuvaa, ei sijainteja. Emme tallenna IP-osoitettasi emmekä käytä evästeitä.",
+  "statsLead": "Vapaaehtoista. Nimettömiä lukuja: mitkä kentät peitit, tunnistiko tekoäly asiakirjan oikein ja laitteen tyyppi. Ei mitään asiakirjastasi: ei tekstiä, ei kuvaa, ei sijainteja. Yhteydestä tallennamme vain maan, emme IP-osoitettasi. Ei evästeitä.",
   "statsPayload": "Tämä lähetetään täsmälleen:",
   "statsSend": "Lähetä nimettömät tilastot",
   "statsSent": "Kiitos!",

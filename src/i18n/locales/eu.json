@@ -190,7 +190,7 @@
   "thanksTitle": "Erabilera-datu anonimoak",
   "thanksLead": "Argazkiak, PDFa eta zure aukerak aplikaziotik ezabatu dira.",
   "statsTitle": "Hobetzen lagunduko diguzu?",
-  "statsLead": "Aukerakoa. Datu anonimoak dira: zein eremu estali dituzun, AAk dokumentua asmatu duen eta gailu mota. Zure dokumentuko ezer ez: ez testurik, ez irudirik, ez posiziorik. Ez dugu zure IPa gordetzen eta ez dugu cookierik erabiltzen.",
+  "statsLead": "Aukerakoa. Datu anonimoak dira: zein eremu estali dituzun, AAk dokumentua asmatu duen eta gailu mota. Zure dokumentuko ezer ez: ez testurik, ez irudirik, ez posiziorik. Konexiotik herrialdea bakarrik gordetzen dugu, ez zure IPa. Cookierik ez.",
   "statsPayload": "Hau da zehazki bidaltzen dena:",
   "statsSend": "Bidali estatistika anonimoak",
   "statsSent": "Eskerrik asko!",

@@ -190,7 +190,7 @@
   "thanksTitle": "Anonieme gebruiksgegevens",
   "thanksLead": "De foto's, de pdf en je keuzes zijn uit de app gewist.",
   "statsTitle": "Help je ons verbeteren?",
-  "statsLead": "Optioneel. Anonieme cijfers: welke velden je hebt afgedekt, of de AI het document goed had en het soort apparaat. Niets uit je document: geen tekst, geen beeld, geen posities. We bewaren je IP-adres niet en gebruiken geen cookies.",
+  "statsLead": "Optioneel. Anonieme cijfers: welke velden je hebt afgedekt, of de AI het document goed had en het soort apparaat. Niets uit je document: geen tekst, geen beeld, geen posities. Van de verbinding bewaren we alleen het land, niet je IP-adres. Geen cookies.",
   "statsPayload": "Dit is precies wat er wordt verstuurd:",
   "statsSend": "Anonieme statistieken sturen",
   "statsSent": "Bedankt!",
