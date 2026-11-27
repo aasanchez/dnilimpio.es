@@ -107,9 +107,9 @@ test('front only: the editor has one side and only front fields, and the PDF has
   await expect(page.locator('h2')).toHaveText('Tu PDF está listo')
   await expect(page.locator('.done .term')).toContainText('1 pp')
   await expect(page.locator('#download-status')).toHaveText('PDF creado. Búscalo en tu carpeta de descargas.')
+  // Cleared first, then the thanks page opens (ADR 0029), as with both sides.
   await page.locator('#reset-done').click()
-  await expect(page.locator('h2')).toHaveText('Foto del anverso')
-  await expect(page.locator('#status-front')).toHaveText('')
+  await expect(page.locator('#thanks-title')).toBeVisible()
 })
 
 test('front only: going back from the editor and adding the back brings both sides, back fields still hidden', async ({ page }) => {
