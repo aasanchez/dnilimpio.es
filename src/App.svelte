@@ -6,6 +6,8 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import { dir, pickLang, t, type Key, type Lang } from './i18n/index.ts'
+  import { BRAND } from './seo/site.ts'
+  import { applyHead } from './seo/head.ts'
   import { emptyAlignState, resetSide } from './ui/align-state.ts'
   import type { DocModel, Side, ZoneId } from './zones/types.ts'
   import { DEFAULT_DOC, choiceOf, documentOf, pixelSize, type DniVersion } from './zones/documents.ts'
@@ -27,9 +29,6 @@
   import type CardGuideT from './components/CardGuide.svelte'
   import { emptyEditState, type Phase } from './ui/edit-state.ts'
   import type { DetectOutcome, PhotoVia, SessionInput } from './stats/session.ts'
-
-  /** The product name. Not translated: it is the brand and the domain (dnitapado.es). */
-  const BRAND = 'DNI Tapado.es'
 
   type Step = 'home' | 'doc' | 'capture' | 'auto' | 'align' | 'edit'
 
@@ -116,7 +115,7 @@
   $effect(() => {
     document.documentElement.lang = lang
     document.documentElement.dir = dir(lang)
-    document.title = BRAND
+    applyHead(lang)
   })
 
   /** Moves focus to the new screen's heading so screen readers announce it, and scrolls to the top. */

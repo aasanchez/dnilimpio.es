@@ -22,7 +22,7 @@ never write "nothing stored" or "never leaves" without that context.
 - The repository is still named `aasanchez/dnilimpio.es`. Do not rename repository URLs, the cache
   prefix `dnilimpio-` or the storage key `dnilimpio.noticeDismissedAt`: renaming them orphans
   caches and shows the notice again to returning users.
-- The brand is the constant `BRAND` in `src/App.svelte`, not a translated string. Use
+- The brand is the constant `BRAND` in `src/seo/site.ts`, not a translated string. Use
   "DNI Tapado.es" in new user-facing text.
 - Owner: Alexis (`aasanchez`). Licence: AGPL-3.0-or-later, with exceptions listed in the README.
 
