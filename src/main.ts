@@ -44,7 +44,12 @@ await loadLang(pickLang(navigator.languages))
 
 const target = document.getElementById('app')
 if (target && isFramed(window)) showFramed(target)
-else if (target) mount(App, { target })
+else if (target) {
+  // The build puts a static copy of the Spanish start screen here, for search engines and a fast
+  // first paint (ADR 0041). The live app replaces it; it does not hydrate it.
+  target.replaceChildren()
+  mount(App, { target })
+}
 
 // Load the PDF code in the background once the page is idle: the first render does not wait for it,
 // and it is ready before the review step. A failure here is retried when the user downloads.

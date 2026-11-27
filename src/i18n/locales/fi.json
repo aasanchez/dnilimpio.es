@@ -233,5 +233,7 @@
   "findFailed": "Automaattinen haku ei toiminut tällä kertaa. Piilota tiedot käsin.",
   "framed": "Turvallisuussyistä tämä työkalu toimii vain omassa välilehdessään. Avaa se tästä.",
   "guideOpen": "Mitä kortissani on?",
-  "guideAbout": "Tietoa: {field}"
+  "guideAbout": "Tietoa: {field}",
+  "seoTitle": "Peitä DNI-kortin tiedot ja lisää vesileima",
+  "seoDescription": "Peitä espanjalaisen DNI- tai TIE-korttisi tiedot ja lisää vesileima ennen kuin lähetät kopion. Ilmainen, ei rekisteröitymistä. Asiakirja käsitellään laitteellasi."
 }

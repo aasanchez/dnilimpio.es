@@ -31,6 +31,8 @@ export const MODEL_DIR = 'assets/ml/'
 
 /**
  * Files that belong in the offline cache: everything the build wrote except the worker and dotfiles.
+ * That includes robots.txt, sitemap.xml and the link preview image (src/seo/site.ts): a page the
+ * worker controls reaches them only through route(), like every other file of the build.
  * The build publishes no source maps (ADR 0022) and refuses to finish if one exists; a `.map` is
  * never listed, so the worker refuses it like any unknown path.
  */

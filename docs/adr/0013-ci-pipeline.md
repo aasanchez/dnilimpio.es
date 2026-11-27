@@ -84,3 +84,18 @@ sit in fixed stages: build, test, code analysis, package, deploy, acceptance.
   builds, signs and deploys the site, so a vulnerable build tool can change what ships.
 - The audit fails at high or critical, so GitHub's failed-run notification is the alert. `outdated`
   only reports. Neither job installs `node_modules` (both read `pnpm-lock.yaml`), so there is no cache.
+
+### Amendment (2026-11-27): Rebase and merge by default
+
+- Decided by Alexis. Pull requests are merged with **Rebase and merge**, so `master` keeps each
+  logical step as its own commit and stays linear. Squash and merge remains for a branch whose
+  commits cannot be made clean, or that contains a merge commit.
+- The safety argument of the amendment of 2026-11-25 still holds: branch protection requires an
+  up-to-date branch, so the tree of the last rebased commit is the tested tree. GitHub rewrites the
+  commits on merge, so `reproducible` still builds the release commit again.
+- CI tests only the last commit of a push. The commits before it land on `master` untested, so each
+  commit must build and pass `pnpm typecheck` and `pnpm test` on its own
+  (`git rebase --exec … origin/master`). This keeps `git bisect` and `git revert` usable.
+- `master` deploys once per push, not once per commit, so a pull request of several commits still
+  makes one release.
+- Settings on GitHub: allow Rebase and merge (keep Squash and merge allowed for the fallback).

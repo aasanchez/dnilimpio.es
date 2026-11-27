@@ -233,5 +233,7 @@
   "findFailed": "Automatic finding did not work this time. Hide the data by hand.",
   "framed": "For your security, this tool only works in its own tab. Open it here.",
   "guideOpen": "What is on my card?",
-  "guideAbout": "About: {field}"
+  "guideAbout": "About: {field}",
+  "seoTitle": "Cover data on your Spanish ID and add a watermark",
+  "seoDescription": "Cover the data on your Spanish DNI or TIE and add a watermark before you send a copy. Free, no sign-up. The document is processed on your device."
 }

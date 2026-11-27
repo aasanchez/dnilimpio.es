@@ -4,10 +4,14 @@ import { defaultClientConditions, defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
 import { normalizeSha, normalizeVersion } from './src/version/build-info.ts'
-import { base64Import, hostHeadersInPreview, ocrAssets, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
+import { base64Import, hostHeadersInPreview, ocrAssets, prerenderStart, searchFiles, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
+import { DEFAULT_SITE_URL, normalizeSiteUrl } from './src/seo/site.ts'
 
 // Override with REPO_URL for forks.
 const REPO_URL = process.env['REPO_URL'] ?? 'https://github.com/aasanchez/dnilimpio.es'
+// The site's public address, for search engines and link previews only (src/seo/site.ts). Forks set
+// SITE_URL to their own address.
+const SITE_URL = normalizeSiteUrl(process.env['SITE_URL'] ?? DEFAULT_SITE_URL)
 
 // Version shown in the footer (src/version/build-info.ts). CI sets GITHUB_SHA; locally it comes from
 // git; without either the footer shows no commit. SOURCE_DATE_EPOCH (seconds) fixes the build time.
@@ -32,6 +36,7 @@ const isModelPart = (ids: readonly string[]): boolean => ids.some((id) => /[\\/]
 export default defineConfig({
   define: {
     __REPO_URL__: JSON.stringify(REPO_URL),
+    __SITE_URL__: JSON.stringify(SITE_URL),
     __BUILD_SHA__: JSON.stringify(BUILD_SHA),
     __BUILD_VERSION__: JSON.stringify(BUILD_VERSION),
     __BUILD_TIME__: JSON.stringify(BUILD_TIME),
@@ -75,5 +80,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [base64Import(), tailwindcss(), svelte(), securityHeaders(), ocrAssets(), subresourceIntegrity(), hostHeadersInPreview()],
+  plugins: [base64Import(), tailwindcss(), svelte(), searchFiles(SITE_URL), securityHeaders(), prerenderStart(), ocrAssets(), subresourceIntegrity(), hostHeadersInPreview()],
 })

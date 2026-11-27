@@ -56,6 +56,8 @@ for (const lang of ['es', 'ar'] as const) {
     test('start screen', async ({ page }) => {
       await page.goto('/')
       await expect(page.locator('html')).toHaveAttribute('lang', lang)
+      // The served HTML already shows a Spanish copy of this screen (ADR 0041): shoot the live app.
+      await expect(page.locator('[data-prerendered]')).toHaveCount(0)
       await expect(page.locator('#start')).toBeVisible()
       await shot(page, `${lang}-1-start`)
       await shot(page, `${lang}-1-start-footer`, { bottom: true })

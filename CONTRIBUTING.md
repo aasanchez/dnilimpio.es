@@ -99,8 +99,18 @@ The [README test section](README.md#tests) describes what each test file covers.
 9. **Open the pull request** against `master`. Say what changes and why, and how you tested it.
    For visual changes, add a screenshot made with a synthetic or specimen image.
 
-Pull requests are merged with **Squash and merge**: the whole pull request becomes one commit on
-`master`, and its title becomes the commit message. Write the title accordingly.
+Pull requests are merged with **Rebase and merge**: each commit of the pull request lands on
+`master` as it is, and `master` stays linear. So:
+
+- Make each commit one logical step that builds and passes `pnpm typecheck` and `pnpm test`.
+- Give each commit a conventional subject, such as `feat(editor): …` or `fix(sw): …`. Write the
+  pull request title in the same form.
+- Fold review fixes into the commit they fix (`git commit --fixup=<sha>`, then
+  `git rebase --autosquash origin/master`). Do not leave "fix review" or "wip" commits.
+- Update your branch by rebasing it onto `master`, then push with `git push --force-with-lease`.
+
+When the commits cannot be made clean, or the branch contains a merge commit, the pull request is
+merged with **Squash and merge** instead, and its title becomes the one commit message.
 
 ## Rules every change must respect
 

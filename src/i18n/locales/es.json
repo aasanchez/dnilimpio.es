@@ -233,5 +233,7 @@
   "findFailed": "La búsqueda automática no ha funcionado esta vez. Tapa los datos a mano.",
   "framed": "Por seguridad, esta herramienta solo funciona en su propia pestaña. Ábrela aquí.",
   "guideOpen": "¿Qué hay en mi tarjeta?",
-  "guideAbout": "Qué es: {field}"
+  "guideAbout": "Qué es: {field}",
+  "seoTitle": "Tapar datos del DNI y poner marca de agua",
+  "seoDescription": "Tapa los datos de tu DNI o TIE y añade una marca de agua antes de enviar una copia. Gratis y sin registro. El documento se procesa en tu dispositivo."
 }

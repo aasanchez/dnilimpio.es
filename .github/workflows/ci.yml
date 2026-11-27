@@ -12,15 +12,15 @@
 #                      └─ unit                           ├─ ci-ok
 #   reuse · audit · dependency-review · workflow-lint ───┘
 #
-# master (push or manual run): the code was validated on its pull request (squash merge of a branch
-# that branch protection requires to be up to date), so it is not validated again. Build, deploy, and
+# master (push or manual run): the code was validated on its pull request (rebase or squash merge of
+# a branch that branch protection requires to be up to date), so it is not validated again. Build, deploy, and
 # check the live site:
 #
 #   changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy (dnitapado.es) ─┬─ smoke ─ lighthouse-live
 #                                                                             ├─ attest ─ verify-provenance
 #                                                                             └─ release (tag, GitHub Release)
 #
-# The release commit is a new commit (squash merge), so it is rebuilt and compared once more before
+# The release commit is a new commit (both merge methods rewrite it), so it is rebuilt and compared once more before
 # it deploys, and its provenance is signed, then checked with a pinned identity.
 #
 # dnitapado.es is served by Cloudflare Workers, the only host, which sends the HTTP security headers
@@ -345,7 +345,7 @@ jobs:
 
   # Builds the same commit again on a fresh runner and compares every file with the `dist` artifact.
   # They must be identical: the deployed site can be rebuilt from source and checked (ADR 0013).
-  # Runs on pull requests and on the release commit itself: the squash merge makes a new commit, so the
+  # Runs on pull requests and on the release commit itself: the merge makes a new commit, so the
   # check on the pull request says nothing about the commit that deploys. Deploy waits for it.
   reproducible:
     needs: [changes, build]

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Dependabot version updates: one pull request per group, every Wednesday at 16:00 Madrid time,
 # the same slot as the dependency check (.github/workflows/deps-check.yml).
-# Each pull request runs the full CI; nothing merges without review (Squash and merge).
+# Each pull request runs the full CI; nothing merges without review (Rebase and merge).
 # Options: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 version: 2
 updates:

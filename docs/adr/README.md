@@ -18,7 +18,7 @@ project specification on purpose).
 | [0010](0010-smart-field-finding.md) | Smart field finding: OCR text patterns and checks; results become ordinary undoable boxes | accepted |
 | [0011](0011-document-detection.md) | Document type detected from the MRZ after the photos; it only preselects the picker | accepted; screen order changed by 0012, DNI fallback by 0021, TIE fallback by 0028 |
 | [0012](0012-automatic-straightening.md) | Automatic straightening: find, turn (sideways, upside down) and straighten both photos; corner screen only on request | accepted |
-| [0013](0013-ci-pipeline.md) | CI split into small single-purpose jobs in logical stages; one required check | accepted; release job added by 0032 |
+| [0013](0013-ci-pipeline.md) | CI split into small single-purpose jobs in logical stages; one required check | accepted; release job added by 0032; Rebase and merge by default (2026-11-27) |
 | [0014](0014-card-guide.md) | Card guide: every element explained with official citations; no source, no claim | accepted |
 | [0015](0015-cookieless-analytics.md) | Cookieless visit counts with Cloudflare Web Analytics, public site only | superseded by 0023 |
 | [0016](0016-source-maps-in-devtools.md) | Source maps readable in the developer tools: `connect-src 'self'`; the service worker serves only this build's maps | superseded by 0022 |
@@ -42,3 +42,4 @@ project specification on purpose).
 | [0034](0034-no-frames-no-fresh-webrtc.md) | No frames, no pop-ups: no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits for browser support | accepted |
 | [0035](0035-no-network-error-logging.md) | No Network Error Logging: `NEL: {"max_age":0}` on every file, NEL off in the zone settings, no `Report-To`; the post-deploy check fails otherwise | accepted |
 | [0036](0036-visual-regression-in-pinned-container.md) | Screenshot tests (12 phone screens, Spanish and Arabic) run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual` | accepted |
+| [0041](0041-prerendered-start-screen.md) | Prerendered start screen: the Spanish start screen rendered from `App.svelte` into `index.html` at build time, inert until the app replaces it; no font preload | accepted |

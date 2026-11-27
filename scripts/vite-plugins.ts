@@ -9,8 +9,11 @@ import { dirname, join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, THANKS_CSP, cspWithScriptHashes } from './csp.ts'
 import { headersFor, hostHeaderRules, type HeaderRule } from './headers.ts'
+import { insertIntoApp, renderHome } from './prerender.ts'
 import { STATS_PATH, handleStats } from '../src/stats/endpoint.ts'
 import { SW_FILE, THANKS_PAGE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
+import { robotsTxt, sitemapXml, staticHead } from '../src/seo/site.ts'
+import es from '../src/i18n/locales/es.json' with { type: 'json' }
 
 export function securityHeaders (): Plugin {
   return {
@@ -28,6 +31,52 @@ export function securityHeaders (): Plugin {
           anchor,
           `${anchor}\n    <meta http-equiv="Content-Security-Policy" content="${csp}" />\n    <meta name="referrer" content="no-referrer" />`
         )
+      },
+    },
+  }
+}
+
+/**
+ * Search and link-preview files (src/seo/site.ts): the start page's title, description and Open Graph
+ * tags, in Spanish from es.json, in place of the `<!-- seo-head -->` marker; and robots.txt and
+ * sitemap.xml, which need the site's absolute address (`site`). The page's own URLs stay relative.
+ */
+export function searchFiles (site: string): Plugin {
+  const MARKER = '<!-- seo-head -->'
+  return {
+    name: 'dni-redactor:search-files',
+    transformIndexHtml: {
+      order: 'pre',
+      handler: (html, ctx) => {
+        if (ctx.path.endsWith(`/${THANKS_PAGE}`)) return html
+        if (!html.includes(MARKER)) throw new Error(`${ctx.path} must contain ${MARKER}`)
+        return html.replace(MARKER, staticHead(site, es))
+      },
+    },
+    generateBundle () {
+      this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(site) })
+      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml([{ loc: site }]) })
+    },
+  }
+}
+
+/**
+ * Prerendered start screen (ADR 0041): the Spanish start screen as plain HTML inside <main id="app">
+ * of index.html. The thanks page is left as it is.
+ */
+export function prerenderStart (): Plugin {
+  let config: ResolvedConfig
+  return {
+    name: 'dni-redactor:prerender',
+    apply: 'build',
+    configResolved (c) {
+      config = c
+    },
+    transformIndexHtml: {
+      order: 'post',
+      handler: async (html, ctx) => {
+        if (ctx.path.endsWith(`/${THANKS_PAGE}`)) return html
+        return insertIntoApp(html, await renderHome(config.root, config.define ?? {}))
       },
     },
   }
