@@ -23,8 +23,8 @@
     watermark: string
     greyscale: boolean
     onReset: () => void
-    /** Once the PDF is saved or shared: clears everything and opens the thanks page (ADR 0029). */
-    onFinish: () => void
+    /** Once the PDF is saved or shared: clears everything and opens the thanks page (ADR 0029), after `delay` ms. */
+    onFinish: (delay?: number) => void
   } = $props()
 
   let confirmed = $state(false)
@@ -95,7 +95,8 @@
       status = 'downloaded'
       // The browser reads the download link a moment after the click (Safari's download prompt
       // later still); opening the thanks page ends this document and its link. The buttons stay off.
-      setTimeout(() => { if (mounted) onFinish() }, DOWNLOAD_HANDOFF_MS)
+      // The shell keeps the timer, so leaving the review meanwhile still clears everything.
+      onFinish(DOWNLOAD_HANDOFF_MS)
     } catch {
       status = 'error'
       busy = false

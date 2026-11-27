@@ -35,7 +35,7 @@
     onAdjust: (side: Side) => void
     onReset: () => void
     /** After "Download and clear" or "Share and clear" (Review.svelte): clear, then open the thanks page. */
-    onFinish: () => void
+    onFinish: (delay?: number) => void
     /** Called after the phase changes, so the shell can move focus to the new heading. */
     onPhase: () => void
     /** Opens the card guide on this field's entry. */

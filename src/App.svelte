@@ -187,9 +187,11 @@
   /**
    * "Download and clear" or "Share and clear", once the PDF has left: the usage figures of this
    * session (ids and counts only, src/stats/session.ts) are taken first, then everything is cleared,
-   * then the photo-free thanks page opens. It sends nothing by itself; there the person may choose to send them (ADR 0029).
+   * then the photo-free thanks page opens. It sends nothing by itself; there the person may choose
+   * to send them (ADR 0029). `delay` gives a download time to start (DOWNLOAD_HANDOFF_MS). The
+   * timer lives here, not in the review, so Back or the brand link during it cannot cancel the clear.
    */
-  function finish (): void {
+  function finish (delay = 0): void {
     const ids = new Set(doc.zones.map((z) => z.id))
     const input: SessionInput = {
       doc: docModel,
@@ -204,6 +206,14 @@
       via: (['front', 'back'] as const).map((s) => photoVia[s]).filter((v): v is PhotoVia => v !== null),
       ocr: ocrRan(),
     }
+    if (delay > 0) {
+      setTimeout(() => { clearAndThank(input) }, delay)
+      return
+    }
+    clearAndThank(input)
+  }
+
+  function clearAndThank (input: SessionInput): void {
     reset()
     // The stats code is its own small chunk (precached like the rest), so the start page does not
     // carry it. If it cannot load, the photos are already cleared and the app stays on the start of
