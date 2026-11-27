@@ -169,7 +169,7 @@ for (const { lang, locale, dir } of [{ lang: 'es', locale: 'es-ES', dir: 'ltr' }
       await page.keyboard.press('Space')
       await tabTo(page, '#download')
       const [download] = await Promise.all([page.waitForEvent('download'), page.keyboard.press('Enter')])
-      expect(download.suggestedFilename()).toBe('protected-document.pdf')
+      expect(download.suggestedFilename()).toBe('redacted-dni.pdf')
       await expect(page.locator('#stats-link')).toBeVisible()
       await expect(page.locator('#download')).toBeFocused()
       expect(await tabProblems(page), 'review').toEqual([])
