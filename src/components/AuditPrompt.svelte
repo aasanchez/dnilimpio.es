@@ -35,8 +35,7 @@
 
 <button type="button" class="link-btn {extra}" {id} onclick={open}>{t(lang, 'auditOpen')} <span class="flip" aria-hidden="true">→</span></button>
 
-<dialog class="audit dialog-win" bind:this={dialog} aria-labelledby="{id}-title">
-  <div class="winbar"><i></i><i></i><i></i><span class="title">audit.prompt</span></div>
+<dialog class="audit dialog-panel" bind:this={dialog} aria-labelledby="{id}-title">
   <div class="flex flex-col gap-2.5 p-4 text-start font-sans text-base leading-normal">
     <p class="kicker">{t(lang, 'auditKicker')}</p>
     <h2 id="{id}-title">{t(lang, 'auditTitle')}</h2>

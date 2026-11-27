@@ -191,7 +191,7 @@
     <!-- Big, short-lived banner when the camera moves on to the back. -->
     <p class="live-flip pointer-events-none absolute inset-0 m-0 grid animate-live-flip place-items-center motion-reduce:animate-none" aria-hidden="true"><span class="rounded-lg border-3 border-coal bg-orange px-5 py-2 text-4xl font-extrabold text-coal uppercase shadow-[6px_6px_0_var(--color-coal)]">{t(lang, side === 'front' ? 'tabFront' : 'tabBack')}</span></p>
   {/if}
-  <p class="mx-4 mt-3 min-h-11 rounded-md border-2 border-cream px-3 py-2 text-center font-mono text-sm [&.ok]:border-ok [&.ok]:text-ok" class:ok={tip === 'ready' && !notice} id="live-tip" role="status">{message}</p>
+  <p class="mx-4 mt-3 min-h-11 rounded-md border-2 border-cream px-3 py-2 text-center text-sm font-semibold [&.ok]:border-ok [&.ok]:text-ok" class:ok={tip === 'ready' && !notice} id="live-tip" role="status">{message}</p>
   <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
     <button type="button" class="chip col-start-1 row-start-1 min-h-11 justify-self-start border-cream text-center whitespace-normal text-cream aria-pressed:bg-cream aria-pressed:text-coal" id="live-auto" aria-pressed={auto} onclick={() => { auto = !auto }}>{t(lang, 'liveAuto')}</button>
     <button type="button" class="col-start-2 row-start-1 size-18 rounded-full border-4 border-cream bg-orange shadow-[inset_0_0_0_3px_var(--color-coal)] focus-visible:outline-cream disabled:cursor-not-allowed disabled:opacity-40" id="live-shutter" disabled={!size || busy} onclick={() => { void shoot() }}>

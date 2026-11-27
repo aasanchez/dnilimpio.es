@@ -105,11 +105,11 @@ test('front only: the editor has one side and only front fields, and the PDF has
   expect(text.match(/\/Type \/Page\b(?!s)/g)).toHaveLength(1)
   // Done screen, as with both sides.
   await expect(page.locator('h2')).toHaveText('Tu PDF está listo')
-  await expect(page.locator('.done .term')).toContainText('1 pp')
+  await expect(page.locator('#done-summary')).toContainText('Archivo: protected-document.pdf')
   await expect(page.locator('#download-status')).toHaveText('PDF creado. Búscalo en tu carpeta de descargas.')
-  // Cleared first, then the thanks page opens (ADR 0029), as with both sides.
   await page.locator('#reset-done').click()
-  await expect(page.locator('#thanks-title')).toBeVisible()
+  // Cleared first, then the thanks page opens (ADR 0029), as in cleanup.spec and stats.spec.
+  await expect(page.locator('#thanks-title')).toHaveText('Tu documento ya no está aquí')
 })
 
 test('front only: going back from the editor and adding the back brings both sides, back fields still hidden', async ({ page }) => {
