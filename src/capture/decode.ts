@@ -1,48 +1,62 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Turns a user-supplied File/Blob into an ImageBitmap held only in memory (spec §4.1, §2.2).
-// Decoding is left to the browser: JPEG and PNG everywhere, HEIC only where the platform supports it (Safari).
+// Before decoding, the file is checked by its content (ADR 0031): JPEG, PNG, WebP or HEIC by its
+// first bytes, at most MAX_BYTES, and at most MAX_PIXELS by its header. Decoding is left to the
+// browser: JPEG, PNG and WebP everywhere, HEIC only where the platform supports it (Safari 17+).
+
+import {
+  HEAD_BYTES, MAX_BYTES, blobReader, fitsPixelLimit, readDimensions, sniffType,
+  type Dimensions, type ImageKind,
+} from './sniff.ts'
+
+export { MAX_BYTES, MAX_PIXELS } from './sniff.ts'
 
 export type DecodeError =
-  | { kind: 'not-an-image'; type: string }
+  | { kind: 'not-an-image' }
   | { kind: 'heic-unsupported' }
   | { kind: 'too-large'; bytes: number }
+  | { kind: 'too-many-pixels'; width: number; height: number }
   | { kind: 'decode-failed' }
 
 export type DecodeResult = { ok: true; bitmap: ImageBitmap } | { ok: false; error: DecodeError }
 
-/** 40 MB: well above any phone photo, low enough to avoid exhausting memory on mobile. */
-export const MAX_BYTES = 40 * 1024 * 1024
+export type Inspection = { ok: true; kind: ImageKind; size: Dimensions } | { ok: false; error: DecodeError }
 
-const HEIC_TYPES = new Set(['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'])
-
-export function isHeic (blob: Pick<Blob, 'type'>, name = ''): boolean {
-  return HEIC_TYPES.has(blob.type.toLowerCase()) || /\.(heic|heif)$/i.test(name)
+/** Checks size, type (by content) and pixel count, reading only the file's header. */
+export async function inspect (blob: Blob): Promise<Inspection> {
+  if (blob.size > MAX_BYTES) return { ok: false, error: { kind: 'too-large', bytes: blob.size } }
+  const read = blobReader(blob)
+  let kind: ImageKind | null
+  let size: Dimensions | null
+  try {
+    kind = sniffType(await read(0, HEAD_BYTES))
+    if (!kind) return { ok: false, error: { kind: 'not-an-image' } }
+    size = await readDimensions(kind, read, blob.size)
+  } catch {
+    return { ok: false, error: { kind: 'decode-failed' } } // the file could not be read at all
+  }
+  if (!size) return { ok: false, error: { kind: 'decode-failed' } }
+  if (!fitsPixelLimit(size)) return { ok: false, error: { kind: 'too-many-pixels', ...size } }
+  return { ok: true, kind, size }
 }
 
-/** Validates type and size before decoding. Exported for unit tests. */
-export function precheck (blob: Pick<Blob, 'type' | 'size'>, name = ''): DecodeError | null {
-  if (blob.size > MAX_BYTES) return { kind: 'too-large', bytes: blob.size }
-  // Some platforms report an empty type for HEIC; accept by extension and let the decoder decide.
-  if (blob.type === '' && isHeic(blob, name)) return null
-  if (!blob.type.toLowerCase().startsWith('image/')) return { kind: 'not-an-image', type: blob.type }
-  return null
+/** Refuses a decoded bitmap over the limit (a live camera frame, or a header that lied). */
+export function checkBitmap (bitmap: ImageBitmap): DecodeResult {
+  const size = { width: bitmap.width, height: bitmap.height }
+  if (fitsPixelLimit(size)) return { ok: true, bitmap }
+  bitmap.close()
+  return { ok: false, error: { kind: 'too-many-pixels', ...size } }
 }
 
-export async function decodeImage (blob: Blob, name = ''): Promise<DecodeResult> {
-  const pre = precheck(blob, name)
-  if (pre) return { ok: false, error: pre }
+export async function decodeImage (blob: Blob): Promise<DecodeResult> {
+  const checked = await inspect(blob)
+  if (!checked.ok) return checked
   try {
     // 'from-image' applies the EXIF orientation so the user sees the photo upright.
     // EXIF itself never reaches the output: exports are re-encoded from canvas (§4.6).
     const bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' })
-    return { ok: true, bitmap }
+    return checkBitmap(bitmap)
   } catch {
-    return { ok: false, error: isHeic(blob, name) ? { kind: 'heic-unsupported' } : { kind: 'decode-failed' } }
+    return { ok: false, error: { kind: checked.kind === 'heic' ? 'heic-unsupported' : 'decode-failed' } }
   }
-}
-
-/** First image file in a DataTransfer (drop or paste), or null. */
-export function firstImageFile (items: Iterable<File>): File | null {
-  for (const f of items) if (f.type.startsWith('image/') || isHeic(f, f.name)) return f
-  return null
 }

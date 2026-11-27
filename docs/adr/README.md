@@ -36,3 +36,4 @@ project specification on purpose).
 | [0028](0028-tie-fallback.md) | TIE preselected when detection reads the photos but cannot tell the document; nothing preselected without detection | accepted |
 | [0029](0029-opt-in-usage-stats.md) | Opt-in usage stats from a photo-free thanks page: fixed list, sent only on a tap, Worker on `/stats` only, no IP stored; the app page keeps `connect-src 'none'` | accepted |
 | [0030](0030-update-with-other-windows-open.md) | A new version takes over when every window is idle, or when the person presses Update now | accepted |
+| [0031](0031-photo-file-checks.md) | Photo files checked by content (JPEG, PNG, WebP, HEIC), at most 25 MB and 50 MP from the header, before decoding | accepted |

@@ -88,7 +88,8 @@ test('shows a clear error for a non-image file', async ({ page }) => {
 
 test('shows a decode error for a corrupt image', async ({ page }) => {
   await openCapture(page)
-  await page.locator('#file-back').setInputFiles({ name: 'x.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('not a jpeg') })
+  // JPEG first bytes, then garbage: the type check passes, the header has no size.
+  await page.locator('#file-back').setInputFiles({ name: 'x.jpg', mimeType: 'image/jpeg', buffer: Buffer.from([0xff, 0xd8, 0xff, 0xd9]) })
   await expect(page.locator('#status-back')).toContainText('No se ha podido abrir')
 })
 
@@ -153,7 +154,11 @@ test('desktop: front and back dropped on the viewer are read locally, never sent
 
 test('desktop: a dropped file that is not an image gets a clear error', async ({ page }) => {
   await openCapture(page)
-  const pdf = await dragged(page, 'synthetic-front.png', 'application/pdf')
+  const pdf = await page.evaluateHandle(() => {
+    const d = new DataTransfer()
+    d.items.add(new File(['%PDF-1.7 not a photo'], 'scan.png', { type: 'image/png' }))
+    return d
+  })
   await page.locator('#viewer').dispatchEvent('drop', { dataTransfer: pdf })
   await expect(page.locator('#error-front')).toContainText('no es una imagen')
 })

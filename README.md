@@ -147,8 +147,12 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    - On a computer, the photo area is an upload area: drag an image onto it, use **Choose a file**,
      or paste with <kbd>Ctrl</kbd>+<kbd>V</kbd>. A file dropped anywhere else in the window is
      ignored, so it never replaces the app in the tab.
-   - Any image the browser can open is accepted (JPEG, PNG, WebP; HEIC where the browser supports
-     it, such as Safari), up to 40 MB. Tap a side's tile to replace its photo.
+   - JPEG, PNG, WebP and HEIC photos are accepted, up to 25 MB and 50 megapixels. The app checks
+     the file's first bytes, not its name, and reads the size in pixels from the file's header
+     before it decodes the image ([ADR 0031](docs/adr/0031-photo-file-checks.md)). Only Safari 17
+     and later can open HEIC; other browsers say so and suggest a screenshot or a JPEG copy. On an
+     iPhone the photo picker usually gives the app a JPEG anyway. Tap a side's tile to replace its
+     photo.
 
    **Capture coach.** A live camera view with a card-shaped frame. Inside the frame, a faint
    drawing shows which side to hold up: a photo and text lines for the front, text lines and the
@@ -621,6 +625,7 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 |---|---|
 | Select front and back photos (file, drag and drop, paste, camera); the back is optional | Done |
 | Capture coach: live camera tips and automatic shot | Done |
+| Photo file checks: type by content, 25 MB and 50 MP limits before decoding (ADR 0031) | Done |
 | DNI 4.0, DNI 3.0 and TIE, with a two-choice picker (DNI, TIE); DNI version detected, 4.0 fallback with a switch | Done |
 | Document type detection from the MRZ (preselects the picker) | Done |
 | Corner finding: on-device model, then classic edge detection, then manual; sides snapped onto the card's real edges | Done |
@@ -708,7 +713,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 
 | Area | Files | What is checked |
 |---|---|---|
-| Capture | `input`, `decode`, `live`, `coach`, `capture-state` | Sides in use with an optional back, file picker and camera modes, decode errors (HEIC, size, not an image), live camera needs and failures, coach metrics (blur, light, framing) |
+| Capture | `input`, `decode`, `sniff`, `live`, `coach`, `capture-state` | Sides in use with an optional back, file picker and camera modes, type by first bytes (name and MIME type ignored, AVIF refused), size in pixels from JPEG, PNG, WebP and HEIC headers, size and pixel limits (decompression bomb), decode errors, live camera needs and failures, coach metrics (blur, light, framing) |
 | Geometry | `homography`, `quad-edit` | Homography round trips and degenerate quads, corner editing |
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates |
 | OCR | `mrz`, `find` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins |
@@ -733,6 +738,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; page code that gathers the canary file names, OCR text and watermark cannot send them by beacon, fetch, image, style sheet, font, frame or form; the page opens no frame, the CSP has no `frame-src` and refuses a frame to another site; the start screen sends nothing to another site, also offline or under GPC |
 | `update` | An idle tab switches to a new build, with other idle windows too; a tab with photos or a busy window holds it back; a window that cannot answer brings **Update now**, which applies it; a busy window keeps its photos and reloads back on the start screen; a page that leaves the start screen while the others answer keeps its photos; an open thanks page does not hold the update back |
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks, and skipping the back from it |
+| `file-checks` | File picker, camera input, drag and drop and paste all refuse a file by content (not by name or MIME type), over 25 MB, or over 50 MP (a decompression bomb), with a translated message; HEIC where the browser cannot decode it |
 | `front-only` | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, done screen, adding the back later |
 | `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, TIE when detection finds no answer, offline note with nothing preselected |
 | `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard, corners saved when you switch side |
@@ -990,6 +996,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0028](docs/adr/0028-tie-fallback.md): TIE is preselected when detection reads the photos but cannot tell the document; without detection nothing is preselected; you can change it.
 - [0029](docs/adr/0029-opt-in-usage-stats.md): opt-in anonymous usage stats; "Clear everything" opens a photo-free thanks page that shows the exact figures and sends them only on a tap; fixed list, Worker on `/stats` only, Workers Analytics Engine, no IP stored; the app page still has `connect-src 'none'`.
 - [0030](docs/adr/0030-update-with-other-windows-open.md): a new version takes over when every open window is idle, or when the person presses Update now; a frozen tab no longer blocks updates.
+- [0031](docs/adr/0031-photo-file-checks.md): photos are checked before decoding: JPEG, PNG, WebP or HEIC by their first bytes, at most 25 MB and 50 megapixels from the header, on every way in.
 
 ## Contributing
 

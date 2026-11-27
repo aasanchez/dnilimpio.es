@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Wires one capture target (front or back): file input, drag-and-drop, and paste.
 
-import { decodeImage, firstImageFile, type DecodeResult } from './decode.ts'
+import { decodeImage, type DecodeResult } from './decode.ts'
 import type { PhotoVia } from '../stats/session.ts'
 
 export interface CaptureTarget {
@@ -22,6 +22,8 @@ export interface CaptureTarget {
  */
 export function configureFileInput (input: HTMLInputElement, mode: 'pick' | 'camera' = 'pick'): void {
   input.type = 'file'
+  // A hint for the picker only: the file's content decides (sniff.ts). 'image/*' also makes iOS
+  // usually hand over a JPEG copy of an HEIC photo, which every browser can open.
   input.accept = 'image/*'
   if (mode === 'camera') input.setAttribute('capture', 'environment')
   else input.removeAttribute('capture')
@@ -37,7 +39,7 @@ export function prefersCameraButton (matchMedia: (q: string) => { matches: boole
  * (e.g. a language change re-renders the UI). A discarded bitmap is closed to free its memory.
  */
 function decodeFor (file: File, signal: AbortSignal, onResult: CaptureTarget['onResult'], via: PhotoVia): void {
-  void decodeImage(file, file.name).then((r) => {
+  void decodeImage(file).then((r) => {
     if (signal.aborted) {
       if (r.ok) r.bitmap.close()
       return
@@ -77,7 +79,8 @@ export function wireCapture (target: CaptureTarget, signal: AbortSignal): void {
 export function wirePaste (pickTarget: () => CaptureTarget | null, signal: AbortSignal): void {
   document.addEventListener('paste', (e) => {
     const target = pickTarget()
-    const file = e.clipboardData ? firstImageFile(e.clipboardData.files) : null
+    // Take the first file as pasted (not filtered by type): its content decides, with a clear error.
+    const file = e.clipboardData?.files[0] ?? null
     if (!target || !file) return
     e.preventDefault()
     decodeFor(file, signal, target.onResult, 'paste')
