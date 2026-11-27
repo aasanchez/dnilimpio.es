@@ -2,6 +2,8 @@
   "sourceCode": "Código fonte",
   "installApp": "Instalar a app",
   "installIos": "No iPhone ou iPad: toca Compartir (o cadrado cunha frecha cara arriba; en iOS 26 está no menú ···), escolle «Engadir á pantalla de inicio» e toca «Engadir».",
+  "updateReady": "Hai unha versión nova. Outra xanela da app está aberta, así que non se aplicou soa.",
+  "updateNow": "Actualizar agora",
   "nagwaraVisit": "Visitar NagWara",
   "nagwaraProduct": "Isto é un produto NagWara,",
   "nagwaraMachines": "As máquinas executan,",
