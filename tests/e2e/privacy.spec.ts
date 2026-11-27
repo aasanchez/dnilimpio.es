@@ -11,7 +11,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page, type Request } from '@playwright/test'
 import { MARK, NAMES, WATERMARK, canariesIn } from './canaries.ts'
-import { controlled, toEditorWithText } from './helpers.ts'
+import { controlled, toEditorWithText, FIREFOX_INTAKE_BUG } from './helpers.ts'
 
 test.use({ locale: 'es-ES', serviceWorkers: 'allow' })
 
@@ -103,7 +103,8 @@ test('after the first visit, a whole document workflow sends no request at all',
   expect(seen.filter((s) => !s.startsWith(`GET ${origin}/`) && !/^GET (blob|data):/.test(s))).toEqual([])
 })
 
-test('nothing about the document is stored in the browser', async ({ page }) => {
+test('nothing about the document is stored in the browser', async ({ page, browserName }) => {
+  test.fail(browserName === 'firefox', FIREFOX_INTAKE_BUG)
   test.setTimeout(300_000)
   await controlled(page)
   await toEditorWithText(page, { model: true, names: NAMES })

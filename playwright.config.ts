@@ -16,7 +16,6 @@ export const CROSS_BROWSER_SPECS = [
   'export.spec.ts',
   'offline.spec.ts',
   'front-only.spec.ts',
-  'zz-diag.spec.ts',
 ]
 
 // e2e tests run against the production build (`vite preview`), never the dev server,

@@ -3,7 +3,7 @@
 // demand, works with the network off. Service workers are on here (blocked in the other specs).
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import { adjustFront, fixture, appElementsInFrame, loadBoth, openCapture, toAuto } from './helpers.ts'
+import { FIREFOX_INTAKE_BUG, adjustFront, appElementsInFrame, fixture, loadBoth, openCapture, toAuto } from './helpers.ts'
 import { PAGE_HEADERS, SECURITY_HEADERS } from '../../src/offline/precache.ts'
 
 test.use({ locale: 'es-ES', serviceWorkers: 'allow' })
@@ -197,6 +197,7 @@ async function cachedPaths (page: Page): Promise<string[]> {
 }
 
 test('offline before the model was ever used: classic edge detection places the corners, silently', async ({ page, context, browserName }) => {
+  test.skip(browserName === 'firefox', "Playwright's offline mode in Firefox does not cut the service worker's own requests (seen in CI): the model still downloads.")
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   await page.goto('/')
@@ -214,7 +215,8 @@ test('offline before the model was ever used: classic edge detection places the 
   expect(unexpected(errors, browserName)).toEqual([])
 })
 
-test('the model is kept after its first use and then works offline', async ({ page, context }) => {
+test('the model is kept after its first use and then works offline', async ({ page, context, browserName }) => {
+  test.fail(browserName === 'firefox', FIREFOX_INTAKE_BUG)
   await page.goto('/')
   await offlineReady(page)
   await openCapture(page)

@@ -4,6 +4,15 @@ import { expect, type Page } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
 import { checkDigit } from '../../src/ocr/mrz.ts'
 
+/**
+ * Known bug, Firefox only (found by the cross-browser run, PR #100): with the service worker in
+ * control, after the photo step every module loaded on demand (OCR, document detection, corner
+ * model) is blocked and fails its integrity check, because Firefox checks sw.js against the photo
+ * step's script-src (src/security/intake-lockdown.ts), which does not list it. The app falls back to
+ * the manual path. Tests marked with test.fail() and this reason must pass again once it is fixed.
+ */
+export const FIREFOX_INTAKE_BUG = 'Known bug: in Firefox the photo-step CSP blocks modules the service worker serves (sw.js is not in its script-src), so OCR and the corner model do not load'
+
 export const fixture = (name: string): string => fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url))
 
 // Card corners in the 1600 × 1200 synthetic fixtures.
@@ -230,16 +239,19 @@ export async function controlled (page: Page): Promise<void> {
 }
 
 /**
- * Puts the app in a frame of `page`, waits until the frame has loaded (an error page when the host
- * refuses it), and returns how many of the app's elements (its heading, or the #app root of its own
- * frame guard) the frame holds. Works in every browser: Chromium shows chrome-error:, Firefox and
- * WebKit an empty document, and Firefox gives no access to it at all (counted as 0).
+ * Puts the app in a frame of `page` and waits until the frame has loaded: an error page when the
+ * host refuses it, or at most 5 s, because Firefox fires no load event then. Returns how many of the
+ * app's elements (its heading, or the #app root of its own frame guard) the frame holds. Works in
+ * every browser: Chromium shows chrome-error:, WebKit an empty document, and Firefox gives no access
+ * to the refused frame at all (counted as 0).
  */
 export async function appElementsInFrame (page: Page, url: string): Promise<number> {
   await page.setContent('<iframe width="800" height="600"></iframe>')
   await page.locator('iframe').evaluate(async (frame, src) => {
     await new Promise<void>((resolve) => {
       frame.addEventListener('load', () => { resolve() }, { once: true })
+      // Firefox fires no load event for a frame that frame-ancestors refused.
+      setTimeout(resolve, 5000)
       frame.setAttribute('src', src)
     })
   }, url)

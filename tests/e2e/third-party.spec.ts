@@ -9,7 +9,7 @@
 // anything at all leaves for another site.
 import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 import { NAMES, WATERMARK, canariesIn } from './canaries.ts'
-import { controlled, toEditor, toEditorWithText } from './helpers.ts'
+import { controlled, toEditor, toEditorWithText, FIREFOX_INTAKE_BUG } from './helpers.ts'
 
 test.use({ locale: 'es-ES', baseURL: 'https://dnitapado.es/' })
 
@@ -212,6 +212,7 @@ test('the audit attack fails: a substitute beacon cannot be loaded or send the p
 })
 
 test('page code that gathers file names, OCR text and the watermark cannot send them anywhere', async ({ browser, browserName }) => {
+  test.fail(browserName === 'firefox', FIREFOX_INTAKE_BUG)
   test.skip(browserName === 'webkit', "Playwright's WebKit does not start a service worker on a site served by context.route() (navigator.serviceWorker.ready never resolves).")
   test.setTimeout(180_000)
   // Under the service worker, as on the public site, so OCR runs (its worker gets its CSP there).
