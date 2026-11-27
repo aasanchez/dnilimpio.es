@@ -165,6 +165,15 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 - **One pull request per feature.** Keep unrelated changes out of it. Merges use **Squash and
   merge**; write the PR title as the final commit subject (`feat(scope): …`, `fix(scope): …`,
   `docs(scope): …`).
+- **Give the branch a real name before you push it.** A tool may create a branch with a generated
+  name, such as `claude/project-thread-xxxx`. Before the first push to GitHub, rename it to say
+  what the work does: `git branch -m <type>/<summary>`. The type is the commit type of the PR
+  title (`feat`, `fix`, `docs`, `refactor`, `test`, `ci`, `chore`). The summary is two to five
+  lowercase words in kebab case, without the scope or an issue number. Examples:
+  `feat/pdf-real-size`, `fix/sw-update-multi-window`, `docs/branch-naming-rule`. If your tooling
+  allows pushes only to its assigned branch and refuses the new name, push the assigned branch
+  and say so in the PR. Do not rename a branch that already has an open PR: the PR stays on the
+  old name.
 - **Tests for every change.** Unit tests for logic, an e2e spec for user-visible behaviour. A
   privacy- or security-relevant change also needs a test that would fail if the protection broke.
 - **An ADR for every architectural decision**: anything costly to reverse, such as a new
