@@ -3,7 +3,7 @@
 // demand, works with the network off. Service workers are on here (blocked in the other specs).
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import { adjustFront, fixture, frameApp, loadBoth, openCapture, toAuto } from './helpers.ts'
+import { adjustFront, fixture, appElementsInFrame, loadBoth, openCapture, toAuto } from './helpers.ts'
 import { PAGE_HEADERS, SECURITY_HEADERS } from '../../src/offline/precache.ts'
 
 test.use({ locale: 'es-ES', serviceWorkers: 'allow' })
@@ -20,7 +20,21 @@ async function offlineReady (page: Page): Promise<string[]> {
   })
 }
 
-test('works offline after one visit, through to the PDF download', async ({ page, context }) => {
+/**
+ * The page errors that count. Offline, before the corner model was ever cached, its module cannot
+ * load: the app catches that and uses classic edge detection. WebKit still reports the failed load
+ * as a page error ("TypeError: Load failed" and the module's address), and its harmless
+ * ResizeObserver notice. Those are dropped in WebKit only, and the test says so in its report.
+ */
+function unexpected (errors: string[], browserName: string): string[] {
+  if (browserName !== 'webkit') return errors
+  const known = (e: string): boolean => e === 'TypeError: Load failed' || /assets\/ml\/model-[\w-]+\.js\.$/.test(e) ||
+    e.startsWith('ResizeObserver loop completed')
+  if (errors.some(known)) test.info().annotations.push({ type: 'browser difference', description: 'WebKit reports the caught, failed load of the corner model as a page error' })
+  return errors.filter((e) => !known(e))
+}
+
+test('works offline after one visit, through to the PDF download', async ({ page, context, browserName }) => {
   const violations: string[] = []
   page.on('console', (m) => { if (/Content Security Policy|Trusted Type/i.test(m.text())) violations.push(m.text()) })
   page.on('pageerror', (e) => violations.push(e.message))
@@ -43,7 +57,7 @@ test('works offline after one visit, through to the PDF download', async ({ page
   const download = page.waitForEvent('download')
   await page.locator('#download').click()
   expect((await download).suggestedFilename()).toBe('redacted-dni.pdf')
-  expect(violations).toEqual([])
+  expect(unexpected(violations, browserName)).toEqual([])
 })
 
 test('works offline with the front alone (the back is optional), through to a one-page PDF', async ({ page, context }) => {
@@ -145,10 +159,8 @@ test('page loads from the worker carry the security headers, whatever the cached
   expect(host['content-security-policy']).toBe(`${meta ?? ''}; frame-ancestors 'none'`)
   // Another site that frames the app: the host's frame-ancestors refuses it, so nothing of the app runs.
   const framer = await context.newPage()
-  await frameApp(framer, baseURL ?? '')
-  await expect(framer.frameLocator('iframe').locator('h1')).toHaveCount(0)
   // Not even the page's own frame guard (#app with a link to itself): the host refused the page.
-  await expect(framer.frameLocator('iframe').locator('#app')).toHaveCount(0)
+  expect(await appElementsInFrame(framer, baseURL ?? '')).toBe(0)
 })
 
 test('a tampered file stops the install and leaves no cache behind', async ({ page, context, browserName }) => {
@@ -184,7 +196,7 @@ async function cachedPaths (page: Page): Promise<string[]> {
   })
 }
 
-test('offline before the model was ever used: classic edge detection places the corners, silently', async ({ page, context }) => {
+test('offline before the model was ever used: classic edge detection places the corners, silently', async ({ page, context, browserName }) => {
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   await page.goto('/')
@@ -199,7 +211,7 @@ test('offline before the model was ever used: classic edge detection places the 
   await page.locator('#doc-continue').click()
   await adjustFront(page)
   await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'edges')
-  expect(errors).toEqual([])
+  expect(unexpected(errors, browserName)).toEqual([])
 })
 
 test('the model is kept after its first use and then works offline', async ({ page, context }) => {

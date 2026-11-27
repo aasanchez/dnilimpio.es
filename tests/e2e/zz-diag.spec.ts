@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test'
 import { controlled, fixture } from './helpers.ts'
 
 test.use({ serviceWorkers: 'allow', locale: 'es-ES' })
-test.skip(({ browserName }) => browserName === 'chromium', 'Temporary diagnostic for Firefox and WebKit.')
+test.skip(({ browserName }) => browserName === (process.env['DIAG_ALL'] ? 'none' : 'chromium'), 'Temporary diagnostic for Firefox and WebKit.')
 
 test('diag: OCR status and prepare', async ({ page }) => {
   test.setTimeout(240_000)
@@ -51,3 +51,31 @@ test('diag: model offline after first use', async ({ page, context }) => {
   await page.waitForTimeout(5000)
   console.log('source', await page.locator('[data-source]').first().getAttribute('data-source', { timeout: 5000 }).catch(() => 'none'))
 })
+
+for (const sw of ['block', 'allow'] as const) {
+  test.describe(`diag lockdown, service worker ${sw}`, () => {
+    test.use({ serviceWorkers: sw })
+    test('diag: on-demand chunk after the photo step', async ({ page }) => {
+      page.on('console', (m) => { console.log(`[${sw} console ${m.type()}] ${m.text()}`) })
+      page.on('requestfailed', (r) => { console.log(`[${sw} requestfailed] ${r.url()} ${r.failure()?.errorText ?? ''}`) })
+      if (sw === 'allow') await controlled(page); else await page.goto('/')
+      const before = await page.evaluate(async () => {
+        const map = JSON.parse(document.querySelector('script[type="importmap"]')?.textContent ?? '{}') as { integrity: Record<string, string> }
+        const key = Object.keys(map.integrity).find((k) => k.includes('/CardGuide-')) ?? ''
+        try { await import(/* @vite-ignore */ key); return `ok ${key}` } catch (e) { return `fail ${key} ${String(e)}` }
+      })
+      console.log(`[${sw}] before lockdown: ${before}`)
+      await page.locator('#start').click()
+      await page.waitForTimeout(500)
+      const after = await page.evaluate(async () => {
+        const meta = document.querySelector('meta[data-intake-lockdown]')?.getAttribute('content') ?? 'none'
+        const map = JSON.parse(document.querySelector('script[type="importmap"]')?.textContent ?? '{}') as { integrity: Record<string, string> }
+        const key = Object.keys(map.integrity).find((k) => /\/ocr-[\w-]+\.js$/.test(k)) ?? ''
+        let r: string
+        try { await import(/* @vite-ignore */ key); r = `ok ${key}` } catch (e) { r = `fail ${key} ${String(e)}` }
+        return { r, meta: meta.slice(0, 3000), base: document.baseURI }
+      })
+      console.log(`[${sw}] after lockdown: ${JSON.stringify(after)}`)
+    })
+  })
+}

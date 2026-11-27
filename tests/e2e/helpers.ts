@@ -230,11 +230,12 @@ export async function controlled (page: Page): Promise<void> {
 }
 
 /**
- * Puts the app in a frame of `page` and waits until the frame has loaded (an error page when the
- * host refuses it). Works in every browser: Chromium shows chrome-error:, Firefox and WebKit an empty
- * document. After the load event the app, had it run, would show its heading.
+ * Puts the app in a frame of `page`, waits until the frame has loaded (an error page when the host
+ * refuses it), and returns how many of the app's elements (its heading, or the #app root of its own
+ * frame guard) the frame holds. Works in every browser: Chromium shows chrome-error:, Firefox and
+ * WebKit an empty document, and Firefox gives no access to it at all (counted as 0).
  */
-export async function frameApp (page: Page, url: string): Promise<void> {
+export async function appElementsInFrame (page: Page, url: string): Promise<number> {
   await page.setContent('<iframe width="800" height="600"></iframe>')
   await page.locator('iframe').evaluate(async (frame, src) => {
     await new Promise<void>((resolve) => {
@@ -242,4 +243,8 @@ export async function frameApp (page: Page, url: string): Promise<void> {
       frame.setAttribute('src', src)
     })
   }, url)
+  // Had the app run, its module scripts would have rendered before the frame's load event.
+  const child = page.frames().find((f) => f !== page.mainFrame())
+  if (!child) return 0
+  return await child.evaluate(() => document.querySelectorAll('h1, #app').length).catch(() => 0)
 }
