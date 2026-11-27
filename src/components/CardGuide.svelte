@@ -84,8 +84,7 @@
   {/if}
 {/snippet}
 
-<dialog class="guide dialog-win w-[min(44rem,calc(100%-2rem))] open:flex open:flex-col open:overflow-hidden" bind:this={dialog} aria-labelledby="{id}-title">
-  <div class="winbar"><i></i><i></i><i></i><span class="title">card.guide</span></div>
+<dialog class="guide dialog-panel w-[min(44rem,calc(100%-2rem))] open:flex open:flex-col open:overflow-hidden" bind:this={dialog} aria-labelledby="{id}-title">
   <div class="flex min-h-0 flex-col gap-2.5 overflow-y-auto p-4 text-start font-sans text-base leading-normal *:shrink-0" bind:this={body}>
     {#if g}
       {@const tx = g}

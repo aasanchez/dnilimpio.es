@@ -1,12 +1,12 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 /* Tailwind CSS v4 (ADR 0017). The build turns this file and the utility classes in the components into
    one static stylesheet: no inline styles, so the CSP keeps style-src 'self'.
-   Visual language: cream paper with a dot grid, near-black ink, one orange accent; framed "windows"
+   Visual language: cream paper with a dot grid, near-black ink, one orange accent; framed panels
    with a hard offset shadow; Bricolage Grotesque for text, JetBrains Mono for labels, Caveat for
    short hand-written notes. Fonts are self-hosted (CSP font-src 'self', offline cache); latin and
    latin-ext subsets only, so other scripts (Cyrillic, Arabic) fall back to system fonts.
    This file holds the theme (palette, fonts, shadows, animations), a few base rules, and the shared
-   pieces that repeat across screens (buttons, chips, windows, switches). Everything else is utility
+   pieces that repeat across screens (buttons, chips, panels, switches). Everything else is utility
    classes in the markup. */
 
 @import 'tailwindcss' source('../');
@@ -243,16 +243,16 @@
   .chip[aria-pressed='true'], .chip.is-on { @apply border-solid border-ink bg-ink text-paper; }
   .chip:has(input:focus-visible) { @apply outline-2 outline-offset-2 outline-accent; }
 
-  /* Windows: framed panels with a mono title bar and a hard shadow. */
-  .win { @apply mr-1.5 mb-1.5 overflow-hidden rounded-lg border-2 border-ink bg-surface shadow-hard; }
-  .winbar { @apply flex min-h-8 items-center gap-1.5 border-b-2 border-ink bg-surface px-2.5 font-mono text-xs; }
-  .winbar > i { @apply block size-2.25 flex-none rounded-full border-[1.5px] border-ink; }
-  .winbar .title { @apply ms-1.5 min-w-0 flex-1 truncate; }
-  .winbar .icon-btn, .winbar .chip { @apply min-h-7.5 min-w-0 px-2 text-[0.6875rem]; }
-  .winbody { @apply bg-sunk p-2.5; }
-  .term { @apply m-0 rounded-md bg-term-bg px-3.5 py-3 font-mono text-[0.78rem] leading-[1.65] text-term-fg; }
-  .term .p { @apply text-accent; }
-  .win > .term { @apply rounded-none; }
+  /* Panels: plain framed cards with a hard shadow, for photos and summaries. No window chrome. */
+  .panel { @apply mr-1.5 mb-1.5 overflow-hidden rounded-lg border-2 border-ink bg-surface shadow-hard; }
+  .panel-bar { @apply flex min-h-10 flex-wrap items-center justify-end gap-1.5 border-b-2 border-ink bg-surface px-2.5 py-1; }
+  .panel-bar .chip { @apply min-h-8 min-w-0 px-2 text-[0.75rem]; }
+  .panel-caption { @apply border-b-2 border-ink bg-surface px-3 py-1.5 text-sm font-bold; }
+  .panel-body { @apply bg-sunk p-2.5; }
+  /* Summary lists: one plain sentence per line, with an orange tick. */
+  .summary { @apply m-0 flex flex-col gap-1.5 rounded-lg border-2 border-ink bg-surface px-4 py-3 text-base leading-snug; }
+  .summary li { @apply flex gap-2; }
+  .summary .tick { @apply flex-none font-bold text-accent-text; }
 
   /* Segmented control and tabs. */
   .segmented { @apply flex gap-1 rounded-md border-2 border-ink bg-surface p-0.75; }
@@ -296,8 +296,8 @@
   .range { @apply col-span-full m-0 min-h-11 w-full accent-accent; }
   .range:disabled { @apply cursor-not-allowed opacity-50; }
 
-  /* Dialogs drawn as windows (audit prompt, card guide). */
-  .dialog-win {
+  /* Dialogs drawn as framed cards (audit prompt, card guide). */
+  .dialog-panel {
     @apply m-auto max-h-[calc(100dvh-2rem)] w-[min(36rem,calc(100%-2rem))] rounded-lg border-2 border-ink bg-surface p-0 text-ink shadow-hard;
   }
 

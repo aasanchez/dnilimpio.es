@@ -105,7 +105,7 @@ test('front only: the editor has one side and only front fields, and the PDF has
   expect(text.match(/\/Type \/Page\b(?!s)/g)).toHaveLength(1)
   // Done screen, as with both sides.
   await expect(page.locator('h2')).toHaveText('Tu PDF está listo')
-  await expect(page.locator('.done .term')).toContainText('1 pp')
+  await expect(page.locator('#done-summary')).toContainText('Páginas: 1')
   await expect(page.locator('#download-status')).toHaveText('PDF creado. Búscalo en tu carpeta de descargas.')
   await page.locator('#reset-done').click()
   await expect(page.locator('h2')).toHaveText('Foto del anverso')

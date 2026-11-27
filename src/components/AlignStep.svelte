@@ -131,12 +131,11 @@
     {/if}
   </div>
   <div class="area-stage flex flex-col gap-3">
-    <div class="win">
-      <div class="winbar"><i></i><i></i><i></i><span class="title">{sideName(side).toLowerCase()}.jpg</span></div>
+    <div class="panel">
       <!-- data-corners / data-source: current corners in photo pixels and who placed them, for e2e tests. -->
       <div {@attach mountEditor} data-source={source} data-corners={quad.map((p) => `${String(Math.round(p.x))},${String(Math.round(p.y))}`).join(' ')}></div>
     </div>
-    <p class="font-mono text-[0.6875rem] text-muted" id="align-auto" role="status">{auto === 'searching' ? t(lang, 'cornersSearching') : auto === 'found' ? t(lang, 'cornersFound') : missed ? t(lang, 'cornersMissed') : ''}</p>
+    <p class="text-sm text-muted" id="align-auto" role="status">{auto === 'searching' ? t(lang, 'cornersSearching') : auto === 'found' ? t(lang, 'cornersFound') : missed ? t(lang, 'cornersMissed') : ''}</p>
   </div>
   <div class="area-side flex flex-col gap-4">
     <p class="hint">{t(lang, 'alignHint')}</p>
