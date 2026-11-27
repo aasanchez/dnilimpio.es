@@ -9,17 +9,12 @@
 
 import type { DocModel } from '../zones/types.ts'
 import { DOCUMENTS, documentOf } from '../zones/documents.ts'
-import type { GuidePage } from '../offline/precache.ts'
+import { GUIDE_PAGE } from './pages.ts'
 import { GENERAL_RISK, GUIDE, PLACES, textOf, type Cite, type Entry, type Place } from './entries.ts'
 import { SOURCES } from './sources.ts'
 import { appState, sourceOrder } from './view.ts'
 
-/** File name of each document's page, at the root of the site, next to index.html. */
-export const GUIDE_PAGE: Readonly<Record<DocModel, GuidePage>> = {
-  'dni-4.0': 'guia-dni-4.html',
-  'dni-3.0': 'guia-dni-3.html',
-  tie: 'guia-tie.html',
-}
+export { GUIDE_PAGE }
 
 /** Documents in the order the pages link to each other: the order of the document picker. */
 export const PAGE_DOCS: readonly DocModel[] = DOCUMENTS.map((d) => d.model)

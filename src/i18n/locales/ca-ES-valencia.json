@@ -233,6 +233,7 @@
   "findFailed": "La busca automàtica no ha funcionat esta vegada. Tapa les dades a mà.",
   "framed": "Per seguretat, esta ferramenta només funciona en la seua pròpia pestanya. Obri-la ací.",
   "guideOpen": "Què hi ha en la meua targeta?",
+  "guidePagesLead": "Guia completa de cada document (en castellà):",
   "guideAbout": "Què és: {field}",
   "seoTitle": "Tapar dades del DNI i posar marca d'aigua",
   "seoDescription": "Tapa les dades del teu DNI o TIE i afig una marca d'aigua abans d'enviar-ne una còpia. Gratis i sense registre. El document es processa en el teu dispositiu.",

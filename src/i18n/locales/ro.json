@@ -233,6 +233,7 @@
   "findFailed": "Căutarea automată nu a funcționat de data aceasta. Acoperă datele manual.",
   "framed": "Pentru siguranța ta, acest instrument funcționează doar în propria filă. Deschide-l aici.",
   "guideOpen": "Ce conține cardul meu?",
+  "guidePagesLead": "Ghid complet pentru fiecare document (în spaniolă):",
   "guideAbout": "Despre: {field}",
   "seoTitle": "Acoperă datele din DNI și adaugă un filigran",
   "seoDescription": "Acoperă datele din DNI-ul sau TIE-ul tău spaniol și adaugă un filigran înainte să trimiți o copie. Gratuit, fără cont. Documentul este procesat pe dispozitivul tău.",
