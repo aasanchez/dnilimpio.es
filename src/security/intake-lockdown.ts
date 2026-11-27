@@ -101,7 +101,8 @@ export function policyFor (doc: Document): string {
   ]
   const map = doc.querySelector('script[type="importmap"]')?.textContent ?? null
   const workers = WORKER_FILES.map((f) => exactSource(f, base)).filter((s): s is string => s !== null)
-  return intakePolicy({ scripts: buildScripts(base, srcs, map), workers })
+  // EXPERIMENT (Firefox): also list the service worker script in script-src.
+  return intakePolicy({ scripts: [...buildScripts(base, srcs, map), ...workers.filter((w) => w.endsWith('/sw.js'))], workers })
 }
 
 /** True once the intake policy is in the page. */
