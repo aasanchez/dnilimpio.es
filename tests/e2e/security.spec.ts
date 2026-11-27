@@ -22,7 +22,7 @@ test('built page carries the exact CSP and referrer policy', async ({ page }) =>
 test('every script and stylesheet has SRI; no inline scripts or styles', async ({ page }) => {
   await page.goto('/')
   const report = await page.evaluate(() => ({
-    scripts: [...document.querySelectorAll<HTMLScriptElement>('script:not([type="importmap"])')].map((s) => ({ src: s.getAttribute('src'), integrity: s.integrity, inline: !s.src && s.textContent !== '' })),
+    scripts: [...document.querySelectorAll<HTMLScriptElement>('script:not([type="importmap"]):not([type="application/ld+json"])')].map((s) => ({ src: s.getAttribute('src'), integrity: s.integrity, inline: !s.src && s.textContent !== '' })),
     styles: [...document.querySelectorAll('link[rel="stylesheet"]')].map((l) => (l as HTMLLinkElement).integrity),
     inlineStyles: document.querySelectorAll('style, [style]').length,
   }))
@@ -33,6 +33,24 @@ test('every script and stylesheet has SRI; no inline scripts or styles', async (
   }
   for (const integrity of report.styles) expect(integrity).toMatch(/^sha384-/)
   expect(report.inlineStyles).toBe(0)
+})
+
+test('the structured data block (ADR 0046) is data only: same on every start page, never run, no CSP report', async ({ page }) => {
+  const reports: string[] = []
+  page.on('console', (m) => { if (/Content Security Policy|Trusted Type/i.test(m.text())) reports.push(m.text()) })
+  const blocks: string[] = []
+  for (const path of ['./', './en', './ar']) {
+    await page.goto(path)
+    const found = await page.evaluate(() => [...document.querySelectorAll('script:not([src]):not([type="importmap"])')].map((s) => ({ type: s.getAttribute('type'), text: s.textContent })))
+    expect(found).toHaveLength(1)
+    expect(found[0]?.type).toBe('application/ld+json')
+    const data = JSON.parse(found[0]?.text ?? '') as { '@type': string, url: string }
+    expect(data['@type']).toBe('WebApplication')
+    expect(data.url).toBe('https://dnitapado.es/')
+    blocks.push(found[0]?.text ?? '')
+  }
+  expect(new Set(blocks).size).toBe(1)
+  expect(reports).toEqual([])
 })
 
 test('app renders with no CSP violations and no requests outside its origin', async ({ page, baseURL }) => {

@@ -93,9 +93,12 @@ async function scriptsAndResources (page: Page): Promise<{ added: string[]; pres
   }))
 }
 
-/** Scripts that do not come from this site: anything other than its own origin or the import map. */
+/**
+ * Scripts that do not come from this site: anything other than its own origin, the import map or the
+ * structured data block (ADR 0046), a data block the browser never runs.
+ */
 function thirdParty (urls: string[], origin: string): string[] {
-  return urls.filter((u) => u !== 'inline:importmap' && !/^(blob|data):/.test(u) && new URL(u).origin !== origin)
+  return urls.filter((u) => u !== 'inline:importmap' && u !== 'inline:application/ld+json' && !/^(blob|data):/.test(u) && new URL(u).origin !== origin)
 }
 
 for (const site of SITES) {

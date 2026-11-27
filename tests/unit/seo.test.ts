@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { LANGS } from '../../src/i18n/index.ts'
 import { isPrecached } from '../../src/offline/precache.ts'
-import { HREFLANG_LANGS, OG_LOCALE, canonicalUrl, hreflangAlternates, langUrl, normalizeSiteUrl, pageTitle, robotsTxt, sitemapXml, startPageSitemap, staticHead } from '../../src/seo/site.ts'
+import { HREFLANG_LANGS, OG_LOCALE, canonicalUrl, hreflangAlternates, langUrl, normalizeSiteUrl, pageTitle, robotsTxt, sitemapXml, startPageSitemap, staticHead, structuredData } from '../../src/seo/site.ts'
 import es from '../../src/i18n/locales/es.json'
 
 describe('site address', () => {
@@ -95,5 +95,30 @@ describe('one address per language (ADR 0038)', () => {
     expect(urls.map((u) => u.loc)).toEqual(LANGS.map((l) => langUrl(site, l)))
     expect(urls[0]?.alternates).toHaveLength(HREFLANG_LANGS.length + 1)
     expect(urls.find((u) => u.loc.endsWith('ca-es-valencia'))?.alternates).toEqual([])
+  })
+})
+
+describe('structured data (ADR 0046)', () => {
+  const block = structuredData('https://dnitapado.es/')
+  const json = (b: string): Record<string, unknown> => JSON.parse(/^<script type="application\/ld\+json">(.*)<\/script>$/s.exec(b)?.[1] ?? 'null') as Record<string, unknown>
+  it('is one JSON-LD data block, never a script the browser runs', () => {
+    expect(block.match(/<script/g)).toHaveLength(1)
+    expect(block.startsWith('<script type="application/ld+json">')).toBe(true)
+    expect(block).not.toMatch(/\s(src|on[a-z]+)=/)
+  })
+  it('describes the free web app at the site address, in every language', () => {
+    const d = json(block)
+    expect(d['@type']).toBe('WebApplication')
+    expect(d['name']).toBe('DNI Tapado.es')
+    expect(d['url']).toBe('https://dnitapado.es/')
+    expect(d['image']).toBe('https://dnitapado.es/icons/og-image.png')
+    expect(d['inLanguage']).toEqual([...LANGS])
+    expect(d['offers']).toEqual({ '@type': 'Offer', price: '0', priceCurrency: 'EUR' })
+  })
+  it('follows the site address, and no text can close the element', () => {
+    const fork = structuredData('https://example.org/x/</script><script>alert(1)</script>/')
+    expect(fork).not.toContain('</script><script>')
+    expect(fork.match(/<\/script>/g)).toHaveLength(1)
+    expect(json(fork)['url']).toBe('https://example.org/x/</script><script>alert(1)</script>/')
   })
 })
