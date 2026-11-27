@@ -169,14 +169,16 @@ sw.addEventListener('message', (event) => {
   // "Update now"; it takes over at once (src/offline/takeover.ts). The answer says which happened.
   if (msg?.type === 'activate') {
     const reply = event.ports[0]
-    const from = event.source instanceof Client ? event.source.id : ''
+    const from = event.source instanceof Client ? event.source : undefined
     event.waitUntil((async () => {
-      let others: WindowAnswer[] = []
+      let answers: WindowAnswer[] = []
       if (msg.force !== true) {
         const windows = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true })
-        others = await Promise.all(windows.filter((c) => c.id !== from).map(askWindow))
+        answers = await Promise.all(windows.filter((c) => c.id !== from?.id).map(askWindow))
+        // The asking page too, last: it may have left the start screen while the others answered.
+        if (from !== undefined) answers.push(await askWindow(from))
       }
-      const activated = mayTakeOver(others, msg.force === true)
+      const activated = mayTakeOver(answers, msg.force === true)
       if (activated) await sw.skipWaiting()
       reply?.postMessage({ activated })
     })())

@@ -28,8 +28,9 @@ for Cloudflare (ADR 0027, PR #69) do not delay an update.
 
 - The waiting build asks every other window of the app whether it is idle (`{ type: 'idle?' }`,
   answered by `src/offline/update.ts`). It takes over only if every one answers "idle" within
-  1.5 seconds (`mayTakeOver()` in `src/offline/takeover.ts`). Idle windows then reload into the new
-  build, also in the background.
+  1.5 seconds (`mayTakeOver()` in `src/offline/takeover.ts`). The asking page is asked last, because
+  it may have left the start screen while the others answered. Idle windows then reload into the new
+  build, also in the background. A page is never reloaded while it is busy, even if it asked.
 - A window that is busy, or that does not answer (frozen, stuck, or still running a build older than
   this one), holds the automatic switch back. The start screen of the asking page then shows
   **Update now**. Pressing it sends `{ type: 'activate', force: true }`, and the new build takes over

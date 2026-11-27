@@ -22,8 +22,6 @@
 let idle = false
 let registration: ServiceWorkerRegistration | undefined
 let reloading = false
-/** This page asked the waiting build to take over, and it may have agreed. */
-let requested = false
 /** Another window applied the new build while this page was busy: reload once it is idle. */
 let reloadWhenIdle = false
 /** The waiting build did not take over by itself: the start screen offers "Update now". */
@@ -55,10 +53,8 @@ function offer (): void {
   channel.port1.onmessage = (e: MessageEvent<unknown>) => {
     if ((e.data as { activated?: unknown } | null)?.activated === true) return
     // Another window is busy or did not answer: the new build waits, and the person may apply it.
-    requested = false
     if (registration?.waiting === waiting) setReady(true)
   }
-  requested = true
   waiting.postMessage({ type: 'activate' }, [channel.port2])
 }
 
@@ -77,7 +73,6 @@ export function onUpdateReady (fn: () => void): () => void {
 export function applyUpdate (): void {
   const waiting = registration?.waiting
   if (!waiting) { setReady(false); return }
-  requested = true
   waiting.postMessage({ type: 'activate', force: true })
 }
 
@@ -106,16 +101,15 @@ export async function watchForUpdates (): Promise<void> {
   const reg = registration
 
   // The new build took over: show it. The first worker taking control of a page that had none (first
-  // visit) is the same build: no reload then. When this page asked for the switch, it reloads even if
-  // the user left the start screen in the few milliseconds since: the new build has already deleted
-  // the old build's files, so this page could no longer load its on-demand code. No photo can have
-  // been chosen in that time. A switch another window asked for keeps a busy page as it is, until it
-  // is back on the start screen.
+  // visit) is the same build: no reload then. A page that is busy now is never reloaded, even if it
+  // asked for the switch: a reload would drop its photos (pagehide). It keeps its page as it is and
+  // reloads when it is back on the start screen. Until then, a part it had not loaded yet may be
+  // missing (the new build deleted the old build's files); AI parts fall back to the manual path.
   let hadController = sw.controller !== null
   sw.addEventListener('controllerchange', () => {
     if (!hadController) { hadController = true; return }
     setReady(false)
-    if (idle || requested) reload()
+    if (idle) reload()
     else reloadWhenIdle = true
   })
 
