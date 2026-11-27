@@ -235,5 +235,18 @@
   "guideOpen": "Zer dago nire txartelean?",
   "guideAbout": "Zer da: {field}",
   "seoTitle": "NANaren datuak estali eta ur-marka jarri",
-  "seoDescription": "Estali zure NANaren edo TIEaren datuak eta gehitu ur-marka bat kopia bat bidali aurretik. Doan eta erregistrorik gabe. Dokumentua zure gailuan prozesatzen da."
+  "seoDescription": "Estali zure NANaren edo TIEaren datuak eta gehitu ur-marka bat kopia bat bidali aurretik. Doan eta erregistrorik gabe. Dokumentua zure gailuan prozesatzen da.",
+  "articlesTitle": "Artikuluak",
+  "articlesLead": "DNI Tapado.es-i buruzko berriak, gidak eta informazioa, eta zure agiriaren kopia arrisku txikiagoarekin nola partekatu.",
+  "articlesNews": "Berriak",
+  "articlesGuide": "Gidak",
+  "articlesInfo": "Informazioa",
+  "articlesPublished": "Argitaratua: {date}",
+  "articlesUpdated": "Eguneratua: {date}",
+  "articlesSources": "Iturriak",
+  "articlesOtherLangs": "Beste hizkuntza batzuetan:",
+  "articlesAll": "Artikulu guztiak",
+  "articlesCtaTitle": "Estali zure agiria",
+  "articlesCta": "Ireki DNI Tapado.es",
+  "articlesLicence": "Artikuluen testuak CC BY-SA 4.0 lizentzia du. Webgunearen kodeak AGPL-3.0 lizentzia du."
 }

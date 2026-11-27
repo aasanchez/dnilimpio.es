@@ -59,6 +59,6 @@ describe('language redirects (ADR 0038)', () => {
     expect(redirectFor('/es')).toBe('/')
     expect(redirectFor('/es/')).toBe('/')
     expect(redirectFor('/en')).toBeNull()
-    expect(redirectsFile()).toMatch(/^(\/\S* \/\S* 301\n)+$/)
+    expect(redirectsFile()).toMatch(/^(\/\S* \/\S* (301|200)\n)+$/)
   })
 })

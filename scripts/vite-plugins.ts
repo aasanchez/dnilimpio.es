@@ -8,11 +8,12 @@ import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, THANKS_CSP, cspWithScriptHashes } from './csp.ts'
-import { headersFor, hostHeaderRules, redirectFor, type HeaderRule } from './headers.ts'
+import { headersFor, hostHeaderRules, redirectFor, rewriteFor, type HeaderRule } from './headers.ts'
 import { insertIntoApp, renderHome } from './prerender.ts'
 import { STATS_PATH, handleStats } from '../src/stats/endpoint.ts'
+import { isArticlePage } from '../src/articles/paths.ts'
 import { GUIDE_PAGES, SW_FILE, THANKS_PAGE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
-import { robotsTxt, sitemapXml, startPageSitemap, staticHead } from '../src/seo/site.ts'
+import { robotsTxt, sitemapXml, startPageSitemap, staticHead, type SitemapUrl } from '../src/seo/site.ts'
 import es from '../src/i18n/locales/es.json' with { type: 'json' }
 
 export function securityHeaders (): Plugin {
@@ -41,7 +42,7 @@ export function securityHeaders (): Plugin {
  * tags, in Spanish from es.json, in place of the `<!-- seo-head -->` marker; and robots.txt and
  * sitemap.xml, which need the site's absolute address (`site`). The page's own URLs stay relative.
  */
-export function searchFiles (site: string): Plugin {
+export function searchFiles (site: string, more: readonly SitemapUrl[] = []): Plugin {
   const MARKER = '<!-- seo-head -->'
   return {
     name: 'dni-redactor:search-files',
@@ -55,7 +56,7 @@ export function searchFiles (site: string): Plugin {
     },
     generateBundle () {
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(site) })
-      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml([...startPageSitemap(site), ...GUIDE_PAGES.map((p) => ({ loc: new URL(p, site).href }))]) })
+      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml([...startPageSitemap(site), ...GUIDE_PAGES.map((p) => ({ loc: new URL(p, site).href })), ...more]) })
     },
   }
 }
@@ -103,10 +104,11 @@ export function subresourceIntegrity (): Plugin {
     closeBundle () {
       const outDir = resolve(config.root, config.build.outDir)
       const tagRe = /<(script|link)\b([^>]*?)\s(src|href)="([^"]+)"([^>]*)>/g
-      const withSri = (html: string): string => html.replace(tagRe, (whole, tag: string, pre: string, attr: string, url: string, post: string) => {
+      // `dir`: the page's folder inside dist/, for pages below its root (the articles).
+      const withSri = (html: string, dir = ''): string => html.replace(tagRe, (whole, tag: string, pre: string, attr: string, url: string, post: string) => {
         if (/^[a-z]+:|^\/\//i.test(url) || whole.includes('integrity=')) return whole
         if (tag === 'link' && !/rel="(stylesheet|modulepreload)"/.test(whole)) return whole
-        const file = join(outDir, url.replace(/^\.?\//, '').replace(config.base.replace(/^\.?\//, ''), ''))
+        const file = join(outDir, dir, url.replace(/^\.?\//, '').replace(config.base.replace(/^\.?\//, ''), ''))
         return `<${tag}${pre} ${attr}="${url}" integrity="${sri(readFileSync(file))}"${post}>`
       })
       // The thanks page (ADR 0029): its own scripts and styles, checked the same way. It loads nothing
@@ -119,6 +121,14 @@ export function subresourceIntegrity (): Plugin {
       for (const page of GUIDE_PAGES) {
         const path = join(outDir, page)
         const html = withSri(readFileSync(path, 'utf8'))
+        if (/<script\b/i.test(html) || !/<link rel="stylesheet" [^>]*integrity="sha384-/.test(html)) throw new Error(`${page}: must link its stylesheet with integrity and have no script`)
+        writeFileSync(path, html)
+      }
+
+      // The articles (ADR 0039): their stylesheet, checked the same way. They run no script.
+      for (const page of listFiles(outDir).filter(isArticlePage)) {
+        const path = join(outDir, page)
+        const html = withSri(readFileSync(path, 'utf8'), dirname(page))
         if (/<script\b/i.test(html) || !/<link rel="stylesheet" [^>]*integrity="sha384-/.test(html)) throw new Error(`${page}: must link its stylesheet with integrity and have no script`)
         writeFileSync(path, html)
       }
@@ -227,6 +237,9 @@ export function hostHeadersInPreview (): Plugin {
           res.end()
           return
         }
+        // The host's rewrites: an articles folder shows its index.html (ADR 0039).
+        const file = rewriteFor(path)
+        if (file !== null) req.url = `${file}${new URL(req.url ?? '/', 'http://preview').search}`
         next()
       })
     },

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { checkPrerendered, insertIntoApp, renderHome, trimMarkup } from '../../scripts/prerender.ts'
 import es from '../../src/i18n/locales/es.json'
 
-const DEFINE = { __REPO_URL__: '"https://github.com/aasanchez/dnilimpio.es"', __SITE_URL__: '"https://dnitapado.es/"', __BUILD_SHA__: '"0123456789abcdef0123456789abcdef01234567"', __BUILD_VERSION__: '"1.2.3"', __BUILD_TIME__: '0' }
+const DEFINE = { __REPO_URL__: '"https://github.com/aasanchez/dnilimpio.es"', __SITE_URL__: '"https://dnitapado.es/"', __BUILD_SHA__: '"0123456789abcdef0123456789abcdef01234567"', __BUILD_VERSION__: '"1.2.3"', __BUILD_TIME__: '0', __ARTICLE_LANGS__: '["es"]' }
 
 describe('renderHome', () => {
   it('renders the Spanish start screen of App.svelte, as a first-time visitor sees it', async () => {

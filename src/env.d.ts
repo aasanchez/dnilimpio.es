@@ -7,6 +7,8 @@ declare const __SITE_URL__: string
 declare const __BUILD_SHA__: string
 /** Release version MAJOR.MINOR.PATCH (ADR 0032), or '' when the build has none. Injected at build time. */
 declare const __BUILD_VERSION__: string
+/** Languages with at least one published article (ADR 0039), injected at build time. */
+declare const __ARTICLE_LANGS__: readonly import('./i18n/langs.ts').Lang[]
 /** Build time, milliseconds since the epoch. Injected at build time. */
 declare const __BUILD_TIME__: number
 

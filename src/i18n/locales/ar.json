@@ -235,5 +235,18 @@
   "guideOpen": "ما الذي تحمله بطاقتي؟",
   "guideAbout": "حول: {field}",
   "seoTitle": "إخفاء بيانات بطاقة DNI وإضافة علامة مائية",
-  "seoDescription": "أخفِ البيانات على بطاقة DNI أو TIE الإسبانية وأضف علامة مائية قبل إرسال نسخة. مجاناً ودون تسجيل. تتم معالجة المستند على جهازك."
+  "seoDescription": "أخفِ البيانات على بطاقة DNI أو TIE الإسبانية وأضف علامة مائية قبل إرسال نسخة. مجاناً ودون تسجيل. تتم معالجة المستند على جهازك.",
+  "articlesTitle": "مقالات",
+  "articlesLead": "أخبار وأدلة ومعلومات عن DNI Tapado.es وعن مشاركة نسخة من وثيقتك بمخاطر أقل.",
+  "articlesNews": "أخبار",
+  "articlesGuide": "أدلة",
+  "articlesInfo": "معلومات",
+  "articlesPublished": "نُشر في {date}",
+  "articlesUpdated": "حُدّث في {date}",
+  "articlesSources": "المصادر",
+  "articlesOtherLangs": "بلغات أخرى:",
+  "articlesAll": "كل المقالات",
+  "articlesCtaTitle": "غطِّ بيانات وثيقتك",
+  "articlesCta": "افتح DNI Tapado.es",
+  "articlesLicence": "نص المقالات مرخّص بموجب CC BY-SA 4.0. شيفرة الموقع مرخّصة بموجب AGPL-3.0."
 }

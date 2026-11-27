@@ -235,5 +235,18 @@
   "guideOpen": "Què hi ha en la meua targeta?",
   "guideAbout": "Què és: {field}",
   "seoTitle": "Tapar dades del DNI i posar marca d'aigua",
-  "seoDescription": "Tapa les dades del teu DNI o TIE i afig una marca d'aigua abans d'enviar-ne una còpia. Gratis i sense registre. El document es processa en el teu dispositiu."
+  "seoDescription": "Tapa les dades del teu DNI o TIE i afig una marca d'aigua abans d'enviar-ne una còpia. Gratis i sense registre. El document es processa en el teu dispositiu.",
+  "articlesTitle": "Articles",
+  "articlesLead": "Notícies, guies i informació sobre DNI Tapado.es i sobre com compartir una còpia del teu document amb menys risc.",
+  "articlesNews": "Notícies",
+  "articlesGuide": "Guies",
+  "articlesInfo": "Informació",
+  "articlesPublished": "Publicat el {date}",
+  "articlesUpdated": "Actualitzat el {date}",
+  "articlesSources": "Fonts",
+  "articlesOtherLangs": "En altres idiomes:",
+  "articlesAll": "Tots els articles",
+  "articlesCtaTitle": "Tapa el teu document",
+  "articlesCta": "Obrir DNI Tapado.es",
+  "articlesLicence": "El text dels articles té llicència CC BY-SA 4.0. El codi del web té llicència AGPL-3.0."
 }

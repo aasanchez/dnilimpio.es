@@ -26,6 +26,7 @@ document.
 - [Privacy and security](#privacy-and-security)
 - [Audit it yourself](#audit-it-yourself)
 - [Languages](#languages)
+- [Articles](#articles)
 - [Status](#status)
 - [Development](#development)
 - [Tests](#tests)
@@ -645,6 +646,52 @@ guide is in [CONTRIBUTING.md](CONTRIBUTING.md#help-with-translations). Spanish
 (`es.json`) defines the keys. Translations can also be managed with Crowdin through its GitHub
 integration ([`crowdin.yml`](crowdin.yml)); the app itself never contacts Crowdin.
 
+## Articles
+
+The site publishes news, information and guides as articles: one static page each, written in
+Markdown and turned into HTML by the build ([ADR 0039](docs/adr/0039-articles.md)). The pages run no
+script, hold no photo and load only this site's stylesheet and the article's images. Search engines
+find them in `sitemap.xml`.
+
+Addresses follow the app's languages. Spanish articles are at `/articles/<slug>`, the others at
+`/<tag>/articles/<slug>`, such as `/en/articles/how-to-cover-your-id`. Each language lists only the
+articles written in it, at `/articles/` or `/<tag>/articles/`. A language with no articles has no
+list, and the app shows no link to one.
+
+To publish an article:
+
+1. Create `content/articles/<lang>/<slug>.md`. The folder is the language tag in lowercase (`es`,
+   `en`, `ca-es-valencia`). The slug is the address: lowercase letters, digits and hyphens.
+2. Start the file with the front matter:
+
+   ```markdown
+   ---
+   title: Cómo enviar una copia del DNI
+   description: Qué datos tapar antes de enviar una copia del DNI, y por qué.
+   type: guide
+   date: 2026-12-01
+   sources: [rd1553, aepdCopy]
+   ---
+   ```
+
+   | Key | Required | What |
+   |---|---|---|
+   | `title` | Yes | At most 70 characters |
+   | `description` | Yes | At most 160 characters, shown in search results |
+   | `type` | Yes | `news`, `guide` or `info`; the list groups articles by type |
+   | `date` | Yes | Publication day, `YYYY-MM-DD`. Builds before that day leave the article out |
+   | `updated` | No | Day of the last real change, not before `date` |
+   | `translationOf` | No | In another language: the slug of the Spanish original, to link the two |
+   | `draft` | No | `true` leaves the article out of every build |
+   | `sources` | For a guide | Ids from [`src/guide/sources.ts`](src/guide/sources.ts). A guide states facts about the documents, so it cites them (rule 9) |
+
+3. Write the body in Markdown. Use `##` and lower for headings: the title is the page's only `#`
+   heading. No HTML. Link the site's own pages with relative links; links to other sites open in a
+   new tab. Put images next to the file (PNG, JPEG, WebP or AVIF), each with a description:
+   `![Description](image.webp)`. Never a photo of a real document (rule 10).
+4. Run `pnpm build`. The build stops and names the file on any mistake. Look at the page with
+   `pnpm preview`, then open a pull request. The article goes live with the next deploy from `master`.
+
 ## Status
 
 The full flow works for the DNI 4.0, DNI 3.0 and TIE. The first implementation plan is kept in
@@ -673,6 +720,7 @@ show the current state.
 | Download or share the PDF through the system share sheet | Done |
 | Card guide with official citations | Done |
 | Card guide pages: one static page per document, no script, built from the guide data (ADR 0040) | Done |
+| Articles: news, information and guides written in Markdown, one static page each, per language, no script (ADR 0039) | Done |
 | Offline mode with a verified service worker; automatic update of idle tabs | Done |
 | Memory clean-up: canvases, temporary buffers, download links, late results after a reset | Done |
 | Installable app: manifest, maskable and Apple icons, install link and iOS steps | Done |
@@ -778,6 +826,7 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | Audit prompt | `audit-prompt` | Every file the prompt names exists, its list of stats fields is the list the thanks page sends, in order, and it stays short and asks for findings, not a verdict |
 | Keyboard focus | `focus-rescue` | Focus that falls back to the page (also while it still sits on a control that just disabled or removed itself) moves to the first control that takes it; how far to scroll so a focused control clears the sticky top bar, the sticky action bar or the floating notice, without leaving the window |
 | Editor redraws | `redraw` | One render per animation frame, only the side on screen, only when its choices changed; every changed side rendered at once before the review; a failed render is retried; nothing runs after the editor closes |
+| Articles | `articles` | Addresses and slugs, front matter checks (keys, lengths, days, sources required for a guide), Markdown rules (no raw HTML, no `#` heading, no root-absolute or unknown links, images next to the article with a description), pages (CSP, canonical, hreflang, translations, sources, escaping), loading (folders, drafts, future dates, translations of nothing), sitemap, host rules and service worker routes |
 | Search metadata | `seo` | Site address checks, escaped static head with no script or style, title and description length, Open Graph locale for every language, language addresses, canonical per language, hreflang list (no Valencian, `x-default`), `robots.txt` and sitemap (one entry per language, hreflang alternates, escaping), crawl files served by the service worker |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
@@ -813,6 +862,7 @@ Every spec runs in Chromium. The specs marked **(all browsers)** also run in Fir
 | `no-trusted-types` (all browsers) | The page served as a browser without Trusted Types sees it (no `trustedTypes`, no Trusted Types directives): the app starts, the service worker registers, the OCR worker starts, the flow reaches the PDF, and the CSP alone still refuses another site's script |
 | `share` | Share only where files can be shared; the share sheet gets the PDF within the click, with no text or link; after a download or a share the review stays and the small Send anonymous data link appears; closing the sheet; a failed share |
 | `guide` | The card guide opens, cites sources, follows the language and makes no outside requests |
+| `articles` | An article loads as HTML at its clean address with the article CSP and no script, and an inline script cannot run; the list shows only that language's articles and links back to the app; a language with no articles has no list and no link; the prerendered start screen links the list; the sitemap names the list and every article; the service worker serves an article and the list after one visit, offline too, never the app |
 | `guide-pages` | Each guide page loads with its own CSP and no script, styled, in Spanish, every citation pointing to a source; the pages link to each other and to the app; the service worker serves them, offline too; the sitemap lists them and each names its canonical address |
 | `languages` | First render in the address's language (`/fr`) with no other dictionary loaded; `/` is Spanish whatever the browser; the address follows the selector without a history entry and survives a reload; `/en/` and `/es` redirect, on the host and offline; switching language after the photo step's policy is in force, and offline |
 | `privacy-notice` | Exact privacy wording (processing on the device, no upload), no accept step, 4-day memory, blocked storage, translations, audit prompt (short, asks to disprove the claims, checks the live site), 80 % of the screen width on phone, tablet and desktop |
@@ -892,7 +942,7 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 
 | Stage | Job | What it does | Runs on | Fails the pipeline |
 |---|---|---|---|---|
-| changes | `changes` | Decides what the run does: release on `master`; on a pull request, whether it touches code. A change to only Markdown, `docs/` or `LICENSES/` skips the code jobs. Computes the release version from the git tags ([`scripts/release-version.ts`](scripts/release-version.ts), see [Releases](#releases)) | Both | No |
+| changes | `changes` | Decides what the run does: release on `master`; on a pull request, whether it touches code. A change to only Markdown, `docs/` or `LICENSES/` skips the code jobs; articles (`content/articles/`) count as code, because the build turns them into pages. Computes the release version from the git tags ([`scripts/release-version.ts`](scripts/release-version.ts), see [Releases](#releases)) | Both | No |
 | setup | `install` | `pnpm install --frozen-lockfile`. Saves the `node_modules` and pnpm store caches that every later job restores | Both | Yes |
 | build | `build` | `pnpm build` with `SOURCE_DATE_EPOCH` set to the commit time and `RELEASE_VERSION` set to the version, so the build is reproducible. Uploads `dist/` once; every later job tests or deploys that same build. Also uploads a CycloneDX SBOM of the runtime dependencies (`sbom` artifact, from `pnpm sbom`) and the `release-evidence` artifact (SHA-384 of every file, commit, version, SBOM; kept 90 days) | Both | Yes |
 | build | `typecheck` | `pnpm typecheck` (svelte-check, strict TypeScript) | PR | Yes |
@@ -1111,6 +1161,7 @@ src/
   zones/             field positions and size per document, from official specimens; documents.ts lists them
   redact/            normalised zones to pixels
   engine/            fields, masks, secure raster, watermark, JPEG filter, PDF export, undo history
+  articles/          article addresses, front matter checks, page rendering
   guide/             card guide: official sources, cited entries per document, text per language, static page per document
   offline/           service worker registration, precache manifest, automatic update of idle tabs
   security/          Trusted Types policy, WebRTC and frame lockdown (frame guard), photo-step CSP (intake lockdown), audit prompt text
@@ -1123,6 +1174,7 @@ deploy/              the deploy tool (wrangler) with its own lockfile, installed
 wrangler.jsonc       Cloudflare Workers host: static files, custom domains, no workers.dev address, /stats Worker route
 worker/              the Cloudflare Worker for POST /stats only: checks the fixed list, writes one Analytics Engine row
 thanks.html          the thanks page's HTML entry (its own CSP)
+content/articles/    the articles, in Markdown, one folder per language (CC BY-SA 4.0)
 tests/               unit, e2e and synthetic fixtures
 docs/                plan, zone measurement method, guide sources, decision records, images
 LICENSES/            licence texts (REUSE)
@@ -1170,6 +1222,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0036](docs/adr/0036-visual-regression-in-pinned-container.md): screenshot tests of key phone screens in Spanish and Arabic run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual`, so the baselines match on every machine.
 - [0037](docs/adr/0037-firefox-service-worker-script-source.md): `sw.js` is a script source in the photo step's policy and the OCR worker's policy, because Firefox checks responses the service worker builds as if they came from `sw.js`; without it, OCR and the corner model do not run in Firefox.
 - [0038](docs/adr/0038-one-address-per-language.md): one address per language; `/` is Spanish and the others have their own path, such as `/en`; `/en/` and `/es` redirect; each is its own canonical page; hreflang links in the HTML and the sitemap, without Valencian.
+- [0039](docs/adr/0039-articles.md): articles; Markdown in `content/articles/<lang>/`, written by the build into one static page each with no script (`script-src 'none'`); clean addresses (`/articles/<slug>`, `/en/articles/<slug>`), each language lists only its own; sent as HTML by `_headers`; saved by the service worker on first visit, checked by hash; text under CC BY-SA 4.0; a guide cites its sources.
 - [0040](docs/adr/0040-card-guide-pages.md): card guide pages; one static page per document, written by the build from the guide data, with no script (`script-src 'none'`), served and precached by the service worker.
 - [0041](docs/adr/0041-prerendered-start-screen.md): the build renders the Spanish start screen from `App.svelte` into `index.html`, inert until the app replaces it, so crawlers without JavaScript read it and the heading paints before any script; no font preload, because measurements showed it slows the first paint.
 - [0042](docs/adr/0042-axe-accessibility-scan.md): an axe-core scan of every screen, in Spanish and Arabic, on a phone and a wide screen, fails CI on any serious or critical accessibility finding. axe is a dev dependency and runs only in tests.
@@ -1209,6 +1262,9 @@ Exceptions:
   comes from Octicons, [MIT](LICENSES/MIT.txt).
 - **Fonts.** The bundled fonts (Bricolage Grotesque, JetBrains Mono, Caveat) are under the
   [SIL Open Font Licence 1.1](LICENSES/OFL-1.1.txt).
+- **Articles.** The text of the articles in [`content/articles/`](content/articles/) is under
+  [Creative Commons Attribution-ShareAlike 4.0](LICENSES/CC-BY-SA-4.0.txt) (`CC-BY-SA-4.0`), so others
+  can quote and translate it.
 - **Libraries.** Third-party libraries keep their own licences: `@cantoo/pdf-lib`, `onnxruntime-web`,
   the `scanic-ml` model and runtime and `paddleocr` are MIT; the PP-OCRv6 models are Apache-2.0.
   Their licence texts are published next to the OCR files in `ocr/`.

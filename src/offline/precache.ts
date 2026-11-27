@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Pure helpers shared by the service worker and the build: no DOM, no worker globals, tested in Node.
 
+import { articleRoute, isArticleFile } from '../articles/paths.ts'
+
 export interface PrecacheFile { readonly path: string; readonly integrity: string }
 export interface PrecacheManifest {
   readonly version: string
@@ -46,7 +48,13 @@ export interface StaticPage {
  */
 export function answersIdle (url: string, scope: string): boolean {
   const key = url.split('#')[0] ?? url
-  return !GUIDE_PAGES.some((p) => key === `${scope}${p}`)
+  if (GUIDE_PAGES.some((p) => key === `${scope}${p}`)) return false
+  // An article or a list of articles (ADR 0039) runs no script either. An address in an articles
+  // folder that names no article gets index.html, whose files do not load at that depth: it holds no
+  // photo either.
+  const rest = key.startsWith(scope) && !key.includes('?') ? key.slice(scope.length) : null
+  const article = rest === null ? null : articleRoute(rest)
+  return article === null || 'redirect' in article
 }
 
 /** Every static page of the site. Every other page load inside the scope gets index.html. */
@@ -76,7 +84,10 @@ export function isPrecached (path: string): boolean {
 
 /** Cached on first use instead of at install. */
 export const isOnDemand = (path: string): boolean =>
-  path.startsWith(ON_DEMAND_DIR) || path.startsWith(MODEL_DIR) || STATIC_PAGES.some((p) => p.onDemand === true && p.path === path)
+  path.startsWith(ON_DEMAND_DIR) || path.startsWith(MODEL_DIR) || STATIC_PAGES.some((p) => p.onDemand === true && p.path === path) ||
+  // The articles and their images (ADR 0039): saved when first read, so the install stays the same
+  // size however many articles there are.
+  isArticleFile(path)
 
 /** Parses and checks the manifest the build inlines into the worker. Throws on anything unexpected. */
 export function parseManifest (json: string): PrecacheManifest {
@@ -266,6 +277,14 @@ export function route (method: string, url: string, mode: string, scope: string,
   if (mode === 'navigate') {
     const to = languageRedirect(key, scope)
     if (to !== null) return { kind: 'redirect', url: to }
+    // An article or a list of articles (ADR 0039), as the host answers it: `articles` goes to
+    // `articles/`, which is the file `articles/index.html`.
+    const article = key.includes('?') ? null : articleRoute(key.slice(scope.length))
+    if (article !== null) {
+      if ('redirect' in article) return { kind: 'redirect', url: `${scope}${article.redirect}` }
+      const file = `${scope}${article.file}`
+      return known.onDemand.has(file) ? { kind: 'page', url: file, onDemand: true } : { kind: 'index' }
+    }
     if (!STATIC_PAGES.some((p) => key === `${scope}${p.path}`)) return { kind: 'index' }
     if (known.files.has(key)) return { kind: 'page', url: key, onDemand: false }
     if (known.onDemand.has(key)) return { kind: 'page', url: key, onDemand: true }

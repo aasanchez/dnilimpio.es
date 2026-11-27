@@ -15,6 +15,13 @@ import { join } from 'node:path'
 import { GUIDE_CSP, THANKS_CSP, cspWithScriptHashes } from './csp.ts'
 import { GUIDE_PAGES, SECURITY_HEADERS, SW_FILE, THANKS_PAGE, WORKER_SCRIPTS } from '../src/offline/precache.ts'
 import { LANGS } from '../src/i18n/langs.ts'
+import { INDEX_FILE, articleFolder } from '../src/articles/paths.ts'
+
+/** Every articles folder, one per language (ADR 0039). */
+const ARTICLE_FOLDERS: readonly string[] = LANGS.map(articleFolder)
+
+/** The type the host sends for every file in an articles folder (ADR 0039). */
+export const ARTICLE_CONTENT_TYPE = 'text/html; charset=utf-8'
 
 /** One rule of the `_headers` file: a path, headers it removes (set by an earlier rule), headers it adds. */
 export interface HeaderRule {
@@ -41,14 +48,31 @@ export function redirectsFile (): string {
     const seg = lang.toLowerCase()
     lines.push(`/${seg}/ /${seg} 301`)
   }
+  // Articles (ADR 0039): `/en/articles` goes to `/en/articles/`, which shows the file
+  // `/en/articles/index.html` at that address (200, a rewrite, not a redirect). The same for every
+  // language: where a language has no articles, the file is missing and the host answers as it does
+  // for any unknown path.
+  for (const folder of ARTICLE_FOLDERS) {
+    lines.push(`/${folder.slice(0, -1)} /${folder} 301`)
+    lines.push(`/${folder} /${folder}${INDEX_FILE} 200`)
+  }
   return `${lines.join('\n')}\n`
 }
 
 /** Where the host redirects `path` (`_redirects`, exact match), or null. For the preview server and tests. */
 export function redirectFor (path: string): string | null {
+  return ruleFor(path, '301')
+}
+
+/** The file the host shows at `path` without a redirect (`_redirects`, status 200), or null. */
+export function rewriteFor (path: string): string | null {
+  return ruleFor(path, '200')
+}
+
+function ruleFor (path: string, status: string): string | null {
   for (const line of redirectsFile().trim().split('\n')) {
-    const [from, to] = line.split(' ')
-    if (from === path && to !== undefined) return to
+    const [from, to, code] = line.split(' ')
+    if (from === path && to !== undefined && code === status) return to
   }
   return null
 }
@@ -135,6 +159,9 @@ export function hostHeaderRules (indexHtml: string): HeaderRule[] {
     own(THANKS_PAGE, THANKS_PAGE_CSP),
     ...GUIDE_PAGES.map((p) => own(p, GUIDE_PAGE_CSP)),
     ...WORKER_SCRIPTS.map((w) => own(w, HOST_WORKER_CSP)),
+    // Articles (ADR 0039) are files with no extension, so the host would send no type: it must send
+    // them as HTML. Their own <meta> CSP, with no script, applies on top of the page CSP above.
+    ...ARTICLE_FOLDERS.map((f): HeaderRule => ({ path: `/${f}*`, detach: ['Content-Type'], headers: { 'Content-Type': ARTICLE_CONTENT_TYPE } })),
   ]
 }
 

@@ -235,5 +235,18 @@
   "guideOpen": "What is on my card?",
   "guideAbout": "About: {field}",
   "seoTitle": "Cover data on your Spanish ID and add a watermark",
-  "seoDescription": "Cover the data on your Spanish DNI or TIE and add a watermark before you send a copy. Free, no sign-up. The document is processed on your device."
+  "seoDescription": "Cover the data on your Spanish DNI or TIE and add a watermark before you send a copy. Free, no sign-up. The document is processed on your device.",
+  "articlesTitle": "Articles",
+  "articlesLead": "News, guides and information about DNI Tapado.es and about sharing a copy of your ID with less risk.",
+  "articlesNews": "News",
+  "articlesGuide": "Guides",
+  "articlesInfo": "Information",
+  "articlesPublished": "Published on {date}",
+  "articlesUpdated": "Updated on {date}",
+  "articlesSources": "Sources",
+  "articlesOtherLangs": "In other languages:",
+  "articlesAll": "All articles",
+  "articlesCtaTitle": "Cover your ID",
+  "articlesCta": "Open DNI Tapado.es",
+  "articlesLicence": "The text of the articles is licensed under CC BY-SA 4.0. The website code is licensed under AGPL-3.0."
 }

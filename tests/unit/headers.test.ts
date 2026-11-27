@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { CSP, THANKS_CSP, cspWithScriptHashes } from '../../scripts/csp.ts'
 import { COMMON_HEADERS, HOST_WORKER_CSP, SERVICE_WORKER_CSP, THANKS_PAGE_CSP, cookiesSetBy, headersFor, reportingProblems, hostHeaderRules, pageCsp, renderHeadersFile } from '../../scripts/headers.ts'
+import { LANGS } from '../../src/i18n/langs.ts'
+import { articleFolder } from '../../src/articles/paths.ts'
 
 const MAP = '{"imports":{},"integrity":{"./assets/a.js":"sha384-x"}}'
 const HTML = `<html><head><script type="importmap">${MAP}</script></head></html>`
@@ -91,7 +93,7 @@ describe('renderHeadersFile', () => {
   const file = renderHeadersFile(rules)
   it('writes the Cloudflare `_headers` format, within its limits', () => {
     const lines = file.trimEnd().split('\n')
-    expect(lines.filter((l) => l.startsWith('/'))).toEqual(['/*', '/sw.js', '/thanks.html', '/guia-dni-4.html', '/guia-dni-3.html', '/guia-tie.html', '/ocr/worker.min.js'])
+    expect(lines.filter((l) => l.startsWith('/'))).toEqual(['/*', '/sw.js', '/thanks.html', '/guia-dni-4.html', '/guia-dni-3.html', '/guia-tie.html', '/ocr/worker.min.js', ...LANGS.map((l) => `/${articleFolder(l)}*`)])
     expect(lines.every((l) => l.length <= 2000)).toBe(true)
     expect(lines.filter((l) => l.startsWith('/')).length).toBeLessThanOrEqual(100)
     expect(file).toContain('/sw.js\n  ! Content-Security-Policy\n  Content-Security-Policy: ')

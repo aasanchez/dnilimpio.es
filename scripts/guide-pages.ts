@@ -24,7 +24,7 @@ function lookup (dict: Readonly<Record<string, string>>, what: string): (key: st
 }
 
 /** The app's stylesheet in the bundle: the `app` chunk's CSS (vite.config.ts). */
-function appStylesheet (bundle: OutputBundle): OutputAsset {
+export function appStylesheet (bundle: OutputBundle): OutputAsset {
   const css = Object.values(bundle).filter((f): f is OutputAsset => f.type === 'asset' && /^assets\/app-[\w-]+\.css$/.test(f.fileName))
   if (css.length !== 1 || css[0] === undefined) throw new Error(`guide pages: expected one assets/app-*.css, found ${String(css.length)}`)
   return css[0]
