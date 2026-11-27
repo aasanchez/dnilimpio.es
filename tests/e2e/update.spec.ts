@@ -177,6 +177,27 @@ test('a window back on the start screen after another window applied the update 
   expect(await marked(other)).toBeUndefined()
 })
 
+test('a page that leaves the start screen while the other windows answer keeps its photos', async ({ page }) => {
+  await page.goto(URL_)
+  await controlled(page)
+  const other = await openOther(page)
+  await blockModel(page)
+  await page.locator('#start').click()
+  await expect(page.locator('#file-front')).toBeAttached()
+  await deployNextBuild(page)
+  await expect.poll(async () => await waiting(page), { timeout: 15_000 }).toBe(true)
+  await page.evaluate(() => { document.documentElement.dataset['oldPage'] = '1' })
+  // The other window answers late (its page is busy for 1 s), while this page asks and moves on.
+  void other.evaluate(() => { const end = Date.now() + 1000; while (Date.now() < end) { /* busy */ } }).catch(() => undefined)
+  await page.locator('#back').click()
+  await page.locator('#start').click()
+  await page.locator('#file-front').setInputFiles(fixture('synthetic-front.png'))
+  await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
+  await page.waitForTimeout(3000)
+  expect(await marked(page)).toBe('1')
+  await expect(page.locator('#status-front')).toHaveText('Imagen cargada.')
+})
+
 test('once the busy window closes, the update is applied by itself when the tab comes back to the foreground', async ({ page }) => {
   await page.goto(URL_)
   await controlled(page)
