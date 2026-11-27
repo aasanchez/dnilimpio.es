@@ -13,7 +13,7 @@ Execute the audit across the following areas:
 
    - Trace the exact data flow from the moment a user selects or drops a DNI/TIE image (File, Blob, ArrayBuffer, DataURL, ObjectURL) through canvas rendering, watermarking, text overlay, compression, and final download/export.
    - Verify whether any temporary objects, IndexedDB entries, localStorage/sessionStorage, or Service Worker caches persist the image or extracted metadata after processing or tab closure.
-   - Check that the public wording is exactly true, no more and no less: the start-screen notice (privacyBody in src/i18n/locales/en.json and es.json, short on purpose; it mentions the opt-in stats in one sentence), the thanks page text (statsLead) and the "Privacy and security" section of README.md, which lists what the browser keeps: the app's files and AI models in Cache Storage and the date the notice was closed (localStorage key dnilimpio.noticeDismissedAt). Flag any claim the code does not support, and anything stored or sent that the README leaves out.
+   - Check that the public wording is exactly true, no more and no less: the start-screen notice (privacyBody in src/i18n/locales/en.json and es.json, short on purpose; it does not mention the opt-in stats, which the thanks page explains before anything is sent), the thanks page text (statsLead) and the "Privacy and security" section of README.md, which lists what the browser keeps: the app's files and AI models in Cache Storage and the date the notice was closed (localStorage key dnilimpio.noticeDismissedAt). Flag any claim the code does not support, and anything stored or sent that the README leaves out.
 
 2. Network & Outbound Traffic Audit
 

@@ -24,8 +24,7 @@
   import Editor from './components/Editor.svelte'
   import type CardGuideT from './components/CardGuide.svelte'
   import { emptyEditState, type Phase } from './ui/edit-state.ts'
-  import { sessionStats, type DetectOutcome, type PhotoVia } from './stats/session.ts'
-  import { openThanks } from './stats/thanks-link.ts'
+  import type { DetectOutcome, PhotoVia, SessionInput } from './stats/session.ts'
 
   /** The product name. Not translated: it is the brand and the domain (dnitapado.es). */
   const BRAND = 'DNI Tapado.es'
@@ -186,7 +185,7 @@
    */
   function finish (): void {
     const ids = new Set(doc.zones.map((z) => z.id))
-    const stats = sessionStats({
+    const input: SessionInput = {
       doc: docModel,
       outcome: detectOutcome,
       back: capture.back !== null,
@@ -197,9 +196,12 @@
       lang,
       sha: __BUILD_SHA__,
       via: (['front', 'back'] as const).map((s) => photoVia[s]).filter((v): v is PhotoVia => v !== null),
-    })
+    }
     reset()
-    openThanks(stats)
+    // The stats code is its own small chunk (precached like the rest), so the start page does not
+    // carry it. If it cannot load, the photos are already cleared and the app stays on the start of
+    // a new session: nothing is lost and nothing is sent.
+    void import('./stats/finish.ts').then((m) => { m.openThanksWith(input) }).catch(() => undefined)
   }
 
   /**

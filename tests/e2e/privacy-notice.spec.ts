@@ -14,8 +14,9 @@ test('informs that there are no cookies, with no accept step', async ({ page }) 
   // visits: no analytics code runs in the page (ADR 0027).
   await expect(notice).toContainText('Tu documento se procesa en tu dispositivo y la app no lo sube.')
   await expect(notice).not.toContainText(/visitas/i)
-  // The opt-in stats are named, as optional (ADR 0029).
-  await expect(notice).toContainText('Al terminar, puedes enviar estadísticas anónimas de uso, solo si tú quieres.')
+  // No word about the opt-in stats either: they are optional, and the thanks page explains them
+  // before anything is sent (ADR 0029).
+  await expect(notice).not.toContainText(/estadísticas/i)
   // No consent choice: one button closes it, the other opens the audit prompt.
   await expect(notice.getByRole('button')).toHaveText(['Compruébalo con tu IA →', 'Me lo creo'])
   await expect(page.getByRole('complementary', { name: 'Bruselas estaría orgullosa' })).toBeVisible()

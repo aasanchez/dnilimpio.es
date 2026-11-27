@@ -68,8 +68,10 @@ Options considered:
    `Sec-Fetch-Site: same-origin`, accepts only the exact list, writes one row to Workers Analytics
    Engine (dataset `dnitapado_usage`) with Cloudflare's two-letter country, and answers 204. It
    writes no IP address, sets no cookie and keeps no request log (`observability` off).
-8. **Wording**: the start-screen notice says, in one sentence, that people can send anonymous usage
-   stats when they finish, only if they want to. The thanks page says what is sent and what is not.
+8. **Wording**: the start-screen notice does not change. Its claims stay exactly true: the document
+   is processed on the device and the app does not upload it, and the stats carry nothing from the
+   document and are sent only on a tap (Alexis: the notice is not a disclaimer for an optional
+   feature). The thanks page says what is sent and what is not, before anything is sent.
    The audit prompt describes this send and asks the auditor to verify each limit above.
 
 ## Consequences
