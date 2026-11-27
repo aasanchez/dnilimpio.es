@@ -74,14 +74,14 @@ Whether a recipient accepts a redacted copy is up to them.
 
 | Document | Shape | Source of the field positions | Hidden by default | Optional |
 |---|---|---|---|---|
-| DNI 4.0 (August 2021 onwards) | card, 85.6 × 54 mm | Policía Nacional specimen | CAN, signature, issue and expiry dates, support number (3 places), MRZ | date and place of birth, address, parents |
-| DNI 3.0 (2015 to 2021) | card, 85.6 × 54 mm | PRADO ESP-BO-05001 | CAN, signature, issue date (laser text by the small photo), expiry date, support number (3 places), MRZ | date and place of birth, address, parents |
-| TIE, foreigner identity card (2020 model) | card, 85.6 × 54 mm | PRADO ESP-HO-03001 | CAN, signature, issue and expiry dates, card number (2 places), MRZ | date and place of birth, address, permit type |
+| DNI 4.0 (August 2021 onwards) | card, 85.6 × 54 mm | Policía Nacional specimen | CAN, signature, issue and expiry dates, support number (3 places), MRZ | name, DNI number (2 places), date and place of birth, address, parents |
+| DNI 3.0 (2015 to 2021) | card, 85.6 × 54 mm | PRADO ESP-BO-05001 | CAN, signature, issue date (laser text by the small photo), expiry date, support number (3 places), MRZ | name, DNI number, date and place of birth, address, parents |
+| TIE, foreigner identity card (2020 model) | card, 85.6 × 54 mm | PRADO ESP-HO-03001 | CAN, signature, issue and expiry dates, card number (2 places), MRZ | name, NIE, date and place of birth, address, permit type |
 
 Positions were measured on official specimens ([method and findings](docs/ZONES.md)); the data is in
-[`src/zones/`](src/zones/). The name, the photo and the DNI or NIE number stay visible by design;
-cover them with a black box, or with **Find automatically**, if needed. Any other document can be
-redacted by hand with black boxes.
+[`src/zones/`](src/zones/). The name and the DNI or NIE number start visible, because the person
+receiving the copy usually needs them; each has a switch to cover it. The photo stays visible; cover
+it with a black box if needed. Any other document can be redacted by hand with black boxes.
 
 **Document detection.** The document is detected from the machine-readable lines (MRZ) on the back,
 and you always confirm it ([ADR 0011](docs/adr/0011-document-detection.md)):
@@ -212,13 +212,17 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
        fields you hide bigger where the printed text runs past them. A box never gets smaller, never
        grows over a field you leave visible, and **Back to original position** undoes it. Only the
        positions of the words are used; the text read is not kept.
-     - **Find automatically** reads both sides with OCR on your device and adds a black box over each
-       piece of data you pick: name and surnames, DNI/NIE number, dates, support number, CAN and MRZ
-       lines. Dates, support number, CAN and MRZ are picked to start with; name and number are not.
-       It works from the text itself, so it also finds data on layouts the app has not measured. A
-       DNI/NIE number or a date counts only when its check letter or calendar date is valid. The
-       boxes it adds are ordinary boxes: check them in **Boxes**, move or delete them, or undo them
-       all in one step ([ADR 0010](docs/adr/0010-smart-field-finding.md)). The first use downloads
+     - **Find automatically** reads both sides with OCR on your device and adds a black box over the
+       data of each field you have switched to covered. The switches are the only choice, so the
+       list and the search always match ([ADR 0043](docs/adr/0043-one-field-list.md)). It looks for
+       the name, the DNI/NIE number, the three dates, the support number, the CAN and the MRZ lines,
+       and says which covered fields it does not look for (the signature, address, place of birth,
+       parents and permit type have no pattern to check, so only their fixed box covers them). The
+       MRZ tells the date of birth and the expiry date apart; other dates take the field printed
+       where they are. It works from the text itself, so it also finds data on layouts the app has
+       not measured. A DNI/NIE number or a date counts only when its check letter or calendar date
+       is valid. The boxes it adds are ordinary boxes: check them in **Boxes**, move or delete them,
+       or undo them all in one step ([ADR 0010](docs/adr/0010-smart-field-finding.md)). The first use downloads
        about 9 MB. If finding cannot run (offline before that download, or a browser without a
        service worker), the button is disabled with a short note and you hide the data by hand.
    - **Boxes:** extra black boxes for anything the list does not cover. Turn on **Draw black box**
@@ -724,6 +728,7 @@ show the current state.
 | Keyboard use: the whole flow without a mouse, visible focus, focus never lost or hidden | Done |
 | Automatic accessibility scan of every screen (axe-core, ADR 0042) | Done |
 | Smart field finding with on-device OCR (self-hosted, loaded on first use) | Done |
+| One field list for the switches and **Find automatically**; name and DNI/NIE number switches; dates told apart by the MRZ (ADR 0043) | Done |
 | OCR engine PP-OCRv6 tiny; document detection from the front's printed text | Done |
 | Fit to the text: cover boxes of the ticked fields grow to the words OCR finds | Done |
 | Watermark with size and opacity controls; black and white | Done |
@@ -1237,6 +1242,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0040](docs/adr/0040-card-guide-pages.md): card guide pages; one static page per document, written by the build from the guide data, with no script (`script-src 'none'`), served and precached by the service worker.
 - [0041](docs/adr/0041-prerendered-start-screen.md): the build renders the Spanish start screen from `App.svelte` into `index.html`, inert until the app replaces it, so crawlers without JavaScript read it and the heading paints before any script; no font preload, because measurements showed it slows the first paint.
 - [0042](docs/adr/0042-axe-accessibility-scan.md): an axe-core scan of every screen, in Spanish and Arabic, on a phone and a wide screen, fails CI on any serious or critical accessibility finding. axe is a dev dependency and runs only in tests.
+- [0043](docs/adr/0043-one-field-list.md): one field list: **Find automatically** covers the data of the fields switched to covered, with no list of its own; name and DNI/NIE number become fields, visible by default; the MRZ tells the dates apart.
 
 ## Contributing
 

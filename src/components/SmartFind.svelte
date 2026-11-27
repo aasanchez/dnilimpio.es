@@ -1,36 +1,39 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Smart field finding: on-device OCR reads both straightened sides and adds black boxes over the
-     data the user picks (src/ocr/find.ts). Online first, offline optional: when OCR cannot run, the
+     data of the fields switched to hidden in the fields list above (src/ocr/find.ts). The switches are
+     the only choice: there is no second list of what to look for (ADR 0043). Online first, offline optional: when OCR cannot run, the
      button is disabled with a short reason and the user hides the data by hand. It never shows a raw error. -->
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { DEFAULT_KINDS, FOUND_KINDS, type FoundKind } from '../ocr/find.ts'
+  import { coverFor, isFindable } from '../ocr/find.ts'
   import { loadOcr } from '../ocr/load-ocr.ts'
   import type { OcrStatus } from '../ocr/ocr.ts'
   import { t, tf, type Key, type Lang } from '../i18n/index.ts'
-  import type { Rect, Side } from '../zones/types.ts'
+  import type { ModelZones, Rect, Side, ZoneId } from '../zones/types.ts'
 
-  const { lang, cards, onFound }: {
+  const { lang, cards, doc, fields, hidden, onFound }: {
     lang: Lang
     /** Straightened sides to read. */
     cards: ReadonlyArray<readonly [Side, HTMLCanvasElement]>
+    /** The document's zones as placed now: they tell which date field a found date is. */
+    doc: ModelZones
+    /** The fields of the list, in its order. */
+    fields: readonly ZoneId[]
+    /** The fields switched to hidden: the search covers what it finds of these. */
+    hidden: ReadonlySet<ZoneId>
     /** Receives the rectangles to cover per side and returns how many boxes were added. */
     onFound: (rects: ReadonlyArray<{ side: Side; rects: Rect[] }>) => number
   } = $props()
 
-  const KIND_KEYS: Readonly<Record<FoundKind, Key>> = {
-    name: 'find_name',
-    idNumber: 'find_idNumber',
-    date: 'find_date',
-    supportNumber: 'field_supportNumber',
-    can: 'field_can',
-    mrz: 'field_mrz',
-  }
+  const fieldName = (id: ZoneId): string => t(lang, `field_${id}` as Key)
+  const list = (ids: readonly ZoneId[]): string => new Intl.ListFormat(lang, { type: 'conjunction' }).format(ids.map(fieldName))
+  /** Hidden fields the search looks for, and hidden fields only their fixed box covers. */
+  const sought = $derived(fields.filter((id) => hidden.has(id) && isFindable(id)))
+  const boxOnly = $derived(fields.filter((id) => hidden.has(id) && !isFindable(id)))
 
   type Result = { kind: 'done'; n: number } | { kind: 'none' } | { kind: 'failed' }
 
   let status = $state<OcrStatus | null>(null)
-  let kinds = $state<FoundKind[]>([...DEFAULT_KINDS])
   let running = $state(false)
   let result = $state<Result | null>(null)
   /** False once the editor is left (e.g. Adjust corners): a run still in progress then discards its results. */
@@ -60,10 +63,6 @@
     }
   })
 
-  function toggleKind (k: FoundKind, on: boolean): void {
-    kinds = on ? FOUND_KINDS.filter((x) => x === k || kinds.includes(x)) : kinds.filter((x) => x !== k)
-  }
-
   async function run (): Promise<void> {
     running = true
     result = null
@@ -72,8 +71,9 @@
       const found = await ocr.findOnCard(cards)
       // The cards may have been re-aligned meanwhile: these boxes belong to the old alignment.
       if (!mounted) return
-      const picked = found.map(({ side, found: f }) => ({ side, rects: f.filter((x) => kinds.includes(x.kind)).map((x) => x.rect) }))
-      const n = onFound(picked)
+      const zonesOf = (side: Side): ModelZones['zones'] => doc.zones.filter((z) => z.side === side)
+      const picked = coverFor(found.map(({ side, found: f }) => ({ side, found: f, zones: zonesOf(side) })), hidden)
+      const n = onFound(picked.map(({ side, rects }) => ({ side: side as Side, rects })))
       result = n > 0 ? { kind: 'done', n } : { kind: 'none' }
     } catch {
       result = { kind: 'failed' }
@@ -89,15 +89,13 @@
 <section class="mt-4 grid gap-2 border-t border-dashed border-dash pt-4" aria-labelledby="find-title">
   <h3 class="text-base" id="find-title">{t(lang, 'findTitle')}</h3>
   <p class="hint">{t(lang, 'findIntro')}</p>
-  <div class="flex flex-wrap gap-2" role="group" aria-label={t(lang, 'findKinds')}>
-    {#each FOUND_KINDS as k (k)}
-      <label class="chip" class:is-on={kinds.includes(k)}>
-        <input type="checkbox" class="sr-only" id="find-kind-{k}" checked={kinds.includes(k)} disabled={running}
-          onchange={(e) => { toggleKind(k, e.currentTarget.checked) }} />{kinds.includes(k) ? '◉' : '○'} {t(lang, KIND_KEYS[k])}
-      </label>
-    {/each}
-  </div>
-  <button type="button" class="button justify-self-start" id="find-run" disabled={status === null || unavailable !== null || running || kinds.length === 0 || cards.length === 0}
+  {#if sought.length > 0}
+    <p class="hint" id="find-sought">{tf(lang, 'findSought', { fields: list(sought) })}</p>
+  {:else}
+    <p class="hint" id="find-sought">{t(lang, 'findNothing')}</p>
+  {/if}
+  {#if boxOnly.length > 0}<p class="hint" id="find-box-only">{tf(lang, 'findBoxOnly', { fields: list(boxOnly) })}</p>{/if}
+  <button type="button" class="button justify-self-start" id="find-run" disabled={status === null || unavailable !== null || running || sought.length === 0 || cards.length === 0}
     onclick={() => { void run() }}>{t(lang, 'findRun')}</button>
   <div aria-live="polite" id="find-status">
     {#if running}

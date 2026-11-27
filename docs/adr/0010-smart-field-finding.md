@@ -1,6 +1,6 @@
 # 0010. Smart field finding from OCR text
 
-- Status: accepted
+- Status: accepted; the kinds the user picks replaced by the field switches in [0043](0043-one-field-list.md)
 - Date: 2026-11-25
 - Decided by: Alexis ("Smart field finding: OCR reads where the name, number and dates are, so it can
   mask them on any document, even layouts we haven't measured. Separate PR.")

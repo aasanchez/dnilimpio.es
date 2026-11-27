@@ -3,15 +3,24 @@
 // It works from what the text says, not from measured zones, so it also covers layouts we have not
 // measured. Pure functions: OCR words in, normalised rectangles out. Nothing here touches the image.
 
-import { parseMrz } from './mrz.ts'
+import { parseMrz, type Mrz } from './mrz.ts'
+import type { ZoneId } from '../zones/types.ts'
 
-/** What a found item is. The user chooses which kinds to cover. */
-export type FoundKind = 'name' | 'idNumber' | 'date' | 'supportNumber' | 'can' | 'mrz'
+/**
+ * The fields the automatic search can find in the text: the same ids as the switches in the fields
+ * list (src/zones/types.ts), so one switch decides what both hide. The signature, address, place of
+ * birth, parents and permit type have no pattern to check, so only their fixed box covers them.
+ */
+export const FINDABLE = ['name', 'idNumber', 'dateOfBirth', 'issueDate', 'expiryDate', 'supportNumber', 'can', 'mrz'] as const satisfies readonly ZoneId[]
+export type FindableField = (typeof FINDABLE)[number]
 
-export const FOUND_KINDS: readonly FoundKind[] = ['name', 'idNumber', 'date', 'supportNumber', 'can', 'mrz']
+/** The three date fields. A date the MRZ or the layout cannot place is still a 'date'. */
+export const DATE_FIELDS = ['dateOfBirth', 'issueDate', 'expiryDate'] as const satisfies readonly FindableField[]
 
-/** Kinds selected by default: the same data the fields list hides by default. Name and ID number stay visible. */
-export const DEFAULT_KINDS: readonly FoundKind[] = ['date', 'supportNumber', 'can', 'mrz']
+/** What a found item is: a field, or a date whose field is not known yet. */
+export type FoundKind = FindableField | 'date'
+
+export const isFindable = (id: ZoneId): id is FindableField => (FINDABLE as readonly ZoneId[]).includes(id)
 
 export interface Box { readonly x0: number; readonly y0: number; readonly x1: number; readonly y1: number }
 export interface OcrWord { readonly text: string; readonly confidence: number; readonly bbox: Box }
@@ -89,7 +98,8 @@ export function mrzNames (line3: string): string[] {
 }
 
 /**
- * Finds personal data in the OCR words of one side of a card.
+ * Finds personal data in the OCR words of one side of a card. Dates come out as 'date': datesByMrz()
+ * and coverFor() tell which date field each one is.
  * - Numbers and dates are matched on one word or on 2–3 neighbouring words ("01 01 1980").
  *   A DNI/NIE number and a date must pass their checks; that is what makes a match trustworthy.
  * - Names: words equal to a name part read from the MRZ (any side), or the line under a
@@ -146,6 +156,71 @@ export function findSensitive (lines: readonly OcrLineWords[], size: { readonly 
 export function namesFromText (text: string): string[] {
   const m = parseMrz(text)
   return m ? mrzNames(m.lines[2]) : []
+}
+
+/** "01 01 1980" (day, month, year) → "800101", the MRZ's YYMMDD form. Undefined when it is not a date. */
+export function mrzDate (s: string): string | undefined {
+  if (!isDate(s)) return undefined
+  const m = /^(\d{2})[ ./-]?(\d{2})[ ./-]?\d{2}(\d{2})$/.exec(s)
+  return m ? `${m[3] ?? ''}${m[2] ?? ''}${m[1] ?? ''}` : undefined
+}
+
+/**
+ * Names the dates the MRZ confirms: a date equal to its birth date is the date of birth, and one
+ * equal to its expiry date is the expiry date. Only fields whose check digit passes count.
+ */
+export function datesByMrz (found: readonly Found[], mrz: Mrz | null): Found[] {
+  if (!mrz) return [...found]
+  return found.map((f) => {
+    if (f.kind !== 'date') return f
+    const d = mrzDate(clean(f.text))
+    if (d !== undefined && mrz.checks.birth && d === mrz.birthDate) return { ...f, kind: 'dateOfBirth' }
+    if (d !== undefined && mrz.checks.expiry && d === mrz.expiryDate) return { ...f, kind: 'expiryDate' }
+    return f
+  })
+}
+
+/** A field's rectangles on one side of the card, as the editor places them. */
+export interface FieldZone { readonly id: ZoneId; readonly rects: readonly Rect[] }
+
+const centre = (r: Rect): [number, number] => [r.x + r.w / 2, r.y + r.h / 2]
+
+/**
+ * The date field printed where `rect` is: the date zone it overlaps most, else the nearest one by
+ * centre. Undefined when the side has no date zone, or `taken` already names every one of them.
+ */
+export function dateFieldAt (rect: Rect, zones: readonly FieldZone[], taken: ReadonlySet<ZoneId> = new Set()): ZoneId | undefined {
+  const dates = zones.filter((z) => (DATE_FIELDS as readonly ZoneId[]).includes(z.id) && !taken.has(z.id))
+  let best: { id: ZoneId; inter: number; dist: number } | undefined
+  const [cx, cy] = centre(rect)
+  for (const z of dates) {
+    for (const r of z.rects) {
+      const inter = Math.max(0, Math.min(rect.x + rect.w, r.x + r.w) - Math.max(rect.x, r.x)) * Math.max(0, Math.min(rect.y + rect.h, r.y + r.h) - Math.max(rect.y, r.y))
+      const [zx, zy] = centre(r)
+      const dist = Math.hypot(cx - zx, cy - zy)
+      if (!best || inter > best.inter || (inter === best.inter && dist < best.dist)) best = { id: z.id, inter, dist }
+    }
+  }
+  return best?.id
+}
+
+/**
+ * The rectangles to cover on each side: the found items whose field is hidden. A date the MRZ did
+ * not name takes the date field of the layout where it is printed, except fields the MRZ already
+ * placed on that side. A date that still has no field is covered when any date field is hidden,
+ * because covering too much is the safe side.
+ */
+export function coverFor (sides: ReadonlyArray<{ side: string; found: readonly Found[]; zones: readonly FieldZone[] }>, hidden: ReadonlySet<ZoneId>): Array<{ side: string; rects: Rect[] }> {
+  const anyDate = DATE_FIELDS.some((d) => hidden.has(d))
+  return sides.map(({ side, found, zones }) => {
+    const named = new Set<ZoneId>(found.flatMap((f) => (f.kind === 'date' ? [] : [f.kind])))
+    const rects = found.filter((f) => {
+      if (f.kind !== 'date') return hidden.has(f.kind)
+      const field = dateFieldAt(f.rect, zones, named)
+      return field === undefined ? anyDate : hidden.has(field)
+    }).map((f) => f.rect)
+    return { side, rects }
+  })
 }
 
 /** Intersection over union of two rectangles, to skip results already covered by a box. */

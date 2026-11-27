@@ -12,7 +12,7 @@
 // This module is loaded on demand (its own chunk): the first page load does not include the engine.
 
 import { AskTimeout, askWorker, type AskMessage, type AskReply } from './ask.ts'
-import { MIN_WORD_CONFIDENCE, findSensitive, namesFromText, type Found, type Rect } from './find.ts'
+import { MIN_WORD_CONFIDENCE, datesByMrz, findSensitive, mrzNames, type Found, type Rect } from './find.ts'
 import { fromWire, type OcrLine } from './lines.ts'
 import { parseMrz, type Mrz } from './mrz.ts'
 import { MODEL_FILES, type Reply, type Request } from './protocol.ts'
@@ -226,8 +226,10 @@ export async function findOnCard<S extends string> (sides: ReadonlyArray<readonl
     const size = { w: image.width, h: image.height }
     read.push({ side, size, ...(await recognise(image)) })
   }
-  const names = namesFromText(read.map((r) => r.text).join('\n'))
-  return read.map((r) => ({ side: r.side, found: findSensitive(r.lines, r.size, names) }))
+  // The MRZ of either side gives the names to look for and tells the date of birth and expiry date apart.
+  const mrz = parseMrz(read.map((r) => r.text).join('\n'))
+  const names = mrz ? mrzNames(mrz.lines[2]) : []
+  return read.map((r) => ({ side: r.side, found: datesByMrz(findSensitive(r.lines, r.size, names), mrz) }))
 }
 
 /**
