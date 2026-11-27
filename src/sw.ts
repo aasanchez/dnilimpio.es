@@ -34,6 +34,9 @@ interface BuildFile { readonly url: string; readonly integrity: string }
 // the request) is cached or downloaded.
 const ON_DEMAND = new Map(manifest.onDemand.map((f): [string, BuildFile] => [urlOf(f.path), { url: urlOf(f.path), integrity: f.integrity }]))
 const FILES = new Map(manifest.files.map((f): [string, BuildFile] => [urlOf(f.path), { url: urlOf(f.path), integrity: f.integrity }]))
+// The Content-Type of each file, fixed by the build (contentTypeOf()); parseManifest() refused any
+// file without one.
+const TYPES = new Map([...manifest.files, ...manifest.onDemand].map((f): [string, string] => [urlOf(f.path), contentTypeOf(f.path) ?? 'application/octet-stream']))
 const KNOWN = { files: new Set(FILES.keys()), onDemand: new Set(ON_DEMAND.keys()) }
 const WORKERS = new Set(WORKER_SCRIPTS.map(urlOf))
 
@@ -72,7 +75,7 @@ async function verifiedHit (cache: Cache, url: string, integrity: string): Promi
     await cache.delete(url)
     return undefined
   }
-  return new Response(body, { status: 200, headers: { 'Content-Type': contentTypeOf(url) ?? 'application/octet-stream' } })
+  return new Response(body, { status: 200, headers: { 'Content-Type': TYPES.get(url) ?? 'application/octet-stream' } })
 }
 
 /** Downloads one file of this build from its fixed URL, checked by the browser against its hash, and caches it. */

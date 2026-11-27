@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
 import { createHash } from 'node:crypto'
+import { IMAGE_TYPES } from '../../scripts/articles.ts'
 import { GUIDE_PAGES, PAGE_HEADERS, SECURITY_HEADERS, STATIC_PAGES, WORKER_SCRIPTS, addPageHeaders, answersIdle, cacheName, contentTypeOf, CONTENT_TYPES, isOnDemand, isPrecached, parseManifest, route, sriOf, workerCsp } from '../../src/offline/precache.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
@@ -53,7 +54,11 @@ describe('parseManifest', () => {
 describe('contentTypeOf (audit F-06)', () => {
   it('gives each kind of build file a fixed type, by extension only', () => {
     expect(contentTypeOf('index.html')).toBe('text/html; charset=utf-8')
-    expect(contentTypeOf('https://dnitapado.es/assets/index-x.js')).toBe('text/javascript; charset=utf-8')
+    expect(contentTypeOf('assets/index-x.js')).toBe('text/javascript; charset=utf-8')
+    // An article has no extension; the host sends it as HTML (ADR 0039).
+    expect(contentTypeOf('articles/presentamos-los-articulos')).toBe('text/html; charset=utf-8')
+    expect(contentTypeOf('en/articles/some-slug')).toBe('text/html; charset=utf-8')
+    expect(contentTypeOf('articles/index.html')).toBe('text/html; charset=utf-8')
     expect(contentTypeOf('ocr/ort-wasm-simd-threaded.wasm')).toBe('application/wasm')
     expect(contentTypeOf('ocr/worker.min.js')).toBe('text/javascript; charset=utf-8')
     expect(contentTypeOf('assets/font.woff2')).toBe('font/woff2')
@@ -62,6 +67,10 @@ describe('contentTypeOf (audit F-06)', () => {
     for (const path of ['assets/x.exe', 'README', 'assets/.css', 'a/b.constructor', 'a/b.toString', 'dir.js/file']) {
       expect(contentTypeOf(path), path).toBeUndefined()
     }
+  })
+  it('types every image format an article may use (scripts/articles.ts)', () => {
+    for (const ext of IMAGE_TYPES) expect(contentTypeOf(`assets/articles/photo-x${ext}`), ext).toMatch(/^image\//)
+    expect(contentTypeOf('assets/articles/PHOTO.JPG')).toBe('image/jpeg')
   })
   it('never types a build file as HTML unless it is one', () => {
     for (const [ext, type] of Object.entries(CONTENT_TYPES)) expect(type.startsWith('text/html')).toBe(ext === 'html')
