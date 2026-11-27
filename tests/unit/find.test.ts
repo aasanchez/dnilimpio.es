@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
-import { findSensitive, isDate, isIdNumber, isMrzLine, isSupportNumber, mrzNames, namesFromText, overlap, toRect, type OcrLineWords, type OcrWord } from '../../src/ocr/find.ts'
-import { checkDigit } from '../../src/ocr/mrz.ts'
+import { DATE_FIELDS, FINDABLE, coverFor, dateFieldAt, datesByMrz, findSensitive, isDate, isFindable, isIdNumber, isMrzLine, isSupportNumber, mrzDate, mrzNames, namesFromText, overlap, toRect, type Found, type OcrLineWords, type OcrWord } from '../../src/ocr/find.ts'
+import { checkDigit, parseMrz } from '../../src/ocr/mrz.ts'
+import { DOCUMENTS } from '../../src/zones/documents.ts'
+import { DNI_4_0 } from '../../src/zones/dni.ts'
+import { TIE } from '../../src/zones/tie.ts'
+import type { ZoneId } from '../../src/zones/types.ts'
 
 const SIZE = { w: 1712, h: 1080 }
 
@@ -135,5 +139,74 @@ describe('overlap', () => {
     const a = { x: 0.1, y: 0.1, w: 0.2, h: 0.1 }
     expect(overlap(a, a)).toBe(1)
     expect(overlap(a, { x: 0.5, y: 0.5, w: 0.1, h: 0.1 })).toBe(0)
+  })
+})
+
+/** A valid TD1 MRZ (DNI) with the given birth and expiry dates (YYMMDD), as OCR text. */
+function mrzText (birth: string, expiry: string): string {
+  const number = 'BAA000589'
+  const l1 = `IDESP${number}${String(checkDigit(number))}99999999R<<<<<<`
+  const l2a = `${birth}${String(checkDigit(birth))}F${expiry}${String(checkDigit(expiry))}ESP<<<<<<<<<<<`
+  const composite = l1.slice(5, 30) + l2a.slice(0, 7) + l2a.slice(8, 15) + l2a.slice(18, 29)
+  return [l1, l2a + String(checkDigit(composite)), 'ESPANOLA<ESPANOLA<<CARMEN<<<<'].join('\n')
+}
+
+const at = (x: number, y: number): Found['rect'] => ({ x, y, w: 0.1, h: 0.05 })
+const date = (text: string, x: number, y: number): Found => ({ kind: 'date', text, rect: at(x, y) })
+const front = (d: typeof DNI_4_0): Array<{ id: ZoneId; rects: Found['rect'][] }> => d.zones.filter((z) => z.side === 'front').map((z) => ({ id: z.id, rects: [...z.rects] }))
+
+describe('one field list for the switches and the search', () => {
+  it('looks only for fields that exist, and every date field is one of them', () => {
+    const ids = new Set(DOCUMENTS.flatMap((d) => d.zones.map((z) => z.id)))
+    for (const f of FINDABLE) expect(ids.has(f)).toBe(true)
+    for (const d of DATE_FIELDS) expect(isFindable(d)).toBe(true)
+    // Fields with no pattern to check: only their fixed box covers them.
+    for (const id of ['signature', 'address', 'placeOfBirth', 'parents', 'permitType'] as const) expect(isFindable(id)).toBe(false)
+  })
+
+  it('turns a printed date into the MRZ form', () => {
+    expect(mrzDate('01 01 1980')).toBe('800101')
+    expect(mrzDate('02.06.2031')).toBe('310602')
+    expect(mrzDate('31 02 2020')).toBeUndefined()
+  })
+
+  it('names the date of birth and the expiry date from the MRZ, and leaves other dates as dates', () => {
+    const mrz = parseMrz(mrzText('800101', '310602'))
+    const found = [date('01 01 1980', 0.8, 0.5), date('02 06 2031', 0.6, 0.6), date('02 06 2021', 0.4, 0.6), { kind: 'can', text: '987654', rect: at(0.8, 0.85) } satisfies Found]
+    expect(datesByMrz(found, mrz).map((f) => f.kind)).toEqual(['dateOfBirth', 'expiryDate', 'date', 'can'])
+    expect(datesByMrz(found, null).map((f) => f.kind)).toEqual(['date', 'date', 'date', 'can'])
+  })
+
+  it('places a date by the layout: the zone it overlaps, else the nearest one, never a field already taken', () => {
+    const zones = front(DNI_4_0)
+    expect(dateFieldAt(at(0.42, 0.6), zones)).toBe('issueDate')
+    expect(dateFieldAt(at(0.62, 0.6), zones)).toBe('expiryDate')
+    expect(dateFieldAt(at(0.82, 0.52), zones)).toBe('dateOfBirth')
+    expect(dateFieldAt(at(0.62, 0.6), zones, new Set<ZoneId>(['expiryDate']))).toBe('issueDate')
+    expect(dateFieldAt(at(0.5, 0.5), [])).toBeUndefined()
+  })
+
+  it('covers only what the switches hide: the date of birth stays visible by default', () => {
+    const recommended = new Set<ZoneId>(['can', 'signature', 'issueDate', 'expiryDate', 'supportNumber', 'mrz'])
+    const found: Found[] = [
+      { kind: 'name', text: 'CARMEN', rect: at(0.4, 0.44) },
+      { kind: 'idNumber', text: '99999999R', rect: at(0.45, 0.2) },
+      date('01 01 1980', 0.82, 0.52),
+      date('02 06 2021', 0.42, 0.6),
+      { kind: 'can', text: '987654', rect: at(0.8, 0.85) },
+    ]
+    const [res] = coverFor([{ side: 'front', found, zones: front(DNI_4_0) }], recommended)
+    expect(res?.rects).toEqual([at(0.42, 0.6), at(0.8, 0.85)])
+    const [all] = coverFor([{ side: 'front', found, zones: front(DNI_4_0) }], new Set<ZoneId>([...recommended, 'name', 'idNumber', 'dateOfBirth']))
+    expect(all?.rects).toHaveLength(5)
+  })
+
+  it('on the TIE back, an unnamed date is the issue date; with no date zone it follows any hidden date', () => {
+    const back = TIE.zones.filter((z) => z.side === 'back').map((z) => ({ id: z.id, rects: [...z.rects] }))
+    const d = [date('01 01 2019', 0.2, 0.18)]
+    expect(coverFor([{ side: 'back', found: d, zones: back }], new Set<ZoneId>(['issueDate']))[0]?.rects).toHaveLength(1)
+    expect(coverFor([{ side: 'back', found: d, zones: back }], new Set<ZoneId>(['expiryDate']))[0]?.rects).toHaveLength(0)
+    expect(coverFor([{ side: 'back', found: d, zones: [] }], new Set<ZoneId>(['expiryDate']))[0]?.rects).toHaveLength(1)
+    expect(coverFor([{ side: 'back', found: d, zones: [] }], new Set<ZoneId>(['can']))[0]?.rects).toHaveLength(0)
   })
 })

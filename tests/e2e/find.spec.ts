@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Smart field finding: on-device OCR reads the straightened card and adds black boxes over the data
-// the user picks. When OCR cannot run, the button is disabled with a reason and nothing fails.
+// of the fields switched to hidden in the list (ADR 0043). When OCR cannot run, the button is
+// disabled with a reason and nothing fails.
 import { expect, test, type Page } from '@playwright/test'
 import { SANS, controlled, pixel, toEditorWithText } from './helpers.ts'
 
@@ -22,21 +23,28 @@ const onCard = (x: number, y: number): [number, number] => [Math.round((x - 200)
 test.describe('with the service worker', () => {
   test.use({ serviceWorkers: 'allow' })
 
-  test('finds the chosen data on both sides and covers it with boxes, in one undoable step', async ({ page }) => {
+  test('finds the data of the hidden fields on both sides and covers it with boxes, in one undoable step', async ({ page }) => {
     test.setTimeout(180_000)
     await controlled(page)
     await toEditorWithText(page)
     // Document detection on the document screen already fetched the OCR files: no download left.
     await expect(page.locator('#find-status')).not.toContainText('MB')
     await expect(page.locator('#find-run')).toBeEnabled()
-    // Default kinds: dates, support number, CAN and MRZ. Add the DNI number; leave the name visible.
-    await expect(page.locator('#find-kind-name')).not.toBeChecked()
-    await expect(page.locator('#find-kind-date')).toBeChecked()
-    await page.locator('#find-kind-idNumber').check({ force: true })
-    // Hide nothing through the fields list, so every black pixel comes from smart find.
+    // The switches are the only choice: with nothing hidden there is nothing to look for.
     await page.locator('#restore-all').click()
+    await expect(page.locator('#find-run')).toBeDisabled()
+    await expect(page.locator('#find-sought')).toHaveText('Tapa algún dato en la lista para buscarlo.')
+    // Recommended fields, plus the DNI number; the name stays visible.
+    await page.locator('#preset-recommended').click()
+    await page.locator('#field-idNumber').check({ force: true })
+    await expect(page.locator('#field-name')).not.toBeChecked()
+    await expect(page.locator('#find-sought')).toContainText('Número de DNI/NIE')
+    await expect(page.locator('#find-sought')).not.toContainText('Nombre y apellidos')
+    await expect(page.locator('#find-box-only')).toHaveText('No busca Firma: solo los tapa su recuadro fijo.')
     await page.locator('#find-run').click()
     await expect(page.locator('#find-status')).toContainText(/Se han añadido \d+ recuadros/, { timeout: 150_000 })
+    // Show every field again, so every black pixel below comes from the boxes the search added.
+    await page.locator('#restore-all').click()
 
     const black = async (x: number, y: number): Promise<boolean> => {
       const [px, py] = onCard(x, y)
@@ -48,11 +56,11 @@ test.describe('with the service worker', () => {
     expect(await black(await centreX(page, 'EMISION 02 06 2021', '06', 640), 646)).toBe(true)
     expect(await black(await centreX(page, 'NUM SOPORTE CAA000000', 'CAA000000', 640), 746)).toBe(true)
     expect(await black(await centreX(page, '987654', '987654', 1180), 916)).toBe(true)
-    expect(await black(await centreX(page, 'CARMEN', 'CARMEN', 640), 546)).toBe(false) // name not chosen
+    expect(await black(await centreX(page, 'CARMEN', 'CARMEN', 640), 546)).toBe(false) // name switch off
     expect(await black(await centreX(page, 'DNI 99999999R', 'DNI', 640), 286)).toBe(false) // labels stay visible
     await page.locator('#tab-back').click()
     expect(await black(400, 846)).toBe(true) // MRZ line 2
-    expect(await black(600, 356)).toBe(false) // address: not a kind smart find covers
+    expect(await black(600, 356)).toBe(false) // address: visible, and not a field the search finds
 
     // One undo removes every box smart find added.
     await page.locator('#tool-boxes').click()

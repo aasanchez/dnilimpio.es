@@ -569,7 +569,7 @@
             </p>
           {/if}
         </div>
-        <SmartFind {lang} {cards} onFound={addFound} />
+        <SmartFind {lang} {cards} doc={placed} fields={fields.map((f) => f.id)} {hidden} onFound={addFound} />
       </div>
 
       <div class="flex flex-col gap-3" id="panel-boxes" role="tabpanel" aria-labelledby="tool-boxes" hidden={tool !== 'boxes'}>

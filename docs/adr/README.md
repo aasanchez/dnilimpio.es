@@ -15,7 +15,7 @@ project specification on purpose).
 | [0007](0007-corner-model.md) | Find the card's corners with a small on-device model (DocCornerNet + minimal ONNX Runtime); CSP adds `'wasm-unsafe-eval'` | accepted |
 | [0008](0008-capture-coach.md) | Capture coach: live tips and automatic shot from classical image metrics, no model | accepted |
 | [0009](0009-on-device-ocr.md) | On-device OCR with Tesseract.js, self-hosted, on demand; Trusted Types policy `default` | accepted; engine replaced by 0019 |
-| [0010](0010-smart-field-finding.md) | Smart field finding: OCR text patterns and checks; results become ordinary undoable boxes | accepted |
+| [0010](0010-smart-field-finding.md) | Smart field finding: OCR text patterns and checks; results become ordinary undoable boxes | accepted, choice of kinds replaced by 0043 |
 | [0011](0011-document-detection.md) | Document type detected from the MRZ after the photos; it only preselects the picker | accepted; screen order changed by 0012, DNI fallback by 0021, TIE fallback by 0028 |
 | [0012](0012-automatic-straightening.md) | Automatic straightening: find, turn (sideways, upside down) and straighten both photos; corner screen only on request | accepted |
 | [0013](0013-ci-pipeline.md) | CI split into small single-purpose jobs in logical stages; one required check | accepted; release job added by 0032; Rebase and merge by default (2026-11-27) |
@@ -48,3 +48,4 @@ project specification on purpose).
 | [0040](0040-card-guide-pages.md) | Card guide pages: one static page per document, written by the build from the guide data, Spanish, `script-src 'none'`, served and precached by the service worker | proposed |
 | [0041](0041-prerendered-start-screen.md) | Prerendered start screen: the Spanish start screen rendered from `App.svelte` into `index.html` at build time, inert until the app replaces it; no font preload | accepted |
 | [0042](0042-axe-accessibility-scan.md) | Automatic accessibility scan: axe-core (dev dependency) on every screen, Spanish and Arabic, phone and wide screen; serious and critical findings fail | accepted |
+| [0043](0043-one-field-list.md) | One field list: **Find automatically** covers what the field switches hide, with no list of its own; name and DNI/NIE number become fields (visible by default); the MRZ tells the dates apart | accepted |
