@@ -1,0 +1,23 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- The thanks page (ADR 0029): opened by "Clear everything". It never holds a photo and loads none of
+     the app's image, AI or PDF code. It shows the anonymous usage stats and sends them only if the
+     person taps Send. -->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="robots" content="noindex" />
+    <title>DNI Tapado.es</title>
+    <link rel="icon" href="./favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f5ed" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#16120e" />
+    <link rel="stylesheet" href="/src/ui/styles.css" />
+  </head>
+  <body>
+    <main id="app" aria-live="polite"></main>
+    <script type="module" src="/src/thanks/main.ts"></script>
+  </body>
+</html>

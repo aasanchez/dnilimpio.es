@@ -8,8 +8,9 @@ document.
 
 > [!NOTE]
 > **Names and addresses.** The product was called *dnilimpio.es* and is now **DNI Tapado.es** (short
-> mark **DT.es**). The site is served from **<https://dnitapado.es>** (`www.dnitapado.es` redirects
-> to it). GitHub Pages sends the earlier address <https://aasanchez.github.io/dnilimpio.es/> there too.
+> mark **DT.es**). The site is served from **<https://dnitapado.es>** by Cloudflare Workers, with
+> HTTP security headers ([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)). The earlier
+> address <https://aasanchez.github.io/dnilimpio.es/> redirects there.
 > The GitHub repository keeps the
 > name `aasanchez/dnilimpio.es` for now, so every link to the source, the CI and the provenance
 > check below uses that name.
@@ -184,6 +185,8 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    corners of the card; a magnifier shows the area under your finger. On a keyboard, arrow keys move
    the selected corner and <kbd>N</kbd> selects the next one. **Rotate** turns the frame a quarter
    turn, **Reset** puts the circles back. The button straightens the card again and takes you on.
+   Switching to the other side with the **Front** and **Back** tabs saves the corners you moved,
+   with no button to press. Crossed corners stay on screen, but that side is not done yet.
 5. **Hide.** The card stays on screen. Choose **Front** or **Back** (only with a back photo); the
    list below shows that side's fields as switches. You can also tap a field on the card itself to cover or uncover it.
    The recommended fields start covered (see [Supported documents](#supported-documents)). Fields
@@ -224,7 +227,11 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
    WhatsApp, Telegram, Gmail, Mail or another app, and the person. A shared PDF is not saved to your
    downloads folder. **Download PDF** saves `protected-document.pdf`.
 7. **Done.** **Clear everything** removes the photos and all your choices from the
-   page; closing the tab does the same.
+   page, then opens a thanks page that holds no document; closing the tab clears everything too.
+8. **Thanks page (optional stats).** It shows, line by line, the exact anonymous figures it could
+   send: document type, whether the AI got it right, which fields you covered, and your device type.
+   Nothing is sent unless you tap **Send anonymous stats**. **Start again** returns to the start
+   screen. See [Usage stats (opt-in)](#usage-stats-opt-in).
 
 ## Privacy and security
 
@@ -232,8 +239,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 redaction, the watermark and the PDF all run in your browser. The app does not upload your
 document. The site sends no photo, file name or data read from the card to any server. It uses no
 cookies, trackers or profiles, and no third-party script runs in the page that holds your photos.
-The public site counts visits with a sandboxed frame from another site (see
-[Visit counts](#visit-counts)). Apart from that, the page downloads only its own files; once they
+The site has no analytics code: the host counts the requests it serves (see
+[Visit counts](#visit-counts)). After you clear everything, a separate page that holds no document
+can send anonymous usage stats, only if you tap Send (see [Usage stats (opt-in)](#usage-stats-opt-in)). The page downloads only its own files; once they
 are on your device you can go offline. Your browser keeps those files and one date (see **No
 storage of your data** below). The PDF leaves the
 app only when you download or share it. An external security and privacy audit (25 November 2026)
@@ -241,26 +249,28 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 
 ### What the tool guarantees
 
-- **No upload.** Photos are processed in the browser with the Canvas API. The site is static and has
-  no server side.
-- **No network access from the page.** The Content Security Policy
+- **No upload.** Photos are processed in the browser with the Canvas API. The site is static. Its one
+  piece of server code receives the opt-in usage stats only, and accepts nothing else
+  ([`worker/index.ts`](worker/index.ts)).
+- **No network access from the app page.** The Content Security Policy
   ([`scripts/csp.ts`](scripts/csp.ts)) is `default-src 'none'` and `connect-src 'none'`: page code
   cannot send a request to any address. There is no `'self'`: page code cannot send a request to the site's own origin either, even before
   the service worker is in place ([ADR 0022](docs/adr/0022-no-published-source-maps.md)). The app
   itself never calls `fetch()`.
-  It loads scripts, styles, fonts and images only from its own origin, and one frame, the visit
-  counter, from its exact address (`frame-src`). `form-action`, `base-uri` and `object-src` are `'none'`. WebRTC, which no
+  It loads scripts, styles, fonts and images only from its own origin, and it can open no frame at
+  all. `form-action`, `base-uri` and `object-src` are `'none'`. WebRTC, which no
   CSP rule covers, is removed before any code runs.
 - **Deny by default.** After the first visit, the service worker answers only the exact files of this
   build. Any other request from the page or its workers (another address, a query string, another
   method) is refused and never reaches the network, so even a same-origin request cannot carry data
-  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). There is no exception. An end-to-end test runs a whole document workflow with
+  out ([ADR 0004](docs/adr/0004-offline-service-worker.md)). The one exception is the opt-in stats
+  POST, and only from the thanks page ([ADR 0029](docs/adr/0029-opt-in-usage-stats.md)). An end-to-end test runs a whole document workflow with
   fictional card values and checks that no request is sent and none carries those values
   ([`tests/e2e/privacy.spec.ts`](tests/e2e/privacy.spec.ts)).
 - **Tighter rules while photos are in the page.** Before the photo step opens, the app loads every
   font it needs and adds a second, stricter CSP. From then on the page can load only this build's
   scripts and workers, each by its exact address, and images only from memory (`blob:`, `data:`).
-  No font, stylesheet, manifest or frame (the visit counter frame shows on the start screen only), and no connection at all.
+  No font, stylesheet, manifest or frame, and no connection at all.
   The policy stays until the page is reloaded, and a reload drops the photos. The photo step says
   when the service worker's filter is not active on this visit; the app then works the same
   ([ADR 0025](docs/adr/0025-intake-lockdown.md)).
@@ -331,10 +341,18 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   external fonts. Only this site's own scripts run in the page that holds the photos
   ([ADR 0023](docs/adr/0023-no-third-party-script-with-photos.md)); a test fails if any other script
   runs there. Visits are counted in an isolated frame, described below. Fonts and icons are self-hosted or inline.
-- **No framing.** Inside another site's frame the app does not start; it only offers to open itself
-  in its own tab. Page loads answered by the service worker also carry the headers GitHub Pages
-  cannot send: `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`,
-  `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`.
+- **Security headers from the host.** dnitapado.es sends the full CSP as a header, with
+  `frame-ancestors 'none'`, plus HSTS, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: no-referrer`, a `Permissions-Policy` that allows only the camera, clipboard
+  writing and sharing, `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy`. The service
+  worker and the OCR worker get their own CSP. The headers are generated from
+  [`scripts/csp.ts`](scripts/csp.ts) by [`scripts/headers.ts`](scripts/headers.ts)
+  ([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)). The `<meta>` CSP stays as a fallback.
+- **No framing.** The host refuses to show the app inside another site's frame. On a host that
+  sends no headers (a fork, a local copy), the app does not start in a frame; it only offers to open
+  itself in its own tab. Page loads answered by the service worker add `frame-ancestors 'none'`,
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer` on
+  any host.
 - **One Trusted Types policy.** The page never turns strings into HTML (no `innerHTML`, no
   `{@html}`). Trusted Types are required, and the only policy, `default`, accepts two script URLs:
   the service worker and the OCR worker.
@@ -361,16 +379,17 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **The browser, extensions and operating system are outside the tool's control.** A malicious
   extension or a compromised device can read what the page shows. Swap files, crash reports and GPU
   memory are managed by the system.
-- **The host sees that you visited.** Like any website, GitHub Pages receives your IP address,
+- **The host sees that you visited.** Like any website, the host (Cloudflare) receives your IP address,
   browser, time and which of the app's files were downloaded (for example, that the OCR files were
   fetched the first time you used OCR). It never receives your photos or data.
 - **The first visit and a forced reload are not covered by the service worker.** The CSP still
   applies; the deny-by-default rule starts once the service worker controls the page. In that window
   the CSP still allows images, scripts, styles and fonts from the site's own origin (`img-src`,
-  `script-src`, `style-src`, `font-src`), and the OCR worker runs without its own CSP. `connect-src`
-  has no `'self'`, so page code cannot send a `fetch()`, a request body or custom headers there.
-  GitHub Pages stores nothing it receives, but GitHub would see the address of an image or script
-  request. Only this build's verified code runs, and it never makes one. Once photos are in the
+  `script-src`, `style-src`, `font-src`). On dnitapado.es the OCR worker has the host's CSP (its
+  own origin only); on a host that sends no headers it runs without its own CSP. `connect-src` has no
+  `'self'`, so page code cannot send a `fetch()`, a request body or custom headers there. The host
+  would see the address of an image or script request. Only this build's verified code runs, and it
+  never makes one. Once photos are in the
   page, the stricter policy closes images, styles and fonts too; a script import of one of the
   build's own files with a query string is the one load CSP alone cannot stop, because CSP ignores
   query strings ([ADR 0025](docs/adr/0025-intake-lockdown.md)).
@@ -400,23 +419,72 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 
 ### Visit counts
 
-The public site counts visits with [Cloudflare Web Analytics](https://www.cloudflare.com/web-analytics/),
-but never in the page that holds your photos
-([ADR 0024](docs/adr/0024-visit-counter-in-isolated-frame.md)).
+The site has no analytics code: no script, no frame, no tracking pixel and no cookie
+([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)).
 
-- **Where it runs.** The start screen embeds a hidden frame from another site,
-  <https://aasanchez.github.io/dnitapado-stats/> ([source](https://github.com/aasanchez/dnitapado-stats)).
-  That blank page loads Cloudflare's script. The frame is sandboxed (`allow-scripts` only), so the
-  browser keeps it out of the app's page: it cannot read the photos, the page or the canvas.
-- **What it gets.** Nothing from the app: no query string, no referrer, no message. Cloudflare sees
-  the counter page's address, load timings, the browser and your IP address, from which it derives a
-  country. No cookies and no storage.
-- **When.** Once per page load, on the start screen, before you choose a photo. Pressing **Start**
-  removes it, and it does not come back in that page load. It is not shown offline, on other hosts
-  (local builds, tests, forks), or when your browser sends Global Privacy Control or Do Not Track.
-- **Tests.** [`tests/e2e/third-party.spec.ts`](tests/e2e/third-party.spec.ts) runs a hostile script
-  inside the frame and checks that it reads nothing from the app, and that no frame exists while a
-  photo is loaded.
+- **Where the counts come from.** The host counts the requests it serves, as every web server does.
+  Its dashboard shows totals: requests, unique visitors (by IP address) and countries.
+- **What the host gets.** What every request carries: your IP address, your browser, the time and
+  the file requested. The app adds nothing to it, because the page cannot send a request of its own.
+- **What the counts miss.** They include bots. They undercount returning visitors, whose files come
+  from the service worker's copy on the device. They say nothing about what anyone does in the app.
+- **Tests.** [`tests/e2e/third-party.spec.ts`](tests/e2e/third-party.spec.ts) checks that no script
+  from another site runs, that the page opens no frame and that nothing leaves for another site,
+  from the start screen to a loaded card. The post-deploy check fails if the live site sets a cookie.
+
+### Usage stats (opt-in)
+
+The app can send anonymous usage figures, only when you ask, and only after your document is gone
+([ADR 0029](docs/adr/0029-opt-in-usage-stats.md)).
+
+- **When.** **Clear everything** on the done screen clears the photos and your choices, then opens
+  `thanks.html`. That is a separate page: it never holds a photo and loads none of the image, AI or
+  PDF code. It shows the exact text it would send. It sends it once, only when you tap **Send
+  anonymous stats**. Offline, the button is off.
+- **What.** A fixed list ([`src/stats/schema.ts`](src/stats/schema.ts)): the document model; whether
+  detection got it right (`right`, `wrong`, `none`, `off`); whether you added the back; the ids of
+  the fields you covered (for example `can`, `mrz`, `signature`); how many extra boxes you drew;
+  whether you added a watermark and used greyscale (never the watermark's text); the language; the
+  build; where the photos came from (`camera`, `file`, `paste`); whether OCR ran; and the device type,
+  system family, browser family and major version, and whether the app is installed.
+- **What not.** No text, image, position or file name from your document. Not the browser's full
+  identifier, screen size, time zone or hardware details: together they could single out a device.
+  No cookie and no ID.
+- **How it travels.** The app hands the figures to the thanks page after `#` in its address. Browsers
+  never send that part to a server. The thanks page checks it against the fixed list, removes it
+  from the address and drops anything else.
+- **Where it goes.** One `POST` to `/stats` on dnitapado.es. A small Cloudflare Worker
+  ([`worker/index.ts`](worker/index.ts), checks in [`src/stats/endpoint.ts`](src/stats/endpoint.ts)) accepts only the exact list and writes one row to Workers
+  Analytics Engine, with the country that Cloudflare reads from the request. It does not store the
+  IP address, sets no cookie and keeps no request log. Cloudflare still sees the IP address and
+  browser of every request at its edge, as for any page load.
+- **What stays locked.** The app page keeps `connect-src 'none'` and `form-action 'none'`, also
+  from the photo step on. Only `thanks.html` has its own policy, with `connect-src 'self'`
+  (`THANKS_CSP` in [`scripts/csp.ts`](scripts/csp.ts)). The service worker passes on the stats `POST`
+  only when the thanks page sends it.
+- **Limits.** Anyone can post a valid row, so the numbers are indications, not proof.
+- **Tests.** [`tests/unit/stats.test.ts`](tests/unit/stats.test.ts) checks the list, the device
+  classes, the Worker and the service worker route.
+  [`tests/e2e/stats.spec.ts`](tests/e2e/stats.spec.ts) checks that nothing is sent before the tap,
+  that the text sent is the text shown, that the app page still cannot connect, and the offline and
+  error cases.
+
+Example query (Workers Analytics Engine SQL API): how often each field is covered, per document.
+
+```sql
+SELECT blob2 AS doc, SUM(_sample_interval) AS uses,
+       SUM(_sample_interval * double9) AS signature, SUM(_sample_interval * double13) AS can,
+       SUM(_sample_interval * double14) AS mrz
+FROM dnitapado_usage
+WHERE timestamp > NOW() - INTERVAL '30' DAY
+GROUP BY doc
+```
+
+Columns: `blob1` list version, `blob2` document, `blob3` detection result, `blob4` language,
+`blob5` build, `blob6` photo source, `blob7` device, `blob8` system, `blob9` browser, `blob10`
+country, `blob11` covered fields; `double1` back, `double2` boxes, `double3` watermark, `double4`
+greyscale, `double5` OCR ran, `double6` browser version, `double7` installed, `double8` number of
+covered fields, `double9` to `double19` one per field in the order of `FIELDS`.
 
 ### Security reviews
 
@@ -443,11 +511,16 @@ The same day, an audit showed that the Cloudflare Web Analytics beacon, which ra
 the photos without an SRI hash, could be replaced by a script that read the unredacted preview and
 sent it to Cloudflare's report address. The beacon is removed, `connect-src` is `'none'`, and a test
 fails if any third-party script runs in that page
-([ADR 0023](docs/adr/0023-no-third-party-script-with-photos.md)). Visits are now counted from an
-isolated frame on another site ([ADR 0024](docs/adr/0024-visit-counter-in-isolated-frame.md)).
+([ADR 0023](docs/adr/0023-no-third-party-script-with-photos.md)). For a short time visits were
+counted from an isolated frame on another site
+([ADR 0024](docs/adr/0024-visit-counter-in-isolated-frame.md)). That frame is removed too: the site
+has no analytics code, and the host counts requests
+([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)).
 
 Headers that need a server for every response (HSTS, Permissions-Policy, COOP) cannot be set on
-GitHub Pages; `github.io` is on the HSTS preload list.
+GitHub Pages, so dnitapado.es moved to Cloudflare Workers, which sends them
+([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)). COEP is not set: the page loads nothing from another site, so it would protect nothing more, and
+the app does not need cross-origin isolation.
 
 ## Audit it yourself
 
@@ -457,9 +530,8 @@ You do not have to trust the claims above. Each one can be checked.
 
 1. Open the browser's developer tools, **Network** tab, before you select a photo.
 2. Use the tool to the end. The only requests are the page's own files, all from the same origin.
-   On the public site the start screen also loads the counter frame
-   (`aasanchez.github.io/dnitapado-stats/`), which then loads Cloudflare's script and sends one
-   report; these come from the frame, not from the app's page. The first time you
+   No request goes to another site. After **Clear everything**, the thanks page sends one `POST` to
+   `/stats`, and only if you tap **Send anonymous stats**; its body is the text the page shows. The first time you
    select a photo, the page also downloads the corner model (`assets/ml/`), and the first time OCR
    runs, the OCR files (`ocr/`), both from the same origin. These are plain downloads of the app's
    files and carry nothing from you.
@@ -477,8 +549,9 @@ hashes differ from the deployed build.
 **With an AI coding agent.** **Check it with your AI** on the start screen (in the footer and in the
 no-cookies notice) opens a ready-made audit prompt to copy into an AI coding agent. It asks for a
 deep review of this repository's privacy claim: image lifecycle, every network primitive, third-party
-scripts and the counter frame, dependencies, CSP, the service worker and reproducibility, with a
-YES/NO verdict and file and line references. It also asks the agent to check the live site at
+scripts and frames, dependencies, CSP, the service worker and reproducibility, with a
+YES/NO verdict and file and line references. It describes the one intended send, the opt-in stats,
+so the agent checks each of its limits instead of reporting the send itself as a leak. It also asks the agent to check the live site at
 <https://dnitapado.es/>: its headers, its CSP against [`scripts/csp.ts`](scripts/csp.ts), the hash of
 every file it serves, and a rebuild of the commit shown in the footer. Copying uses the clipboard
 only; nothing is sent. The text is in [`src/security/audit-prompt.ts`](src/security/audit-prompt.ts).
@@ -571,9 +644,11 @@ The full flow works for the DNI 4.0, DNI 3.0 and TIE. The roadmap is in [docs/PL
 | No-cookies notice, audit prompt, source link, build version, NagWara band | Done |
 | Automatic releases: semantic version per deploy, tag and GitHub Release, version in the footer | Done |
 | No third-party script in the page with photos (ADR 0023) | Done |
-| Visit counts from a sandboxed frame on another site (ADR 0024) | Done |
+| No analytics code: no third-party script, frame or cookie; the host counts requests (ADR 0027) | Done |
+| Opt-in anonymous usage stats from a photo-free thanks page (ADR 0029) | Done in code; live once Workers Analytics Engine is on ([Deployment](#deployment)) |
 | Stricter CSP while photos are in the page; service worker check on the photo step | Done |
-| Custom domain `dnitapado.es`, HTTPS enforced | Done |
+| Custom domain `dnitapado.es`, HTTPS enforced; one host, the old address redirects | Done |
+| Security headers from the host (Cloudflare Workers): CSP with `frame-ancestors`, HSTS, Permissions-Policy, COOP, worker CSPs | Done in code; live once Cloudflare is set up ([Deployment](#deployment)) |
 | Languages: 31 in the specification | 13 today |
 
 ## Development
@@ -625,8 +700,7 @@ Runtime dependencies, all bundled and served from this site:
 - No `eval`, `new Function`, inline scripts or inline styles. WebAssembly is allowed only for the
   corner model's runtime and the OCR engine.
 - No runtime requests, no third-party scripts and no persistent storage, except the notice's closing
-  date (`src/ui/notice-memory.ts`). The visit counter runs in a sandboxed frame on another site
-  (`src/analytics/stats-frame.ts`).
+  date (`src/ui/notice-memory.ts`). No analytics code, and no frame from another site.
 - Links that leave the app open in a new tab, because leaving the page clears the photos.
 - Test images are synthetic or official specimens. Never commit a photo of a real person's document.
 
@@ -645,23 +719,26 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Redaction | `zones`, `fields`, `masks`, `raster` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
-| Platform | `precache`, `takeover`, `lockdown`, `intake-lockdown`, `stats-frame`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest and deny-by-default routes (Cloudflare refused), when a new build may take over, WebRTC removal and frame check, the photo step's policy and the service worker check, counter frame hosts, sandbox and CSP, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
+| Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns), the service worker route open only to the thanks page |
+| Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal and frame check, the photo step's policy and the service worker check, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
 
-**End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP):
+**End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off:
 
 | Spec | What is checked |
 |---|---|
 | `privacy` | A whole workflow sends no request and stores nothing. Canaries from the card text (OCR), the photos' file names and the watermark never appear in any request's address, headers or body, from the first visit on, nor as text in the PDF |
-| `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused, photos dropped on `pagehide` |
+| `security` | Exact CSP and referrer policy, SRI on every asset, no inline code, no CSP violations, Trusted Types, import map hashes, a tampered PDF chunk refused, WebRTC removed, framing refused by the host and, without headers, by the page, photos dropped on `pagehide` |
+| `headers` | The host's headers: page CSP equal to the `<meta>` CSP plus `frame-ancestors`, the worker CSPs, HSTS, Permissions-Policy (camera on; microphone, location, clipboard reading off), no COEP |
+| `stats` | Clear everything opens the photo-free thanks page; nothing is sent before the tap; the text sent is the text shown; its own CSP; the app page still cannot connect to `/stats`, with and without the service worker; a changed fragment shows nothing to send; offline and error states; Arabic layout |
 | `cleanup` | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
 | `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
-| `offline` | Full flow to the PDF offline, also with the front alone, deny-by-default service worker, page headers, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
-| `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; page code that gathers the canary file names, OCR text and watermark cannot send them by beacon, fetch, image, style sheet, font, frame or form; the counter frame is cross-site, sandboxed, given nothing, gone before any photo, not shown offline, under GPC or DNT, or on other hosts |
-| `update` | An idle tab switches to a new build, with other idle windows too; a tab with photos or a busy window holds it back; a window that cannot answer brings **Update now**, which applies it; a busy window keeps its photos and reloads back on the start screen; a page that leaves the start screen while the others answer keeps its photos |
+| `offline` | Full flow to the PDF offline, also with the front alone, deny-by-default service worker, page headers added next to the host's CSP, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
+| `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; page code that gathers the canary file names, OCR text and watermark cannot send them by beacon, fetch, image, style sheet, font, frame or form; the page opens no frame, the CSP has no `frame-src` and refuses a frame to another site; the start screen sends nothing to another site, also offline or under GPC |
+| `update` | An idle tab switches to a new build, with other idle windows too; a tab with photos or a busy window holds it back; a window that cannot answer brings **Update now**, which applies it; a busy window keeps its photos and reloads back on the start screen; a page that leaves the start screen while the others answer keeps its photos; an open thanks page does not hold the update back |
 | `capture`, `coach` | File inputs, drag and drop, paste, errors, stray drops; the capture coach and its fallbacks, and skipping the back from it |
 | `front-only` | The back is optional: skip it after a file, a drop or the camera, remove it, one-side editor without back-only fields, CAN still black, one-page PDF, done screen, adding the back later |
 | `documents`, `detect-doc` | Each document's size and fields; MRZ detection, a manual choice never overridden, TIE when detection finds no answer, offline note with nothing preselected |
-| `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard |
+| `detect`, `corners`, `fabric`, `straighten`, `align` | Corner finding on generated photos (clutter, dark woven fabric), fallbacks, automatic straightening at 0°, 90°, 180° and 270°, manual corners by mouse, touch and keyboard, corners saved when you switch side |
 | `ocr`, `find` | On-device OCR, its own CSP, tampered files refused, offline and no-service-worker cases; smart field finding |
 | `fit-zones` | Fit to the text: a ticked box grows to cover a value printed past it, never shrinks, Back to original position undoes it; disabled offline or with no field ticked |
 | `export` | Field checklist, warnings, hand-adjusted boxes, manual boxes, watermark sliders, review, a real PDF decoded in the browser (both sides on one page, hidden areas black, no metadata, no file name, no watermark text in the file), reset |
@@ -721,8 +798,8 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 | code analysis | `workflow-lint` | [actionlint](https://github.com/rhysd/actionlint) and [zizmor](https://docs.zizmor.sh) on the workflows (syntax, script injection, permissions, pinning). Rules turned off are explained in [`.github/zizmor.yml`](.github/zizmor.yml) | PR | Yes |
 | acceptance | `lighthouse` | Lighthouse on the built site (performance, accessibility, best practices, SEO), thresholds in [`lighthouserc.json`](lighthouserc.json). Reports are a workflow artifact; nothing is uploaded elsewhere | PR | No, warns |
 | gate | `ci-ok` | Passes when every job above passed or was skipped on purpose | Both | Yes |
-| deploy | `deploy` | Publishes the built `dist/` to GitHub Pages. Only a push or manual run on `master`, never a pull request or another branch. A running deploy is never cancelled | `master` | Yes |
-| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte. Retries for up to 5 minutes while Pages updates | `master` | Yes |
+| deploy | `deploy` | Adds the `_headers` file ([`scripts/headers.ts`](scripts/headers.ts)) to the built `dist/` and publishes it to Cloudflare Workers for dnitapado.es ([`wrangler.jsonc`](wrangler.jsonc)). `wrangler` comes from [`deploy/pnpm-lock.yaml`](deploy/pnpm-lock.yaml), installed without install scripts. Only a push or manual run on `master`, never a pull request or another branch. A running deploy is never cancelled | `master` | Yes |
+| post-deploy | `smoke` | [`scripts/smoke.ts`](scripts/smoke.ts): the live site serves exactly this run's build: the exact CSP and referrer policy, the entry script's SRI and commit, every file of the service worker's manifest, and every file of the `dist` artifact byte for byte. Also the exact HTTP headers of [`scripts/headers.ts`](scripts/headers.ts) on the page, `sw.js` and the OCR worker (`SMOKE_HOST_HEADERS=1`), and no cookie on any response. Retries for up to 5 minutes while the host updates | `master` | Yes |
 | post-deploy | `attest` | Signed build provenance for every deployed file and the release evidence ([artifact attestations](https://docs.github.com/actions/security-for-github-actions/using-artifact-attestations)) | `master` | Yes |
 | post-deploy | `verify-provenance` | Checks those signatures as a third party would, with [`scripts/verify-release.ts`](scripts/verify-release.ts): every file must carry provenance for this repository, `ci.yml` on `master`, this commit and a GitHub-hosted runner. Also checks the evidence lists exactly the deployed files | `master` | Yes |
 | release | `release` | Once `deploy` succeeded: tags the commit with its version and publishes a GitHub Release with generated notes and the release evidence attached. Safe to re-run; fails if the tag exists on another commit | `master` | Yes |
@@ -747,14 +824,15 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 
   | Job | Command | Scope | Fails |
   |---|---|---|---|
-  | `audit` | `pnpm audit --json` | Whole tree (direct and transitive), runtime and dev. Each advisory names the direct dependency to update | At high or critical (manual run: level of your choice) |
+  | `audit` | `pnpm audit --json`, for the app and for the deploy tool in `deploy/` | Whole tree (direct and transitive), runtime and dev. Each advisory names the direct dependency to update | At high or critical (manual run: level of your choice) |
   | `outdated` | `pnpm outdated --format json` | Direct dependencies only, runtime and dev | Never; deprecated packages get a warning |
 
 **Rules the workflows follow**
 
 - Actions are pinned to full commit SHAs; the comment gives the release tag.
-- Every job has read-only permissions, except `deploy` (Pages), `attest` (signing the provenance) and
-  CodeQL (code scanning results).
+- Every job has read-only permissions, except `attest` (signing the provenance) and CodeQL (code
+  scanning results). `deploy` reads the Cloudflare API token from the `cloudflare` environment; no
+  other job can.
 - Checkout never keeps the token (`persist-credentials: false`).
 - Node, pnpm and Playwright versions come from `.nvmrc`, `package.json` and `pnpm-lock.yaml`, set up
   by one shared action ([`.github/actions/setup`](.github/actions/setup/action.yml)).
@@ -766,7 +844,7 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 - Require status checks: only `ci-ok`. It covers every other job, so adding or renaming a job does
   not need a settings change.
 - Require branches to be up to date before merging, so the merged tree is the tested tree.
-- Environment `github-pages`: deployment branches limited to `master`.
+- Environment `cloudflare`: deployment branches limited to `master`.
 
 To run the same checks locally: `pnpm verify`, then `pnpm size` and `pnpm test:coverage`. The CI
 tools that are not npm packages (REUSE, actionlint, zizmor) can be run with `pipx run reuse lint`,
@@ -774,23 +852,58 @@ tools that are not npm packages (REUSE, actionlint, zizmor) can be run with `pip
 
 ## Deployment
 
-On `master`, the `deploy` job publishes the freshly built `dist/` to GitHub Pages (the same code
-that passed every check on its pull request). `smoke` then checks that the live site serves it,
-`attest` signs its provenance, `verify-provenance` checks those signatures, and `lighthouse-live`
-measures it. To redeploy without a new commit,
-run the **CI** workflow on `master` from the Actions tab.
+On `master`, CI publishes the freshly built `dist/` (the same code that passed every check on its
+pull request) to one host:
+
+- `deploy` publishes it to **Cloudflare Workers** for <https://dnitapado.es> and
+  `www.dnitapado.es`, with the `_headers` file of [`scripts/headers.ts`](scripts/headers.ts).
+  [`wrangler.jsonc`](wrangler.jsonc) sets the host: static files, Worker code for `POST /stats` only
+  ([ADR 0029](docs/adr/0029-opt-in-usage-stats.md)), no redirects, no `workers.dev` address.
+- `smoke` then checks the files, the headers and that no response sets a cookie. `attest` signs the
+  provenance of every file, `verify-provenance` checks those signatures, and `lighthouse-live`
+  measures the live site.
+
+Nothing is deployed to GitHub Pages any more. The old address
+<https://aasanchez.github.io/dnilimpio.es/> redirects to dnitapado.es, because the repository's
+Pages settings keep `dnitapado.es` as the custom domain.
+
+To redeploy without a new commit, run the **CI** workflow on `master` from the Actions tab.
 
 Do not re-run the old **pages build and deployment** workflow if it appears in the Actions tab. It
-publishes the raw, unbuilt source of an old commit over the real site.
+publishes the raw, unbuilt source of an old commit.
 
 The build uses relative paths (`base: './'`), so `dist/` works at a domain root, under a subpath and
-on any static server (Nginx, Caddy, Cloudflare Pages).
+on any static server (Nginx, Caddy, Cloudflare). A host that sends no headers still gets the `<meta>`
+CSP and the service worker's headers.
 
-**Custom domain.** The site is live at <https://dnitapado.es>: the custom domain is set in the
-repository's Pages settings, HTTPS is enforced, and `www.dnitapado.es` redirects to it. It needed
-no code change, because the build uses relative paths. GitHub Pages redirects the earlier address <https://aasanchez.github.io/dnilimpio.es/> to it. The
-service worker, its cache and the notice's storage key are per origin, so the first visit on the new
-domain downloads the app again.
+**Cloudflare setup** (once, by the owner of the Cloudflare account):
+
+1. Create an API token from the **Edit Cloudflare Workers** template, limited to this account and the
+   `dnitapado.es` zone. In the repository settings, create the environment `cloudflare` (deployment
+   branches: `master` only) and add the secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+2. In the `dnitapado.es` zone, delete the DNS records that point to GitHub Pages (the `A`/`AAAA`
+   records of `dnitapado.es` and the `CNAME` of `www`). The first deploy attaches both names to the
+   Worker and creates their records and certificate. The site is down between the deletion and the
+   end of that deploy.
+3. In the zone, keep off every feature that rewrites pages or sets a cookie: Rocket Loader, Email
+   Obfuscation, the automatic injection of Web Analytics and Bot Fight Mode. Leave Cloudflare's own
+   HSTS setting off; the `_headers` file sends HSTS. `smoke` fails if a feature changes a file or a
+   header, or sets a cookie.
+4. In the repository's Pages settings, leave the custom domain `dnitapado.es` set, so the old
+   github.io address keeps redirecting. GitHub will warn that the DNS no longer points to it; that
+   is expected.
+5. Delete what the visit counter used: the Web Analytics site in Cloudflare and the repository
+   `aasanchez/dnitapado-stats`.
+6. Turn on **Workers Analytics Engine** for the account (Workers & Pages, Analytics Engine) before
+   the first deploy with the opt-in stats. The first send creates the dataset `dnitapado_usage`.
+   To query it, create an API token with **Account Analytics: Read** and use the SQL API (example
+   query under [Usage stats (opt-in)](#usage-stats-opt-in)).
+
+Visit counts are in the Cloudflare dashboard, under the zone's **Analytics** (requests, unique
+visitors, countries). See [Visit counts](#visit-counts).
+
+The service worker, its cache and the notice's storage key are per origin, so the first visit on a
+new address downloads the app again.
 
 ### Version shown in the app
 
@@ -843,10 +956,11 @@ Every deploy from `master` is a release with a [semantic version](https://semver
 ```text
 src/
   main.ts            removes WebRTC, refuses framing, mounts the app, registers the service worker
+  thanks/            the photo-free thanks page after Clear everything: shows and, on a tap, sends the opt-in stats
+  stats/             the fixed list of opt-in usage stats, device classes, session figures, the one send
   sw.ts              service worker: verified offline cache, deny by default, page headers
   App.svelte         screen flow, brand, clearing on pagehide
   components/        Svelte components, one per screen or control (start screen, notice, audit prompt, footer, editor, review…)
-  analytics/         visit counter frame: address, sandbox, host rules
   capture/           file input, drag and drop, paste, decoding, live camera and capture coach
   geometry/          homography, perspective warp, corner editing (pure TypeScript)
   detect/            corner finding (on-device model, classic edge detection, edge snapping), upright check,
@@ -861,8 +975,12 @@ src/
   version/           commit SHA and build time shown in the footer, relative time
   i18n/              dictionaries, one JSON file per language
   ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state, notice memory
-scripts/             CSP, build plugins (CSP, SRI, import map, offline file list), build manifest, smoke test,
+scripts/             CSP, host headers, build plugins (CSP, SRI, import map, offline file list), build manifest, smoke test,
                      bundle size, dependency report, test fixture generator
+deploy/              the deploy tool (wrangler) with its own lockfile, installed only by the CI deploy job
+wrangler.jsonc       Cloudflare Workers host: static files, custom domains, no workers.dev address, /stats Worker route
+worker/              the Cloudflare Worker for POST /stats only: checks the fixed list, writes one Analytics Engine row
+thanks.html          the thanks page's HTML entry (its own CSP)
 tests/               unit, e2e and synthetic fixtures
 docs/                plan, zone measurement method, guide sources, decision records, images
 LICENSES/            licence texts (REUSE)
@@ -895,10 +1013,12 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0021](docs/adr/0021-one-dni-choice.md): one "DNI" choice; the version is detected, the DNI 4.0 is the fallback, and the editor has an Older DNI (3.0) switch.
 - [0022](docs/adr/0022-no-published-source-maps.md): no published source maps and no `'self'` in `connect-src`, so page code cannot send requests to its own origin (review finding PRIV-003).
 - [0023](docs/adr/0023-no-third-party-script-with-photos.md): no third-party script in the page that holds the photos; the Cloudflare beacon is removed and `connect-src` is `'none'`.
-- [0024](docs/adr/0024-visit-counter-in-isolated-frame.md): visit counts from a sandboxed frame on another site, on the start screen only.
+- [0024](docs/adr/0024-visit-counter-in-isolated-frame.md): visit counts from a sandboxed frame on another site, on the start screen only. Superseded by 0027: the frame is removed.
 - [0025](docs/adr/0025-intake-lockdown.md): a second, stricter CSP from the photo step on: exact build scripts, images only from memory, no fonts, styles or connections; a service worker check with a calm note when it is missing.
 - [0026](docs/adr/0026-recheck-cache-hits.md): the service worker hashes every cache hit again before it answers; a rewritten entry is deleted and downloaded again, or refused offline.
+- [0027](docs/adr/0027-security-headers-from-the-host.md): security headers from the host; dnitapado.es on Cloudflare Workers with a generated `_headers` file, the only host, no COEP; no analytics code, the host counts requests; nothing deployed to GitHub Pages.
 - [0028](docs/adr/0028-tie-fallback.md): TIE is preselected when detection reads the photos but cannot tell the document; without detection nothing is preselected; you can change it.
+- [0029](docs/adr/0029-opt-in-usage-stats.md): opt-in anonymous usage stats; "Clear everything" opens a photo-free thanks page that shows the exact figures and sends them only on a tap; fixed list, Worker on `/stats` only, Workers Analytics Engine, no IP stored; the app page still has `connect-src 'none'`.
 - [0030](docs/adr/0030-update-with-other-windows-open.md): a new version takes over when every open window is idle, or when the person presses Update now; a frozen tab no longer blocks updates.
 - [0032](docs/adr/0032-semver-releases.md): every deploy from `master` is a release: the patch goes up by one from the latest tag, major and minor are set by hand with a tag, the tag and GitHub Release are created after the deploy, and the footer shows the version.
 

@@ -25,7 +25,11 @@
     aligned: Readonly<Record<Side, boolean>>
     /** True when automatic straightening did not find the card in this photo. */
     missed?: boolean
-    onSide: (side: Side) => void
+    /**
+     * The person switched to the other side. `done` says whether this side now counts as confirmed:
+     * corners moved here are saved and straightened, as with Continue, so nothing is lost.
+     */
+    onSide: (side: Side, done: boolean) => void
     onDone: () => void
   } = $props()
 
@@ -104,13 +108,29 @@
     editor?.setQuad(quad)
   }
 
-  function next (): void {
-    if (!valid) return
+  /** Confirms this side's corners: straightens the photo with them. */
+  function save (): void {
     const q = quad
     resetSide(align, side)
     align.quads[side] = q
     align.warped[side] = warpBitmap(bitmap, q, size)
+  }
+
+  function next (): void {
+    if (!valid) return
+    save()
     onDone()
+  }
+
+  /**
+   * Switching side saves this side by itself: moved corners are straightened and the side is done,
+   * with no button to press. Crossed corners are kept on screen but the side is not done. Corners
+   * nobody moved keep the side as it was, so an unchecked guess never counts as confirmed.
+   */
+  function switchTo (s: Side): void {
+    if (s === side) return
+    if (touched && valid) save()
+    onSide(s, touched ? valid : aligned[side])
   }
 </script>
 
@@ -123,7 +143,7 @@
     {#if sides.length > 1}
       <div class="segmented" role="group" aria-label={t(lang, 'sides')}>
         {#each sides as s (s)}
-          <button type="button" id="align-tab-{s}" aria-pressed={s === side} onclick={() => { if (s !== side) onSide(s) }}>
+          <button type="button" id="align-tab-{s}" aria-pressed={s === side} onclick={() => { switchTo(s) }}>
             {#if aligned[s]}<span class="font-bold text-accent" aria-hidden="true">✓</span>{/if}{sideName(s)}
           </button>
         {/each}

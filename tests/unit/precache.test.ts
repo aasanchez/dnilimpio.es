@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
 import { createHash } from 'node:crypto'
-import { WORKER_SCRIPTS, cacheName, isOnDemand, isPrecached, parseManifest, route, sriOf, workerCsp } from '../../src/offline/precache.ts'
+import { PAGE_HEADERS, SECURITY_HEADERS, WORKER_SCRIPTS, addPageHeaders, cacheName, isOnDemand, isPrecached, parseManifest, route, sriOf, workerCsp } from '../../src/offline/precache.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
 const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }], onDemand: [{ path: 'ocr/ppocrv6-tiny-rec.onnx', integrity: HASH }] }
@@ -127,5 +127,25 @@ describe('sriOf', () => {
 
   it('changes when one byte of a cached file is rewritten', async () => {
     expect(await sriOf(bytes('self.onmessage = run'))).not.toBe(await sriOf(bytes('self.onmessage = rum')))
+  })
+})
+
+describe('addPageHeaders', () => {
+  it('adds frame-ancestors as one more policy, never in place of the host CSP (ADR 0027)', () => {
+    const host = new Headers({ 'Content-Security-Policy': "default-src 'none'", 'X-Frame-Options': 'SAMEORIGIN' })
+    const h = addPageHeaders(host)
+    expect(h.get('content-security-policy')).toBe("default-src 'none', frame-ancestors 'none'")
+    expect(h.get('x-frame-options')).toBe('DENY')
+    expect(h.get('referrer-policy')).toBe('no-referrer')
+    expect(host.get('content-security-policy')).toBe("default-src 'none'") // the cached copy is untouched
+  })
+  it('sets every security header itself, so a cached entry needs none (ADR 0026)', () => {
+    expect(Object.keys(PAGE_HEADERS)).toEqual(['Content-Security-Policy', ...Object.keys(SECURITY_HEADERS)])
+    expect(PAGE_HEADERS['Permissions-Policy']).toMatch(/camera=\(self\)/)
+    expect(PAGE_HEADERS['Permissions-Policy']).toMatch(/microphone=\(\)/)
+    expect(PAGE_HEADERS['Cross-Origin-Opener-Policy']).toBe('same-origin')
+  })
+  it('on a response without headers sends exactly PAGE_HEADERS', () => {
+    expect(Object.fromEntries(addPageHeaders(new Headers()))).toEqual(Object.fromEntries(Object.entries(PAGE_HEADERS).map(([k, v]) => [k.toLowerCase(), v])))
   })
 })

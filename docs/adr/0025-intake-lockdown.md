@@ -4,6 +4,9 @@
 - Status: accepted
 - Date: 2026-11-26
 - Decided by: Alexis (asked for item 5 of the security review of 26 November 2026); details chosen below
+- Changed by [ADR 0027](0027-security-headers-from-the-host.md): the visit counter frame of ADR 0024
+  is removed, so the first policy has no `frame-src` either and forbids every frame from the start.
+  `frame-src 'none'` stays in the second policy; it now repeats the first.
 
 ## Context
 
@@ -39,7 +42,7 @@ reloaded, and a reload drops the photos (`pagehide`). The second policy is:
 | `worker-src` | `sw.js` and `ocr/worker.min.js` by exact address | The only workers the app starts |
 | `img-src` | `blob: data:` | Photos, canvases and CSS icons are in memory; no image comes from a server |
 | `font-src`, `style-src`, `manifest-src` | `'none'` | Loaded before; nothing more is needed |
-| `frame-src` | `'none'` | The counter frame shows on the start screen only, once per page load (ADR 0024) |
+| `frame-src` | `'none'` | No frame beside a photo. The counter frame of ADR 0024 showed on the start screen only; ADR 0027 removed it |
 | `connect-src` | `'none'` | No `fetch`, XHR, `sendBeacon` or WebSocket (as in the first policy since ADR 0023) |
 
 **Large AI files stay on demand.** The corner model (`assets/ml/`) and OCR (`ocr/`) are not loaded
@@ -73,9 +76,9 @@ and a reload usually starts it. The app never blocks on it (rule 5).
   the service worker, delete its caches, or fake the worker check. The check guards against a
   missing or foreign worker, not against a compromised page. What keeps such code out is that only
   this build's verified code runs (CSP, SRI, the locked dependency list).
-- The counter frame (ADR 0024) can no longer appear beside a photo at all: a frame added after
-  Start is refused by `frame-src 'none'`. `tests/e2e/third-party.spec.ts` now checks that refusal
-  instead of the frame's isolation next to a photo.
+- A frame can no longer appear beside a photo at all: a frame added after Start is refused by
+  `frame-src 'none'`. Since ADR 0027 the first policy refuses it on the start screen too, and
+  `tests/e2e/third-party.spec.ts` checks that refusal there.
 - Production builds only. The dev server has no CSP, no import map and needs its HMR connection,
   so `pnpm dev` never adds the second policy. Check it with `pnpm build` and the e2e tests.
 - The script list holds only files inside the app's own folder. Another site's script that is

@@ -31,7 +31,7 @@ const FIXED: readonly string[] = [
   "style-src 'none'",
   "manifest-src 'none'",
   "connect-src 'none'",
-  // No frame: the visit counter frame (ADR 0024) shows on the start screen only, before this policy.
+  // No frame. The first policy forbids frames too since ADR 0027 (default-src 'none'); said again here.
   "frame-src 'none'",
 ]
 

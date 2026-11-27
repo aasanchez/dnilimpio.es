@@ -213,3 +213,24 @@ test('once the busy window closes, the update is applied by itself when the tab 
   await reloaded
   expect(await marked(page)).toBeUndefined()
 })
+
+// The thanks page (ADR 0029) is a window of the app too. It holds no photo and loads nothing later,
+// so it answers that it is idle. Without that answer it would count as a window that cannot answer.
+test('an open thanks page does not hold the update back', async ({ page }) => {
+  await page.goto(URL_)
+  await controlled(page)
+  const thanks = await page.context().newPage()
+  await thanks.goto(`${URL_}thanks.html`)
+  await controlled(thanks)
+  await expect(thanks.locator('#thanks-title')).toBeVisible()
+  await thanks.evaluate(() => { document.documentElement.dataset['oldPage'] = '1' })
+  await page.evaluate(() => { document.documentElement.dataset['oldPage'] = '1' })
+  const reloaded = page.waitForEvent('load')
+  await deployNextBuild(page)
+  await reloaded
+  expect(await marked(page)).toBeUndefined()
+  await expect(page.locator('#update-ready')).toHaveCount(0)
+  // The thanks page is not reloaded: it keeps what it shows.
+  expect(await marked(thanks)).toBe('1')
+  await expect(thanks.locator('#thanks-title')).toBeVisible()
+})

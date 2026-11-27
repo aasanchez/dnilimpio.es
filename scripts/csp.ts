@@ -2,8 +2,6 @@
 // Single source of truth for the Content-Security-Policy (spec §5.1).
 // The build injects it as a <meta> tag; the e2e test asserts the built page carries exactly this value.
 
-import { STATS_URL } from '../src/analytics/stats-frame.ts'
-
 export const CSP_DIRECTIVES: readonly string[] = [
   "default-src 'none'",
   // 'wasm-unsafe-eval' lets the page compile WebAssembly (the corner model's runtime, ADR 0007).
@@ -17,9 +15,8 @@ export const CSP_DIRECTIVES: readonly string[] = [
   "font-src 'self'",
   "manifest-src 'self'",
   "worker-src 'self'",
-  // One frame only: the visit counter page on another site, by its exact path (ADR 0024). It runs
-  // sandboxed (allow-scripts only), so it cannot reach this page.
-  `frame-src ${STATS_URL}`,
+  // No frame-src: the page may open no frame at all (default-src 'none'). The visit counter frame of
+  // ADR 0024 is gone (ADR 0027).
   // The page can send nothing, to anyone (ADR 0023). No 'self' either (ADR 0022): code in the page
   // cannot send a request to the site's own origin, even before the service worker controls the page. The OCR worker reads its files under its own CSP
   // (workerCsp() in src/offline/precache.ts), not this one.
@@ -35,6 +32,30 @@ export const CSP_DIRECTIVES: readonly string[] = [
 ]
 
 export const CSP = CSP_DIRECTIVES.join('; ')
+
+/**
+ * Policy of the thanks page (thanks.html, ADR 0029): the page the app opens after "Clear everything".
+ * It never holds a photo: it is a new document, and it loads none of the app's image, AI or PDF code.
+ * It may connect to its own origin, where it sends the opt-in usage stats (one POST, src/stats/send.ts).
+ * 'self' and not a path: the same build is served at more than one address (dnitapado.es, www, a
+ * local preview). The service worker lets through only that one POST from this page (route()).
+ */
+export const THANKS_CSP_DIRECTIVES: readonly string[] = [
+  "default-src 'none'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "manifest-src 'self'",
+  "connect-src 'self'",
+  "form-action 'none'",
+  "base-uri 'none'",
+  "object-src 'none'",
+  "require-trusted-types-for 'script'",
+  "trusted-types 'none'",
+]
+
+export const THANKS_CSP = THANKS_CSP_DIRECTIVES.join('; ')
 
 /**
  * The policy with extra script hashes. The build adds one: the hash of the inline import map that
