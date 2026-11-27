@@ -756,7 +756,7 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | Audit prompt | `audit-prompt` | Every file the prompt names exists, its list of stats fields is the list the thanks page sends, in order, and it stays short and asks for findings, not a verdict |
 | Keyboard focus | `focus-rescue` | Focus that falls back to the page (also while it still sits on a control that just disabled or removed itself) moves to the first control that takes it; how far to scroll so a focused control clears the sticky top bar, the sticky action bar or the floating notice, without leaving the window |
 | Editor redraws | `redraw` | One render per animation frame, only the side on screen, only when its choices changed; every changed side rendered at once before the review; a failed render is retried; nothing runs after the editor closes |
-| Search metadata | `seo` | Site address checks, escaped static head with no script or style, title and description length, Open Graph locale for every language, `robots.txt` and sitemap (hreflang alternates, escaping), crawl files not cached by the service worker |
+| Search metadata | `seo` | Site address checks, escaped static head with no script or style, title and description length, Open Graph locale for every language, `robots.txt` and sitemap (hreflang alternates, escaping), crawl files served by the service worker |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
 | Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns, 429 above the rate limit with one key for all senders), the service worker route open only to the thanks page |
@@ -973,8 +973,8 @@ To redeploy without a new commit, run the **CI** workflow on `master` from the A
   [`scripts/make-og-image.ts`](scripts/make-og-image.ts).
 
 These need absolute URLs, so the build takes the site's address from `SITE_URL` (default
-`https://dnitapado.es/`). A fork sets its own. The app's own URLs stay relative. The service worker
-does not cache these files: only crawlers read them.
+`https://dnitapado.es/`). A fork sets its own. The app's own URLs stay relative. Like every file
+of the build, they are in the service worker's manifest.
 
 Do not re-run the old **pages build and deployment** workflow if it appears in the Actions tab. It
 publishes the raw, unbuilt source of an old commit.

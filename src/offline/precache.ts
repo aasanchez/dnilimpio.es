@@ -30,20 +30,14 @@ export const ON_DEMAND_DIR = 'ocr/'
 export const MODEL_DIR = 'assets/ml/'
 
 /**
- * Files for search engines and link previews (scripts/vite-plugins.ts, searchFiles; og:image in
- * src/seo/site.ts). Crawlers fetch them from the host; the app never reads them, so the worker does
- * not cache them.
- */
-export const CRAWL_FILES: readonly string[] = ['robots.txt', 'sitemap.xml', 'icons/og-image.png']
-
-/**
- * Files that belong in the offline cache: everything the build wrote except the worker, the crawl
- * files and dotfiles.
+ * Files that belong in the offline cache: everything the build wrote except the worker and dotfiles.
+ * That includes robots.txt, sitemap.xml and the link preview image (src/seo/site.ts): a page the
+ * worker controls reaches them only through route(), like every other file of the build.
  * The build publishes no source maps (ADR 0022) and refuses to finish if one exists; a `.map` is
  * never listed, so the worker refuses it like any unknown path.
  */
 export function isPrecached (path: string): boolean {
-  return path !== SW_FILE && !CRAWL_FILES.includes(path) && !path.endsWith('.map') && !path.startsWith('.')
+  return path !== SW_FILE && !path.endsWith('.map') && !path.startsWith('.')
 }
 
 /** Cached on first use instead of at install. */

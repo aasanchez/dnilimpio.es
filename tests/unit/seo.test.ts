@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
 import { LANGS } from '../../src/i18n/index.ts'
-import { CRAWL_FILES, isPrecached } from '../../src/offline/precache.ts'
+import { isPrecached } from '../../src/offline/precache.ts'
 import { OG_LOCALE, normalizeSiteUrl, pageTitle, robotsTxt, sitemapXml, staticHead } from '../../src/seo/site.ts'
 import es from '../../src/i18n/locales/es.json'
 
@@ -50,7 +50,7 @@ describe('crawl files', () => {
     expect(xml).toContain('<loc>https://dnitapado.es/?a=1&amp;b=2</loc>')
     expect(xml).toContain('<xhtml:link rel="alternate" hreflang="en" href="https://dnitapado.es/?lang=en"/>')
   })
-  it('are not cached by the service worker', () => {
-    for (const f of CRAWL_FILES) expect(isPrecached(f)).toBe(false)
+  it('are files of the build the service worker serves', () => {
+    for (const f of ['robots.txt', 'sitemap.xml', 'icons/og-image.png']) expect(isPrecached(f)).toBe(true)
   })
 })
