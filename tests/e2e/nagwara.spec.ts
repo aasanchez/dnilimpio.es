@@ -31,7 +31,7 @@ test('footer shows the NagWara attribution next to the source link and the build
 test.describe('English', () => {
   test.use({ locale: 'en-GB' })
   test('the claim follows the language', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/en')
     await expect(page.locator('footer .nagwara-tagline')).toHaveText('Machines execute, People lead.')
   })
 })

@@ -11,9 +11,9 @@ export type Key = keyof typeof es
 export type Dictionary = Readonly<Record<Key, string>>
 type Translation = Readonly<Record<string, string>>
 
-/** BCP 47 tags. `ca-ES-valencia` is the registered tag for Valencian. */
-export const LANGS = ['es', 'ca', 'ca-ES-valencia', 'gl', 'eu', 'en', 'fr', 'nl', 'sv', 'fi', 'uk', 'ro', 'ar'] as const
-export type Lang = (typeof LANGS)[number]
+import { LANGS, type Lang } from './langs.ts'
+
+export { LANGS, type Lang }
 
 /** Each language's own name, shown in the selector. */
 export const AUTONYMS: Readonly<Record<Lang, string>> = {

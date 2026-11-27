@@ -10,11 +10,13 @@ import { watchForUpdates } from './offline/update.ts'
 import { watchInstall } from './offline/install.ts'
 import { installTrustedTypesPolicy } from './security/trusted-types.ts'
 import { loadAllFonts } from './security/intake-lockdown.ts'
-import { loadLang, pickLang, t } from './i18n/index.ts'
+import { loadLang, t } from './i18n/index.ts'
+import { startLang } from './i18n/url.ts'
+import { revealFocus } from './ui/focus-rescue.ts'
 
 /** Inside another page's frame the app does not start: it only offers to open itself in a tab. */
 function showFramed (target: HTMLElement): void {
-  const lang = pickLang(navigator.languages)
+  const lang = startLang(location.href)
   const p = document.createElement('p')
   const a = document.createElement('a')
   a.href = location.href
@@ -31,16 +33,24 @@ installTrustedTypesPolicy()
 // A file dropped by mistake must never replace the app (and the user's work) in the tab.
 blockStrayDrops(window)
 
+// Keyboard focus is never hidden behind the sticky action bar or the fixed notice.
+revealFocus()
+
 // Before mounting: Chromium can offer installation as soon as the page loads (offline/install.ts).
 watchInstall()
 
-// The browser's language, before the first render (the start page holds Spanish only). Waits at most
-// a few seconds; on a failure the page starts in Spanish.
-await loadLang(pickLang(navigator.languages))
+// The address's language (/en, ADR 0038), before the first render (the start page holds Spanish
+// only). Waits at most a few seconds; on a failure the page starts in Spanish.
+await loadLang(startLang(location.href))
 
 const target = document.getElementById('app')
 if (target && isFramed(window)) showFramed(target)
-else if (target) mount(App, { target })
+else if (target) {
+  // The build puts a static copy of the Spanish start screen here, for search engines and a fast
+  // first paint (ADR 0041). The live app replaces it; it does not hydrate it.
+  target.replaceChildren()
+  mount(App, { target })
+}
 
 // Load the PDF code in the background once the page is idle: the first render does not wait for it,
 // and it is ready before the review step. A failure here is retried when the user downloads.

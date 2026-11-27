@@ -2,7 +2,8 @@
 <!-- Step 1: photos of the card. One side at a time, front first; it moves to the back by itself.
      The back is optional: once the front is in, the person can go on without it, or remove it. -->
 <script lang="ts">
-  import { untrack } from 'svelte'
+  import { tick, untrack } from 'svelte'
+  import { byId, keepFocus, rescueFocus } from '../ui/focus-rescue.ts'
   import { MAX_BYTES, MAX_PIXELS, checkBitmap, type DecodeError, type DecodeResult } from '../capture/decode.ts'
   import { prefersCameraButton, wireCapture, wirePageDrop, wirePaste, type CaptureTarget } from '../capture/input.ts'
   import { canUseLiveCamera, type CameraFailure } from '../capture/live.ts'
@@ -74,6 +75,8 @@
     // Move on to the other side while it is still empty.
     const other: Side = side === 'front' ? 'back' : 'front'
     current = photos[other] === null ? other : side
+    // The control used to load the photo may be gone (the last "Choose a file"): focus the next step.
+    void tick().then(() => rescueFocus([byId('capture-continue'), byId('capture-skip-back'), byId(`pick-${current}`)]))
   }
 
   function onShot (bitmap: ImageBitmap): void {
@@ -209,7 +212,7 @@
       {#if errors[side]}<p class="notice-warn" id="error-{side}">{sideName(side)}: {errorText(errors[side])}</p>{/if}
     {/each}
     {#if photos.back !== null}
-      <button type="button" class="link-button justify-self-start" id="capture-remove-back" onclick={removeBack}>{t(lang, 'removeBack')}</button>
+      <button type="button" class="link-button justify-self-start" id="capture-remove-back" onclick={removeBack} {@attach keepFocus(() => [byId('drop-choose'), byId('pick-back')])}>{t(lang, 'removeBack')}</button>
     {/if}
     {#if !withCamera}<p class="hint">{t(lang, 'pasteHint')}</p>{/if}
     {#if liveNote}<p class="hint" id="live-note" role="status">{t(lang, liveNote)}</p>{/if}

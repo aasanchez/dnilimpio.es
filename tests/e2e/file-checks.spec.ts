@@ -81,7 +81,7 @@ test.describe('on a touch device', () => {
 
 test('the error is translated: English', async ({ browser }) => {
   const page = await browser.newPage({ locale: 'en-GB' })
-  await openCapture(page)
+  await openCapture(page, '/en')
   await page.locator('#file-front').setInputFiles({ name: 'a.png', mimeType: 'image/png', buffer: BOMB })
   await expect(page.locator('#error-front')).toContainText('too many pixels (maximum 50 megapixels)')
   await page.close()

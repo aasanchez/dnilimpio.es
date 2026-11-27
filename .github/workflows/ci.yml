@@ -12,15 +12,15 @@
 #                      └─ unit                           ├─ ci-ok
 #   reuse · audit · dependency-review · workflow-lint ───┘
 #
-# master (push or manual run): the code was validated on its pull request (squash merge of a branch
-# that branch protection requires to be up to date), so it is not validated again. Build, deploy, and
+# master (push or manual run): the code was validated on its pull request (rebase or squash merge of
+# a branch that branch protection requires to be up to date), so it is not validated again. Build, deploy, and
 # check the live site:
 #
 #   changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy (dnitapado.es) ─┬─ smoke ─ lighthouse-live
 #                                                                             ├─ attest ─ verify-provenance
 #                                                                             └─ release (tag, GitHub Release)
 #
-# The release commit is a new commit (squash merge), so it is rebuilt and compared once more before
+# The release commit is a new commit (both merge methods rewrite it), so it is rebuilt and compared once more before
 # it deploys, and its provenance is signed, then checked with a pinned identity.
 #
 # dnitapado.es is served by Cloudflare Workers, the only host, which sends the HTTP security headers
@@ -292,6 +292,38 @@ jobs:
         env:
           BROWSER: ${{ matrix.browser }}
 
+  # Screenshot comparisons (tests/e2e/visual.spec.ts) inside the official Playwright image, pinned by
+  # digest: the same browser build and system fonts as `pnpm test:visual` on any machine, so the
+  # baselines in tests/e2e/__screenshots__/ match. Keep the image in sync with scripts/visual.sh and
+  # @playwright/test. On a difference, the `visual-diff` artifact holds expected, actual and diff.
+  visual:
+    needs: [changes, build]
+    if: needs.changes.outputs.validate == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - run: pnpm exec playwright test
+        env:
+          VISUAL: '1'
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: visual-diff
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
   bundle-size:
     needs: [changes, build]
     if: needs.changes.outputs.validate == 'true'
@@ -313,7 +345,7 @@ jobs:
 
   # Builds the same commit again on a fresh runner and compares every file with the `dist` artifact.
   # They must be identical: the deployed site can be rebuilt from source and checked (ADR 0013).
-  # Runs on pull requests and on the release commit itself: the squash merge makes a new commit, so the
+  # Runs on pull requests and on the release commit itself: the merge makes a new commit, so the
   # check on the pull request says nothing about the commit that deploys. Deploy waits for it.
   reproducible:
     needs: [changes, build]
@@ -421,7 +453,7 @@ jobs:
   # The single required status check. Passes when every job passed or was skipped on purpose.
   ci-ok:
     if: always()
-    needs: [changes, install, build, typecheck, lint, unit, e2e, e2e-browsers, bundle-size, reproducible, reuse, audit, dependency-review, workflow-lint, lighthouse]
+    needs: [changes, install, build, typecheck, lint, unit, e2e, e2e-browsers, visual, bundle-size, reproducible, reuse, audit, dependency-review, workflow-lint, lighthouse]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -434,7 +466,7 @@ jobs:
           test "$FAILED" = 'false'
 
   # ── Stage 7: deploy (master only) ───────────────────────────────────────────────────────────────
-  # The tested build, with the `_headers` file of scripts/headers.ts, to Cloudflare Workers
+  # The tested build, with the `_headers` and `_redirects` files of scripts/headers.ts, to Cloudflare Workers
   # (wrangler.jsonc, ADR 0027). wrangler comes from deploy/pnpm-lock.yaml, installed without install
   # scripts. The API token lives in the `cloudflare` environment, which only master may use.
   # An `if:` without a status function means success() of every job upstream, including jobs skipped on

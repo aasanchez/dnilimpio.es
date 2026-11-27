@@ -31,6 +31,8 @@ export const MODEL_DIR = 'assets/ml/'
 
 /**
  * Files that belong in the offline cache: everything the build wrote except the worker and dotfiles.
+ * That includes robots.txt, sitemap.xml and the link preview image (src/seo/site.ts): a page the
+ * worker controls reaches them only through route(), like every other file of the build.
  * The build publishes no source maps (ADR 0022) and refuses to finish if one exists; a `.map` is
  * never listed, so the worker refuses it like any unknown path.
  */
@@ -167,6 +169,11 @@ export function workerCsp (scope: string): string {
 export type Route =
   /** A page load inside the scope: answer with the cached index.html. */
   | { readonly kind: 'index' }
+  /**
+   * A page load of a language folder with a slash (`en/`), or of `es`: sent to the language's own
+   * address (`en`, or the site address for Spanish, ADR 0038), as the host does.
+   */
+  | { readonly kind: 'redirect'; readonly url: string }
   /** A page load of the thanks page: answer with the cached thanks.html. */
   | { readonly kind: 'thanks'; readonly url: string }
   /** The thanks page sends the opt-in stats: passed on to the network, unchanged (ADR 0029). */
@@ -186,6 +193,26 @@ export interface KnownFiles {
 }
 
 /**
+ * Where a page load of `url` must go instead (ADR 0038), or null. The address of a language has no
+ * trailing slash, because the page's relative URLs must point at the app's own folder: `<scope>en/`
+ * goes to `<scope>en`. Spanish is the site address: `<scope>es` and `<scope>es/` go to `<scope>`. Only
+ * one path segment counts, and the query and fragment are kept.
+ */
+export function languageRedirect (url: string, scope: string): string | null {
+  const u = new URL(url)
+  const scopePath = new URL(scope).pathname
+  if (!u.pathname.startsWith(scopePath)) return null
+  const rest = u.pathname.slice(scopePath.length)
+  const m = /^([A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*)(\/?)$/.exec(rest)
+  if (m === null) return null
+  const segment = m[1] ?? ''
+  const slash = m[2] ?? ''
+  const tail = `${u.search}${u.hash}`
+  if (segment.toLowerCase() === 'es') return `${scope}${tail}`
+  return slash === '/' ? `${scope}${segment}${tail}` : null
+}
+
+/**
  * Deny by default: the worker answers only the files of this build, listed in its manifest, and page
  * loads inside its scope. Every other request from the page or its workers (another origin, another
  * path, a query string, a method other than GET) is refused without touching the network, so no code
@@ -201,6 +228,10 @@ export function route (method: string, url: string, mode: string, scope: string,
   const key = url.split('#')[0] ?? url
   // A page load may carry a query string or a path of its own: it gets index.html, unless it is
   // exactly the thanks page.
+  if (mode === 'navigate') {
+    const to = languageRedirect(key, scope)
+    if (to !== null) return { kind: 'redirect', url: to }
+  }
   if (mode === 'navigate') return key === thanks && known.files.has(thanks) ? { kind: 'thanks', url: thanks } : { kind: 'index' }
   if (known.files.has(key)) return { kind: 'file', url: key }
   if (known.onDemand.has(key)) return { kind: 'on-demand', url: key }

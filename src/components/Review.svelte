@@ -159,9 +159,9 @@
     {#if shareStatus === 'error'}<p class="notice-warn" id="share-error" role="alert">{t(lang, 'errShare')}</p>{/if}
     <div class="flex flex-col gap-2.5 lg:flex-row lg:*:flex-1">
       {#if shareable}
-        <button type="button" class="button primary" id="share-file" disabled={!confirmed || busy} onclick={share}>{@render shareIcon()}{t(lang, 'shareFile')}</button>
+        <button type="button" class="button primary" id="share-file" disabled={!confirmed} aria-busy={busy} onclick={share}>{@render shareIcon()}{t(lang, 'shareFile')}</button>
       {/if}
-      <button type="button" class={shareable ? 'button' : 'button primary'} id="download" disabled={!confirmed || busy} onclick={download}>
+      <button type="button" class={shareable ? 'button' : 'button primary'} id="download" disabled={!confirmed} aria-busy={busy} onclick={download}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
         {t(lang, 'downloadPdf')}
       </button>

@@ -22,7 +22,7 @@ never write "nothing stored" or "never leaves" without that context.
 - The repository is still named `aasanchez/dnilimpio.es`. Do not rename repository URLs, the cache
   prefix `dnilimpio-` or the storage key `dnilimpio.noticeDismissedAt`: renaming them orphans
   caches and shows the notice again to returning users.
-- The brand is the constant `BRAND` in `src/App.svelte`, not a translated string. Use
+- The brand is the constant `BRAND` in `src/seo/site.ts`, not a translated string. Use
   "DNI Tapado.es" in new user-facing text.
 - Owner: Alexis (`aasanchez`). Licence: AGPL-3.0-or-later, with exceptions listed in the README.
 
@@ -47,9 +47,12 @@ pnpm typecheck                       # svelte-check, strict; warnings fail
 pnpm lint                            # ESLint (neostandard, typescript-eslint strict, security bans)
 pnpm format                          # ESLint --fix
 pnpm test                            # unit tests (Vitest), tests/unit/
+pnpm test:coverage                   # unit tests + coverage floor (vitest.config.ts), as CI runs them
 pnpm build                           # production build in dist/ (CSP, SRI, import map, SW manifest)
 pnpm test:e2e                        # Playwright in Chromium against `pnpm preview` of dist/ (build first)
 pnpm test:e2e:browsers               # the cross-browser specs in Firefox and WebKit (CI runs them too)
+pnpm test:visual                     # screenshot tests in the pinned Playwright container (Docker)
+pnpm test:visual:update              # rewrite the screenshot baselines after an intended UI change
 pnpm size                            # bundle size against budgets (after build)
 pnpm verify                          # typecheck + lint + unit + build + e2e: run before every PR
 ```
@@ -70,6 +73,11 @@ pnpm test:e2e -g "tampered"          # by test title
   test there that a browser cannot run gets `test.skip(condition, reason)`, never a silent skip; a
   known app bug in one browser gets `test.fail(condition, reason)`, removed with the fix.
   Privacy- and security-relevant specs belong in that list.
+- Screenshot tests (`tests/e2e/visual.spec.ts`, ADR 0036) run only in the Playwright image pinned in
+  `scripts/visual.sh` and the CI job `visual`; `pnpm test:e2e` and `pnpm verify` skip them. A change
+  to the start screen, editor, review or stats page fails that job: run `pnpm test:visual:update`,
+  look at each changed PNG, and commit it with the change. Never make baselines outside the container.
+  Bumping `@playwright/test` means a new image tag and digest in both places and new baselines.
 
 ## Non-negotiable rules
 
@@ -128,6 +136,9 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 
 ## Code conventions
 
+- The build renders the start screen in Node (`scripts/prerender.ts`, ADR 0041). Code that runs while
+  App.svelte renders the start screen must not touch `window`, `document` or storage outside
+  `$effect`, or the build fails.
 - Image, geometry, redaction and PDF logic are plain TypeScript modules with no Svelte import, so
   unit tests run them in Node. Svelte components stay thin.
 - Masked pixels must be opaque black in the exported raster, also under the watermark:
@@ -143,6 +154,8 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
   listed in [`REUSE.toml`](REUSE.toml) if it cannot hold a comment (JSON, images). CI runs
   `reuse lint`, which also parses SPDX tags quoted in prose, so do not write one inside Markdown.
 - Raise a bundle budget in `scripts/bundle-size.ts` only on purpose, and say why in the PR.
+- Never lower a coverage threshold in `vitest.config.ts`. When your change raises coverage, raise
+  the threshold to 1 point below the new value.
 - Write documentation and UI text in plain language (ISO 24495-1): short sentences, active voice,
   concrete words. Match the tone of the README.
 
@@ -163,16 +176,23 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 | `src/stats/`, `src/thanks/`, `thanks.html`, `worker/` | Opt-in usage stats (ADR 0029): fixed list, thanks page, the Cloudflare Worker for `/stats` |
 | `src/security/` | Trusted Types policy, WebRTC and framing lockdown, photo-step CSP (intake lockdown), audit prompt |
 | `src/i18n/` | Dictionaries, language choice |
-| `scripts/` | CSP, Vite plugins (SRI, import map, SW manifest), smoke test, size, icons, fixtures |
+| `scripts/` | CSP, Vite plugins (SRI, import map, SW manifest, prerendered start screen), smoke test, size, icons, fixtures |
 | `tests/unit/`, `tests/e2e/` | Vitest and Playwright; the README lists what each file checks |
 | `docs/adr/` | Architecture decision records, with an index |
 | `.github/workflows/ci.yml` | CI; `ci-ok` is the single required check; deploy runs from `master` only |
 
 ## Workflow
 
-- **One pull request per feature.** Keep unrelated changes out of it. Merges use **Squash and
-  merge**; write the PR title as the final commit subject (`feat(scope): …`, `fix(scope): …`,
-  `docs(scope): …`).
+- **One pull request per feature.** Keep unrelated changes out of it. Merges use **Rebase and
+  merge**: every commit of the branch lands on `master` as it is. So each commit is one logical
+  step with a conventional subject (`feat(scope): …`, `fix(scope): …`, `docs(scope): …`), and each
+  one builds and passes `pnpm typecheck` and `pnpm test`; check with
+  `git rebase --exec 'pnpm typecheck && pnpm test' origin/master`. Fold review fixes into the commit
+  they fix (`git commit --fixup=<sha>`, then
+  `GIT_SEQUENCE_EDITOR=true git rebase --autosquash origin/master`); do not leave "fix review" or
+  "wip" commits. Write the PR title in the same form; for a one-commit PR it is that commit's
+  subject. Use **Squash and merge** only when the commits cannot be made clean, or the branch
+  contains a merge commit, and say so in the PR.
 - **Give the branch a real name before you push it.** A tool may create a branch with a generated
   name, such as `claude/project-thread-xxxx`. Before the first push to GitHub, rename it to say
   what the work does: `git branch -m <type>/<summary>`. The type is the commit type of the PR
@@ -182,6 +202,17 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
   allows pushes only to its assigned branch and refuses the new name, push the assigned branch
   and say so in the PR. Do not rename a branch that already has an open PR: the PR stays on the
   old name.
+- **Update a branch by rebasing it onto `master`.** When asked to update a branch or fix its
+  merge conflicts, run `git fetch origin master` and `git rebase origin/master`. Resolve each
+  conflict in the commit that causes it, so every commit still builds; run the checks the
+  conflicted files touch; then push with `git push --force-with-lease`, never a plain `--force`.
+  If a rebase goes wrong, `git rebase --abort` restores the branch. Merge instead
+  (`git merge origin/master`, then a normal push) when any of these holds:
+  someone else pushes to the branch, or another PR is based on it, because a rebase rewrites the
+  commits they build on; the same conflict comes back in commit after commit, so one merge solves
+  it once; review comments point at commits a rewrite would detach; or the remote refuses the
+  force-push. A branch with a merge commit cannot keep a linear history, so it goes in with
+  Squash and merge (see above). Say in the PR which method you used and why.
 - **Tests for every change.** Unit tests for logic, an e2e spec for user-visible behaviour. A
   privacy- or security-relevant change also needs a test that would fail if the protection broke.
 - **An ADR for every architectural decision**: anything costly to reverse, such as a new
