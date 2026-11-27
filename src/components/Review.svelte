@@ -11,9 +11,12 @@
   import { shrink } from '../engine/wipe.ts'
   import { t, tf, type Lang } from '../i18n/index.ts'
   import type { Side } from '../zones/dni.ts'
+  import type { DocChoice } from '../zones/documents.ts'
 
-  const { lang, secure, sides, hiddenCount, boxCount, watermark, greyscale, onReset, onFinish }: {
+  const { lang, choice, secure, sides, hiddenCount, boxCount, watermark, greyscale, onReset, onFinish }: {
     lang: Lang
+    /** The document type: names the PDF `redacted-dni.pdf` or `redacted-tie.pdf`. */
+    choice: DocChoice
     secure: Readonly<Record<Side, HTMLCanvasElement>>
     /** The sides to show and export, front first, all on one PDF page. The back is optional. */
     sides: readonly Side[]
@@ -43,7 +46,7 @@
 
   /** Web Share with files: most phones, Safari on macOS, Chrome on Windows and ChromeOS. */
   const shareable = typeof navigator.canShare === 'function' &&
-    navigator.canShare({ files: [new File([], 'protected-document.pdf', { type: 'application/pdf' })] })
+    navigator.canShare({ files: [new File([], 'redacted-dni.pdf', { type: 'application/pdf' })] })
 
   /** Shows a copy of the sanitised raster: the same pixels that go into the PDF. */
   const copyOf = (s: Side) => (node: HTMLCanvasElement): () => void => {
@@ -66,9 +69,9 @@
   /** Builds the PDF once. Failure is not kept: the next click tries again. */
   function makePdf (): Promise<File> {
     pending ??= (async () => {
-      const { exportPdf, PDF_FILE_NAME } = await loadExport()
+      const { exportPdf, pdfFileName } = await loadExport()
       const blob = await exportPdf(sides.map((s) => secure[s]))
-      const file = new File([blob], PDF_FILE_NAME, { type: 'application/pdf' })
+      const file = new File([blob], pdfFileName(choice), { type: 'application/pdf' })
       if (mounted) pdf = file
       return file
     })().catch((e: unknown) => {
