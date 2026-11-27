@@ -33,7 +33,7 @@ Options considered:
 3. **Send on "Start again" by navigation:** no CSP change, but no confirmation for the person, and no
    data from people who close the tab.
 4. **Local only:** show the stats with copy and email buttons. Very little data would reach us.
-5. **"Clear everything", then a separate thanks page that sends on opt-in.** Chosen.
+5. **Clear the photos, then a separate thanks page that sends on opt-in.** Chosen.
 
 ## Decision
 
@@ -81,7 +81,7 @@ Options considered:
    is processed on the device and the app does not upload it, and the stats carry nothing from the
    document and are sent only on a tap (Alexis: the notice is not a disclaimer for an optional
    feature). The thanks page says what is sent and what is not, before anything is sent.
-   The audit prompt describes this send and asks the auditor to verify each limit above.
+   The audit prompt names this send and its fixed fields, and asks the auditor to try to disprove the claims.
 
 ## Consequences
 

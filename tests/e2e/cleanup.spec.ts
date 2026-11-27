@@ -21,7 +21,7 @@ async function logUrls (page: Page): Promise<void> {
     }
     URL.revokeObjectURL = (url: string): void => {
       log.revoked.push(url)
-      // Also on the console: "Clear everything" then leaves the page (thanks page, ADR 0029).
+      // Also on the console: "Send anonymous data" then leaves the page (thanks page, ADR 0029).
       console.log(`revoked ${url}`)
       revoke(url)
     }

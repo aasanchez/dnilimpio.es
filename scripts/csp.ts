@@ -34,7 +34,7 @@ export const CSP_DIRECTIVES: readonly string[] = [
 export const CSP = CSP_DIRECTIVES.join('; ')
 
 /**
- * Policy of the thanks page (thanks.html, ADR 0029): the page the app opens after "Clear everything".
+ * Policy of the thanks page (thanks.html, ADR 0029): the page the app opens from "Send anonymous data".
  * It never holds a photo: it is a new document, and it loads none of the app's image, AI or PDF code.
  * It may connect to its own origin, where it sends the opt-in usage stats (one POST, src/stats/send.ts).
  * 'self' and not a path: the same build is served at more than one address (dnitapado.es, www, a

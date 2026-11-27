@@ -79,7 +79,7 @@ test('offers an audit prompt to copy into an AI coding agent, from the notice an
   await page.locator('#audit-notice').click()
   const dialog = page.getByRole('dialog', { name: 'Audita el código tú mismo' })
   await expect(dialog).toBeVisible()
-  await expect(dialog.locator('textarea')).toHaveValue(/^Perform a deep security and privacy audit of the codebase at https:\/\/github\.com\/aasanchez\/dnilimpio\.es/)
+  await expect(dialog.locator('textarea')).toHaveValue(/^Audit the repository https:\/\/github\.com\/aasanchez\/dnilimpio\.es and the live site built from it, https:\/\/dnitapado\.es\//)
   await page.locator('#audit-notice-copy').click()
   await expect(dialog.getByRole('status')).toHaveText('Copiado')
   // The app's Permissions-Policy forbids clipboard-read (ADR 0027), so the test reads the clipboard
@@ -89,12 +89,17 @@ test('offers an audit prompt to copy into an AI coding agent, from the notice an
   await reader.goto('/__clipboard')
   const copied = await reader.evaluate(async () => await navigator.clipboard.readText())
   await reader.close()
-  expect(copied).toContain("connect-src 'none', without 'self'")
+  // It states the claims and asks the agent to disprove them, with findings and evidence, not a verdict.
+  expect(copied).toContain('Try to disprove each one.')
+  expect(copied).toContain("connect-src 'none'")
+  expect(copied).toContain('Do not give an overall pass or fail.')
   // It asks the agent to check the live site too, not only the repository.
-  expect(copied).toContain('6. Live Site Verification (https://dnitapado.es/)')
-  // It describes the one intended send, so the agent verifies its limits instead of flagging it (ADR 0029).
-  expect(copied).toContain('3. The One Intended Send: Opt-in Usage Stats')
-  expect(copied).toContain("The app page (index.html) keeps connect-src 'none' and form-action 'none'")
+  expect(copied).toContain('Check the live site, not only the source:')
+  // It names the one intended send and its fixed fields, so the agent can check it (ADR 0029).
+  expect(copied).toContain('One request is sent on purpose: opt-in usage stats, from thanks.html')
+  // Short and neutral: no section that argues the auditor's findings away in advance.
+  expect(copied).not.toContain('Do not report')
+  expect(copied.length).toBeLessThan(3000)
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
 

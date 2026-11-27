@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Opt-in usage stats (ADR 0029). "Clear everything" clears the photos and opens the thanks page,
+// Opt-in usage stats (ADR 0029). "Send anonymous data" clears the photos and opens the thanks page,
 // a page of its own that never holds a photo. It shows the exact text it would send and sends it
 // only when the person taps Send. Nothing is sent on the way there, and the app page still cannot
 // connect anywhere.
@@ -31,7 +31,7 @@ async function toThanks (page: Page): Promise<void> {
   await expect(page.locator('#thanks-title')).toHaveText('Datos de uso anónimos')
 }
 
-test('Clear everything opens the photo-free thanks page; nothing is sent until the person taps Send', async ({ page }) => {
+test('Send anonymous data opens the photo-free thanks page; nothing is sent until the person taps Send', async ({ page }) => {
   const sent = watchSends(page)
   await toThanks(page)
 
