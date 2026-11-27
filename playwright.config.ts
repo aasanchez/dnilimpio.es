@@ -1,6 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { defineConfig, devices } from '@playwright/test'
 
+/**
+ * Specs that also run in Firefox and WebKit (Safari's engine): the privacy and security promise,
+ * cleanup, export, offline and the front-only flow. Every test in these files runs there; a test that
+ * cannot, because the browser really lacks the feature, says so with test.skip() and a reason, so the
+ * report shows it. The other specs (layout, AI accuracy, languages, ...) run in Chromium only.
+ */
+export const CROSS_BROWSER_SPECS = [
+  'privacy.spec.ts',
+  'third-party.spec.ts',
+  'security.spec.ts',
+  'no-trusted-types.spec.ts',
+  'cleanup.spec.ts',
+  'export.spec.ts',
+  'offline.spec.ts',
+  'front-only.spec.ts',
+]
+
 // Screenshot comparisons (tests/e2e/visual.spec.ts) depend on the exact browser build and system
 // fonts, so they run only inside the pinned Playwright container: `pnpm test:visual` locally, the
 // `visual` job in CI. VISUAL=1 turns them on; every other run skips that file.
@@ -20,8 +37,13 @@ export default defineConfig({
   // One baseline per screen, with no platform suffix: the container is the only platform.
   snapshotPathTemplate: '{testDir}/__screenshots__/{arg}{ext}',
   expect: { toHaveScreenshot: { animations: 'disabled', caret: 'hide', scale: 'css' } },
+  // `pnpm test:e2e` runs the chromium project; `pnpm test:e2e:browsers` runs firefox and webkit.
   projects: VISUAL
     ? [{ name: 'visual', testMatch: VISUAL_SPEC, use: { ...devices['Desktop Chrome'] } }]
-    : [{ name: 'chromium', testIgnore: VISUAL_SPEC, use: { ...devices['Desktop Chrome'] } }],
+    : [
+        { name: 'chromium', testIgnore: VISUAL_SPEC, use: { ...devices['Desktop Chrome'] } },
+        { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testMatch: CROSS_BROWSER_SPECS },
+        { name: 'webkit', use: { ...devices['Desktop Safari'] }, testMatch: CROSS_BROWSER_SPECS },
+      ],
   webServer: { command: 'pnpm preview', url: 'http://localhost:4173/', reuseExistingServer: !process.env['CI'] },
 })

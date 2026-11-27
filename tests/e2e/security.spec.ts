@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
 import { cspWithScriptHashes } from '../../scripts/csp.ts'
-import { fixture, openCapture, toEditor } from './helpers.ts'
+import { fixture, appElementsInFrame, openCapture, toEditor } from './helpers.ts'
 
 /** The inline import map's text, or null. It is the only inline script the CSP allows (by hash). */
 const importMapText = async (page: Page): Promise<string | null> =>
@@ -66,11 +66,18 @@ test('without the service worker, the CSP alone stops every same-origin connecti
       x.onerror = () => { resolve('blocked') }
       try { x.open('POST', 'leak'); x.send(data) } catch { resolve('blocked') }
     })
+    // WebKit refuses some of these at once with a SecurityError; that counts as blocked too.
     const source = async (): Promise<string> => await new Promise((resolve) => {
-      const es = new EventSource(`leak/events?${data}`)
-      es.onopen = () => { es.close(); resolve('sent') }
-      es.onerror = () => { es.close(); resolve('blocked') }
+      try {
+        const es = new EventSource(`leak/events?${data}`)
+        es.onopen = () => { es.close(); resolve('sent') }
+        es.onerror = () => { es.close(); resolve('blocked') }
+      } catch { resolve('blocked') }
     })
+    const beacon = (): string => {
+      // eslint-disable-next-line no-restricted-properties -- this test checks that the CSP blocks it
+      try { return String(navigator.sendBeacon(`leak/beacon?${data}`, data)) } catch { return 'blocked' }
+    }
     return {
       get: await tryFetch(),
       post: await tryFetch({ method: 'POST', body: data }),
@@ -78,8 +85,7 @@ test('without the service worker, the CSP alone stops every same-origin connecti
       xhr: await xhr(),
       eventSource: await source(),
       // sendBeacon() may answer true and be stopped later: only `reached` below tells.
-      // eslint-disable-next-line no-restricted-properties -- this test checks that the CSP blocks it
-      beacon: String(navigator.sendBeacon(`leak/beacon?${data}`, data)),
+      beacon: beacon(),
     }
   })
   expect(results).toEqual({ get: 'blocked', post: 'blocked', header: 'blocked', xhr: 'blocked', eventSource: 'blocked', beacon: results.beacon })
@@ -100,6 +106,8 @@ test('the build publishes no source maps and no script points to one (ADR 0022)'
 
 test('Trusted Types: HTML strings are rejected and no other policy can be created', async ({ page }) => {
   await page.goto('/')
+  const supported = await page.evaluate(() => 'trustedTypes' in window)
+  test.skip(!supported, 'This browser has no Trusted Types. tests/e2e/no-trusted-types.spec.ts covers that path.')
   const result = await page.evaluate(() => {
     const tryIt = (f: () => void): string => { try { f(); return 'allowed' } catch { return 'blocked' } }
     const tt = (window as unknown as { trustedTypes?: { createPolicy: (n: string, o: object) => unknown } }).trustedTypes
@@ -164,9 +172,8 @@ test.describe('hardening (security audit of 2026-11-25)', () => {
   })
 
   test('the host refuses to show the app inside another page\'s frame (frame-ancestors, ADR 0027)', async ({ page, baseURL }) => {
-    await page.setContent(`<iframe src="${baseURL ?? ''}" width="800" height="600"></iframe>`)
-    await expect.poll(() => page.frames()[1]?.url()).toMatch(/^chrome-error:/)
-    await expect(page.frameLocator('iframe').locator('h1')).toHaveCount(0)
+    // Not even the page's own frame guard (#app with a link to itself): the host refused the page.
+    expect(await appElementsInFrame(page, baseURL ?? '')).toBe(0)
   })
 
   test('on a host without headers (GitHub Pages), inside a frame the app does not start, it only links to itself', async ({ page, context, baseURL }) => {
@@ -191,6 +198,7 @@ test.describe('hardening (security audit of 2026-11-25)', () => {
 
   test('a photo still decoding when the page is left is dropped too', async ({ page }) => {
     await openCapture(page)
+    await expect(page.locator('#file-front')).toBeAttached()
     const png = readFileSync(fixture('synthetic-front.png')).toString('base64')
     // Choose the file and leave in the same task: the decode is still running when pagehide fires.
     await page.evaluate((b64) => {

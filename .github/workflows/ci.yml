@@ -5,6 +5,7 @@
 # Pull request: validate everything, never deploy.
 #
 #   changes ─ install ─┬─ build ──────┬─ e2e (4 shards) ─┐
+#                      │              ├─ e2e (firefox, webkit)
 #                      ├─ typecheck   ├─ bundle-size     │
 #                      ├─ lint        ├─ reproducible    │
 #                      │              └─ lighthouse      │
@@ -262,6 +263,35 @@ jobs:
           # The version the build carries, for tests/e2e/version.spec.ts.
           RELEASE_VERSION: ${{ needs.changes.outputs.version }}
 
+  # The privacy, security, cleanup, export, offline and front-only specs in Firefox and WebKit
+  # (Safari's engine): CROSS_BROWSER_SPECS in playwright.config.ts. One job per browser, in parallel
+  # with the Chromium shards.
+  e2e-browsers:
+    needs: [changes, build]
+    if: needs.changes.outputs.validate == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    name: e2e (${{ matrix.browser }})
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          playwright: 'true'
+          browser: ${{ matrix.browser }}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - run: pnpm exec playwright test --project="$BROWSER"
+        env:
+          BROWSER: ${{ matrix.browser }}
+
   # Screenshot comparisons (tests/e2e/visual.spec.ts) inside the official Playwright image, pinned by
   # digest: the same browser build and system fonts as `pnpm test:visual` on any machine, so the
   # baselines in tests/e2e/__screenshots__/ match. Keep the image in sync with scripts/visual.sh and
@@ -423,7 +453,7 @@ jobs:
   # The single required status check. Passes when every job passed or was skipped on purpose.
   ci-ok:
     if: always()
-    needs: [changes, install, build, typecheck, lint, unit, e2e, visual, bundle-size, reproducible, reuse, audit, dependency-review, workflow-lint, lighthouse]
+    needs: [changes, install, build, typecheck, lint, unit, e2e, e2e-browsers, visual, bundle-size, reproducible, reuse, audit, dependency-review, workflow-lint, lighthouse]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:

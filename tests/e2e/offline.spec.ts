@@ -3,7 +3,7 @@
 // demand, works with the network off. Service workers are on here (blocked in the other specs).
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import { adjustFront, fixture, loadBoth, openCapture, toEditor } from './helpers.ts'
+import { FIREFOX_INTAKE_BUG, adjustFront, appElementsInFrame, fixture, loadBoth, openCapture, toAuto } from './helpers.ts'
 import { PAGE_HEADERS, SECURITY_HEADERS } from '../../src/offline/precache.ts'
 
 test.use({ locale: 'es-ES', serviceWorkers: 'allow' })
@@ -20,7 +20,21 @@ async function offlineReady (page: Page): Promise<string[]> {
   })
 }
 
-test('works offline after one visit, through to the PDF download', async ({ page, context }) => {
+/**
+ * The page errors that count. Offline, before the corner model was ever cached, its module cannot
+ * load: the app catches that and uses classic edge detection. WebKit still reports the failed load
+ * as a page error ("TypeError: Load failed" and the module's address), and its harmless
+ * ResizeObserver notice. Those are dropped in WebKit only, and the test says so in its report.
+ */
+function unexpected (errors: string[], browserName: string): string[] {
+  if (browserName !== 'webkit') return errors
+  const known = (e: string): boolean => e === 'TypeError: Load failed' || /assets\/ml\/model-[\w-]+\.js\.$/.test(e) ||
+    e.startsWith('ResizeObserver loop completed')
+  if (errors.some(known)) test.info().annotations.push({ type: 'browser difference', description: 'WebKit reports the caught, failed load of the corner model as a page error' })
+  return errors.filter((e) => !known(e))
+}
+
+test('works offline after one visit, through to the PDF download', async ({ page, context, browserName }) => {
   const violations: string[] = []
   page.on('console', (m) => { if (/Content Security Policy|Trusted Type/i.test(m.text())) violations.push(m.text()) })
   page.on('pageerror', (e) => violations.push(e.message))
@@ -35,13 +49,15 @@ test('works offline after one visit, through to the PDF download', async ({ page
   await context.setOffline(true)
   await page.reload()
   await expect(page.locator('h1')).toBeVisible()
-  await toEditor(page)
+  // The network is off, so the model cannot load anyway: no route that blocks it (in Firefox a
+  // route takes requests away from the service worker).
+  await toAuto(page, 'dni-4.0', { model: true })
   await page.locator('#review').click()
   await page.locator('#review-confirm').check()
   const download = page.waitForEvent('download')
   await page.locator('#download').click()
   expect((await download).suggestedFilename()).toBe('redacted-dni.pdf')
-  expect(violations).toEqual([])
+  expect(unexpected(violations, browserName)).toEqual([])
 })
 
 test('works offline with the front alone (the back is optional), through to a one-page PDF', async ({ page, context }) => {
@@ -143,12 +159,12 @@ test('page loads from the worker carry the security headers, whatever the cached
   expect(host['content-security-policy']).toBe(`${meta ?? ''}; frame-ancestors 'none'`)
   // Another site that frames the app: the host's frame-ancestors refuses it, so nothing of the app runs.
   const framer = await context.newPage()
-  await framer.setContent(`<iframe src="${baseURL ?? ''}"></iframe>`)
-  await expect.poll(() => framer.frames()[1]?.url()).toMatch(/^chrome-error:/)
-  await expect(framer.frameLocator('iframe').locator('h1')).toHaveCount(0)
+  // Not even the page's own frame guard (#app with a link to itself): the host refused the page.
+  expect(await appElementsInFrame(framer, baseURL ?? '')).toBe(0)
 })
 
-test('a tampered file stops the install and leaves no cache behind', async ({ page, context }) => {
+test('a tampered file stops the install and leaves no cache behind', async ({ page, context, browserName }) => {
+  test.skip(browserName !== 'chromium', "Playwright routes and reports a service worker's own requests only in Chromium: the tampered file must reach the worker.")
   // context.route also sees the worker's own requests.
   let fromWorker = 0
   await context.route('**/assets/export-*.js', async (route) => {
@@ -180,23 +196,27 @@ async function cachedPaths (page: Page): Promise<string[]> {
   })
 }
 
-test('offline before the model was ever used: classic edge detection places the corners, silently', async ({ page, context }) => {
+test('offline before the model was ever used: classic edge detection places the corners, silently', async ({ page, context, browserName }) => {
+  test.skip(browserName === 'firefox', "Playwright's offline mode in Firefox does not cut the service worker's own requests (seen in CI): the model still downloads.")
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   await page.goto('/')
   await offlineReady(page)
   await context.setOffline(true)
   await page.reload()
-  await loadBoth(page)
+  // No route that blocks the model: the network is off (in Firefox a route takes requests away from
+  // the service worker).
+  await loadBoth(page, { model: true })
   await page.locator('#capture-continue').click()
   await page.locator('#doc-dni').check()
   await page.locator('#doc-continue').click()
   await adjustFront(page)
   await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'edges')
-  expect(errors).toEqual([])
+  expect(unexpected(errors, browserName)).toEqual([])
 })
 
-test('the model is kept after its first use and then works offline', async ({ page, context }) => {
+test('the model is kept after its first use and then works offline', async ({ page, context, browserName }) => {
+  test.fail(browserName === 'firefox', FIREFOX_INTAKE_BUG)
   await page.goto('/')
   await offlineReady(page)
   await openCapture(page)
@@ -217,7 +237,8 @@ test('the model is kept after its first use and then works offline', async ({ pa
   await expect(page.locator('[data-source]')).toHaveAttribute('data-source', 'model')
 })
 
-test('a tampered model file is refused and classic edge detection takes over', async ({ page, context }) => {
+test('a tampered model file is refused and classic edge detection takes over', async ({ page, context, browserName }) => {
+  test.skip(browserName !== 'chromium', "Playwright routes and reports a service worker's own requests only in Chromium: the tampered model must reach the worker.")
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
   await context.route('**/assets/ml/model-*.js', async (route) => {
@@ -284,22 +305,29 @@ test('a rewritten cached index.html is never served: the worker refetches the re
   expect(await cachedText(page, 'index.html')).toBe(real)
 })
 
-test('offline, a rewritten cached index.html is refused, never shown', async ({ page, context }) => {
+test('offline, a rewritten cached index.html is refused, never shown', async ({ page, context, browserName }) => {
   await page.goto('/')
   await offlineReady(page)
   await poison(page, 'index.html', POISONED_PAGE, 'text/html')
   await context.setOffline(true)
   // No verified copy and no network: a network error instead of the forged page.
   const failed = await page.reload().then(() => false, () => true)
-  expect(failed).toBe(true)
+  // The forged page never shows, in any browser.
   await expect(page.locator('#poisoned')).toHaveCount(0)
+  if (browserName === 'firefox') {
+    // Playwright's offline mode in Firefox does not cut the service worker's own requests (seen in
+    // CI): the worker fetches the real page instead of failing. Still safe; only the network error differs.
+    test.info().annotations.push({ type: 'browser difference', description: 'Firefox: the service worker still reaches the network in Playwright offline mode' })
+  } else {
+    expect(failed).toBe(true)
+  }
   await context.setOffline(false)
   await page.goto('/')
   await expect(page.locator('#guide-open')).toBeVisible()
   expect(await cachedText(page, 'index.html')).not.toContain('poisoned')
 })
 
-test('a rewritten cached OCR worker never runs: online it is replaced, offline it is refused', async ({ page, context }) => {
+test('a rewritten cached OCR worker never runs: online it is replaced, offline it is refused', async ({ page, context, browserName }) => {
   await page.goto('/')
   await offlineReady(page)
   await poison(page, 'ocr/worker.min.js', POISONED_WORKER, 'text/javascript')
@@ -309,6 +337,15 @@ test('a rewritten cached OCR worker never runs: online it is replaced, offline i
 
   await poison(page, 'ocr/worker.min.js', POISONED_WORKER, 'text/javascript')
   await context.setOffline(true)
-  expect(await startWorker(page)).toEqual({ ran: false, failed: true })
-  expect(await cachedText(page, 'ocr/worker.min.js')).toBe('')
+  const offline = await startWorker(page)
+  // The forged worker never runs, in any browser.
+  expect(offline.ran).toBe(false)
+  if (browserName === 'firefox') {
+    // As above: in Firefox the worker still reaches the network, so it loads the real file.
+    test.info().annotations.push({ type: 'browser difference', description: 'Firefox: the service worker still reaches the network in Playwright offline mode' })
+    expect(await cachedText(page, 'ocr/worker.min.js')).not.toContain('poisoned')
+  } else {
+    expect(offline.failed).toBe(true)
+    expect(await cachedText(page, 'ocr/worker.min.js')).toBe('')
+  }
 })
