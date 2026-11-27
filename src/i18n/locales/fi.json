@@ -239,6 +239,7 @@
   "guideAbout": "Tietoa: {field}",
   "seoTitle": "Peitä DNI-kortin tiedot ja lisää vesileima",
   "seoDescription": "Peitä espanjalaisen DNI- tai TIE-korttisi tiedot ja lisää vesileima ennen kuin lähetät kopion. Ilmainen, ei rekisteröitymistä. Asiakirja käsitellään laitteellasi.",
+  "noScript": "Tämä sovellus tarvitsee JavaScriptin. Ota se käyttöön selaimessa, niin voit käyttää sovellusta.",
   "articlesTitle": "Artikkelit",
   "articlesLead": "Uutisia, oppaita ja tietoa DNI Tapado.esistä ja siitä, miten jaat henkilöllisyystodistuksesi kopion pienemmällä riskillä.",
   "articlesNews": "Uutiset",

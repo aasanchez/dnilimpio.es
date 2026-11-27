@@ -29,6 +29,14 @@ describe('static head', () => {
     expect(h).toContain('content="&quot;&gt;&lt;script&gt;"')
     expect(h).not.toMatch(/<script|<style|style=/)
   })
+  it('names the page in its language and its own canonical address (ADR 0044)', () => {
+    expect(head).toContain('<link rel="canonical" href="https://dnitapado.es/" />')
+    expect(head).toContain('<meta property="og:locale" content="es_ES" />')
+    const fr = staticHead('https://dnitapado.es/', es, 'fr')
+    expect(fr).toContain('<link rel="canonical" href="https://dnitapado.es/fr" />')
+    expect(fr).toContain('<meta property="og:locale" content="fr_FR" />')
+    expect(fr.match(/rel="canonical"/g)).toHaveLength(1)
+  })
   it('keeps the title short enough for search results', () => {
     expect(pageTitle(es.seoTitle).length).toBeLessThanOrEqual(65)
     expect(es.seoDescription.length).toBeLessThanOrEqual(160)
@@ -78,7 +86,9 @@ describe('one address per language (ADR 0038)', () => {
     expect(head).toContain('<link rel="alternate" hreflang="en" href="https://dnitapado.es/en" />')
     expect(head).toContain('<link rel="alternate" hreflang="x-default" href="https://dnitapado.es/" />')
     expect(head).not.toContain('hreflang="ca-ES-valencia"')
-    expect(head).not.toContain('rel="canonical"')
+    // One canonical: the page's own address (ADR 0044), here the Spanish one.
+    expect(head.match(/rel="canonical"/g)).toHaveLength(1)
+    expect(head).toContain('<link rel="canonical" href="https://dnitapado.es/" />')
   })
   it('the sitemap lists every language address, with alternates', () => {
     const urls = startPageSitemap(site)

@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0038. One address per language: `/` is Spanish, `/en` and so on for the others, hreflang
 
-- Status: proposed
+- Status: proposed; each address sends its own language page since [ADR 0044](0044-language-pages.md)
 - Date: 2026-11-27
 - Decided by: Alexis
 

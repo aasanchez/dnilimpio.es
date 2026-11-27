@@ -239,6 +239,7 @@
   "guideAbout": "About: {field}",
   "seoTitle": "Cover data on your Spanish ID and add a watermark",
   "seoDescription": "Cover the data on your Spanish DNI or TIE and add a watermark before you send a copy. Free, no sign-up. The document is processed on your device.",
+  "noScript": "This app needs JavaScript. Turn it on in your browser to use it.",
   "articlesTitle": "Articles",
   "articlesLead": "News, guides and information about DNI Tapado.es and about sharing a copy of your ID with less risk.",
   "articlesNews": "News",

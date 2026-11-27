@@ -7,7 +7,9 @@ import { normalizeSha, normalizeVersion } from './src/version/build-info.ts'
 import { guidePages } from './scripts/guide-pages.ts'
 import { CONTENT_DIR, articleLangs, articleSitemap, articles, dayOf, loadArticles } from './scripts/articles.ts'
 import { base64Import, hostHeadersInPreview, ocrAssets, prerenderStart, searchFiles, securityHeaders, subresourceIntegrity } from './scripts/vite-plugins.ts'
+import { languagePages } from './scripts/language-pages.ts'
 import { DEFAULT_SITE_URL, normalizeSiteUrl } from './src/seo/site.ts'
+import type { Lang } from './src/i18n/langs.ts'
 
 // Override with REPO_URL for forks.
 const REPO_URL = process.env['REPO_URL'] ?? 'https://github.com/aasanchez/dnilimpio.es'
@@ -37,6 +39,10 @@ const ARTICLES = loadArticles(CONTENT_DIR, dayOf(BUILD_TIME))
 // The corner model (src/detect/model.ts) and its runtime go to assets/ml/: the service worker caches
 // that folder on first use instead of at install (src/offline/precache.ts).
 const isModelPart = (ids: readonly string[]): boolean => ids.some((id) => /[\\/](scanic-ml|onnxruntime-(web|common))[\\/]|[\\/]src[\\/]detect[\\/]model\.ts$/.test(id))
+
+// The prerendered start screen of each language (ADR 0041, 0044): rendered once, used for index.html
+// and for the language pages.
+const prerendered = new Map<Lang, string>()
 
 export default defineConfig({
   define: {
@@ -86,5 +92,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [base64Import(), tailwindcss(), svelte(), searchFiles(SITE_URL, articleSitemap(SITE_URL, ARTICLES)), securityHeaders(), prerenderStart(), guidePages(SITE_URL), articles(import.meta.dirname, SITE_URL, ARTICLES), ocrAssets(), subresourceIntegrity(), hostHeadersInPreview()],
+  plugins: [base64Import(), tailwindcss(), svelte(), searchFiles(SITE_URL, articleSitemap(SITE_URL, ARTICLES)), securityHeaders(), prerenderStart(prerendered), guidePages(SITE_URL), articles(import.meta.dirname, SITE_URL, ARTICLES), ocrAssets(), subresourceIntegrity({ pages: (html) => languagePages(html, SITE_URL, prerendered) }), hostHeadersInPreview()],
 })

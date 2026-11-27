@@ -9,11 +9,13 @@ import { dirname, join, resolve } from 'node:path'
 import type { Plugin, ResolvedConfig } from 'vite'
 import { CSP, THANKS_CSP, cspWithScriptHashes } from './csp.ts'
 import { headersFor, hostHeaderRules, redirectFor, rewriteFor, type HeaderRule } from './headers.ts'
-import { insertIntoApp, renderHome } from './prerender.ts'
+import { insertIntoApp, renderHomes } from './prerender.ts'
+import { noScriptTag } from './language-pages.ts'
 import { STATS_PATH, handleStats } from '../src/stats/endpoint.ts'
 import { isArticlePage } from '../src/articles/paths.ts'
 import { GUIDE_PAGES, SW_FILE, THANKS_PAGE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 import { robotsTxt, sitemapXml, startPageSitemap, staticHead, type SitemapUrl } from '../src/seo/site.ts'
+import { LANGS, type Lang } from '../src/i18n/langs.ts'
 import es from '../src/i18n/locales/es.json' with { type: 'json' }
 
 export function securityHeaders (): Plugin {
@@ -38,12 +40,14 @@ export function securityHeaders (): Plugin {
 }
 
 /**
- * Search and link-preview files (src/seo/site.ts): the start page's title, description and Open Graph
- * tags, in Spanish from es.json, in place of the `<!-- seo-head -->` marker; and robots.txt and
- * sitemap.xml, which need the site's absolute address (`site`). The page's own URLs stay relative.
+ * Search and link-preview files (src/seo/site.ts): the start page's title, description, Open Graph
+ * tags and canonical address, in Spanish from es.json, in place of the `<!-- seo-head -->` marker, and
+ * its <noscript> text in place of `<!-- noscript: … -->`; and robots.txt and sitemap.xml, which need
+ * the site's absolute address (`site`). The page's own URLs stay relative.
  */
 export function searchFiles (site: string, more: readonly SitemapUrl[] = []): Plugin {
   const MARKER = '<!-- seo-head -->'
+  const NOSCRIPT = /<!-- noscript:[^>]*-->/
   return {
     name: 'dni-redactor:search-files',
     transformIndexHtml: {
@@ -51,7 +55,8 @@ export function searchFiles (site: string, more: readonly SitemapUrl[] = []): Pl
       handler: (html, ctx) => {
         if (ctx.path.endsWith(`/${THANKS_PAGE}`)) return html
         if (!html.includes(MARKER)) throw new Error(`${ctx.path} must contain ${MARKER}`)
-        return html.replace(MARKER, staticHead(site, es))
+        if (!NOSCRIPT.test(html)) throw new Error(`${ctx.path} must contain <!-- noscript: … -->`)
+        return html.replace(MARKER, staticHead(site, es, 'es')).replace(NOSCRIPT, noScriptTag(es.noScript))
       },
     },
     generateBundle () {
@@ -62,10 +67,11 @@ export function searchFiles (site: string, more: readonly SitemapUrl[] = []): Pl
 }
 
 /**
- * Prerendered start screen (ADR 0041): the Spanish start screen as plain HTML inside <main id="app">
- * of index.html. The thanks page is left as it is.
+ * Prerendered start screen (ADR 0041, 0044): the start screen of every language as plain HTML. The
+ * Spanish one goes inside <main id="app"> of index.html; the others go into `store`, for the
+ * language pages (scripts/language-pages.ts). The thanks page is left as it is.
  */
-export function prerenderStart (): Plugin {
+export function prerenderStart (store: Map<Lang, string>): Plugin {
   let config: ResolvedConfig
   return {
     name: 'dni-redactor:prerender',
@@ -77,7 +83,12 @@ export function prerenderStart (): Plugin {
       order: 'post',
       handler: async (html, ctx) => {
         if (ctx.path.endsWith(`/${THANKS_PAGE}`)) return html
-        return insertIntoApp(html, await renderHome(config.root, config.define ?? {}))
+        const all = await renderHomes(config.root, config.define ?? {}, LANGS)
+        store.clear()
+        for (const [lang, markup] of all) store.set(lang, markup)
+        const es = all.get('es')
+        if (es === undefined) throw new Error('prerender: no Spanish start screen')
+        return insertIntoApp(html, es)
       },
     },
   }
@@ -92,7 +103,7 @@ const sri = (bytes: Buffer | string): string => `sha384-${createHash('sha384').u
  *   `integrity` entry per chunk, so the browser checks them too, and allows exactly that inline
  *   script in the CSP by its SHA-256 hash.
  */
-export function subresourceIntegrity (): Plugin {
+export function subresourceIntegrity (more: { pages?: (indexHtml: string) => ReadonlyMap<string, string> } = {}): Plugin {
   let config: ResolvedConfig
   return {
     name: 'dni-redactor:sri',
@@ -139,9 +150,14 @@ export function subresourceIntegrity (): Plugin {
       // Chunks not referenced from the HTML are loaded with import(): list them in the import map.
       // That includes the corner model's files under assets/ml/ (the runtime's .mjs loader too).
       const lazy = listFiles(join(outDir, 'assets')).filter((f) => /\.m?js$/.test(f) && !out.includes(`assets/${f}"`))
-      if (lazy.length === 0) {
-        writeFileSync(htmlPath, out)
+      // Pages made from the final index.html (the language pages, ADR 0044), before the file list.
+      const finish = (html: string): void => {
+        writeFileSync(htmlPath, html)
+        for (const [file, page] of more.pages?.(html) ?? []) writeFileSync(join(outDir, file), page)
         writePrecacheManifest(outDir)
+      }
+      if (lazy.length === 0) {
+        finish(out)
         return
       }
       const integrity = Object.fromEntries(lazy.map((f) => [`./assets/${f}`, sri(readFileSync(join(outDir, 'assets', f)))]))
@@ -152,8 +168,7 @@ export function subresourceIntegrity (): Plugin {
       const cspMeta = /(<meta http-equiv="Content-Security-Policy" content=")[^"]*(")/
       if (!cspMeta.test(out)) throw new Error('dist/index.html has no CSP meta tag')
       const withMap = out.slice(0, firstModule) + `<script type="importmap">${importMap}</script>\n    ` + out.slice(firstModule)
-      writeFileSync(htmlPath, withMap.replace(cspMeta, `$1${cspWithScriptHashes([hash]).replaceAll("'", '&#39;')}$2`))
-      writePrecacheManifest(outDir)
+      finish(withMap.replace(cspMeta, `$1${cspWithScriptHashes([hash]).replaceAll("'", '&#39;')}$2`))
     },
   }
 }
@@ -237,7 +252,8 @@ export function hostHeadersInPreview (): Plugin {
           res.end()
           return
         }
-        // The host's rewrites: an articles folder shows its index.html (ADR 0039).
+        // The host's rewrites: an articles folder shows its index.html (ADR 0039), and a language's
+        // address shows its own start page (ADR 0044).
         const file = rewriteFor(path)
         if (file !== null) req.url = `${file}${new URL(req.url ?? '/', 'http://preview').search}`
         next()

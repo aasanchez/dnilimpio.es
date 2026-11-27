@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // One address per language (ADR 0038). The site address is Spanish; every other language is a path
-// of its own, `<site>/<tag>` in lowercase, such as `/en` or `/ca-es-valencia`. The host answers every
-// unknown path with the same index.html (SPA fallback), and the service worker answers every page load
-// with it, so these addresses need no page file and also work offline. There is no trailing slash:
+// of its own, `<site>/<tag>` in lowercase, such as `/en` or `/ca-es-valencia`. The host and the
+// service worker answer each one with that language's own page, `<tag>.html` (ADR 0044): the same app,
+// with the head and start screen in that language. The app still reads the language from the address,
+// so any page of the app starts in the right language. There is no trailing slash:
 // at `/en` the page's relative URLs (`./assets/…`) still point at the site's own folder (rule 6).
 import { LANGS, type Lang } from './langs.ts'
 
