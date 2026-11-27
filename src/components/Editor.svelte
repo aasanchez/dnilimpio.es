@@ -4,7 +4,8 @@
 <script lang="ts">
   import { untrack } from 'svelte'
   import { fieldsOn, hasField, masksFor, mrzLeaks, placeZones, sideRects } from '../engine/fields.ts'
-  import { renderSecure } from '../engine/render.ts'
+  import { renderSecure, type RenderOptions } from '../engine/render.ts'
+  import { createRedraw } from '../engine/redraw.ts'
   import { canRedo, canUndo, commit, redo, undo } from '../engine/history.ts'
   import { HANDLES, centredBox, fromPoints, grow, handlePoint, hitTest, isUsable, move, resize, type Handle, type Point } from '../engine/masks.ts'
   import { toPixels } from '../redact/zones.ts'
@@ -71,7 +72,6 @@
   let display: HTMLCanvasElement | undefined = $state()
   /** Sanitised rasters, one per side: the only images the preview, the review and the PDF use. */
   const secure: Record<Side, HTMLCanvasElement> = { front: document.createElement('canvas'), back: document.createElement('canvas') }
-  let version = $state(0)
   let drawMode = $state(false)
   /** Index of the selected manual box on the current side. */
   let selected = $state<number | null>(null)
@@ -335,25 +335,49 @@
     onPhase()
   }
 
-  // Re-render both sides whenever a choice changes.
-  $effect(() => {
-    const opts = {
+  /** The inputs of each side's sanitised raster: every choice that changes its pixels. */
+  const renderOpts = $derived.by(() => {
+    const base = {
       greyscale: edit.greyscale,
       watermark: edit.watermark,
       watermarkStyle: { scale: edit.watermarkScale, opacity: edit.watermarkOpacity },
     }
-    for (const s of SIDES) {
+    const out: Partial<Record<Side, RenderOptions>> = {}
+    for (const s of SIDES) out[s] = { ...base, masks: [...masksFor(placed, s, hidden), ...edit.boxes.present[s]] }
+    return out
+  })
+  /**
+   * Renders the sanitised rasters (src/engine/redraw.ts): at most once per frame, only the side on
+   * screen, and only when its inputs changed. The other side is rendered when it is shown, and every
+   * side before the review, so the review, the share and the PDF always use current pixels.
+   */
+  const redraw = createRedraw<Side>({
+    key: (s) => JSON.stringify(untrack(() => renderOpts[s])),
+    draw: (s) => {
       const card = align.warped[s]
-      if (card) renderSecure(card, { ...opts, masks: [...masksFor(placed, s, hidden), ...edit.boxes.present[s]] }, secure[s])
-    }
-    version = untrack(() => version) + 1
+      const opts = untrack(() => renderOpts[s])
+      if (card && opts) renderSecure(card, opts, secure[s])
+    },
+    visible: () => [untrack(() => side)],
+    onFrame: () => { paint() },
+  })
+  $effect(() => {
+    // Reading the inputs subscribes this effect to every choice that changes the pixels.
+    if (Object.keys(renderOpts).length > 0) redraw.request()
+  })
+  // Before the review (or done) screen mounts and reads the rasters: bring every side up to date.
+  $effect.pre(() => {
+    if (phase !== 'edit') untrack(() => redraw.flush(SIDES))
   })
 
   // Display copy of the current side. Outside the final preview, fields left visible get a dashed
   // orange outline (a pattern, not only a colour). The outlines never reach the sanitised raster.
-  $effect(() => {
-    if (version === 0) return // nothing rendered yet; also subscribes to re-renders
-    const src = secure[side]
+  $effect(() => { paint() })
+  function paint (): void {
+    const s = side
+    // The side on screen is always current: right after a tab switch it is rendered here, at once.
+    untrack(() => redraw.flush([s]))
+    const src = secure[s]
     if (!display || src.width === 0) return
     display.width = src.width
     display.height = src.height
@@ -417,10 +441,13 @@
     } else if (sel) {
       outline(sel, true)
     }
-  })
+  }
 
   // Free the rasters when the editor goes away (Reset, or adjusting corners).
-  $effect(() => () => { shrink(secure.front, secure.back) })
+  $effect(() => () => {
+    redraw.dispose()
+    shrink(secure.front, secure.back)
+  })
 
   // The on-screen copy too: when it leaves the screen (review, Reset, adjusting corners).
   $effect(() => {

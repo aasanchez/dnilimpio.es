@@ -125,6 +125,32 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
 })
 
 /** Number of pure black pixels in the preview canvas (masks plus any solid black watermark text). */
+test('a change made while the front is shown reaches the back in the review and the PDF', async ({ page }) => {
+  // The editor renders only the side on screen; every side is brought up to date before the review.
+  await toEditor(page)
+  const mrz = at([0.5, 0.8])
+  await page.locator('#restore-all').click()
+  // The back is rendered once with the MRZ uncovered, then left.
+  await page.locator('#tab-back').click()
+  await expect.poll(async () => (await pixel(page, '#preview', ...mrz))[0]).toBeGreaterThan(0)
+  await page.locator('#tab-front').click()
+  // Hide every field and turn on greyscale with the front on screen, then go straight to the review.
+  await page.locator('#hide-all').click()
+  await page.locator('#tool-mark').click()
+  await page.locator('#greyscale').check()
+  await page.locator('#review').click()
+  expect(await pixel(page, '#review-back', ...mrz)).toEqual([0, 0, 0])
+  const [r = 0, g = 0, b = 0] = await pixel(page, '#review-back', ...at(PHOTO))
+  expect(Math.max(r, g, b) - Math.min(r, g, b)).toBe(0)
+
+  await page.locator('#review-confirm').check()
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
+  const back = jpegs(readFileSync(await download.path()))[1]
+  if (!back) throw new Error('expected the back image')
+  const bk = await samples(page, back, [[0.5, 0.8]])
+  for (const c of bk.px[0] ?? []) expect(c).toBeLessThan(16)
+})
+
 async function blackPixels (page: Page): Promise<number> {
   return await page.locator('#preview').evaluate((c: HTMLCanvasElement) => {
     const ctx = c.getContext('2d')
