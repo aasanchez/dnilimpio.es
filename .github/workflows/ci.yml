@@ -4,7 +4,7 @@
 #
 # Pull request: validate everything, never deploy.
 #
-#   changes ─ install ─┬─ build ──────┬─ e2e (2 shards) ─┐
+#   changes ─ install ─┬─ build ──────┬─ e2e (4 shards) ─┐
 #                      ├─ typecheck   ├─ bundle-size     │
 #                      ├─ lint        ├─ reproducible    │
 #                      │              └─ lighthouse      │
@@ -238,11 +238,13 @@ jobs:
     if: needs.changes.outputs.validate == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # Four shards: each one runs about a quarter of the tests (fullyParallel in playwright.config.ts
+    # splits by test, not by file). Setup takes ~25 s per shard, so more shards would gain little.
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
-    name: e2e (${{ matrix.shard }}/2)
+        shard: [1, 2, 3, 4]
+    name: e2e (${{ matrix.shard }}/4)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -254,7 +256,7 @@ jobs:
         with:
           name: dist
           path: dist/
-      - run: pnpm test:e2e --shard="$SHARD/2"
+      - run: pnpm test:e2e --shard="$SHARD/4"
         env:
           SHARD: ${{ matrix.shard }}
           # The version the build carries, for tests/e2e/version.spec.ts.
