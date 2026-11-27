@@ -6,6 +6,6 @@
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "devDependencies": {
-    "wrangler": "4.156.2"
+    "wrangler": "4.165.0"
   }
 }
