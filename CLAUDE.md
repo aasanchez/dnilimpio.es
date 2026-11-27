@@ -186,6 +186,18 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
   allows pushes only to its assigned branch and refuses the new name, push the assigned branch
   and say so in the PR. Do not rename a branch that already has an open PR: the PR stays on the
   old name.
+- **Update a branch by rebasing it onto `master`.** When asked to update a branch or fix its
+  merge conflicts, run `git fetch origin master` and `git rebase origin/master`. Resolve each
+  conflict in the commit that causes it, so every commit still builds; run the checks the
+  conflicted files touch; then push with `git push --force-with-lease`, never a plain `--force`.
+  If a rebase goes wrong, `git rebase --abort` restores the branch. Merge instead
+  (`git merge origin/master`, then a normal push) when any of these holds:
+  someone else pushes to the branch, or another PR is based on it, because a rebase rewrites the
+  commits they build on; the same conflict comes back in commit after commit, so one merge solves
+  it once; review comments point at commits a rewrite would detach; or the remote refuses the
+  force-push. Squash and merge turns the branch into one commit on `master` either way, so this
+  choice only affects the branch history and the review. Say in the PR which method you used and
+  why.
 - **Tests for every change.** Unit tests for logic, an e2e spec for user-visible behaviour. A
   privacy- or security-relevant change also needs a test that would fail if the protection broke.
 - **An ADR for every architectural decision**: anything costly to reverse, such as a new
