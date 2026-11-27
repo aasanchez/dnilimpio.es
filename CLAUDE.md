@@ -50,6 +50,8 @@ pnpm test                            # unit tests (Vitest), tests/unit/
 pnpm build                           # production build in dist/ (CSP, SRI, import map, SW manifest)
 pnpm test:e2e                        # Playwright in Chromium against `pnpm preview` of dist/ (build first)
 pnpm test:e2e:browsers               # the cross-browser specs in Firefox and WebKit (CI runs them too)
+pnpm test:visual                     # screenshot tests in the pinned Playwright container (Docker)
+pnpm test:visual:update              # rewrite the screenshot baselines after an intended UI change
 pnpm size                            # bundle size against budgets (after build)
 pnpm verify                          # typecheck + lint + unit + build + e2e: run before every PR
 ```
@@ -70,6 +72,11 @@ pnpm test:e2e -g "tampered"          # by test title
   test there that a browser cannot run gets `test.skip(condition, reason)`, never a silent skip; a
   known app bug in one browser gets `test.fail(condition, reason)`, removed with the fix.
   Privacy- and security-relevant specs belong in that list.
+- Screenshot tests (`tests/e2e/visual.spec.ts`, ADR 0036) run only in the Playwright image pinned in
+  `scripts/visual.sh` and the CI job `visual`; `pnpm test:e2e` and `pnpm verify` skip them. A change
+  to the start screen, editor, review or stats page fails that job: run `pnpm test:visual:update`,
+  look at each changed PNG, and commit it with the change. Never make baselines outside the container.
+  Bumping `@playwright/test` means a new image tag and digest in both places and new baselines.
 
 ## Non-negotiable rules
 

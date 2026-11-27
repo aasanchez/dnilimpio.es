@@ -13,8 +13,9 @@
   const { lang, onStart, notice, onNoticeDismiss, onGuide }: { lang: Lang; onStart: () => void; notice: boolean; onNoticeDismiss: () => void; onGuide: () => void } = $props()
 </script>
 
-<!-- Wide screens: the promise and the start button on the left, the sample card on the right. -->
-<section class="step home split flex-1 lg:grid-cols-2 lg:[grid-template-areas:'head_stage'_'side_stage'_'act_stage'_'foot_foot'] lg:pt-6">
+<!-- Wide screens: the promise and the start button on the left, the sample card on the right. While the
+     notice floats at the bottom, room under the footer lets every footer link scroll above it. -->
+<section class="step home split flex-1 lg:grid-cols-2 lg:[grid-template-areas:'head_stage'_'side_stage'_'act_stage'_'foot_foot'] lg:pt-6 {notice ? 'lg:pb-60' : ''}">
   <div class="area-head flex flex-col gap-4">
     <div>
       <p class="kicker">{t(lang, 'kicker')}</p>
@@ -41,7 +42,8 @@
     <li><span class="chip">{t(lang, 'chipNoAccount')}</span></li>
   </ul>
 
-  <footer class="area-foot p-4 text-center font-mono text-xs lg:mt-8 lg:border-t lg:border-hair lg:pt-6">
+  <!-- On phones the notice reaches above the action bar: extra room keeps the last link clear of it. -->
+  <footer class="area-foot p-4 text-center font-mono text-xs lg:mt-8 lg:border-t lg:border-hair lg:pt-6 {notice ? 'max-lg:pb-14' : ''}">
     <InstallApp {lang} />
     <!-- New tab: leaving this page clears the photos (pagehide in App.svelte). -->
     <a class="source-link inline-flex min-h-6 items-center gap-[0.4em] text-muted" id="source-link" href={__REPO_URL__} target="_blank" rel="noopener noreferrer"><GitHubMark />{t(lang, 'sourceCode')}</a>
