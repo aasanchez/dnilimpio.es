@@ -304,6 +304,18 @@ test('a rewritten cached index.html is never served: the worker refetches the re
   expect(await cachedText(page, 'index.html')).toBe(real)
 })
 
+test('a cached file with its real bytes but a forged Content-Type is served with the build type (audit F-06)', async ({ page, context }) => {
+  await page.goto('/')
+  await offlineReady(page)
+  // The bytes still match the manifest's hash; only the stored header is changed.
+  await poison(page, 'index.html', await cachedText(page, 'index.html'), 'text/plain')
+  await context.setOffline(true)
+  const res = await page.reload()
+  expect(res?.headers()['content-type']).toBe('text/html; charset=utf-8')
+  await expect(page.locator('#guide-open')).toBeVisible()
+  await context.setOffline(false)
+})
+
 test('offline, a rewritten cached index.html is refused, never shown', async ({ page, context, browserName }) => {
   await page.goto('/')
   await offlineReady(page)

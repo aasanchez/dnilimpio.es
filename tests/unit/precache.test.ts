@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest'
 import { createHash } from 'node:crypto'
-import { GUIDE_PAGES, PAGE_HEADERS, SECURITY_HEADERS, STATIC_PAGES, WORKER_SCRIPTS, addPageHeaders, answersIdle, cacheName, isOnDemand, isPrecached, parseManifest, route, sriOf, workerCsp } from '../../src/offline/precache.ts'
+import { GUIDE_PAGES, PAGE_HEADERS, SECURITY_HEADERS, STATIC_PAGES, WORKER_SCRIPTS, addPageHeaders, answersIdle, cacheName, contentTypeOf, CONTENT_TYPES, isOnDemand, isPrecached, parseManifest, route, sriOf, workerCsp } from '../../src/offline/precache.ts'
 
 const HASH = `sha384-${'A'.repeat(64)}`
 const ok = { version: '0123456789abcdef', files: [{ path: 'index.html', integrity: HASH }, { path: 'assets/index-x.js', integrity: HASH }], onDemand: [{ path: 'ocr/ppocrv6-tiny-rec.onnx', integrity: HASH }] }
@@ -47,6 +47,28 @@ describe('parseManifest', () => {
   it('ignores an analytics entry left over from the ADR 0015 manifest (ADR 0023)', () => {
     const analytics = { script: 'https://static.cloudflareinsights.com/beacon.min.js', endpoint: 'https://cloudflareinsights.com/cdn-cgi/rum' }
     expect(parseManifest(JSON.stringify({ ...ok, analytics }))).toEqual(ok)
+  })
+})
+
+describe('contentTypeOf (audit F-06)', () => {
+  it('gives each kind of build file a fixed type, by extension only', () => {
+    expect(contentTypeOf('index.html')).toBe('text/html; charset=utf-8')
+    expect(contentTypeOf('https://dnitapado.es/assets/index-x.js')).toBe('text/javascript; charset=utf-8')
+    expect(contentTypeOf('ocr/ort-wasm-simd-threaded.wasm')).toBe('application/wasm')
+    expect(contentTypeOf('ocr/worker.min.js')).toBe('text/javascript; charset=utf-8')
+    expect(contentTypeOf('assets/font.woff2')).toBe('font/woff2')
+  })
+  it('knows no type for an unknown extension, no extension, or an inherited key', () => {
+    for (const path of ['assets/x.exe', 'README', 'assets/.css', 'a/b.constructor', 'a/b.toString', 'dir.js/file']) {
+      expect(contentTypeOf(path), path).toBeUndefined()
+    }
+  })
+  it('never types a build file as HTML unless it is one', () => {
+    for (const [ext, type] of Object.entries(CONTENT_TYPES)) expect(type.startsWith('text/html')).toBe(ext === 'html')
+  })
+  it('makes the build fail on a file it cannot type', () => {
+    expect(() => parseManifest(JSON.stringify({ ...ok, files: [...ok.files, { path: 'assets/x.bin', integrity: HASH }] }))).toThrow(/Content-Type/)
+    expect(() => parseManifest(JSON.stringify({ ...ok, onDemand: [{ path: 'ocr/model', integrity: HASH }] }))).toThrow(/Content-Type/)
   })
 })
 

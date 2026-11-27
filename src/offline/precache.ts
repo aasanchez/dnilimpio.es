@@ -82,6 +82,37 @@ export function isPrecached (path: string): boolean {
   return path !== SW_FILE && !path.endsWith('.map') && !path.startsWith('.')
 }
 
+/**
+ * Content-Type of each kind of file the build writes, by extension. The service worker answers a
+ * cache hit with this type, never with the type stored beside the cached bytes: page code can
+ * rewrite Cache Storage, and the SHA-384 check covers the bytes only, not the headers (audit F-06).
+ * The build fails on a file whose extension is not listed here (checkFiles()).
+ */
+export const CONTENT_TYPES: Readonly<Record<string, string>> = {
+  css: 'text/css; charset=utf-8',
+  html: 'text/html; charset=utf-8',
+  ico: 'image/x-icon',
+  js: 'text/javascript; charset=utf-8',
+  json: 'application/json; charset=utf-8',
+  mjs: 'text/javascript; charset=utf-8',
+  onnx: 'application/octet-stream',
+  png: 'image/png',
+  svg: 'image/svg+xml',
+  txt: 'text/plain; charset=utf-8',
+  wasm: 'application/wasm',
+  webmanifest: 'application/manifest+json',
+  woff2: 'font/woff2',
+  xml: 'application/xml; charset=utf-8',
+}
+
+/** The fixed Content-Type of a build file (CONTENT_TYPES), or undefined for an unknown extension. */
+export function contentTypeOf (path: string): string | undefined {
+  const name = path.slice(path.lastIndexOf('/') + 1)
+  const dot = name.lastIndexOf('.')
+  if (dot <= 0) return undefined
+  return Object.hasOwn(CONTENT_TYPES, name.slice(dot + 1)) ? CONTENT_TYPES[name.slice(dot + 1)] : undefined
+}
+
 /** Cached on first use instead of at install. */
 export const isOnDemand = (path: string): boolean =>
   path.startsWith(ON_DEMAND_DIR) || path.startsWith(MODEL_DIR) || STATIC_PAGES.some((p) => p.onDemand === true && p.path === path) ||
@@ -105,6 +136,7 @@ function checkFiles (list: unknown[]): PrecacheFile[] {
     const { path, integrity } = (f ?? {}) as { path?: unknown; integrity?: unknown }
     if (typeof path !== 'string' || !isPrecached(path) || path.startsWith('/') || path.includes('..')) throw new Error('Bad precache path')
     if (typeof integrity !== 'string' || !/^sha384-[A-Za-z0-9+/]{64}$/.test(integrity)) throw new Error('Bad precache integrity')
+    if (contentTypeOf(path) === undefined) throw new Error(`No Content-Type for ${path}`)
     return { path, integrity }
   })
 }

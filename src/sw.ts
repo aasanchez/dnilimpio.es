@@ -20,7 +20,7 @@
 // The build (scripts/vite-plugins.ts) replaces the manifest placeholder below with the file list.
 
 import { ANSWER_TIMEOUT_MS, mayTakeOver, type WindowAnswer } from './offline/takeover.ts'
-import { CACHE_PREFIX, WORKER_SCRIPTS, addPageHeaders, answersIdle, cacheName, parseManifest, route, sriOf, workerCsp } from './offline/precache.ts'
+import { CACHE_PREFIX, WORKER_SCRIPTS, addPageHeaders, answersIdle, cacheName, contentTypeOf, parseManifest, route, sriOf, workerCsp } from './offline/precache.ts'
 
 const sw = self as unknown as ServiceWorkerGlobalScope
 
@@ -60,8 +60,9 @@ function withWorkerCsp (url: string, res: Response): Response {
  * A cache entry, only if its bytes still match the build's hash. Any same-origin script can rewrite
  * Cache Storage (caches.open(...).put(...)), so a hit is checked every time it is answered, not once:
  * a check kept in memory would not see a rewrite made after it. A mismatch is deleted at once. The
- * answer is a new response made from the checked bytes, so what runs is exactly what was hashed. It
- * keeps only the entry's Content-Type: no other header of a rewritten entry reaches the page.
+ * answer is a new response made from the checked bytes, so what runs is exactly what was hashed. Its
+ * only header, Content-Type, comes from the build's fixed list (contentTypeOf()), not from the entry:
+ * the hash covers the bytes, not the headers, so no header of a rewritten entry reaches the page.
  */
 async function verifiedHit (cache: Cache, url: string, integrity: string): Promise<Response | undefined> {
   const hit = await cache.match(url)
@@ -71,10 +72,7 @@ async function verifiedHit (cache: Cache, url: string, integrity: string): Promi
     await cache.delete(url)
     return undefined
   }
-  const headers = new Headers()
-  const type = hit.headers.get('Content-Type')
-  if (type !== null) headers.set('Content-Type', type)
-  return new Response(body, { status: 200, headers })
+  return new Response(body, { status: 200, headers: { 'Content-Type': contentTypeOf(url) ?? 'application/octet-stream' } })
 }
 
 /** Downloads one file of this build from its fixed URL, checked by the browser against its hash, and caches it. */
