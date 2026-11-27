@@ -67,7 +67,8 @@ pnpm test:e2e -g "tampered"          # by test title
   stale one.
 - Re-run only the tests that failed while you fix them; run `pnpm verify` once at the end.
 - The specs in `CROSS_BROWSER_SPECS` (`playwright.config.ts`) also run in Firefox and WebKit. A
-  test there that a browser cannot run gets `test.skip(condition, reason)`, never a silent skip.
+  test there that a browser cannot run gets `test.skip(condition, reason)`, never a silent skip; a
+  known app bug in one browser gets `test.fail(condition, reason)`, removed with the fix.
   Privacy- and security-relevant specs belong in that list.
 
 ## Non-negotiable rules

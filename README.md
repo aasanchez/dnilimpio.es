@@ -749,7 +749,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off.
 
-Every spec runs in Chromium. The specs marked **(all browsers)** also run in Firefox and WebKit, Safari's engine (`CROSS_BROWSER_SPECS` in [`playwright.config.ts`](playwright.config.ts)). A test that a browser cannot run, because it lacks the feature, is skipped with a reason in the report, never silently.
+Every spec runs in Chromium. The specs marked **(all browsers)** also run in Firefox and WebKit, Safari's engine (`CROSS_BROWSER_SPECS` in [`playwright.config.ts`](playwright.config.ts)). A test that a browser cannot run, because it or Playwright lacks the feature, is skipped with a reason in the report, never silently. A test that fails in one browser because of a known bug is marked with `test.fail()` and the reason, so it reports an error once the bug is fixed and the mark must go.
 
 | Spec | What is checked |
 |---|---|
