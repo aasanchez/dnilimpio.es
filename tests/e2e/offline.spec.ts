@@ -42,7 +42,7 @@ test('works offline after one visit, through to the PDF download', async ({ page
   await page.locator('#review-confirm').check()
   const download = page.waitForEvent('download')
   await page.locator('#download').click()
-  expect((await download).suggestedFilename()).toBe('protected-document.pdf')
+  expect((await download).suggestedFilename()).toBe('redacted-dni.pdf')
   expect(violations).toEqual([])
 })
 

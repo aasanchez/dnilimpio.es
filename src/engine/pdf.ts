@@ -11,6 +11,7 @@
 
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { stripJpeg } from './jpeg.ts'
+import type { DocChoice } from '../zones/documents.ts'
 
 /** A4 in PostScript points (1 pt = 1/72 in). */
 export const A4_PT = { w: 595.28, h: 841.89 } as const
@@ -71,5 +72,8 @@ export async function buildPdf (jpegs: readonly Uint8Array[]): Promise<Uint8Arra
   return await doc.save({ useObjectStreams: false })
 }
 
-/** Generic file name (§16): never derived from the source file name. */
-export const PDF_FILE_NAME = 'protected-document.pdf'
+/**
+ * File name of the exported PDF (§16): `redacted-dni.pdf` or `redacted-tie.pdf`. It names only the
+ * document type, never anything from the photo or its file name, and stays ASCII in every language.
+ */
+export const pdfFileName = (choice: DocChoice): string => `redacted-${choice}.pdf`
