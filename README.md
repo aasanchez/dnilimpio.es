@@ -280,6 +280,8 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **Tighter rules while photos are in the page.** Before the photo step opens, the app loads every
   font it needs and adds a second, stricter CSP. From then on the page can load only this build's
   scripts and workers, each by its exact address, and images only from memory (`blob:`, `data:`).
+  Its scripts include `sw.js`, which Firefox needs to run what the service worker answers
+  ([ADR 0037](docs/adr/0037-firefox-service-worker-script-source.md)).
   No font, stylesheet, manifest or frame, and no connection at all.
   The policy stays until the page is reloaded, and a reload drops the photos. The photo step says
   when the service worker's filter is not active on this visit; the app then works the same
@@ -1063,6 +1065,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0032](docs/adr/0032-semver-releases.md): every deploy from `master` is a release: the patch goes up by one from the latest tag, major and minor are set by hand with a tag, the tag and GitHub Release are created after the deploy, and the footer shows the version.
 - [0033](docs/adr/0033-ocr-ready-once-per-worker.md): the page asks the service worker once per worker whether OCR is ready; a new worker or a failed OCR job asks again; every file is still hashed when it is served.
 - [0034](docs/adr/0034-no-frames-no-fresh-webrtc.md): the page refuses every frame element and pop-up, so no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits until a browser implements it.
+- [0037](docs/adr/0037-firefox-service-worker-script-source.md): `sw.js` is a script source in the photo step's policy and the OCR worker's policy, because Firefox checks responses the service worker builds as if they came from `sw.js`; without it, OCR and the corner model do not run in Firefox.
 
 ## Contributing
 
