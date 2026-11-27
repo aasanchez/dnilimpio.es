@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Opt-in usage stats (ADR 0029): the fixed list, the device classes, the Worker and the one route
 // the service worker opens for them.
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { FIELDS, LANG_TAGS, MAX_STATS_LENGTH, encodeSession, encodeStats, parseSession, parseStats, type SessionStats, type UsageStats } from '../../src/stats/schema.ts'
 import { browserOf, deviceOf, deviceStats, systemOf } from '../../src/stats/device.ts'
@@ -12,7 +13,7 @@ import { thanksText } from '../../src/thanks/strings.ts'
 import { LANGS, loadLang, t } from '../../src/i18n/index.ts'
 import { STATS_ENDPOINT, THANKS_PAGE, route } from '../../src/offline/precache.ts'
 import worker from '../../worker/index.ts'
-import { dataPoint, handleStats, type AnalyticsDataset } from '../../src/stats/endpoint.ts'
+import { RATE_LIMIT_KEY, dataPoint, handleStats, type AnalyticsDataset, type RateLimit } from '../../src/stats/endpoint.ts'
 import { clearOcrRan, markOcrRan, ocrRan } from '../../src/ocr/ran.ts'
 
 const SESSION: SessionStats = { doc: 'tie', ai: 'right', back: true, fields: ['signature', 'can', 'mrz'], boxes: 2, mark: true, grey: false, lang: 'es', app: '1a2b3c4', src: 'camera', ocr: true }
@@ -202,6 +203,28 @@ describe('Worker', () => {
     const req = chunked(Array.from({ length: 1000 }, () => 'x'.repeat(100)), () => { pulls++ })
     expect((await handleStats(req, sink().env)).status).toBe(413)
     expect(pulls).toBeLessThan(20)
+  })
+  it('stores nothing and answers 429 once the rate limit is reached', async () => {
+    const { rows, env } = sink()
+    const keys: string[] = []
+    let left = 1
+    const STATS_LIMIT: RateLimit = { limit: async ({ key }) => { keys.push(key); return await Promise.resolve({ success: left-- > 0 }) } }
+    expect((await handleStats(post(TEXT), { ...env, STATS_LIMIT })).status).toBe(204)
+    expect((await handleStats(post(TEXT), { ...env, STATS_LIMIT })).status).toBe(429)
+    expect(rows).toHaveLength(1)
+    // One fixed key for every sender: nothing of the request (IP address, country, body) is used.
+    expect(keys).toEqual([RATE_LIMIT_KEY, RATE_LIMIT_KEY])
+  })
+  it('counts only valid rows against the rate limit', async () => {
+    let calls = 0
+    const STATS_LIMIT: RateLimit = { limit: async () => { calls++; return await Promise.resolve({ success: true }) } }
+    await handleStats(post(`${TEXT}&name=Ana`), { STATS_LIMIT })
+    await handleStats(post(TEXT, { 'Sec-Fetch-Site': 'cross-site' }), { STATS_LIMIT })
+    expect(calls).toBe(0)
+  })
+  it('the rate limit binding in wrangler.jsonc uses the name the Worker reads', () => {
+    const config = readFileSync(new URL('../../wrangler.jsonc', import.meta.url), 'utf8')
+    expect(config).toMatch(/"ratelimits":\s*\[\s*\{\s*"name": "STATS_LIMIT"/)
   })
   it('runs only for /stats; any other path goes to the static files', async () => {
     let served = ''

@@ -4,6 +4,8 @@
 - Status: accepted
 - Date: 2026-11-27
 - Decided by: Alexis
+- Updated 2026-11-27 (Alexis): the done screen is gone. "Download and clear" and "Share and clear"
+  on the review screen open the thanks page (point 1).
 
 ## Context
 
@@ -35,8 +37,11 @@ Options considered:
 
 ## Decision
 
-1. **"Clear everything" on the done screen** (`#reset-done`) takes the session's figures, clears
-   everything (as Reset does), then opens `thanks.html`. The figures travel in the address fragment
+1. **"Download and clear" and "Share and clear" on the review screen** (`#download`,
+   `#share-file`) take the session's figures once the PDF has left, clear everything (as Reset does),
+   then open `thanks.html`. A download waits `DOWNLOAD_HANDOFF_MS` (1.5 s) first, so the browser can
+   read the file; a closed share sheet clears nothing. (Until this update, a separate done screen had
+   a "Clear everything" button, `#reset-done`.) The figures travel in the address fragment
    (after `#`), which browsers never send to a server (`src/stats/thanks-link.ts`).
 2. **`thanks.html` is a page of its own.** It is a new document, so it never holds a photo. It loads
    none of the app's image, AI or PDF code: only Svelte, the translations, the stats list and its own
@@ -68,6 +73,11 @@ Options considered:
    `Sec-Fetch-Site: same-origin`, accepts only the exact list, writes one row to Workers Analytics
    Engine (dataset `dnitapado_usage`) with Cloudflare's two-letter country, and answers 204. It
    writes no IP address, sets no cookie and keeps no request log (`observability` off).
+   `Sec-Fetch-Site` blocks cross-site requests from browsers only; a script outside a browser can
+   set it. So a Workers rate limit (`ratelimits` in `wrangler.jsonc`, added 2026-11-27) caps valid
+   rows at 60 per minute per Cloudflare location and answers 429 above that. It has one fixed key
+   for every sender, so it uses no IP address; the cost is that a flood can make real sends fail
+   for that minute.
 8. **Wording**: the start-screen notice does not change. Its claims stay exactly true: the document
    is processed on the device and the app does not upload it, and the stats carry nothing from the
    document and are sent only on a tap (Alexis: the notice is not a disclaimer for an optional
@@ -83,6 +93,7 @@ Options considered:
   server this way. (A script could already navigate the page to any site; CSP does not cover
   top-level navigation. This decision opens no new door.)
 - The stats are not authenticated: anyone can post a valid row. Treat the numbers as indications.
+  The rate limit bounds how many fake rows a script can add, not whether it can add them.
 - Cloudflare still sees each request's IP address and user agent at its edge, as for every page
   load; the Worker does not store them. The README says so.
 - The thanks page and the app share one chunk (`app-*.js`, `app-*.css`): the Svelte runtime, the

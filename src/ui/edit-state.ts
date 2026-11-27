@@ -7,7 +7,7 @@ import { DEFAULT_WATERMARK_STYLE } from '../engine/watermark.ts'
 import type { ModelZones, Rect, Side, ZoneId } from '../zones/types.ts'
 
 /** Screen inside step 3: choosing what to hide, reviewing the result, or done after the download. */
-export type Phase = 'edit' | 'review' | 'done'
+export type Phase = 'edit' | 'review'
 
 /** Extra black boxes per side, in normalised card coordinates. */
 export type Boxes = Readonly<Record<Side, readonly Rect[]>>
