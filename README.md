@@ -266,7 +266,11 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   itself never calls `fetch()`.
   It loads scripts, styles, fonts and images only from its own origin, and it can open no frame at
   all. `form-action`, `base-uri` and `object-src` are `'none'`. WebRTC, which no
-  CSP rule covers, is removed before any code runs.
+  CSP rule covers, is removed before any code runs. A new frame or pop-up would bring a fresh copy
+  of it, so the page also refuses to add any frame element and opens no pop-up; a frame that
+  appeared anyway would get the same lockdown and be removed
+  ([ADR 0034](docs/adr/0034-no-frames-no-fresh-webrtc.md)). The CSP `webrtc 'block'` directive
+  would do this in the policy itself, but no browser implements it yet.
 - **Deny by default.** After the first visit, the service worker answers only the exact files of this
   build. Any other request from the page or its workers (another address, a query string, another
   method) is refused and never reaches the network, so even a same-origin request cannot carry data
@@ -738,7 +742,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
 | Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns, 429 above the rate limit with one key for all senders), the service worker route open only to the thanks page |
-| Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `install`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal and frame check, the photo step's policy and the service worker check, iPhone and iPad detection and installed mode for the install link, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
+| Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `install`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal, frame guard and frame check, the photo step's policy and the service worker check, iPhone and iPad detection and installed mode for the install link, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off:
 
@@ -750,6 +754,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | `stats` | Download and clear opens the photo-free thanks page; nothing is sent before the tap; the text sent is the text shown; its own CSP; the app page still cannot connect to `/stats`, with and without the service worker; a changed fragment shows nothing to send; offline and error states; Arabic layout |
 | `cleanup` | Clear all revokes the PDF's download link at once, closed screens hold no canvas pixels, a reset during straightening is not undone by the late result |
 | `intake-lockdown` | With photos loaded, images, CSS backgrounds, fonts, stylesheets, `fetch`, XHR, `sendBeacon`, WebSocket, workers and script imports with data in the address reach nothing; the one gap without a service worker is pinned; a whole workflow causes no policy violation |
+| `webrtc-frames` | Canary: in a page without the app, a blank frame (each DOM insertion method), `srcdoc`, `innerHTML`, `document.write`, a nested frame and `window.open` each reach a working data channel; in the app, on the start screen and with photos loaded, none of these routes does, nor a frameset, object, embed or three-argument `document.open` |
 | `offline` | Full flow to the PDF offline, also with the front alone, deny-by-default service worker, page headers added next to the host's CSP, a tampered file stops the install, a rewritten cached `index.html` or OCR worker never runs, corner model cached after first use |
 | `third-party` | Served as the public site, with a card loaded and with or without the service worker: no script from another origin is added or runs and no request leaves; CSP `script-src` is `'self'` and `connect-src 'none'`; the audit's substitute beacon cannot load or send the preview; page code that gathers the canary file names, OCR text and watermark cannot send them by beacon, fetch, image, style sheet, font, frame or form; the page opens no frame, the CSP has no `frame-src` and refuses a frame to another site; the start screen sends nothing to another site, also offline or under GPC |
 | `update` | An idle tab switches to a new build, with other idle windows too; a tab with photos or a busy window holds it back; a window that cannot answer brings **Update now**, which applies it; a busy window keeps its photos and reloads back on the start screen; a page that leaves the start screen while the others answer keeps its photos; an open thanks page does not hold the update back |
@@ -996,7 +1001,7 @@ src/
   engine/            fields, masks, secure raster, watermark, JPEG filter, PDF export, undo history
   guide/             card guide: official sources, cited entries per document, text per language
   offline/           service worker registration, precache manifest, automatic update of idle tabs
-  security/          Trusted Types policy, WebRTC and frame lockdown, photo-step CSP (intake lockdown), audit prompt text
+  security/          Trusted Types policy, WebRTC and frame lockdown (frame guard), photo-step CSP (intake lockdown), audit prompt text
   version/           commit SHA and build time shown in the footer, relative time
   i18n/              dictionaries, one JSON file per language
   ui/                styles, self-hosted fonts, corner editor (canvas widget), in-memory state, notice memory
@@ -1048,6 +1053,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0031](docs/adr/0031-photo-file-checks.md): photos are checked before decoding: JPEG, PNG, WebP or HEIC by their first bytes, at most 25 MB and 50 megapixels from the header, on every way in.
 - [0032](docs/adr/0032-semver-releases.md): every deploy from `master` is a release: the patch goes up by one from the latest tag, major and minor are set by hand with a tag, the tag and GitHub Release are created after the deploy, and the footer shows the version.
 - [0033](docs/adr/0033-ocr-ready-once-per-worker.md): the page asks the service worker once per worker whether OCR is ready; a new worker or a failed OCR job asks again; every file is still hashed when it is served.
+- [0034](docs/adr/0034-no-frames-no-fresh-webrtc.md): the page refuses every frame element and pop-up, so no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits until a browser implements it.
 
 ## Contributing
 
