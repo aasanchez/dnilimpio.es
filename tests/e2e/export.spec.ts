@@ -104,11 +104,9 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
     expect(text).not.toContain(forbidden)
   }
   await expect(page.locator('#download-status')).toHaveText('PDF creado. Búscalo en tu carpeta de descargas.')
-  await expect(page.locator('h2')).toHaveText('Tu PDF está listo')
-  await expect(page.locator('#reset-done')).toBeVisible()
-  // The done screen says what happened in plain sentences, not as a fake terminal log.
-  await expect(page.locator('#done-summary')).toContainText('Archivo: protected-document.pdf')
-  await expect(page.locator('#done-summary')).toContainText('Tu documento se ha procesado en tu dispositivo y la app no lo ha subido.')
+  // No done screen: the app clears itself and opens the thanks page, which says where the PDF is.
+  await expect(page.locator('#thanks-title')).toHaveText('Tu documento ya no está aquí')
+  await expect(page.getByText('Tu PDF está en tu carpeta de descargas o en la app con la que lo compartiste.')).toBeVisible()
 
   const [front, back] = jpegs(pdf)
   if (!front || !back) throw new Error('expected two images')
