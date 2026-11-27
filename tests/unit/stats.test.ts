@@ -3,9 +3,11 @@
 // the service worker opens for them.
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { FIELDS, LANG_TAGS, MAX_STATS_LENGTH, encodeSession, encodeStats, parseSession, parseStats, type SessionStats, type UsageStats } from '../../src/stats/schema.ts'
+import { FIELDS, LANG_TAGS, MAX_MOVED, MAX_STATS_LENGTH, MOVED_STEPS, encodeSession, encodeStats, parseSession, parseStats, type SessionStats, type UsageStats } from '../../src/stats/schema.ts'
 import { browserOf, deviceOf, deviceStats, systemOf } from '../../src/stats/device.ts'
-import { aiResult, photoSource, sessionStats } from '../../src/stats/session.ts'
+import { aiResult, movedBoxes, photoSource, sessionStats, type SessionInput } from '../../src/stats/session.ts'
+import { documentOf } from '../../src/zones/documents.ts'
+import { zoneKey } from '../../src/engine/fields.ts'
 import { THANKS_URL, thanksHref } from '../../src/stats/thanks-link.ts'
 import { STATS_URL } from '../../src/stats/send.ts'
 import { readFragment } from '../../src/thanks/fragment.ts'
@@ -16,19 +18,39 @@ import worker from '../../worker/index.ts'
 import { RATE_LIMIT_KEY, dataPoint, handleStats, type AnalyticsDataset, type RateLimit } from '../../src/stats/endpoint.ts'
 import { clearOcrRan, markOcrRan, ocrRan } from '../../src/ocr/ran.ts'
 
-const SESSION: SessionStats = { doc: 'tie', ai: 'right', back: true, fields: ['signature', 'can', 'mrz'], boxes: 2, mark: true, grey: false, lang: 'es', app: '1a2b3c4', src: 'camera', ocr: true }
+const SESSION: SessionStats = { doc: 'tie', ai: 'right', back: true, fields: ['signature', 'can', 'mrz'], boxes: 2, mark: true, grey: false, lang: 'es', app: '1a2b3c4', src: 'camera', ocr: true, moved: [{ field: 'can', rect: 0, x: 124, y: 142, w: 60, h: 18 }] }
 const FULL: UsageStats = { ...SESSION, device: 'phone', os: 'android', browser: 'chrome', bv: 131, pwa: false }
 const TEXT = encodeStats(FULL)
+const NO_MOVES: Pick<SessionInput, 'zones' | 'placement' | 'handPlaced'> = { zones: documentOf('tie'), placement: {}, handPlaced: [] }
 
 describe('stats text', () => {
   it('has fixed keys in a fixed order, readable as it is shown on the thanks page', () => {
-    expect(TEXT).toBe('v=1&doc=tie&ai=right&back=1&fields=signature,can,mrz&boxes=2&mark=1&grey=0&lang=es&app=1a2b3c4&src=camera&ocr=1&device=phone&os=android&browser=chrome&bv=131&pwa=0')
+    expect(TEXT).toBe('v=2&doc=tie&ai=right&back=1&fields=signature,can,mrz&boxes=2&mark=1&grey=0&lang=es&app=1a2b3c4&src=camera&ocr=1&moved=can-0-124-142-60-18&device=phone&os=android&browser=chrome&bv=131&pwa=0')
     expect(parseStats(TEXT)).toEqual(FULL)
     expect(parseSession(encodeSession(SESSION))).toEqual(SESSION)
   })
   it('lists the fields in one fixed order, whatever order they were chosen in', () => {
     expect(encodeSession({ ...SESSION, fields: ['mrz', 'signature'] })).toContain('fields=signature,mrz&')
-    expect(parseSession(encodeSession({ ...SESSION, fields: [] }))?.fields).toEqual([])
+    expect(parseSession(encodeSession({ ...SESSION, fields: [], moved: [] }))?.fields).toEqual([])
+  })
+  it('lists moved boxes of covered fields only, each once, in field order then box number', () => {
+    const moved = [
+      { field: 'mrz', rect: 0, x: 1, y: 2, w: 3, h: 4 },
+      { field: 'can', rect: 1, x: 5, y: 6, w: 7, h: 8 },
+      { field: 'can', rect: 0, x: 9, y: 10, w: 11, h: 12 },
+      { field: 'can', rect: 0, x: 0, y: 0, w: 0, h: 0 },
+      { field: 'address', rect: 0, x: 1, y: 1, w: 1, h: 1 },
+    ] as const
+    const text = encodeSession({ ...SESSION, moved })
+    expect(text).toContain('&moved=can-0-9-10-11-12,can-1-5-6-7-8,mrz-0-1-2-3-4')
+    expect(parseSession(text)?.moved).toHaveLength(3)
+    expect(encodeSession({ ...SESSION, moved: [] })).toMatch(/&moved=$/)
+  })
+  it('fits the most boxes a row can list within the length limit', () => {
+    const moved = Array.from({ length: MAX_MOVED }, (_, i) => ({ field: FIELDS[i % FIELDS.length] ?? 'can', rect: Math.floor(i / FIELDS.length), x: MOVED_STEPS, y: MOVED_STEPS, w: MOVED_STEPS, h: MOVED_STEPS }))
+    const full = encodeStats({ ...FULL, fields: [...FIELDS], moved })
+    expect(full.length).toBeLessThanOrEqual(MAX_STATS_LENGTH)
+    expect(parseStats(full)?.moved).toHaveLength(MAX_MOVED)
   })
   it('knows every field id and every language of the app', () => {
     expect([...LANG_TAGS].sort()).toEqual([...LANGS].sort())
@@ -47,7 +69,16 @@ describe('stats text', () => {
     ['a number out of range', TEXT.replace('boxes=2', 'boxes=51')],
     ['a padded number', TEXT.replace('bv=131', 'bv=0131')],
     ['an encoded spelling', TEXT.replace('doc=tie', 'doc=t%69e')],
-    ['another version', TEXT.replace('v=1', 'v=2')],
+    ['another version', TEXT.replace('v=2', 'v=1')],
+    ['a moved box of a field not covered', TEXT.replace('moved=can', 'moved=address')],
+    ['a moved box of a field outside the list', TEXT.replace('moved=can', 'moved=name')],
+    ['a moved box out of range', TEXT.replace('can-0-124', 'can-0-201')],
+    ['a moved box with a fraction', TEXT.replace('can-0-124', 'can-0-12.4')],
+    ['a moved box with a missing value', TEXT.replace('-60-18', '-60')],
+    ['a moved box with a negative value', TEXT.replace('can-0-124', 'can-0--124')],
+    ['a moved box twice', TEXT.replace('moved=can-0-124-142-60-18', 'moved=can-0-124-142-60-18,can-0-124-142-60-18')],
+    ['moved boxes out of order', TEXT.replace('moved=can-0-124-142-60-18', 'moved=mrz-0-1-1-1-1,can-0-124-142-60-18')],
+    ['a box number out of range', TEXT.replace('can-0-124', 'can-10-124')],
     ['a broken escape', TEXT.replace('doc=tie', 'doc=%E0%A4%A')],
     ['the empty text', ''],
   ])('rejects %s', (_name, text) => {
@@ -62,7 +93,7 @@ describe('stats text', () => {
 describe('thanks page fragment', () => {
   it('opens the thanks page with the session in the fragment, which browsers never send', () => {
     const href = thanksHref(SESSION)
-    expect(href.startsWith('./thanks.html#v=1&doc=tie&')).toBe(true)
+    expect(href.startsWith('./thanks.html#v=2&doc=tie&')).toBe(true)
     expect(readFragment(new URL(href, 'https://x.test/').hash)).toEqual(SESSION)
   })
   it('drops any fragment that is not exactly the session list', () => {
@@ -93,14 +124,52 @@ describe('session figures', () => {
     expect(photoSource([])).toBe('file')
   })
   it('keeps ids and counts only: never the watermark text or the commit in full', () => {
-    const s = sessionStats({ doc: 'dni-4.0', outcome: 'dni', back: false, hidden: ['mrz', 'can'], boxes: 0, watermark: 'Solo para Banco X', greyscale: true, lang: 'en', sha: 'a'.repeat(40), via: ['file'], ocr: true })
-    expect(s).toEqual({ doc: 'dni-4.0', ai: 'right', back: false, fields: ['can', 'mrz'], boxes: 0, mark: true, grey: true, lang: 'en', app: 'aaaaaaa', src: 'file', ocr: true })
+    const s = sessionStats({ doc: 'dni-4.0', outcome: 'dni', back: false, hidden: ['mrz', 'can'], boxes: 0, watermark: 'Solo para Banco X', greyscale: true, lang: 'en', sha: 'a'.repeat(40), via: ['file'], ocr: true, ...NO_MOVES })
+    expect(s).toEqual({ doc: 'dni-4.0', ai: 'right', back: false, fields: ['can', 'mrz'], boxes: 0, mark: true, grey: true, lang: 'en', app: 'aaaaaaa', src: 'file', ocr: true, moved: [] })
     expect(encodeSession(s)).not.toContain('Banco')
-    expect(sessionStats({ doc: 'tie', outcome: null, back: true, hidden: [], boxes: 0, watermark: '  ', greyscale: false, lang: 'es', sha: '', via: [], ocr: false })).toMatchObject({ mark: false, app: 'dev', ocr: false, ai: 'off' })
+    expect(sessionStats({ doc: 'tie', outcome: null, back: true, hidden: [], boxes: 0, watermark: '  ', greyscale: false, lang: 'es', sha: '', via: [], ocr: false, ...NO_MOVES })).toMatchObject({ mark: false, app: 'dev', ocr: false, ai: 'off' })
   })
   it('counts OCR that ran after the document step, also when detection was left early', () => {
     // Detection still reading when the person picked the document: no outcome, but Find my data ran.
-    expect(sessionStats({ doc: 'tie', outcome: null, back: true, hidden: [], boxes: 0, watermark: '', greyscale: false, lang: 'es', sha: '', via: [], ocr: true })).toMatchObject({ ai: 'off', ocr: true })
+    expect(sessionStats({ doc: 'tie', outcome: null, back: true, hidden: [], boxes: 0, watermark: '', greyscale: false, lang: 'es', sha: '', via: [], ocr: true, ...NO_MOVES })).toMatchObject({ ai: 'off', ocr: true })
+  })
+  it('sends a moved box as steps of 0.5% of the card, for covered fields only, never the default', () => {
+    const zones = documentOf('dni-4.0')
+    const at = (id: string): number => zones.zones.findIndex((z) => z.id === id)
+    const can = zones.zones[at('can')]?.rects[0]
+    expect(can).toBeDefined()
+    const placement = {
+      [zoneKey(at('can'), 0)]: { x: 0.6213, y: 0.7101, w: 0.3, h: 0.0912 },
+      // Moved by less than half a step: not sent.
+      [zoneKey(at('mrz'), 0)]: zones.zones[at('mrz')]?.rects[0] ?? { x: 0, y: 0, w: 0, h: 0 },
+      // Moved, but the field stays visible: not sent.
+      [zoneKey(at('address'), 0)]: { x: 0.1, y: 0.1, w: 0.1, h: 0.1 },
+      // Never counted (ADR 0043): not sent, even when covered.
+      [zoneKey(at('name'), 0)]: { x: 0.1, y: 0.1, w: 0.1, h: 0.1 },
+    }
+    const hand = Object.keys(placement)
+    const moved = movedBoxes(zones, placement, ['can', 'mrz', 'name'], hand)
+    expect(moved).toEqual([{ field: 'can', rect: 0, x: 124, y: 142, w: 60, h: 18 }])
+    const s = sessionStats({ doc: 'dni-4.0', outcome: null, back: true, hidden: ['can', 'mrz', 'name'], boxes: 0, watermark: '', greyscale: false, lang: 'es', sha: '', via: [], ocr: false, zones, placement, handPlaced: hand })
+    expect(encodeSession(s)).toContain('&moved=can-0-124-142-60-18')
+    // Off the card is kept on its edge.
+    const off = { [zoneKey(at('can'), 0)]: { x: -0.2, y: 1.4, w: 0.1, h: 0.1 } }
+    expect(movedBoxes(zones, off, ['can'], Object.keys(off))).toEqual([{ field: 'can', rect: 0, x: 0, y: 200, w: 20, h: 20 }])
+  })
+  it('leaves out boxes placed by Fit to the text: they follow the words OCR read', () => {
+    const zones = documentOf('dni-4.0')
+    const at = zones.zones.findIndex((z) => z.id === 'can')
+    const placement = { [zoneKey(at, 0)]: { x: 0.6, y: 0.7, w: 0.3, h: 0.1 } }
+    expect(movedBoxes(zones, placement, ['can'], [])).toEqual([])
+  })
+  it('numbers a field\'s boxes across its zones, so front and back never share a number', () => {
+    const zones = documentOf('dni-4.0')
+    const keys = zones.zones.flatMap((z, zi) => (z.id === 'supportNumber' ? z.rects.map((_, ri) => zoneKey(zi, ri)) : []))
+    expect(keys.length).toBeGreaterThan(1)
+    const placement = Object.fromEntries(keys.map((k) => [k, { x: 0.01, y: 0.01, w: 0.01, h: 0.01 }]))
+    const moved = movedBoxes(zones, placement, ['supportNumber'], keys)
+    expect(moved.map((m) => m.rect)).toEqual(keys.map((_, i) => i))
+    expect(parseSession(encodeSession({ ...SESSION, fields: ['supportNumber'], moved }))?.moved).toHaveLength(keys.length)
   })
   it('the OCR flag is set by a read and cleared by Reset', () => {
     clearOcrRan()
@@ -172,8 +241,8 @@ describe('Worker', () => {
   it('writes ids, classes and counts only, in fixed columns', () => {
     const p = dataPoint(FULL, 'ES')
     expect(p.indexes).toEqual(['tie'])
-    expect(p.blobs).toEqual(['1', 'tie', 'right', 'es', '1a2b3c4', 'camera', 'phone', 'android', 'chrome', 'ES', 'signature,can,mrz'])
-    expect(p.doubles).toEqual([1, 2, 1, 0, 1, 131, 0, 3, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0])
+    expect(p.blobs).toEqual(['2', 'tie', 'right', 'es', '1a2b3c4', 'camera', 'phone', 'android', 'chrome', 'ES', 'signature,can,mrz', 'can-0-124-142-60-18'])
+    expect(p.doubles).toEqual([1, 2, 1, 0, 1, 131, 0, 3, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1])
     // Workers Analytics Engine limits: 20 blobs, 20 doubles, 1 index.
     expect(p.blobs.length).toBeLessThanOrEqual(20)
     expect(p.doubles.length).toBeLessThanOrEqual(20)

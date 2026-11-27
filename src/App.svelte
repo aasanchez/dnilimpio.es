@@ -195,7 +195,7 @@
 
   /**
    * "Send anonymous data" on the review screen, once the PDF has left: the usage figures of this
-   * session (ids and counts only, src/stats/session.ts) are taken first, then everything is cleared,
+   * session (ids, counts and hand-moved box positions on the card, src/stats/session.ts) are taken first, then everything is cleared,
    * then the photo-free stats page opens. It sends nothing by itself; there the person may choose
    * to send them (ADR 0029).
    */
@@ -213,6 +213,10 @@
       sha: __BUILD_SHA__,
       via: (['front', 'back'] as const).map((s) => photoVia[s]).filter((v): v is PhotoVia => v !== null),
       ocr: ocrRan(),
+      zones: doc,
+      // A copy: reset() below replaces the placement, and the stats chunk loads after it.
+      placement: { ...edit.placement },
+      handPlaced: [...edit.handPlaced],
     }
     reset()
     // The stats code is its own small chunk (precached like the rest), so the start page does not
@@ -256,6 +260,7 @@
   function setDniVersion (version: DniVersion): void {
     docModel = version
     edit.placement = {}
+    edit.handPlaced = []
   }
 
   /** Automatic straightening finished: on to the editor, or to the corners of a card it missed. */

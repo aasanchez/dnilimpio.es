@@ -192,7 +192,7 @@
   "thanksTitle": "Données d'utilisation anonymes",
   "thanksLead": "Les photos, le PDF et vos choix sont effacés de l'app.",
   "statsTitle": "Vous nous aidez à progresser ?",
-  "statsLead": "Facultatif. Des chiffres anonymes : les champs masqués, si l'IA a reconnu le bon document et le type d'appareil. Rien de votre document : ni texte, ni image, ni position. De la connexion, nous ne gardons que le pays, pas votre adresse IP. Pas de cookies.",
+  "statsLead": "Facultatif. Des chiffres anonymes : les champs masqués, où vous avez déplacé leurs cadres sur la carte, si l'IA a reconnu le bon document et le type d'appareil. Rien de votre document : ni texte, ni image, ni position sur la photo. De la connexion, nous ne gardons que le pays, pas votre adresse IP. Pas de cookies.",
   "statsPayload": "Voici exactement ce qui est envoyé :",
   "statsSend": "Envoyer les statistiques anonymes",
   "statsSent": "Merci !",

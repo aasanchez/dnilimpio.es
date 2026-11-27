@@ -131,6 +131,7 @@
 
   function place (key: string, rect: Rect): void {
     edit.placement = { ...edit.placement, [key]: rect }
+    if (!edit.handPlaced.includes(key)) edit.handPlaced = [...edit.handPlaced, key]
   }
 
   /**
@@ -140,9 +141,12 @@
   function fitToText (found: ReadonlyArray<{ side: Side; words: Rect[] }>): number {
     let next = { ...edit.placement }
     for (const { side: s, words } of found) next = { ...next, ...fitSide(placed, s, words, hidden) }
-    const n = Object.keys(next).filter((k) => next[k] !== edit.placement[k]).length
+    const changed = Object.keys(next).filter((k) => next[k] !== edit.placement[k])
+    const n = changed.length
     if (n > 0) {
       edit.placement = next
+      // A fitted box follows the words OCR read: no longer a hand adjustment (ADR 0047).
+      edit.handPlaced = edit.handPlaced.filter((k) => !changed.includes(k))
       zoneDraft = null
     }
     return n
@@ -150,6 +154,7 @@
 
   function resetPlacement (): void {
     edit.placement = {}
+    edit.handPlaced = []
     zoneDraft = null
   }
 

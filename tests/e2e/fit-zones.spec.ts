@@ -65,6 +65,21 @@ test.describe('with the service worker', () => {
     expect(back.x1).toBeCloseTo(SUPPORT.x1, 3)
   })
 
+  test('a box placed by Fit to the text is not a hand-moved box: the opt-in stats leave it out (ADR 0047)', async ({ page }) => {
+    test.setTimeout(180_000)
+    await controlled(page)
+    await toEditorWithText(page, { frontLines: [[VALUE, START.x, START.y, SANS]] })
+    await expect(page.locator('#fit-zones')).toBeEnabled()
+    await page.locator('#fit-zones').click()
+    await expect(page.locator('#fit-status')).toContainText(/Se han agrandado \d+ recuadros/, { timeout: 150_000 })
+    await page.locator('#review').click()
+    await page.locator('#review-confirm').check()
+    await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
+    await page.locator('#stats-link').click()
+    const shown = (await page.locator('#stats-payload').textContent() ?? '').split('\n')
+    expect(shown).toContain('moved=')
+  })
+
   test('offline before the first download, the button is disabled and says to adjust by hand', async ({ page, context }) => {
     await controlled(page)
     await context.setOffline(true)
