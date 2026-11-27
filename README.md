@@ -843,8 +843,10 @@ check failed.
 - **`master`: release.** The code was already validated on its pull request, so the checks do not
   run again. `master` builds, deploys and then checks the live site.
 
-This is safe because pull requests are squash-merged and branch protection requires the branch to be
-up to date with `master` before merging: the tree that lands on `master` is the tree that passed.
+This is safe because branch protection requires the branch to be up to date with `master` before
+merging: with Rebase and merge (the default) or Squash and merge, the tree of the last commit that
+lands on `master` is the tree that passed. CI tests that last tree only, so each commit of a pull
+request must build and pass the unit tests on its own (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
 
 ```text
 Pull request
@@ -872,7 +874,7 @@ changes ─ install ─ build ─ reproducible ─ ci-ok ─ deploy ─┬─ sm
 | build | `unit` | `pnpm test:coverage` (Vitest). Coverage table in the job summary, HTML report as an artifact. No threshold yet | PR | Yes |
 | test | `e2e (1/4)` to `e2e (4/4)` | `pnpm test:e2e`, split in four shards, against the built `dist/` | PR | Yes |
 | test | `visual` | Screenshot comparisons ([Visual regression](#visual-regression)) against the built `dist/`, inside the pinned Playwright image. On a difference, the `visual-diff` artifact holds the images | PR | Yes |
-| test | `reproducible` | Builds the same commit again on a fresh runner and compares the SHA-384 of every file with the `dist/` artifact ([`scripts/build-manifest.ts`](scripts/build-manifest.ts)). Any difference fails. Also runs on the release commit, because the squash merge makes a new commit; `deploy` waits for it | Both | Yes |
+| test | `reproducible` | Builds the same commit again on a fresh runner and compares the SHA-384 of every file with the `dist/` artifact ([`scripts/build-manifest.ts`](scripts/build-manifest.ts)). Any difference fails. Also runs on the release commit, because the merge makes a new commit; `deploy` waits for it | Both | Yes |
 | test | `bundle-size` | `pnpm size`: gzip size of the start page (entry and preloaded modules), PDF chunk, corner model and OCR files against budgets in [`scripts/bundle-size.ts`](scripts/bundle-size.ts) | PR | No, warns (`--strict` makes it fail) |
 | code analysis | `reuse` | Every file has copyright and licence information ([REUSE](https://reuse.software)) | PR | Yes |
 | code analysis | `audit` | `pnpm audit --prod --audit-level high`: known high or critical vulnerabilities in the code that ships | PR | Yes |
@@ -1154,7 +1156,7 @@ you open a pull request:
 5. Keep every file's licence information ([REUSE](https://reuse.software)); new files carry an
    `SPDX-License-Identifier` header or are listed in [`REUSE.toml`](REUSE.toml).
 
-Pull requests are merged with **Squash and merge**. Security problems: please report them privately
+Pull requests are merged with **Rebase and merge**; see [`CONTRIBUTING.md`](CONTRIBUTING.md) for what each commit needs. Security problems: please report them privately
 through [security advisories](https://github.com/aasanchez/dnilimpio.es/security/advisories/new).
 
 ## Licence

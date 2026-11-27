@@ -174,9 +174,16 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
 
 ## Workflow
 
-- **One pull request per feature.** Keep unrelated changes out of it. Merges use **Squash and
-  merge**; write the PR title as the final commit subject (`feat(scope): …`, `fix(scope): …`,
-  `docs(scope): …`).
+- **One pull request per feature.** Keep unrelated changes out of it. Merges use **Rebase and
+  merge**: every commit of the branch lands on `master` as it is. So each commit is one logical
+  step with a conventional subject (`feat(scope): …`, `fix(scope): …`, `docs(scope): …`), and each
+  one builds and passes `pnpm typecheck` and `pnpm test`; check with
+  `git rebase --exec 'pnpm typecheck && pnpm test' origin/master`. Fold review fixes into the commit
+  they fix (`git commit --fixup=<sha>`, then
+  `GIT_SEQUENCE_EDITOR=true git rebase --autosquash origin/master`); do not leave "fix review" or
+  "wip" commits. Write the PR title in the same form; for a one-commit PR it is that commit's
+  subject. Use **Squash and merge** only when the commits cannot be made clean, or the branch
+  contains a merge commit, and say so in the PR.
 - **Give the branch a real name before you push it.** A tool may create a branch with a generated
   name, such as `claude/project-thread-xxxx`. Before the first push to GitHub, rename it to say
   what the work does: `git branch -m <type>/<summary>`. The type is the commit type of the PR
@@ -195,9 +202,8 @@ require breaking one, stop and ask Alexis instead of finding a workaround.
   someone else pushes to the branch, or another PR is based on it, because a rebase rewrites the
   commits they build on; the same conflict comes back in commit after commit, so one merge solves
   it once; review comments point at commits a rewrite would detach; or the remote refuses the
-  force-push. Squash and merge turns the branch into one commit on `master` either way, so this
-  choice only affects the branch history and the review. Say in the PR which method you used and
-  why.
+  force-push. A branch with a merge commit cannot keep a linear history, so it goes in with
+  Squash and merge (see above). Say in the PR which method you used and why.
 - **Tests for every change.** Unit tests for logic, an e2e spec for user-visible behaviour. A
   privacy- or security-relevant change also needs a test that would fail if the protection broke.
 - **An ADR for every architectural decision**: anything costly to reverse, such as a new
