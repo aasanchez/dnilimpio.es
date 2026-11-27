@@ -105,9 +105,9 @@ describe('isOnDemand', () => {
 })
 
 describe('workerCsp', () => {
-  it('lets the OCR worker load and read its own folder only, with no eval()', () => {
+  it('lets the OCR worker load and read its own folder only, plus sw.js for Firefox (ADR 0037), with no eval()', () => {
     const csp = workerCsp('https://example.org/app/')
-    expect(csp).toBe("default-src 'none'; script-src https://example.org/app/ocr/ 'wasm-unsafe-eval'; connect-src https://example.org/app/ocr/")
+    expect(csp).toBe("default-src 'none'; script-src https://example.org/app/ocr/ https://example.org/app/sw.js 'wasm-unsafe-eval'; connect-src https://example.org/app/ocr/ https://example.org/app/sw.js")
     for (const bad of ["'unsafe-eval'", "'self'", '*', 'blob:', 'data:']) expect(csp).not.toContain(bad)
   })
   it('applies to the OCR worker script, an on-demand file', () => {

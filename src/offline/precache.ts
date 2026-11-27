@@ -152,12 +152,16 @@ export const WORKER_SCRIPTS: readonly string[] = [`${ON_DEMAND_DIR}worker.min.js
  */
 export function workerCsp (scope: string): string {
   const ocr = `${scope}${ON_DEMAND_DIR}`
+  // The service worker's own script, by its exact address (ADR 0037): Firefox checks a response the
+  // service worker builds (every checked cache hit, src/sw.ts) as if it came from sw.js. Without it,
+  // Firefox blocks the engine's files and OCR fails. sw.js loads and sends nothing itself.
+  const sw = `${scope}${SW_FILE}`
   return [
     "default-src 'none'",
     // importScripts() of the engine; the engine compiles its WebAssembly (no eval()).
-    `script-src ${ocr} 'wasm-unsafe-eval'`,
-    // The language data, read with fetch().
-    `connect-src ${ocr}`,
+    `script-src ${ocr} ${sw} 'wasm-unsafe-eval'`,
+    // The models and the language data, read with fetch().
+    `connect-src ${ocr} ${sw}`,
   ].join('; ')
 }
 

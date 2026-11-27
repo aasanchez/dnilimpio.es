@@ -280,6 +280,8 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
 - **Tighter rules while photos are in the page.** Before the photo step opens, the app loads every
   font it needs and adds a second, stricter CSP. From then on the page can load only this build's
   scripts and workers, each by its exact address, and images only from memory (`blob:`, `data:`).
+  Its scripts include `sw.js`, which Firefox needs to run what the service worker answers
+  ([ADR 0037](docs/adr/0037-firefox-service-worker-script-source.md)).
   No font, stylesheet, manifest or frame, and no connection at all.
   The policy stays until the page is reloaded, and a reload drops the photos. The photo step says
   when the service worker's filter is not active on this visit; the app then works the same
@@ -1160,6 +1162,7 @@ Significant decisions are recorded in [`docs/adr/`](docs/adr/):
 - [0034](docs/adr/0034-no-frames-no-fresh-webrtc.md): the page refuses every frame element and pop-up, so no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits until a browser implements it.
 - [0035](docs/adr/0035-no-network-error-logging.md): no Network Error Logging; every file turns NEL off, Cloudflare's NEL and `Report-To` headers are off in the zone settings, and the post-deploy check fails if they come back.
 - [0036](docs/adr/0036-visual-regression-in-pinned-container.md): screenshot tests of key phone screens in Spanish and Arabic run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual`, so the baselines match on every machine.
+- [0037](docs/adr/0037-firefox-service-worker-script-source.md): `sw.js` is a script source in the photo step's policy and the OCR worker's policy, because Firefox checks responses the service worker builds as if they came from `sw.js`; without it, OCR and the corner model do not run in Firefox.
 - [0038](docs/adr/0038-one-address-per-language.md): one address per language; `/` is Spanish and the others have their own path, such as `/en`; `/en/` and `/es` redirect; each is its own canonical page; hreflang links in the HTML and the sitemap, without Valencian.
 - [0041](docs/adr/0041-prerendered-start-screen.md): the build renders the Spanish start screen from `App.svelte` into `index.html`, inert until the app replaces it, so crawlers without JavaScript read it and the heading paints before any script; no font preload, because measurements showed it slows the first paint.
 - [0042](docs/adr/0042-axe-accessibility-scan.md): an axe-core scan of every screen, in Spanish and Arabic, on a phone and a wide screen, fails CI on any serious or critical accessibility finding. axe is a dev dependency and runs only in tests.

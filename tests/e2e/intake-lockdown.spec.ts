@@ -156,7 +156,11 @@ test('the photo step\'s policy lists exact build files, no origin, no analytics,
   expect(d['default-src']).toEqual(["'none'"])
   const origin = new URL(page.url()).origin
   expect(d['worker-src']).toEqual([`${origin}/sw.js`, `${origin}/ocr/worker.min.js`])
-  const scripts = (d['script-src'] ?? []).filter((s) => s !== "'wasm-unsafe-eval'")
+  // sw.js once, by its exact address (ADR 0037: Firefox checks scripts the service worker answers
+  // against it); every other source is a module of this build.
+  const sources = d['script-src'] ?? []
+  expect(sources.filter((s) => s === `${origin}/sw.js`)).toHaveLength(1)
+  const scripts = sources.filter((s) => s !== "'wasm-unsafe-eval'" && s !== `${origin}/sw.js`)
   expect(scripts.length).toBeGreaterThan(5)
   for (const s of scripts) expect(s).toMatch(new RegExp(`^${origin}/assets/[\\w./-]+\\.m?js$`))
   // Back on the start screen the policy stays: only a reload drops it, and a reload drops the photos.

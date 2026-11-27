@@ -7,7 +7,7 @@
 // pixels are zeroed after each read and the text goes back only to the page.
 //
 // The service worker serves this script with its own CSP (workerCsp() in src/offline/precache.ts):
-// it may load scripts and data only from ocr/, so it can send nothing anywhere.
+// it may load scripts and data only from ocr/ (and sw.js, for Firefox: ADR 0037), so it can send nothing anywhere.
 
 import * as ort from 'onnxruntime-web/wasm'
 import { PaddleOcrService } from 'paddleocr'

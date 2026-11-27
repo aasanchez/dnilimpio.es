@@ -3,7 +3,7 @@
 // demand, works with the network off. Service workers are on here (blocked in the other specs).
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import { FIREFOX_INTAKE_BUG, adjustFront, appElementsInFrame, fixture, loadBoth, openCapture, toAuto } from './helpers.ts'
+import { adjustFront, appElementsInFrame, fixture, loadBoth, openCapture, toAuto } from './helpers.ts'
 import { PAGE_HEADERS, SECURITY_HEADERS } from '../../src/offline/precache.ts'
 
 test.use({ locale: 'es-ES', serviceWorkers: 'allow' })
@@ -215,8 +215,7 @@ test('offline before the model was ever used: classic edge detection places the 
   expect(unexpected(errors, browserName)).toEqual([])
 })
 
-test('the model is kept after its first use and then works offline', async ({ page, context, browserName }) => {
-  test.fail(browserName === 'firefox', FIREFOX_INTAKE_BUG)
+test('the model is kept after its first use and then works offline', async ({ page, context }) => {
   await page.goto('/')
   await offlineReady(page)
   await openCapture(page)

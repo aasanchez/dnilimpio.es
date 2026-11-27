@@ -30,7 +30,7 @@ project specification on purpose).
 | [0022](0022-no-published-source-maps.md) | No published source maps; `connect-src` without `'self'` (PRIV-003) | accepted |
 | [0023](0023-no-third-party-script-with-photos.md) | No third-party script in the page that holds the photos: beacon removed, `connect-src 'none'` | accepted |
 | [0024](0024-visit-counter-in-isolated-frame.md) | Visit counts from a sandboxed frame on another site, start screen only; `frame-src` for that page only | superseded by 0027 |
-| [0025](0025-intake-lockdown.md) | Intake lockdown: a stricter CSP while photos are in the page (exact build scripts, images from memory only, no connection); service worker check | accepted, completed by 0034 |
+| [0025](0025-intake-lockdown.md) | Intake lockdown: a stricter CSP while photos are in the page (exact build scripts, images from memory only, no connection); service worker check | accepted, completed by 0034, `sw.js` source added by 0037 |
 | [0026](0026-recheck-cache-hits.md) | The service worker hashes every cache hit again; a rewritten entry is deleted and downloaded again | accepted, status answer amended by 0033 |
 | [0027](0027-security-headers-from-the-host.md) | Security headers from the host: dnitapado.es on Cloudflare Workers with a generated `_headers`; the only host, GitHub Pages no longer deployed; no COEP; no analytics code, the host counts requests | accepted, amended by 0035 |
 | [0028](0028-tie-fallback.md) | TIE preselected when detection reads the photos but cannot tell the document; nothing preselected without detection | accepted |
@@ -42,6 +42,7 @@ project specification on purpose).
 | [0034](0034-no-frames-no-fresh-webrtc.md) | No frames, no pop-ups: no new window brings back WebRTC; a frame that appears anyway is locked and removed; `webrtc 'block'` waits for browser support | accepted |
 | [0035](0035-no-network-error-logging.md) | No Network Error Logging: `NEL: {"max_age":0}` on every file, NEL off in the zone settings, no `Report-To`; the post-deploy check fails otherwise | accepted |
 | [0036](0036-visual-regression-in-pinned-container.md) | Screenshot tests (12 phone screens, Spanish and Arabic) run only in the Playwright Docker image pinned by digest, in CI and with `pnpm test:visual` | accepted |
+| [0037](0037-firefox-service-worker-script-source.md) | `sw.js` by its exact address in the photo step's `script-src` and the OCR worker's `script-src` and `connect-src`, because Firefox checks responses the service worker builds as if they came from `sw.js` | proposed |
 | [0038](0038-one-address-per-language.md) | One address per language: `/` is Spanish, `/<tag>` (such as `/en`) for the others; canonical per language; hreflang in the HTML and the sitemap (not for Valencian) | proposed |
 | [0041](0041-prerendered-start-screen.md) | Prerendered start screen: the Spanish start screen rendered from `App.svelte` into `index.html` at build time, inert until the app replaces it; no font preload | accepted |
 | [0042](0042-axe-accessibility-scan.md) | Automatic accessibility scan: axe-core (dev dependency) on every screen, Spanish and Arabic, phone and wide screen; serious and critical findings fail | accepted |

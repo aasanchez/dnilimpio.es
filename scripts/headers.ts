@@ -83,7 +83,7 @@ export function reportingProblems (headers: Headers): string[] {
  * CSP of the OCR worker script, sent by the host. A worker takes its policy from its own script's
  * response, not from the page. `'self'` instead of the ocr/ folder: the host serves the same files at
  * more than one address (dnitapado.es, www, a local preview), and this origin serves only this build.
- * The service worker still replaces it with the narrower workerCsp() (ocr/ only) once it controls
+ * The service worker still replaces it with the narrower workerCsp() (ocr/ and sw.js only) once it controls
  * the page.
  */
 export const HOST_WORKER_CSP = [

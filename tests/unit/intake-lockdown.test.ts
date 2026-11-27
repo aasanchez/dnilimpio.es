@@ -108,14 +108,14 @@ function page ({ base = SUB, scripts = [], preloads = [], importMap = null, font
 }
 
 describe('policyFor', () => {
-  it('lists the page\'s scripts, preloads, import map modules and the two workers, by exact address', () => {
+  it('lists the page\'s scripts, preloads, import map modules, sw.js (ADR 0037) and the two workers, by exact address', () => {
     const doc = page({
       scripts: ['./assets/index-1.js', 'https://static.cloudflareinsights.com/beacon.min.js'],
       preloads: ['./assets/chunk-2.js'],
       importMap: JSON.stringify({ imports: {}, integrity: { './assets/ocr-3.js': 'sha384-x' } }),
     })
     const p = Object.fromEntries(policyFor(doc).split('; ').map((d) => { const [k, ...v] = d.split(' '); return [k ?? '', v] }))
-    expect(p['script-src']).toEqual([`${SUB}assets/index-1.js`, `${SUB}assets/chunk-2.js`, `${SUB}assets/ocr-3.js`, "'wasm-unsafe-eval'"])
+    expect(p['script-src']).toEqual([`${SUB}assets/index-1.js`, `${SUB}assets/chunk-2.js`, `${SUB}assets/ocr-3.js`, `${SUB}sw.js`, "'wasm-unsafe-eval'"])
     expect(p['worker-src']).toEqual([`${SUB}sw.js`, `${SUB}ocr/worker.min.js`])
     expect(p['connect-src']).toEqual(["'none'"])
   })

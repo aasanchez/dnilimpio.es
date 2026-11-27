@@ -10,6 +10,9 @@
 - Completed by [ADR 0034](0034-no-frames-no-fresh-webrtc.md): `frame-src 'none'` does not stop the
   empty `about:blank` document every frame starts with, which brought back WebRTC. The page now
   refuses every frame element and pop-up. The policies are unchanged.
+- Changed by [ADR 0037](0037-firefox-service-worker-script-source.md): `script-src` also lists
+  `sw.js` by its exact address, because Firefox checks responses the service worker builds as if
+  they came from `sw.js`.
 
 ## Context
 

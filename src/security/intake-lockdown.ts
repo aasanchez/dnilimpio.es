@@ -89,8 +89,11 @@ export function buildScripts (base: string, srcs: readonly string[], importMap: 
   return hrefs.map((h) => exactSource(h, base)).filter((s): s is string => s !== null && s.startsWith(scope))
 }
 
+/** The service worker's script (src/sw.ts). */
+export const SERVICE_WORKER_FILE = 'sw.js'
+
 /** Scripts the page starts as workers: the service worker and the OCR worker (src/ocr/ocr.ts). */
-export const WORKER_FILES: readonly string[] = ['sw.js', 'ocr/worker.min.js']
+export const WORKER_FILES: readonly string[] = [SERVICE_WORKER_FILE, 'ocr/worker.min.js']
 
 /** The intake policy for this page, read from its own document. */
 export function policyFor (doc: Document): string {
@@ -100,8 +103,12 @@ export function policyFor (doc: Document): string {
     ...Array.from(doc.querySelectorAll<HTMLLinkElement>('link[rel="modulepreload"]'), (l) => l.getAttribute('href') ?? ''),
   ]
   const map = doc.querySelector('script[type="importmap"]')?.textContent ?? null
-  const workers = WORKER_FILES.map((f) => exactSource(f, base)).filter((s): s is string => s !== null)
-  return intakePolicy({ scripts: buildScripts(base, srcs, map), workers })
+  const exact = (files: readonly string[]): string[] => files.map((f) => exactSource(f, base)).filter((s): s is string => s !== null)
+  // sw.js in script-src too (ADR 0037): Firefox checks a script the service worker answers with a
+  // response it built (every checked cache hit, src/sw.ts) against script-src as if it came from
+  // sw.js. Without it, Firefox blocks every module loaded after the photo step. sw.js is this build's
+  // own file; no other path is added.
+  return intakePolicy({ scripts: [...buildScripts(base, srcs, map), ...exact([SERVICE_WORKER_FILE])], workers: exact(WORKER_FILES) })
 }
 
 /** True once the intake policy is in the page. */
