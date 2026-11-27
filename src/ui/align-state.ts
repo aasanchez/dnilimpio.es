@@ -28,3 +28,13 @@ export function resetSide (state: AlignState, side: Side): void {
   }
   state.warped[side] = null
 }
+
+/**
+ * What switching from one side to the other does with the side being left (PR #81).
+ * Moved, valid corners are saved (straightened) and the side is done. Moved but crossed corners stay
+ * on screen and the side is not done. Corners nobody moved keep the side as it was (`wasDone`), so a
+ * default frame or an unchecked detection never counts as confirmed.
+ */
+export function leaveSide (touched: boolean, valid: boolean, wasDone: boolean): { save: boolean; done: boolean } {
+  return touched ? { save: valid, done: valid } : { save: false, done: wasDone }
+}
