@@ -79,7 +79,7 @@ test('front only: the editor has one side and only front fields, and the PDF has
   await expect(page.locator('#field-can')).toBeChecked()
   await expect(page.locator('#field-mrz')).toHaveCount(0)
   await expect(page.locator('#field-address')).toHaveCount(0)
-  await expect(page.locator('#hidden-count')).toHaveText('5 de 6')
+  await expect(page.locator('#hidden-count')).toHaveText('5 de 8')
   // Hiding data the MRZ repeats warns only when an MRZ is in the copy.
   await page.locator('#field-dateOfBirth').check()
   await expect(page.locator('#mrz-warning')).toHaveCount(0)
@@ -114,7 +114,7 @@ test('front only: going back from the editor and adding the back brings both sid
   await frontOnlyToEditor(page)
   // Presets act on the front only: the back's recommended choices (MRZ) are kept for later.
   await page.locator('#restore-all').click()
-  await expect(page.locator('#hidden-count')).toHaveText('0 de 6')
+  await expect(page.locator('#hidden-count')).toHaveText('0 de 8')
   await page.locator('#back').click()
   await page.locator('#back').click()
   // Back on the photo step, it opens on the empty back, ready to add it.

@@ -33,8 +33,11 @@ so a document with another shape needs no engine change.
   illegible on the specimen. It looks like the support-number pattern, so it is hidden with
   `supportNumber` on both sides as a precaution.
 - The **MRZ** repeats the support number, DNI number, date of birth, expiry date and full name.
-- Left as visible (not in the spec's list): the vertical "EQUIPO" code on the back (issuing team) and
-  the small DNI number top left on the front (the DNI number stays visible by design).
+- Left as visible (not in the spec's list): the vertical "EQUIPO" code on the back (issuing team).
+- **Name and DNI number** (added 2026-11-27, [ADR 0043](adr/0043-one-field-list.md)), visible by
+  default. The number is printed twice on the front: "DNI 99999999R" at the top and a small copy top
+  left. The surnames take two lines and the name one, under their labels; the boxes reach 78 % of
+  the width for long names. The back shows the name and number only in the MRZ.
 
 ## DNI 3.0
 
@@ -50,6 +53,10 @@ Findings:
 - The **support number** ("NUM SOPORT") also appears in the clear window, top right on the front and
   mirrored top left on the back. Both are in `supportNumber`.
 - The address, place of birth and parents' zones are wider than the specimen text, for long names.
+- **Name and DNI number** (added 2026-11-27): the number is printed once on the front, bottom left
+  under the photo ("DNI 99999999R"). The surnames (two lines) and the name sit under their labels;
+  the boxes reach 72 % of the width, short of the "ESPECIMEN" area. The back shows them only in the
+  MRZ.
 
 ## TIE (Tarjeta de Identidad de Extranjero)
 
@@ -65,7 +72,9 @@ Findings:
 - **Permit type** ("TIPO DE PERMISO", e.g. long-term residence, authorised to work) is a new optional
   field, visible by default. Some people may not want to show their immigration status.
 - The **issue date** is on the back ("FECHA DE EMISIÓN"); the place of issue next to it stays visible.
-- The NIE stays visible by design, like the DNI number. It is also in the MRZ.
+- **Name and NIE** (added 2026-11-27), visible by default. The surnames and name take three lines
+  under "APELLIDOS Nombres"; the box stops left of the small ghost photo. The NIE is printed once on
+  the front ("NIE:X1234567P", right of "NIE / PERSONAL NUMBER"). The back shows both only in the MRZ.
 - **Checked on a real card (2026-11-25).** A permanent residence card of a family member of an EU
   citizen ("TARJETA DE RESIDENCIA PERMANENTE", permit type "REGIM COMUNITARIO", "Residence card of a
   family member of a Union citizen") uses the same 2020 layout; only the title and the permit text

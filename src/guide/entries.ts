@@ -58,11 +58,11 @@ const PUBLISH_FOUR: Cite = { src: 'aepdDa7', at: 'nota de prensa, 04/03/2019' }
 // format of Regulation (EU) 2019/1157, now 2025/1208.
 const DNI_4_0: readonly Entry[] = [
   { id: 'header', place: 'front', what: [{ src: 'reg2025', at: 'Art. 3(3), 3(4)' }, { src: 'dnie40', at: 'DNI 4.0' }, ICAO_ZONES], risk: [] },
-  { id: 'name', place: 'front', what: [{ src: 'rd255', at: 'art. 12.a)' }, ICAO_ZONES], risk: [] },
+  { id: 'name', place: 'front', field: 'name', what: [{ src: 'rd255', at: 'art. 12.a)' }, ICAO_ZONES], risk: [] },
   { id: 'sex', place: 'front', what: [{ src: 'rd255', at: 'art. 12.a)' }, { src: 'reg2025', at: 'Art. 3(2)' }, { src: 'icao5', at: '§4.1.1.1, §4.2.2' }], risk: [] },
   { id: 'nationality', place: 'front', what: [{ src: 'rd255', at: 'art. 12.a)' }], risk: [] },
   { id: 'dateOfBirth', place: 'front', field: 'dateOfBirth', what: [{ src: 'rd255', at: 'art. 12.a)' }], risk: [] },
-  { id: 'dniNumber', place: 'front', what: [{ src: 'rd255', at: 'art. 2.2, art. 12.a)' }, { src: 'rd1553', at: 'art. 11.1' }], risk: [PUBLISH_FOUR] },
+  { id: 'dniNumber', place: 'front', field: 'idNumber', what: [{ src: 'rd255', at: 'art. 2.2, art. 12.a)' }, { src: 'rd1553', at: 'art. 11.1' }], risk: [PUBLISH_FOUR] },
   { id: 'supportNumber', place: 'front', field: 'supportNumber', what: [{ src: 'rd255', at: 'art. 12.a)' }, { src: 'dnie40', at: 'DNI 4.0' }], risk: [SUPPORT_HIDE] },
   { id: 'issueDate', place: 'front', field: 'issueDate', what: [{ src: 'rd255', at: 'art. 12.a)' }], risk: [{ src: 'rd255', at: 'art. 7.1' }] },
   { id: 'expiryDate', place: 'front', field: 'expiryDate', what: [{ src: 'rd255', at: 'art. 12.a), art. 7.1' }, { src: 'reg2025', at: 'Art. 4(1)' }], risk: [{ src: 'rd255', at: 'art. 7.1' }] },
@@ -89,11 +89,11 @@ const DNI_4_0: readonly Entry[] = [
 // they expire). Layout from the Policía Nacional NFC guide (§1.6) and PRADO ESP-BO-05001.
 const DNI_3_0: readonly Entry[] = [
   { id: 'header', text: 'header30', place: 'front', what: [{ src: 'rd1553', at: 'art. 10.2' }, ICAO_ZONES], risk: [] },
-  { id: 'name', place: 'front', what: [{ src: 'rd1553', at: 'art. 11.1' }, { src: 'dnieNfc', at: '§1.6' }], risk: [] },
+  { id: 'name', place: 'front', field: 'name', what: [{ src: 'rd1553', at: 'art. 11.1' }, { src: 'dnieNfc', at: '§1.6' }], risk: [] },
   { id: 'sex', text: 'sex30', place: 'front', what: [{ src: 'rd1553', at: 'art. 11.1' }, { src: 'icao5', at: '§4.1.1.1, §4.2.2' }], risk: [] },
   { id: 'nationality', place: 'front', what: [{ src: 'rd1553', at: 'art. 11.1' }], risk: [] },
   { id: 'dateOfBirth', place: 'front', field: 'dateOfBirth', what: [{ src: 'rd1553', at: 'art. 11.1' }, { src: 'dnieNfc', at: '§1.6' }], risk: [] },
-  { id: 'dniNumber', place: 'front', what: [{ src: 'rd1553', at: 'art. 1.3, art. 11.1' }, { src: 'dnieNfc', at: '§1.6' }], risk: [PUBLISH_FOUR] },
+  { id: 'dniNumber', place: 'front', field: 'idNumber', what: [{ src: 'rd1553', at: 'art. 1.3, art. 11.1' }, { src: 'dnieNfc', at: '§1.6' }], risk: [PUBLISH_FOUR] },
   { id: 'supportNumber', place: 'front', field: 'supportNumber', what: [{ src: 'rd1553', at: 'art. 11.2' }, { src: 'dnieNfc', at: '§1.6' }, { src: 'dnieChip3', at: 'datos de gestión' }], risk: [SUPPORT_HIDE] },
   { id: 'issueDate', text: 'issueDate30', place: 'front', field: 'issueDate', what: [{ src: 'dnieNfc', at: '§1.6' }], risk: [{ src: 'rd1553', at: 'art. 6.1' }] },
   { id: 'expiryDate', text: 'expiryDate30', place: 'front', field: 'expiryDate', what: [{ src: 'rd1553', at: 'art. 11.2, art. 6.1' }, { src: 'dnieNfc', at: '§1.6' }], risk: [{ src: 'rd1553', at: 'art. 6.1' }] },
@@ -122,8 +122,8 @@ const DNI_3_0: readonly Entry[] = [
 const TIE: readonly Entry[] = [
   { id: 'header', text: 'headerTie', place: 'front', what: [{ src: 'reg1030', at: 'Annex, points 1, 3.1, 3.2' }, { src: 'reg1030', at: 'Art. 5' }, { src: 'reg2025', at: 'title' }], risk: [] },
   { id: 'cardNumber', place: 'front', field: 'supportNumber', what: [{ src: 'reg1030', at: 'Annex, points 4.1, 4.2, (e)' }], risk: [] },
-  { id: 'nie', place: 'front', what: [{ src: 'moncloaNie', at: '¿Qué es el NIE?' }], risk: [PUBLISH_FOUR] },
-  { id: 'name', text: 'nameTie', place: 'front', what: [{ src: 'reg1030', at: 'Annex, point 6' }, ICAO_ZONES], risk: [] },
+  { id: 'nie', place: 'front', field: 'idNumber', what: [{ src: 'moncloaNie', at: '¿Qué es el NIE?' }], risk: [PUBLISH_FOUR] },
+  { id: 'name', text: 'nameTie', place: 'front', field: 'name', what: [{ src: 'reg1030', at: 'Annex, point 6' }, ICAO_ZONES], risk: [] },
   { id: 'sex', text: 'sexTie', place: 'front', what: [{ src: 'reg1030', at: 'Annex, point 7' }, { src: 'icao5', at: '§4.1.1.1, §4.2.2' }], risk: [] },
   { id: 'nationality', place: 'front', what: [{ src: 'reg1030', at: 'Annex, point 8' }], risk: [] },
   { id: 'dateOfBirth', place: 'front', field: 'dateOfBirth', what: [{ src: 'reg1030', at: 'Annex, point 9' }], risk: [] },

@@ -11,6 +11,7 @@ export type ZoneId =
   | 'signature' | 'issueDate' | 'expiryDate' | 'supportNumber' | 'can' // hidden by default
   | 'mrz' // back, hidden by default
   | 'address' | 'placeOfBirth' | 'parents' | 'dateOfBirth' | 'permitType' // optional, visible by default
+  | 'name' | 'idNumber' // optional, visible by default: the receiver usually needs them to identify the holder
 
 /** `mandatory` marks the CAN (it gives NFC access to the chip): hidden by default, with a warning if shown. */
 export type ZoneDefault = 'mandatory' | 'hidden' | 'visible'
