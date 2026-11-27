@@ -270,4 +270,10 @@ describe('thanks page text', () => {
     expect(text).toBe(t(lang, 'statsSend'))
     expect(thanksText(lang, 'statsLead')).toBe(t(lang, 'statsLead'))
   })
+
+  // The Worker stores the country with each row (endpoint.ts dataPoint): the text says so.
+  it('names the stored country', () => {
+    expect(thanksText('es', 'statsLead')).toContain('país')
+    expect(thanksText('en', 'statsLead')).toContain('country')
+  })
 })

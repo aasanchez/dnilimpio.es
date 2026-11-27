@@ -20,6 +20,14 @@ describe('audit prompt', () => {
     expect(AUDIT_PROMPT).toContain(`Fields (src/stats/schema.ts): ${keys}.`)
   })
 
+  it('names what the receiver adds and what is not absolute', () => {
+    // The Worker stores the country with each row (endpoint.ts dataPoint), so the claim says so.
+    expect(AUDIT_PROMPT).toContain('adds the country Cloudflare reads from the request')
+    // CSP cannot block a top-level navigation, and the stats are usage data.
+    expect(AUDIT_PROMPT).toContain('CSP cannot stop a top-level navigation')
+    expect(AUDIT_PROMPT).not.toMatch(/no analytics|cannot reach any other origin/)
+  })
+
   it('points at the live site and asks for findings, not a verdict', () => {
     expect(LIVE_SITE).toBe('https://dnitapado.es/')
     expect(AUDIT_PROMPT).toContain(LIVE_SITE)

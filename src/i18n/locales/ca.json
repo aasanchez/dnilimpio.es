@@ -190,7 +190,7 @@
   "thanksTitle": "Dades d'ús anònimes",
   "thanksLead": "Les fotos, el PDF i les teves tries s'han esborrat de l'app.",
   "statsTitle": "Ens ajudes a millorar?",
-  "statsLead": "Opcional. Són dades anònimes: quins camps has tapat, si la IA ha encertat el document i el tipus de dispositiu. Res del teu document: ni text, ni imatge, ni posicions. No desem la teva IP ni fem servir galetes.",
+  "statsLead": "Opcional. Són dades anònimes: quins camps has tapat, si la IA ha encertat el document i el tipus de dispositiu. Res del teu document: ni text, ni imatge, ni posicions. De la connexió només desem el país, no la teva IP. Sense galetes.",
   "statsPayload": "Això és exactament el que s'envia:",
   "statsSend": "Envia estadístiques anònimes",
   "statsSent": "Gràcies!",

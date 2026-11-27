@@ -190,7 +190,7 @@
   "thanksTitle": "Datos de uso anónimos",
   "thanksLead": "As fotos, o PDF e as túas escollas borráronse da app.",
   "statsTitle": "Axúdasnos a mellorar?",
-  "statsLead": "Opcional. Son datos anónimos: que campos tapaches, se a IA acertou o documento e o tipo de dispositivo. Nada do teu documento: nin texto, nin imaxe, nin posicións. Non gardamos a túa IP nin usamos cookies.",
+  "statsLead": "Opcional. Son datos anónimos: que campos tapaches, se a IA acertou o documento e o tipo de dispositivo. Nada do teu documento: nin texto, nin imaxe, nin posicións. Da conexión só gardamos o país, non a túa IP. Sen cookies.",
   "statsPayload": "Isto é exactamente o que se envía:",
   "statsSend": "Enviar estatísticas anónimas",
   "statsSent": "Grazas!",
