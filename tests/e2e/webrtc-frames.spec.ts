@@ -5,7 +5,7 @@
 // object, a pop-up) and to open a peer connection with a data channel there. The same routes run
 // first in a page without the app, to prove that each one does reach WebRTC in this browser.
 // Synthetic cards only.
-/* eslint-disable no-restricted-properties, @typescript-eslint/no-deprecated -- the canary tries each route to prove it is closed */
+/* eslint-disable no-restricted-properties, no-extend-native, @typescript-eslint/no-deprecated, @typescript-eslint/unbound-method -- the canary tries each route, as hostile page code would, to prove it is closed */
 import { expect, test, type Page } from '@playwright/test'
 import { loadBoth } from './helpers.ts'
 
@@ -42,30 +42,58 @@ async function routes (page: Page): Promise<Record<string, string>> {
     const frame = (): HTMLIFrameElement => document.createElement('iframe')
     const html = (s: string): string => s
 
-    attempt('blank frame (appendChild)', () => document.body.appendChild(frame()).contentWindow)
-    attempt('blank frame (append)', () => { const f = frame(); document.body.append(f); return f.contentWindow })
-    attempt('blank frame (insertBefore)', () => document.body.insertBefore(frame(), document.body.firstChild).contentWindow)
-    attempt('blank frame (insertAdjacentElement)', () => (document.body.insertAdjacentElement('beforeend', frame()) as HTMLIFrameElement | null)?.contentWindow)
-    attempt('blank frame (replaceChildren of a new div)', () => { const d = document.createElement('div'); document.body.append(d); const f = frame(); d.replaceChildren(f); return f.contentWindow })
-    attempt('blank frame inside a div', () => { const d = document.createElement('div'); const f = frame(); d.append(f); document.body.append(d); return f.contentWindow })
-    attempt('blank frame (Range.insertNode)', () => { const r = document.createRange(); r.selectNodeContents(document.body); const f = frame(); r.insertNode(f); return f.contentWindow })
+    // The newest frame's window, read through window[i]: no getter of the frame element is involved.
+    const last = (): unknown => (window.length > 0 ? window[window.length - 1] : null)
+    /** Runs `fn` with built-ins replaced, the way page code could before it adds a frame. */
+    const poisoned = (fn: () => unknown): unknown => {
+      const saved = { some: Array.prototype.some, has: Set.prototype.has, lower: String.prototype.toLowerCase }
+      try {
+        Array.prototype.some = () => false
+        Set.prototype.has = () => false
+        String.prototype.toLowerCase = () => 'div'
+        return fn()
+      } finally {
+        Array.prototype.some = saved.some
+        Set.prototype.has = saved.has
+        String.prototype.toLowerCase = saved.lower
+      }
+    }
+    const disguise = <T extends object>(o: T, props: Record<string, unknown>): T => {
+      for (const [k, value] of Object.entries(props)) Object.defineProperty(o, k, { value })
+      return o
+    }
+
+    attempt('blank frame (appendChild)', () => { document.body.appendChild(frame()); return last() })
+    attempt('blank frame (append)', () => { document.body.append(frame()); return last() })
+    attempt('blank frame (insertBefore)', () => { document.body.insertBefore(frame(), null); return last() })
+    attempt('blank frame (insertAdjacentElement)', () => { document.body.insertAdjacentElement('beforeend', frame()); return last() })
+    attempt('blank frame (replaceChildren of a new div)', () => { const d = document.createElement('div'); document.body.append(d); d.replaceChildren(frame()); return last() })
+    attempt('blank frame inside a div', () => { const d = document.createElement('div'); d.append(frame()); document.body.append(d); return last() })
+    attempt('blank frame (Range.insertNode)', () => { const r = document.createRange(); r.selectNodeContents(document.body); r.collapse(false); r.insertNode(frame()); return last() })
     attempt('blank frame in a shadow root', () => { const host = document.createElement('div'); document.body.append(host); const f = frame(); host.attachShadow({ mode: 'open' }).append(f); return f.contentWindow })
-    attempt('blank frame from a template', () => { const t = document.createElement('template'); t.content.append(frame()); const c = t.content.cloneNode(true) as DocumentFragment; const f = c.firstChild as HTMLIFrameElement; document.body.append(c); return f.contentWindow })
-    attempt('blank frame made in another document', () => { const d = document.implementation.createHTMLDocument(''); const f = document.adoptNode(d.createElement('iframe')); document.body.append(f); return f.contentWindow })
-    attempt('srcdoc frame', () => { const f = frame(); f.srcdoc = html('<p>x</p>'); document.body.append(f); return f.contentWindow })
+    attempt('blank frame from a template', () => { const t = document.createElement('template'); t.content.append(frame()); document.body.append(t.content.cloneNode(true)); return last() })
+    attempt('blank frame made in another document', () => { const d = document.implementation.createHTMLDocument(''); document.body.append(document.adoptNode(d.createElement('iframe'))); return last() })
+    attempt('frame disguised as a text node', () => { document.body.append(disguise(frame(), { nodeType: 3, localName: 'p' })); return last() })
+    attempt('frame in a div that hides it', () => {
+      const d = document.createElement('div')
+      d.append(disguise(frame(), { nodeType: 3, localName: 'p' }))
+      document.body.append(disguise(d, { nodeType: 3, querySelector: () => null }))
+      return last()
+    })
+    attempt('blank frame with built-ins replaced', () => poisoned(() => { document.body.append(frame()); return last() }))
+    attempt('srcdoc frame', () => { const f = frame(); f.srcdoc = html('<p>x</p>'); document.body.append(f); return last() })
     attempt('document.write in a blank frame', () => {
-      const f = frame(); document.body.append(f)
-      const d = f.contentDocument
-      d?.open(); d?.write(html('<p>x</p>')); d?.close()
-      return f.contentWindow
+      document.body.append(frame())
+      const w = last() as Window | null
+      w?.document.open(); w?.document.write(html('<p>x</p>')); w?.document.close()
+      return last()
     })
     attempt('nested frame', () => {
-      const f = frame(); document.body.append(f)
-      const d = f.contentDocument
-      const g = d?.createElement('iframe')
-      if (g === undefined) return null
-      d?.body.append(g)
-      return g.contentWindow
+      document.body.append(frame())
+      const w = last() as Window | null
+      if (w === null) return null
+      w.document.body.append(w.document.createElement('iframe'))
+      return w[0]
     })
     attempt('innerHTML frame', () => { const d = document.createElement('div'); d.innerHTML = html('<iframe></iframe>'); document.body.append(d); return d.querySelector('iframe')?.contentWindow })
     attempt('insertHTML command', () => {
@@ -106,7 +134,7 @@ test('the canary works: without the app, each frame and pop-up route reaches Web
   await page.evaluate(() => { document.body.innerHTML = '' })
   const r = await routes(page)
   // Every route that makes a new window in a plain page gets a working data channel there.
-  for (const route of ['blank frame (appendChild)', 'blank frame (append)', 'blank frame (insertBefore)', 'blank frame (Range.insertNode)', 'blank frame in a shadow root', 'blank frame from a template', 'blank frame made in another document', 'srcdoc frame', 'document.write in a blank frame', 'nested frame', 'innerHTML frame', 'insertHTML command', 'window.open', 'the app window']) {
+  for (const route of ['blank frame (appendChild)', 'blank frame (append)', 'blank frame (insertBefore)', 'blank frame (insertAdjacentElement)', 'blank frame (Range.insertNode)', 'frame disguised as a text node', 'frame in a div that hides it', 'blank frame with built-ins replaced', 'blank frame in a shadow root', 'blank frame from a template', 'blank frame made in another document', 'srcdoc frame', 'document.write in a blank frame', 'nested frame', 'innerHTML frame', 'insertHTML command', 'window.open', 'the app window']) {
     expect(r[route], route).toBe('webrtc')
   }
 })
@@ -127,6 +155,8 @@ test('with photos loaded under the photo step\'s policy, no frame, pop-up or nes
   expect(reached(r), JSON.stringify(r, null, 1)).toEqual([])
   expect(r['blank frame (appendChild)']).toBe('NotSupportedError')
   expect(r['nested frame']).toBe('NotSupportedError')
+  expect(r['frame disguised as a text node']).toBe('NotSupportedError')
+  expect(r['blank frame with built-ins replaced']).toBe('NotSupportedError')
   // And no frame element is left in the page.
   expect(await page.locator('iframe, frame, object, embed').count()).toBe(0)
 })

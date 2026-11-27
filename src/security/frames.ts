@@ -20,27 +20,95 @@
 
 /** Elements that can hold a browsing context (a window of their own). */
 export const FRAME_TAGS = ['iframe', 'frame', 'object', 'embed', 'fencedframe', 'frameset'] as const
-const FRAME_SET = new Set<string>(FRAME_TAGS)
 const FRAME_SELECTOR = FRAME_TAGS.join(',')
 
-/** The part of a node this guard reads. */
+// Built-ins captured when this module loads, before any other code runs: page code can later replace
+// Array.prototype.some, Function.prototype.apply or Set.prototype.has, but not these bindings.
+const apply = Reflect.apply
+const getOwn = Object.getOwnPropertyDescriptor
+const define = Object.defineProperty
+const entries = Object.entries
+
+type Method = (this: unknown, ...args: unknown[]) => unknown
+type Getter = (this: unknown) => unknown
+type Setter = (this: unknown, v: unknown) => void
+/** A property descriptor with function-typed members (not methods), so they can be read alone. */
+interface Desc { get?: Getter, set?: Setter, value?: unknown, enumerable?: boolean }
+const descOf = (o: object, name: string): Desc | undefined => getOwn(o, name)
+
+/** True for a frame tag. Compared one by one: no Set or Array method that page code could replace. */
+function isFrameTag (name: unknown): boolean {
+  for (let i = 0; i < FRAME_TAGS.length; i++) if (name === FRAME_TAGS[i]) return true
+  return false
+}
+
+/** The native DOM accessors the guard reads a node with (one realm's). */
+export interface Natives {
+  nodeType: Getter
+  localName: Getter
+  elementQuery: Method
+  fragmentQuery: Method
+  elementQueryAll: Method
+  remove: Method
+}
+
+/**
+ * Reads the native accessors from a window's prototypes, or returns null where there is no DOM
+ * (Node, unit tests). A node's own properties are never read: page code can shadow them
+ * (Object.defineProperty(frame, 'nodeType', { value: 3 })), the native getters cannot be fooled.
+ */
+export function nativesOf (scope: object): Natives | null {
+  const proto = (iface: string): object | undefined => protoOf(scope as Scope, iface)
+  const node = proto('Node')
+  const el = proto('Element')
+  const frag = proto('DocumentFragment')
+  if (!node || !el || !frag) return null
+  const nodeType = descOf(node, 'nodeType')?.get
+  const localName = descOf(el, 'localName')?.get
+  const elementQuery = descOf(el, 'querySelector')?.value
+  const fragmentQuery = descOf(frag, 'querySelector')?.value
+  const elementQueryAll = descOf(el, 'querySelectorAll')?.value
+  const remove = descOf(el, 'remove')?.value
+  if (!nodeType || !localName || typeof elementQuery !== 'function' || typeof fragmentQuery !== 'function' || typeof elementQueryAll !== 'function' || typeof remove !== 'function') return null
+  return { nodeType, localName, elementQuery: elementQuery as Method, fragmentQuery: fragmentQuery as Method, elementQueryAll: elementQueryAll as Method, remove: remove as Method }
+}
+
+/** The part of a node the fallback reads (no DOM: unit tests with plain objects). */
 interface NodeLike {
   nodeType?: number
   localName?: string | null
   querySelector?: (s: string) => unknown
 }
 
-/** True when `node` is a frame element or holds one. Text nodes, comments and strings never do. */
-export function holdsFrame (node: unknown): boolean {
+/**
+ * True when `node` is a frame element or holds one. Text nodes, comments and strings never do.
+ * With `natives`, the node is read only through the native accessors.
+ */
+export function holdsFrame (node: unknown, natives: Natives | null = null): boolean {
   if (node === null || typeof node !== 'object') return false
+  if (natives !== null) {
+    let type: unknown
+    try {
+      type = apply(natives.nodeType, node, [])
+    } catch {
+      return false // Not a DOM node: the native method it was passed to refuses it anyway.
+    }
+    try {
+      // 1: element, 11: document fragment (also a template's content and a shadow root).
+      if (type === 1) return isFrameTag(apply(natives.localName, node, [])) || apply(natives.elementQuery, node, [FRAME_SELECTOR]) !== null
+      if (type === 11) return apply(natives.fragmentQuery, node, [FRAME_SELECTOR]) !== null
+    } catch {
+      return true // A node that cannot be searched is refused.
+    }
+    return false
+  }
   const n = node as NodeLike
-  // 1: element, 11: document fragment (also a template's content and a shadow root).
-  if (n.nodeType === 1 && typeof n.localName === 'string' && FRAME_SET.has(n.localName.toLowerCase())) return true
+  if (n.nodeType === 1 && isFrameTag(n.localName)) return true
   if ((n.nodeType === 1 || n.nodeType === 11) && typeof n.querySelector === 'function') {
     try {
       return n.querySelector(FRAME_SELECTOR) !== null
     } catch {
-      return true // A node that cannot be searched is refused.
+      return true
     }
   }
   return false
@@ -53,28 +121,21 @@ export function frameRefused (): Error {
   return e
 }
 
-type Method = (this: unknown, ...args: unknown[]) => unknown
-type Getter = (this: unknown) => unknown
-type Setter = (this: unknown, v: unknown) => void
-/** A property descriptor with function-typed members (not methods), so they can be read alone. */
-interface Desc { get?: Getter, set?: Setter, value?: unknown, enumerable?: boolean }
-const descOf = (o: object, name: string): Desc | undefined => Object.getOwnPropertyDescriptor(o, name)
-
 /**
  * Wraps the method `name` of `proto` so it throws before running when any argument holds a frame.
  * Returns true when the method was wrapped. The wrapper cannot be replaced again.
  */
-export function refuseFramesIn (proto: object | undefined, name: string): boolean {
+export function refuseFramesIn (proto: object | undefined, name: string, natives: Natives | null = null): boolean {
   if (proto === undefined) return false
-  const desc = Object.getOwnPropertyDescriptor(proto, name)
+  const desc = descOf(proto, name)
   const original = desc?.value as Method | undefined
   if (desc === undefined || typeof original !== 'function') return false
   const guarded = function (this: unknown, ...args: unknown[]): unknown {
-    if (args.some(holdsFrame)) throw frameRefused()
-    return original.apply(this, args)
+    for (let i = 0; i < args.length; i++) if (holdsFrame(args[i], natives)) throw frameRefused()
+    return apply(original, this, args)
   }
   try {
-    Object.defineProperty(proto, name, { value: guarded, writable: false, configurable: false, enumerable: desc.enumerable ?? false })
+    define(proto, name, { value: guarded, writable: false, configurable: false, enumerable: desc.enumerable ?? false })
     return true
   } catch {
     return false
@@ -110,14 +171,16 @@ const protoOf = (scope: Scope, iface: string): object | undefined => {
 
 /** Windows already guarded, so a window is never wrapped twice. */
 const guarded = new WeakSet()
+const isGuarded = descOf(WeakSet.prototype, 'has')?.value as Method
+const markGuarded = descOf(WeakSet.prototype, 'add')?.value as Method
 
 /**
  * Applies the full lockdown to a window: WebRTC removed (`block`), frames refused, no pop-ups,
  * frames that still appear locked and removed. Safe to call more than once and on any object.
  */
 export function guardWindow (scope: object, block: (s: object) => unknown): void {
-  if (guarded.has(scope)) return
-  guarded.add(scope)
+  if (apply(isGuarded, guarded, [scope])) return
+  apply(markGuarded, guarded, [scope])
   const s = scope as Scope
   try {
     block(scope)
@@ -125,9 +188,13 @@ export function guardWindow (scope: object, block: (s: object) => unknown): void
     // A window of another origin cannot be changed (and cannot be one of this app's frames).
     return
   }
+  // Read before any wrapper below is installed, from this window's own prototypes.
+  const natives = nativesOf(scope)
   // 1. No frame element can enter a document.
-  for (const [iface, names] of Object.entries(INSERTERS)) {
-    for (const name of names) refuseFramesIn(protoOf(s, iface), name)
+  const inserters = entries(INSERTERS)
+  for (let i = 0; i < inserters.length; i++) {
+    const [iface, names] = inserters[i] ?? ['', []]
+    for (let j = 0; j < names.length; j++) refuseFramesIn(protoOf(s, iface), names[j] ?? '', natives)
   }
   // document.body = <frameset> would add frames too.
   const docProto = protoOf(s, 'Document')
@@ -136,9 +203,9 @@ export function guardWindow (scope: object, block: (s: object) => unknown): void
   const setBody = body?.set
   if (docProto && getBody && setBody) {
     try {
-      Object.defineProperty(docProto, 'body', {
-        get (this: unknown) { return getBody.call(this) },
-        set (this: unknown, v: unknown) { if (holdsFrame(v)) throw frameRefused(); setBody.call(this, v) },
+      define(docProto, 'body', {
+        get (this: unknown) { return apply(getBody, this, []) },
+        set (this: unknown, v: unknown) { if (holdsFrame(v, natives)) throw frameRefused(); apply(setBody, this, [v]) },
         configurable: false,
         enumerable: body.enumerable ?? false,
       })
@@ -146,14 +213,14 @@ export function guardWindow (scope: object, block: (s: object) => unknown): void
   }
   // 2. No pop-up: window.open() and document.open(url, name, features) return null, as a blocked pop-up does.
   try {
-    Object.defineProperty(s, 'open', { value: () => null, writable: false, configurable: false })
+    define(s, 'open', { value: () => null, writable: false, configurable: false })
   } catch { /* left as it was */ }
-  const docOpen = docProto && Object.getOwnPropertyDescriptor(docProto, 'open')
+  const docOpen = docProto && descOf(docProto, 'open')
   if (docProto && typeof docOpen?.value === 'function') {
     const open = docOpen.value as Method
     try {
-      Object.defineProperty(docProto, 'open', {
-        value: function (this: unknown, ...args: unknown[]) { return args.length >= 3 ? null : open.apply(this, args) },
+      define(docProto, 'open', {
+        value: function (this: unknown, ...args: unknown[]) { return args.length >= 3 ? null : apply(open, this, args) },
         writable: false,
         configurable: false,
       })
@@ -161,17 +228,28 @@ export function guardWindow (scope: object, block: (s: object) => unknown): void
   }
   // 3. A frame that appears anyway: its window is locked before it is handed out...
   const lockFrameWindow = (w: unknown): void => { if (w !== null && typeof w === 'object') guardWindow(w, block) }
-  for (const [iface, names] of Object.entries(FRAME_GETTERS)) {
+  const docProtoView = docProto && descOf(docProto, 'defaultView')?.get
+  const viewOf = (d: unknown): unknown => {
+    if (d === null || typeof d !== 'object' || !docProtoView) return null
+    try { return apply(docProtoView, d, []) } catch { return null }
+  }
+  /** The native contentWindow getters, kept to lock a frame found by the observer. */
+  const windowGetters: Getter[] = []
+  const getters = entries(FRAME_GETTERS)
+  for (let i = 0; i < getters.length; i++) {
+    const [iface, names] = getters[i] ?? ['', []]
     const proto = protoOf(s, iface)
-    for (const name of names) {
+    for (let j = 0; j < names.length; j++) {
+      const name = names[j] ?? ''
       const desc = proto && descOf(proto, name)
       const get = desc?.get
       if (proto === undefined || desc === undefined || get === undefined) continue
+      if (name === 'contentWindow') windowGetters.push(get)
       try {
-        Object.defineProperty(proto, name, {
+        define(proto, name, {
           get (this: unknown) {
-            const v = get.call(this) as { defaultView?: unknown } | null
-            lockFrameWindow(name === 'contentDocument' ? v?.defaultView : v)
+            const v = apply(get, this, [])
+            lockFrameWindow(name === 'contentDocument' ? viewOf(v) : v)
             return v
           },
           configurable: false,
@@ -183,18 +261,29 @@ export function guardWindow (scope: object, block: (s: object) => unknown): void
   // ...and the element is removed as soon as the page notices it.
   const doc = s.document
   const MO = s.MutationObserver
-  if (doc === undefined || typeof MO !== 'function') return
+  if (doc === undefined || typeof MO !== 'function' || natives === null) return
+  const lockAndRemove = (f: unknown): void => {
+    for (let i = 0; i < windowGetters.length; i++) {
+      const get = windowGetters[i]
+      if (get === undefined) continue
+      try { lockFrameWindow(apply(get, f, [])); break } catch { /* not this interface */ }
+    }
+    try { apply(natives.remove, f, []) } catch { /* already gone */ }
+  }
   try {
     new MO((records) => {
-      for (const r of records) {
-        for (const node of Array.from(r.addedNodes)) {
-          if (!holdsFrame(node)) continue
-          const el = node as Element
-          const frames = FRAME_SET.has(el.localName) ? [el] : Array.from(el.querySelectorAll(FRAME_SELECTOR))
-          for (const f of frames) {
-            lockFrameWindow((f as HTMLIFrameElement).contentWindow)
-            f.remove()
+      for (let i = 0; i < records.length; i++) {
+        const added = records[i]?.addedNodes
+        if (added === undefined) continue
+        for (let j = 0; j < added.length; j++) {
+          const node = added[j]
+          if (!holdsFrame(node, natives)) continue
+          if (isFrameTag(apply(natives.localName, node, []))) {
+            lockAndRemove(node)
+            continue
           }
+          const inner = apply(natives.elementQueryAll, node, [FRAME_SELECTOR]) as ArrayLike<unknown>
+          for (let k = 0; k < inner.length; k++) lockAndRemove(inner[k])
         }
       }
     }).observe(doc, { childList: true, subtree: true })
