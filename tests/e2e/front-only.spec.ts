@@ -98,14 +98,16 @@ test('front only: the editor has one side and only front fields, and the PDF has
   await expect(page.locator('label:has(#review-confirm)')).toHaveText('He revisado el anverso')
   await page.locator('#review-confirm').check()
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
-  expect(download.suggestedFilename()).toBe('protected-document.pdf')
+  expect(download.suggestedFilename()).toBe('redacted-dni.pdf')
   const text = readFileSync(await download.path()).toString('latin1')
   expect(text.startsWith('%PDF-')).toBe(true)
   expect(text).toMatch(/\/Count 1\b/)
   expect(text.match(/\/Type \/Page\b(?!s)/g)).toHaveLength(1)
-  // As with both sides: no done screen. Cleared first, then the thanks page opens (ADR 0029).
+  // Done screen, as with both sides.
+  // As with both sides: the review stays, then the small link opens the stats page (ADR 0029).
   await expect(page.locator('#download-status')).toHaveText('PDF creado. Búscalo en tu carpeta de descargas.')
-  await expect(page.locator('#thanks-title')).toHaveText('Tu documento ya no está aquí')
+  await page.locator('#stats-link').click()
+  await expect(page.locator('#thanks-title')).toHaveText('Datos de uso anónimos')
 })
 
 test('front only: going back from the editor and adding the back brings both sides, back fields still hidden', async ({ page }) => {

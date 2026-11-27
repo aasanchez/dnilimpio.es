@@ -63,17 +63,16 @@
         <p class="hint">{thanksText(lang, 'statsLead')}</p>
         <p class="hint">{thanksText(lang, 'statsPayload')}</p>
         <pre class="term whitespace-pre-wrap break-all" id="stats-payload" dir="ltr">{lines.join('\n')}</pre>
-        {#if status === 'sent'}
-          <p class="lead" id="stats-status" role="status">{thanksText(lang, 'statsSent')}</p>
-        {:else}
-          <button type="button" class="button" id="stats-send" disabled={!online || status === 'sending'} onclick={send}>{thanksText(lang, 'statsSend')}</button>
-          <p class="notice-warn empty:hidden" id="stats-status" role={status === 'error' ? 'alert' : 'status'}>{status === 'error' ? thanksText(lang, 'statsError') : online ? '' : thanksText(lang, 'statsOffline')}</p>
-        {/if}
+        <!-- After a send the button itself says thank you, and stays off: one send per visit. -->
+        <button type="button" class="button primary" id="stats-send" disabled={status === 'sent' || !online || status === 'sending'} onclick={send}>
+          {#if status === 'sent'}<span aria-hidden="true">✓</span> {thanksText(lang, 'statsSent')}{:else}{thanksText(lang, 'statsSend')}{/if}
+        </button>
+        <p class="notice-warn empty:hidden" id="stats-status" role={status === 'error' ? 'alert' : 'status'}>{status === 'error' ? thanksText(lang, 'statsError') : status !== 'sent' && !online ? thanksText(lang, 'statsOffline') : ''}</p>
       </section>
     {/if}
 
     <div class="actionbar">
-      <a class="button primary" id="start-again" href="./">{thanksText(lang, 'reset')}</a>
+      <a class="button" id="start-again" href="./">{thanksText(lang, 'reset')}</a>
     </div>
   </section>
 </div>

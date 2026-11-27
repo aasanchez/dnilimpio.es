@@ -77,7 +77,7 @@ export default tseslint.config(
     rules: { 'no-restricted-globals': ['error', ...['localStorage', 'sessionStorage', 'indexedDB', 'openDatabase', 'caches', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'WebTransport', 'RTCPeerConnection', 'webkitRTCPeerConnection'].map((name) => ({ name, message: 'Only the one fetch() of the opt-in stats is allowed here.' }))] },
   },
   {
-    // "Clear everything" opens the thanks page. The address is built only by thanksHref() from the
+    // "Send anonymous data" opens the thanks page. The address is built only by thanksHref() from the
     // fixed stats list, and its data is in the fragment, which no browser sends to a server.
     files: ['src/stats/thanks-link.ts'],
     rules: { 'no-restricted-syntax': 'off' },

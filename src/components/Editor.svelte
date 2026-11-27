@@ -13,7 +13,7 @@
   import type { AlignState } from '../ui/align-state.ts'
   import type { EditState, Phase } from '../ui/edit-state.ts'
   import type { ModelZones, Rect, Side, ZoneId } from '../zones/types.ts'
-  import { isDni, type DniVersion } from '../zones/documents.ts'
+  import { choiceOf, isDni, type DniVersion } from '../zones/documents.ts'
   import { overlap } from '../ocr/find.ts'
   import { WATERMARK_OPACITY, WATERMARK_SCALE, normaliseWatermark } from '../engine/watermark.ts'
   import Review from './Review.svelte'
@@ -35,8 +35,8 @@
     phase: Phase
     onAdjust: (side: Side) => void
     onReset: () => void
-    /** After "Download and clear" or "Share and clear" (Review.svelte): clear, then open the thanks page. */
-    onFinish: (delay?: number) => void
+    /** "Send anonymous data" on the review screen, once the PDF has left (Review.svelte). */
+    onFinish: () => void
     /** Called after the phase changes, so the shell can move focus to the new heading. */
     onPhase: () => void
     /** Opens the card guide on this field's entry. */
@@ -638,6 +638,6 @@
     </div>
   </section>
 {:else}
-  <Review {lang} {secure} sides={SIDES} hiddenCount={hidden.size} boxCount={SIDES.reduce((n, s) => n + edit.boxes.present[s].length, 0)} watermark={edit.watermark} greyscale={edit.greyscale}
+  <Review {lang} choice={choiceOf(model.model)} {secure} sides={SIDES} hiddenCount={hidden.size} boxCount={SIDES.reduce((n, s) => n + edit.boxes.present[s].length, 0)} watermark={edit.watermark} greyscale={edit.greyscale}
     {onReset} {onFinish} />
 {/if}

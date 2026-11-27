@@ -92,7 +92,7 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
   await page.locator('#review-confirm').check()
 
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
-  expect(download.suggestedFilename()).toBe('protected-document.pdf')
+  expect(download.suggestedFilename()).toBe('redacted-dni.pdf')
   const pdf = readFileSync(await download.path())
   const text = pdf.toString('latin1')
   expect(text.startsWith('%PDF-')).toBe(true)
@@ -104,9 +104,10 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
     expect(text).not.toContain(forbidden)
   }
   await expect(page.locator('#download-status')).toHaveText('PDF creado. Búscalo en tu carpeta de descargas.')
-  // No done screen: the app clears itself and opens the thanks page, which says where the PDF is.
-  await expect(page.locator('#thanks-title')).toHaveText('Tu documento ya no está aquí')
-  await expect(page.getByText('Tu PDF está en tu carpeta de descargas o en la app con la que lo compartiste.')).toBeVisible()
+  // No done screen: the review stays, with the small link to the optional stats below the buttons.
+  await expect(page.locator('#review-title')).toBeVisible()
+  await expect(page.locator('#stats-link')).toHaveText('Enviar datos anónimos')
+  await expect(page.locator('#stats-link-hint')).toHaveText('Abre una página sin tu documento. Las fotos se borran de la app.')
 
   const [front, back] = jpegs(pdf)
   if (!front || !back) throw new Error('expected two images')
@@ -123,6 +124,14 @@ test('review, then download a PDF with only sanitised images', async ({ page }) 
 })
 
 /** Number of pure black pixels in the preview canvas (masks plus any solid black watermark text). */
+test('the PDF is named after the document type: redacted-tie.pdf for a TIE, in every language', async ({ page }) => {
+  await toEditor(page, 'tie')
+  await page.locator('#review').click()
+  await page.locator('#review-confirm').check()
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#download').click()])
+  expect(download.suggestedFilename()).toBe('redacted-tie.pdf')
+})
+
 test('a change made while the front is shown reaches the back in the review and the PDF', async ({ page }) => {
   // The editor renders only the side on screen; every side is brought up to date before the review.
   await toEditor(page)
@@ -183,6 +192,34 @@ test('watermark size and opacity sliders update the preview live', async ({ page
   await size.fill('2')
   await expect(page.locator('#watermark-size-value')).toHaveText(/200\s?%/)
   await expect.poll(async () => await blackPixels(page)).toBeGreaterThan(solid)
+})
+
+/** Pixels of the preview inside a rectangle (fractions of width/height) that are not opaque black. */
+async function nonBlackIn (page: Page, x0: number, y0: number, x1: number, y1: number): Promise<number> {
+  return await page.locator('#preview').evaluate((c: HTMLCanvasElement, r) => {
+    const ctx = c.getContext('2d')
+    if (!ctx) throw new Error('no 2d')
+    const x = Math.ceil(r[0] * c.width)
+    const y = Math.ceil(r[1] * c.height)
+    const d = ctx.getImageData(x, y, Math.floor(r[2] * c.width) - x, Math.floor(r[3] * c.height) - y).data
+    let n = 0
+    for (let i = 0; i < d.length; i += 4) if (d[i] !== 0 || d[i + 1] !== 0 || d[i + 2] !== 0 || d[i + 3] !== 255) n++
+    return n
+  }, [x0, y0, x1, y1] as const)
+}
+
+test('the watermark is not drawn over hidden fields: they stay pure opaque black', async ({ page }) => {
+  await toEditor(page)
+  await page.locator('#tool-mark').click()
+  // Large, long text, so copies of it cross the CAN box. Its light halo would turn the box grey.
+  await page.locator('#watermark').fill('COPIA SOLO PARA ALQUILER DE VIVIENDA EN MADRID')
+  await page.locator('#watermark-size').fill('3')
+  await expect(page.locator('#watermark-size-value')).toHaveText(/300\s?%/)
+  // CAN zone on the front (src/zones/dni.ts): 0.78–0.985 × 0.82–0.93.
+  for (const opacity of ['0.16', '0.5', '1']) {
+    await page.locator('#watermark-opacity').fill(opacity)
+    await expect.poll(async () => await nonBlackIn(page, 0.78, 0.82, 0.985, 0.93)).toBe(0)
+  }
 })
 
 test('reset clears photos and choices', async ({ page }) => {
