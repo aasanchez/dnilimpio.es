@@ -56,8 +56,8 @@ export function insertIntoApp (page: string, markup: string): string {
 /**
  * The browser objects the start screen reads while it renders, set to a fixed Spanish browser that
  * is not installed, not on iOS and has no stored notice date. The clock reads `now`, the build time,
- * so the footer's "deployed" time is the same in every rebuild (the reproducible build). Only for the
- * duration of render().
+ * and the time zone is UTC, so the footer's "deployed" time is the same in every rebuild, on any
+ * machine (the reproducible build). Only for the duration of render().
  */
 function withPrerenderGlobals<T> (now: number, fn: () => T): T {
   const g = globalThis as Record<string, unknown>
@@ -70,11 +70,16 @@ function withPrerenderGlobals<T> (now: number, fn: () => T): T {
   stub('window', { matchMedia: () => ({ matches: false }) })
   stub('localStorage', undefined)
   const realNow = Date.now
+  const realTz = process.env['TZ']
   Date.now = () => now
+  // Node reads TZ again whenever it changes; Intl.DateTimeFormat then formats in UTC.
+  process.env['TZ'] = 'UTC'
   try {
     return fn()
   } finally {
     Date.now = realNow
+    if (realTz === undefined) Reflect.deleteProperty(process.env, 'TZ')
+    else process.env['TZ'] = realTz
     for (const [key, d] of saved) {
       if (d) Object.defineProperty(g, key, d)
       else Reflect.deleteProperty(g, key)
