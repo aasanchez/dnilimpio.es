@@ -51,3 +51,55 @@ export function keepFocus (next: () => readonly Focusable[]): (node: HTMLButtonE
 
 /** A control by its id, for the candidate lists above. */
 export const byId = (id: string): HTMLElement | null => document.getElementById(id)
+
+/** The part of a box the reveal reads: a DOMRect fits. */
+export interface Box { readonly top: number; readonly bottom: number; readonly left: number; readonly right: number }
+
+/**
+ * How far to scroll so that a focused control is not hidden behind bars that stay on screen: the
+ * sticky top bar, the sticky action bar on phones and the fixed no-cookies notice on wide screens
+ * (WCAG 2.4.11). Positive scrolls down, negative scrolls up, 0 means no scroll. Only covers that
+ * overlap the control count: one in the lower half of the window (`height` tall) pushes the control
+ * up, one in the upper half pushes it down. The control never leaves the window on the other side.
+ */
+export function coverShift (target: Box, covers: readonly Box[], height: number, gap = 8): number {
+  let down = 0
+  let up = 0
+  for (const c of covers) {
+    if (!(c.top < target.bottom && c.bottom > target.top && c.left < target.right && c.right > target.left)) continue
+    if (c.top + c.bottom > height) down = Math.max(down, target.bottom - c.top + gap)
+    else up = Math.max(up, c.bottom - target.top + gap)
+  }
+  if (down > 0) return Math.max(0, Math.min(down, target.top - gap))
+  const lift = Math.max(0, Math.min(up, height - target.bottom - gap))
+  return lift === 0 ? 0 : -lift
+}
+
+/** Bars that stay on screen while the page scrolls. */
+const COVERS = 'header, .actionbar, #privacy-notice'
+
+/**
+ * Keeps the focused control in view, clear of the bars that stay on screen. The browser scrolls a
+ * focused control into the window, but not out from under a sticky or fixed bar. Controls inside a
+ * bar, or in a dialog (drawn above everything), are left alone.
+ */
+export function revealFocus (signal?: AbortSignal): void {
+  document.addEventListener('focusin', (e) => {
+    const target = e.target
+    if (!(target instanceof Element) || target.closest(`dialog, ${COVERS}`)) return
+    requestAnimationFrame(() => {
+      if (document.activeElement !== target) return
+      // A cover counts while it, or the bar around it, stays on screen. The notice inside the phone's
+      // action bar reaches above the bar's top edge, so it counts on its own.
+      const stays = (c: Element): boolean => ['sticky', 'fixed'].includes(getComputedStyle(c).position)
+      const covers = [...document.querySelectorAll(COVERS)]
+        .filter((c) => {
+          const bar = c.closest('.actionbar')
+          return !c.contains(target) && (stays(c) || (bar !== null && stays(bar)))
+        })
+        .map((c) => c.getBoundingClientRect())
+      const shift = coverShift((target.closest('label') ?? target).getBoundingClientRect(), covers, window.innerHeight)
+      if (shift !== 0) window.scrollBy({ top: shift, behavior: 'instant' })
+    })
+  }, signal ? { signal } : undefined)
+}
