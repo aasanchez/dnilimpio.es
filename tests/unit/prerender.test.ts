@@ -31,6 +31,22 @@ describe('renderHome', () => {
     expect(first).toContain('datetime="1970-01-01T00:00:00.000Z"')
   }, 60_000)
 
+  it('gives the same markup in any time zone of the build machine', async () => {
+    const tz = process.env['TZ']
+    try {
+      process.env['TZ'] = 'Pacific/Kiritimati'
+      const far = await renderHome(process.cwd(), DEFINE)
+      expect(process.env['TZ']).toBe('Pacific/Kiritimati')
+      process.env['TZ'] = 'America/Los_Angeles'
+      expect(await renderHome(process.cwd(), DEFINE)).toBe(far)
+      // 1 January 1970, 00:00, in UTC.
+      expect(far).toMatch(/title="1 de enero de 1970 a las 0:00"/)
+    } finally {
+      if (tz === undefined) Reflect.deleteProperty(process.env, 'TZ')
+      else process.env['TZ'] = tz
+    }
+  }, 60_000)
+
   it('leaves the build machine as it was: no browser objects remain set', async () => {
     const before = ['window', 'localStorage'].map((k) => Object.getOwnPropertyDescriptor(globalThis, k))
     const nav = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
