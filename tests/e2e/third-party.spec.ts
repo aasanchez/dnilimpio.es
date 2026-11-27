@@ -220,24 +220,7 @@ test('page code that gathers file names, OCR text and the watermark cannot send 
   const traffic = await asPublicSite(context)
   await controlled(page)
   // Fictional card text (read by OCR), canary file names, then smart find and a canary watermark.
-  // TEMPORARY DIAGNOSTICS (to be reverted)
-  page.on('console', (m) => { console.log(`[diag console ${m.type()}] ${m.text().slice(0, 600)}`) })
-  page.on('pageerror', (e) => { console.log(`[diag pageerror] ${String(e).slice(0, 600)}`) })
-  page.on('requestfailed', (r) => { console.log(`[diag requestfailed] ${r.url()} ${r.failure()?.errorText ?? ''}`) })
   await toEditorWithText(page, { names: NAMES })
-  await page.waitForTimeout(8000)
-  console.log('[diag probe]', await page.evaluate(async () => {
-    const out: string[] = [`controller=${navigator.serviceWorker.controller?.scriptURL ?? 'null'}`, `online=${String(navigator.onLine)}`]
-    const src = [...document.querySelectorAll('link[rel=modulepreload], script[src]')].map((e) => e.getAttribute('href') ?? e.getAttribute('src')).join(',')
-    out.push(`scripts=${src.slice(0, 300)}`)
-    const map = JSON.parse(document.querySelector('script[type=importmap]')?.textContent ?? '{}') as { integrity?: Record<string, string> }
-    const ocr = Object.keys(map.integrity ?? {}).find((k) => /\/ocr-[^/]+\.js$/.test(k))
-    out.push(`ocrChunk=${ocr ?? 'none'}`)
-    if (ocr !== undefined) {
-      try { const m = await import(ocr) as { ocrStatus: () => Promise<unknown> }; out.push(`status=${JSON.stringify(await m.ocrStatus())}`) } catch (e) { out.push(`import failed: ${String(e)}`) }
-    }
-    return out.join(' | ')
-  }))
   await expect(page.locator('#find-run')).toBeEnabled({ timeout: 30_000 })
   await page.locator('#find-run').click()
   await expect(page.locator('#find-status')).toContainText(/Se han añadido \d+ recuadros/, { timeout: 150_000 })
