@@ -14,7 +14,7 @@ import { noScriptTag } from './language-pages.ts'
 import { STATS_PATH, handleStats } from '../src/stats/endpoint.ts'
 import { isArticlePage } from '../src/articles/paths.ts'
 import { GUIDE_PAGES, SW_FILE, THANKS_PAGE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
-import { robotsTxt, sitemapXml, startPageSitemap, staticHead, type SitemapUrl } from '../src/seo/site.ts'
+import { robotsTxt, sitemapXml, startPageSitemap, staticHead, structuredData, type SitemapUrl } from '../src/seo/site.ts'
 import { LANGS, type Lang } from '../src/i18n/langs.ts'
 import es from '../src/i18n/locales/es.json' with { type: 'json' }
 
@@ -42,12 +42,14 @@ export function securityHeaders (): Plugin {
 /**
  * Search and link-preview files (src/seo/site.ts): the start page's title, description, Open Graph
  * tags and canonical address, in Spanish from es.json, in place of the `<!-- seo-head -->` marker, and
- * its <noscript> text in place of `<!-- noscript: … -->`; and robots.txt and sitemap.xml, which need
+ * its <noscript> text in place of `<!-- noscript: … -->`, the structured data block (ADR 0046) in place
+ * of `<!-- structured-data -->`; and robots.txt and sitemap.xml, which need
  * the site's absolute address (`site`). The page's own URLs stay relative.
  */
 export function searchFiles (site: string, more: readonly SitemapUrl[] = []): Plugin {
   const MARKER = '<!-- seo-head -->'
   const NOSCRIPT = /<!-- noscript:[^>]*-->/
+  const DATA_MARKER = '<!-- structured-data -->'
   return {
     name: 'dni-redactor:search-files',
     transformIndexHtml: {
@@ -56,7 +58,8 @@ export function searchFiles (site: string, more: readonly SitemapUrl[] = []): Pl
         if (ctx.path.endsWith(`/${THANKS_PAGE}`)) return html
         if (!html.includes(MARKER)) throw new Error(`${ctx.path} must contain ${MARKER}`)
         if (!NOSCRIPT.test(html)) throw new Error(`${ctx.path} must contain <!-- noscript: … -->`)
-        return html.replace(MARKER, staticHead(site, es, 'es')).replace(NOSCRIPT, noScriptTag(es.noScript))
+        if (!html.includes(DATA_MARKER)) throw new Error(`${ctx.path} must contain ${DATA_MARKER}`)
+        return html.replace(MARKER, staticHead(site, es, 'es')).replace(DATA_MARKER, structuredData(site)).replace(NOSCRIPT, noScriptTag(es.noScript))
       },
     },
     generateBundle () {

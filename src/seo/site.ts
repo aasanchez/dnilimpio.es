@@ -80,6 +80,33 @@ export function staticHead (site: string, text: HeadText, lang: Lang = 'es'): st
   ].join('\n    ')
 }
 
+/** The type of the structured data block (ADR 0046). Browsers never run a script of this type. */
+export const STRUCTURED_DATA_TYPE = 'application/ld+json'
+
+/**
+ * Structured data for search engines (schema.org, JSON-LD, ADR 0046): what the site is, in words that
+ * do not depend on the language, so every language page carries the same block and the app never
+ * changes it. A data block: the browser does not run it and the CSP does not apply to it. `<` is
+ * written as `\u003c`, so no text can close the element.
+ */
+export function structuredData (site: string): string {
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: BRAND,
+    url: site,
+    image: new URL(OG_IMAGE, site).href,
+    applicationCategory: 'UtilitiesApplication',
+    operatingSystem: 'Any',
+    browserRequirements: 'Requires JavaScript and WebAssembly.',
+    inLanguage: [...LANGS],
+    isAccessibleForFree: true,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+    license: 'https://www.gnu.org/licenses/agpl-3.0.html',
+  }
+  return `<script type="${STRUCTURED_DATA_TYPE}">${JSON.stringify(data).replaceAll('<', '\\u003c')}</script>`
+}
+
 /** robots.txt: every page may be crawled; the sitemap's address. */
 export function robotsTxt (site: string): string {
   return `User-agent: *\nAllow: /\n\nSitemap: ${new URL('sitemap.xml', site).href}\n`
