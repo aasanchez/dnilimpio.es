@@ -105,8 +105,8 @@ and you always confirm it ([ADR 0011](docs/adr/0011-document-detection.md)):
   DNI number sits ([ADR 0019](docs/adr/0019-ppocr-and-text-detection.md)). The MRZ wins when both answer.
 - Detection needs OCR. Online, the first time, it downloads the OCR files by itself (about 9 MB; the
   status line says so). After that it also runs offline. When OCR cannot run (offline before the
-  first download, no service worker, an old browser), a note says so and you choose by hand. A
-  choice you make yourself is never changed.
+  first download, no service worker or one that does not answer, an old browser), a note says so
+  and you choose by hand. A choice you make yourself is never changed.
 
 **Card guide.** "What is on my card?" on the start screen, and the ⓘ beside each field in the
 editor, open a guide to every element of each card (one DNI tab with a 4.0/3.0 switch, and the TIE): what it is, how a copy of it can be misused, and
@@ -320,7 +320,7 @@ reviewed this; its findings are fixed and covered by tests (see [Security review
   never from a third party. Its files are downloaded only the first time OCR is used and are checked
   against their hash before use. The worker runs under its own strict CSP: it can read its own files in `ocr/` and
   cannot send requests anywhere. If OCR cannot run (offline before the first download, or no service
-  worker), it is switched off and you choose by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md),
+  worker, or one that does not answer in time), it is switched off and you choose by hand ([ADR 0009](docs/adr/0009-on-device-ocr.md),
   [ADR 0019](docs/adr/0019-ppocr-and-text-detection.md)).
 - **Works offline.** After one visit, a service worker keeps a copy of the app's files, and the tool
   works with no network. Each file is checked against the SHA-384 hash recorded at build time before
@@ -471,7 +471,11 @@ The app can send anonymous usage figures, only when you ask, and only after your
   from the photo step on. Only `thanks.html` has its own policy, with `connect-src 'self'`
   (`THANKS_CSP` in [`scripts/csp.ts`](scripts/csp.ts)). The service worker passes on the stats `POST`
   only when the thanks page sends it.
-- **Limits.** Anyone can post a valid row, so the numbers are indications, not proof.
+- **Limits.** Anyone can post a valid row, so the numbers are indications, not proof. The
+  `Sec-Fetch-Site` check stops other sites' pages only, not scripts. A rate limit
+  (`ratelimits` in [`wrangler.jsonc`](wrangler.jsonc)) caps valid rows at 60 per minute per
+  Cloudflare location and answers 429 above that. It uses one key for all senders, not the IP
+  address, so a flood can also make real sends fail for that minute.
 - **Tests.** [`tests/unit/stats.test.ts`](tests/unit/stats.test.ts) checks the list, the device
   classes, the Worker and the service worker route.
   [`tests/e2e/stats.spec.ts`](tests/e2e/stats.spec.ts) checks that nothing is sent before the tap,
@@ -727,12 +731,12 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Capture | `input`, `decode`, `sniff`, `live`, `coach`, `capture-state` | Sides in use with an optional back, file picker and camera modes, type by first bytes (name and MIME type ignored, AVIF refused), size in pixels from JPEG, PNG, WebP and HEIC headers, size and pixel limits (decompression bomb), decode errors, live camera needs and failures, coach metrics (blur, light, framing) |
 | Geometry | `homography`, `quad-edit` | Homography round trips and degenerate quads, corner editing |
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type`, `doc-text` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates, document type from the front's printed text (accents, case and OCR misreads ignored) |
-| OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink |
+| OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans`, `ocr-ask` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink, a silent service worker turns OCR off after a time limit (15 s to check the files, 3 minutes to download them) |
 | Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black (also after the watermark, checked on the final pixels), Fit to the text (a box only grows, by at most half its size, and stays on the card) |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output |
 | Interface | `plain-ui` | No fake terminal lines (`$ dt.es …`) or desktop-window title bars in any screen, style or Spanish and English text |
 | Clean-up | `cleanup` | Canvases shrink and buffers are zeroed, download links revoked after the delay or at once, the coach keeps no old frame |
-| Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns), the service worker route open only to the thanks page |
+| Usage stats | `stats` | The fixed list and its one spelling (unknown, repeated, missing or encoded values refused), the thanks page fragment and its text in every language with nothing loaded on demand, session figures with no watermark text, device classes, the Worker (204 only for the exact list from the same origin, no cookie, fixed columns, 429 above the rate limit with one key for all senders), the service worker route open only to the thanks page |
 | Platform | `precache`, `takeover`, `headers`, `lockdown`, `intake-lockdown`, `install`, `build-info`, `i18n`, `i18n-load`, `guide`, `deps-report`, `verify-release`, `release-version` | Service worker manifest, deny-by-default routes (Cloudflare refused) and page headers, when a new build may take over, host headers (page CSP equals the `<meta>` CSP plus `frame-ancestors`, worker CSPs, `_headers` format and limits, no cookie, no `frame-src`), WebRTC removal and frame check, the photo step's policy and the service worker check, iPhone and iPad detection and installed mode for the install link, release version, release link and relative time, translation keys and no absolute privacy claims in es/en, Spanish until a language is loaded, guide citations, dependency report, pinned provenance identity, next version from the tags (first 1.0.0, patch bump, major and minor set by hand, re-runs) |
 
 **End to end** ([`tests/e2e/`](tests/e2e/), Playwright, against the production build with the real CSP). `vite preview` sends the host's HTTP headers ([`scripts/headers.ts`](scripts/headers.ts)), so every test also runs under them; `PREVIEW_HOST_HEADERS=0` turns them off:
