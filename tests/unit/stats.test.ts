@@ -148,6 +148,19 @@ describe('Worker', () => {
   const post = (body: string, headers: Record<string, string> = { 'Sec-Fetch-Site': 'same-origin' }, method = 'POST'): Request =>
     new Request('https://dnitapado.es/stats', { method, body: method === 'POST' ? body : null, headers })
 
+  /** A streamed body, as a client sends with chunked transfer encoding: no Content-Length. */
+  const chunked = (parts: string[], onPull: () => void = () => {}): Request => {
+    const enc = new TextEncoder()
+    let i = 0
+    const body = new ReadableStream<Uint8Array>({
+      pull (c) {
+        onPull()
+        if (i < parts.length) c.enqueue(enc.encode(parts[i++])); else c.close()
+      },
+    })
+    return new Request('https://dnitapado.es/stats', { method: 'POST', body, headers: { 'Sec-Fetch-Site': 'same-origin' }, duplex: 'half' } as RequestInit)
+  }
+
   it('stores one row for the exact list and answers 204, with no cookie', async () => {
     const { rows, env } = sink()
     const res = await handleStats(post(TEXT), env)
@@ -171,10 +184,25 @@ describe('Worker', () => {
     ['a GET', post('', { 'Sec-Fetch-Site': 'same-origin' }, 'GET'), 405],
     ['a changed list', post(`${TEXT}&name=Ana`), 400],
     ['a large body', post('x'.repeat(MAX_STATS_LENGTH + 1)), 413],
+    ['a large body with no Content-Length (chunked)', chunked(['x'.repeat(MAX_STATS_LENGTH), 'x']), 413],
+    ['a large body under a false Content-Length', post('x'.repeat(MAX_STATS_LENGTH + 1), { 'Sec-Fetch-Site': 'same-origin', 'Content-Length': '10' }), 413],
   ])('refuses %s and stores nothing', async (_name, req, status) => {
     const { rows, env } = sink()
     expect((await handleStats(req, env)).status).toBe(status)
     expect(rows).toEqual([])
+  })
+  it('accepts the exact list sent in chunks with no Content-Length', async () => {
+    const { rows, env } = sink()
+    const req = chunked([TEXT.slice(0, 100), TEXT.slice(100)])
+    expect(req.headers.get('Content-Length')).toBeNull()
+    expect((await handleStats(req, env)).status).toBe(204)
+    expect(rows).toEqual([dataPoint(FULL, 'XX')])
+  })
+  it('stops reading a chunked body once it passes the cap', async () => {
+    let pulls = 0
+    const req = chunked(Array.from({ length: 1000 }, () => 'x'.repeat(100)), () => { pulls++ })
+    expect((await handleStats(req, sink().env)).status).toBe(413)
+    expect(pulls).toBeLessThan(20)
   })
   it('stores nothing and answers 429 once the rate limit is reached', async () => {
     const { rows, env } = sink()

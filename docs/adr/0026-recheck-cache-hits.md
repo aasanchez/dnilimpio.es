@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0026. The service worker hashes every cache hit again
 
-- Status: accepted
+- Status: accepted; the page keeps the `status` answer per worker since [ADR 0033](0033-ocr-ready-once-per-worker.md)
 - Date: 2026-11-26
 - Decided by: Alexis (security review list of 26 November 2026, item 3)
 

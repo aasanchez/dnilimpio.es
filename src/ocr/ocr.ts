@@ -17,6 +17,7 @@ import { fromWire, type OcrLine } from './lines.ts'
 import { parseMrz, type Mrz } from './mrz.ts'
 import { MODEL_FILES, type Reply, type Request } from './protocol.ts'
 import { markOcrRan } from './ran.ts'
+import { ReadyMemo } from './ready-memo.ts'
 
 export type { OcrBox, OcrLine, OcrWord } from './lines.ts'
 
@@ -54,29 +55,55 @@ async function ask (msg: AskMessage): Promise<AskReply> {
 }
 
 /**
+ * The last "ready" answer, per controlling service worker (ADR 0033). A new controller asks again;
+ * a failed prepare or a failed OCR job drops it.
+ */
+const readyMemo = new ReadyMemo<ServiceWorker>()
+let watching = false
+
+/** Drops the kept "ready" answer when another service worker takes control (an update). */
+function watchController (): void {
+  if (watching) return
+  watching = true
+  navigator.serviceWorker.addEventListener('controllerchange', () => { readyMemo.forget() })
+}
+
+/**
  * Asks the service worker to download and check the files OCR needs, so a missing network or a file
  * that fails its integrity check is one clear error now instead of a stalled worker later.
  */
 async function prepare (): Promise<void> {
-  const r = await ask({ type: 'prepare', paths: neededFiles() })
-  if (!r.ok) throw new Error(`OCR files unavailable: ${r.error ?? 'unknown error'}`)
+  const controller = navigator.serviceWorker.controller
+  const r = await ask({ type: 'prepare', paths: neededFiles() }).catch((e: unknown) => ({ ok: false, error: e instanceof Error ? e.message : String(e) }))
+  if (!r.ok) {
+    readyMemo.forget()
+    throw new Error(`OCR files unavailable: ${r.error ?? 'unknown error'}`)
+  }
+  // Every file was just checked and is in this worker's cache: later status questions need no hashing.
+  if (controller !== null && controller === navigator.serviceWorker.controller) readyMemo.remember(controller)
 }
 
 /** Whether OCR can run now, without starting it. */
 export async function ocrStatus (): Promise<OcrStatus> {
   if (typeof WebAssembly !== 'object' || typeof Worker === 'undefined' || !simd()) return { state: 'unavailable', reason: 'unsupported' }
-  if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return { state: 'unavailable', reason: 'no-service-worker' }
-  // Ask the controlling service worker: only its own build's cache counts.
-  let reply: AskReply
+  const controller = 'serviceWorker' in navigator ? navigator.serviceWorker.controller : null
+  if (controller === null) return { state: 'unavailable', reason: 'no-service-worker' }
+  // Ask the controlling service worker: only its own build's cache counts. Its "ready" is kept for
+  // this page until another worker takes control or using OCR fails (ADR 0033).
+  watchController()
+  let ready: boolean
   try {
-    reply = await ask({ type: 'status', paths: neededFiles() })
+    ready = await readyMemo.ready(controller, async () => {
+      const reply = await ask({ type: 'status', paths: neededFiles() })
+      return reply.cached === true
+    })
   } catch (e) {
     // A worker that does not answer (stopped, or being replaced) cannot check the files: OCR is off
     // until a worker takes control again (the screens check again on 'controllerchange').
     if (e instanceof AskTimeout) return { state: 'unavailable', reason: 'no-service-worker' }
-    reply = { ok: false, cached: false }
+    ready = false
   }
-  if (reply.cached === true) return { state: 'ready' }
+  if (ready) return { state: 'ready' }
   return navigator.onLine ? { state: 'download', megabytes: OCR_DOWNLOAD_MB } : { state: 'unavailable', reason: 'offline' }
 }
 
@@ -170,6 +197,10 @@ export async function recognise (image: HTMLCanvasElement | OffscreenCanvas): Pr
     if (mine !== generation) throw new OcrStopped()
     markOcrRan()
     return result
+  }).catch((e: unknown) => {
+    // A file may be gone or rewritten since the last "ready": the next status question asks again.
+    if (!(e instanceof OcrStopped)) readyMemo.forget()
+    throw e
   })
   queue = job.then(() => undefined, () => undefined)
   return await job
