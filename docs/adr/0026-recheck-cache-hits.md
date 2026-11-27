@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0026. The service worker hashes every cache hit again
 
-- Status: accepted; the page keeps the `status` answer per worker since [ADR 0033](0033-ocr-ready-once-per-worker.md)
+- Status: accepted; the page keeps the `status` answer per worker since [ADR 0033](0033-ocr-ready-once-per-worker.md); `Content-Type` from the build since 2026-11-27 (audit F-06)
 - Date: 2026-11-26
 - Decided by: Alexis (security review list of 26 November 2026, item 3)
 
@@ -28,7 +28,11 @@ So a one-time rewrite could become code that runs on every visit.
   'omit' })`, so the browser checks the new bytes, and stores them. Offline, that download fails and
   the request gets a network error: the rewritten file never runs.
 - The answer is a new response built from the bytes that were hashed, so what runs is exactly what was
-  checked. Only the entry's `Content-Type` is kept; no other header of the entry reaches the page.
+  checked. No header of the entry reaches the page. Its one header, `Content-Type`, comes from a
+  fixed list by file extension (`CONTENT_TYPES` in `src/offline/precache.ts`). Until 27 November
+  2026 the entry's own `Content-Type` was kept; an audit (F-06) noted that the hash covers the
+  bytes, not the headers, so a rewritten entry with the right bytes could still change how the
+  browser reads them. The build fails if it writes a file whose extension is not in the list.
 - The check runs on every hit, not once per worker lifetime. A check kept in memory would not see a
   rewrite made after it, and the worker often lives across several page loads.
 
@@ -44,4 +48,6 @@ So a one-time rewrite could become code that runs on every visit.
   cache or acting inside the page while it runs. It stops one rewrite from persisting as code that
   runs later.
 - `tests/e2e/offline.spec.ts` rewrites the cached `index.html` and `ocr/worker.min.js`, online and
-  offline, and checks that neither ever runs. The tests fail against the previous worker.
+  offline, and checks that neither ever runs. The tests fail against the previous worker. A further
+  test keeps the real bytes of `index.html` but stores it as `text/plain`, and checks that the app
+  still opens offline as `text/html`.
