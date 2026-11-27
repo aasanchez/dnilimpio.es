@@ -732,7 +732,7 @@ Run them with `pnpm test` (unit) and `pnpm test:e2e` (end to end, after `pnpm bu
 | Area | Files | What is checked |
 |---|---|---|
 | Capture | `input`, `decode`, `sniff`, `live`, `coach`, `capture-state` | Sides in use with an optional back, file picker and camera modes, type by first bytes (name and MIME type ignored, AVIF refused), size in pixels from JPEG, PNG, WebP and HEIC headers, size and pixel limits (decompression bomb), decode errors, live camera needs and failures, coach metrics (blur, light, framing) |
-| Geometry | `homography`, `quad-edit` | Homography round trips and degenerate quads, corner editing |
+| Geometry | `homography`, `quad-edit`, `corner-input` | Homography round trips and degenerate quads, corner editing, corner editor input (screen to photo pixels, hit radius per pointer kind, drag with grab offset and clamping, arrow keys and Shift, next corner, canvas size, magnifier side), switching side saves moved valid corners and never confirms crossed or untouched ones |
 | Detection | `detect`, `detect-model`, `refine`, `upright`, `doc-type`, `doc-text` | Classic edge detection, model answer checks, edge snapping, upside-down check for every document, document type and DNI version from the MRZ dates, document type from the front's printed text (accents, case and OCR misreads ignored) |
 | OCR | `mrz`, `find`, `ocr-lines`, `ocr-spans`, `ocr-ask`, `ready-memo` | ICAO check digits and TD1 parsing, DNI/NIE letters, real calendar dates, support numbers, box margins, word boxes from OCR lines in reading order, word spans from the ink, a silent service worker turns OCR off after a time limit (15 s to check the files, 3 minutes to download them), "OCR is ready" kept per service worker and asked again after an update or a failure |
 | Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black (also after the watermark, checked on the final pixels), Fit to the text (a box only grows, by at most half its size, and stays on the card) |
@@ -992,7 +992,7 @@ src/
   App.svelte         screen flow, brand, clearing on pagehide
   components/        Svelte components, one per screen or control (start screen, notice, audit prompt, footer, editor, review…)
   capture/           file input, drag and drop, paste, decoding, live camera and capture coach
-  geometry/          homography, perspective warp, corner editing (pure TypeScript)
+  geometry/          homography, perspective warp, corner editing and its input maths (pure TypeScript)
   detect/            corner finding (on-device model, classic edge detection, edge snapping), upright check,
                      automatic straightening, document type from the MRZ
   ocr/               on-device OCR (PP-OCRv6 tiny in a worker, loaded on demand), MRZ reader, smart field finding

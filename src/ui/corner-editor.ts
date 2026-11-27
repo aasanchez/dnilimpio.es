@@ -5,7 +5,8 @@
 
 import type { Point, Quad } from '../geometry/homography.ts'
 import { isConvex } from '../geometry/homography.ts'
-import { moveCorner, nearestCorner } from '../geometry/quad-edit.ts'
+import { moveCorner } from '../geometry/quad-edit.ts'
+import { arrowTarget, canvasSize, dragCorner, grabOffset, loupeCentre, nextCorner, pickCorner, pointerKind, scales, toSource, type GrabOffset } from '../geometry/corner-input.ts'
 import { el } from './dom.ts'
 import { shrink } from '../engine/wipe.ts'
 
@@ -17,9 +18,8 @@ export interface CornerEditorOptions {
   readonly signal: AbortSignal;
 }
 
-/** Handle radius and hit radius in CSS pixels. Touch gets a larger target than a mouse (WCAG 2.5.5). */
+/** Handle radius in CSS pixels. Hit radii per pointer kind are in geometry/corner-input.ts. */
 const HANDLE_R = 11
-const HIT_R = { touch: 36, pen: 24, mouse: 18 } as const
 const LOUPE_R = 64
 const LOUPE_ZOOM = 3
 
@@ -37,7 +37,7 @@ export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
   const bh = bitmap.height
   let quad = opts.quad
   let active = 0
-  let drag: { pointerId: number; dx: number; dy: number } | null = null
+  let drag: { pointerId: number; grab: GrabOffset } | null = null
 
   const canvas = el('canvas', { className: 'corner-editor' })
   canvas.tabIndex = 0
@@ -48,19 +48,15 @@ export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
   /** Canvas pixels per CSS pixel, and source pixels per CSS pixel, from the current layout. */
   const metrics = (): { cssToCanvas: number; cssToSrc: number; rect: DOMRect } => {
     const rect = canvas.getBoundingClientRect()
-    const w = rect.width > 0 ? rect.width : 1
-    return { cssToCanvas: canvas.width / w, cssToSrc: bw / w, rect }
+    return { ...scales(rect.width, canvas.width, bw), rect }
   }
 
   const layout = (): void => {
-    const dpr = window.devicePixelRatio || 1
-    const maxW = wrap.clientWidth
-    const maxH = window.innerHeight * 0.55
-    if (maxW <= 0) return
-    const s = Math.min(maxW / bw, maxH / bh)
+    const size = canvasSize(bw, bh, wrap.clientWidth, window.innerHeight * 0.55, window.devicePixelRatio)
+    if (!size) return
     // The bitmap is drawn at display resolution; full resolution is kept for the warp.
-    canvas.width = Math.max(1, Math.round(bw * s * dpr))
-    canvas.height = Math.max(1, Math.round(bh * s * dpr))
+    canvas.width = size.width
+    canvas.height = size.height
     draw()
   }
 
@@ -144,9 +140,7 @@ export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
   const drawLoupe = (ctx: CanvasRenderingContext2D, at: Point, src: Point, u: number): void => {
     const r = LOUPE_R * u
     const margin = 12 * u
-    const left = at.x > canvas.width / 2
-    const cx = left ? margin + r : canvas.width - margin - r
-    const cy = margin + r
+    const { x: cx, y: cy } = loupeCentre(at.x, canvas.width, r, margin)
     const srcR = (r / LOUPE_ZOOM) * (bw / canvas.width)
     ctx.save()
     ctx.beginPath()
@@ -174,7 +168,7 @@ export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
 
   const toSrc = (e: PointerEvent): Point => {
     const { rect, cssToSrc } = metrics()
-    return { x: (e.clientX - rect.left) * cssToSrc, y: (e.clientY - rect.top) * cssToSrc }
+    return toSource(e.clientX, e.clientY, rect.left, rect.top, cssToSrc)
   }
 
   const set = (q: Quad): void => {
@@ -186,14 +180,13 @@ export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
   canvas.addEventListener('pointerdown', (e) => {
     if (drag || !e.isPrimary) return
     const p = toSrc(e)
-    const kind = e.pointerType === 'touch' || e.pointerType === 'pen' ? e.pointerType : 'mouse'
-    const hit = nearestCorner(quad, p, HIT_R[kind] * metrics().cssToSrc)
+    const hit = pickCorner(quad, p, pointerKind(e.pointerType), metrics().cssToSrc)
     if (hit === null) return
     e.preventDefault()
     active = hit
     const c = quad[hit] ?? p
     // Keep the grab offset so the corner does not jump under the finger.
-    drag = { pointerId: e.pointerId, dx: c.x - p.x, dy: c.y - p.y }
+    drag = { pointerId: e.pointerId, grab: grabOffset(c, p) }
     // Capture keeps the drag alive when the finger leaves the canvas. It throws for synthetic events.
     try { canvas.setPointerCapture(e.pointerId) } catch { /* drag still works inside the canvas */ }
     canvas.classList.add('is-dragging')
@@ -203,12 +196,12 @@ export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
   canvas.addEventListener('pointermove', (e) => {
     const p = toSrc(e)
     if (!drag) {
-      if (e.pointerType === 'mouse') canvas.classList.toggle('is-over-handle', nearestCorner(quad, p, HIT_R.mouse * metrics().cssToSrc) !== null)
+      if (e.pointerType === 'mouse') canvas.classList.toggle('is-over-handle', pickCorner(quad, p, 'mouse', metrics().cssToSrc) !== null)
       return
     }
     if (e.pointerId !== drag.pointerId) return
     e.preventDefault()
-    set(moveCorner(quad, active, { x: p.x + drag.dx, y: p.y + drag.dy }, bw, bh))
+    set(dragCorner(quad, active, p, drag.grab, bw, bh))
   }, { signal })
 
   const end = (e: PointerEvent): void => {
@@ -221,22 +214,15 @@ export function cornerEditor (opts: CornerEditorOptions): CornerEditor {
   canvas.addEventListener('pointercancel', end, { signal })
 
   canvas.addEventListener('keydown', (e) => {
-    const step = (e.shiftKey ? 10 : 1) * metrics().cssToSrc
     const c = quad[active]
     if (!c) return
-    const moves: Partial<Record<string, Point>> = {
-      ArrowLeft: { x: c.x - step, y: c.y },
-      ArrowRight: { x: c.x + step, y: c.y },
-      ArrowUp: { x: c.x, y: c.y - step },
-      ArrowDown: { x: c.x, y: c.y + step },
-    }
-    const target = moves[e.key]
+    const target = arrowTarget(c, e.key, e.shiftKey, metrics().cssToSrc)
     if (target) {
       e.preventDefault()
       set(moveCorner(quad, active, target, bw, bh))
     } else if (e.key === 'n' || e.key === 'N') {
       e.preventDefault()
-      active = (active + (e.shiftKey ? 3 : 1)) % 4
+      active = nextCorner(active, e.shiftKey)
       draw()
     }
   }, { signal })
