@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0028. TIE preselected when detection runs but cannot tell the document
 
 - Status: accepted
