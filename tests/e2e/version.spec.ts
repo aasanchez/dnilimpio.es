@@ -21,7 +21,7 @@ test('shows the release version, linked to its GitHub Release, or none when the 
     return
   }
   await expect(link).toHaveText(RELEASE_VERSION)
-  await expect(link).toHaveAttribute('href', `https://github.com/aasanchez/dnilimpio.es/releases/tag/v${RELEASE_VERSION}`)
+  await expect(link).toHaveAttribute('href', `https://github.com/aasanchez/dnitapado.es/releases/tag/v${RELEASE_VERSION}`)
   await expect(link).toHaveAttribute('target', '_blank')
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   // Version first, then the commit: "Versión 1.4.8 · 2a07023 · desplegado hace …".
@@ -36,7 +36,7 @@ test('shows the short commit SHA, linked to the commit on GitHub', async ({ page
   const sha = await link.getAttribute('data-sha') ?? ''
   expect(sha).toMatch(/^[0-9a-f]{40}$/)
   expect(sha.startsWith(await link.innerText())).toBe(true)
-  await expect(link).toHaveAttribute('href', `https://github.com/aasanchez/dnilimpio.es/commit/${sha}`)
+  await expect(link).toHaveAttribute('href', `https://github.com/aasanchez/dnitapado.es/commit/${sha}`)
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer')
 })
 

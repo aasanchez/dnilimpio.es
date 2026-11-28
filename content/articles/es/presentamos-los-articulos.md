@@ -15,7 +15,7 @@ DNI Tapado.es estrena una sección de artículos. Aquí publicaremos noticias so
 
 ## Cómo están hechas estas páginas
 
-Escribimos cada artículo en un archivo de texto dentro del [código fuente](https://github.com/aasanchez/dnilimpio.es). Al publicar una versión nueva de la web, cada artículo se convierte en una página estática.
+Escribimos cada artículo en un archivo de texto dentro del [código fuente](https://github.com/aasanchez/dnitapado.es). Al publicar una versión nueva de la web, cada artículo se convierte en una página estática.
 
 Estas páginas no ejecutan ningún programa en tu navegador y no usan cookies. Solo cargan la hoja de estilos de la web y, si las hay, las imágenes del propio artículo.
 

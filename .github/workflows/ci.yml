@@ -25,7 +25,8 @@
 #
 # dnitapado.es is served by Cloudflare Workers, the only host, which sends the HTTP security headers
 # of scripts/headers.ts (ADR 0027). Nothing is deployed to GitHub Pages any more: the old address
-# https://aasanchez.github.io/dnilimpio.es/ only redirects to dnitapado.es.
+# https://aasanchez.github.io/dnitapado.es/ only redirects to dnitapado.es; the older
+# https://aasanchez.github.io/dnilimpio.es/ stopped working when the repository was renamed.
 #
 # ci-ok is the one status check that branch protection requires. CodeQL runs in codeql.yml.
 # Never re-run the legacy "pages build and deployment" workflow: it publishes unbuilt source.

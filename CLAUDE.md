@@ -17,11 +17,12 @@ never write "nothing stored" or "never leaves" without that context.
 
 - Live site: <https://dnitapado.es> (Cloudflare Workers static assets, `wrangler.jsonc`, ADR 0027;
   Worker code for `POST /stats` only, ADR 0029).
-  It is the only host. The old address <https://aasanchez.github.io/dnilimpio.es/> only redirects
+  It is the only host. The address <https://aasanchez.github.io/dnitapado.es/> only redirects
   there; CI deploys nothing to GitHub Pages. The build must still work under a subpath (rule 6).
-- The repository is still named `aasanchez/dnilimpio.es`. Do not rename repository URLs, the cache
-  prefix `dnilimpio-` or the storage key `dnilimpio.noticeDismissedAt`: renaming them orphans
-  caches and shows the notice again to returning users.
+- The repository is `aasanchez/dnitapado.es` (renamed from `aasanchez/dnilimpio.es` on
+  2026-11-28; GitHub redirects the old URLs). Link to the new name. Do not rename the cache prefix
+  `dnilimpio-` or the storage key `dnilimpio.noticeDismissedAt`: renaming them orphans caches and
+  shows the notice again to returning users.
 - The brand is the constant `BRAND` in `src/seo/site.ts`, not a translated string. Use
   "DNI Tapado.es" in new user-facing text.
 - Owner: Alexis (`aasanchez`). Licence: AGPL-3.0-or-later, with exceptions listed in the README.

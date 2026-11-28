@@ -8,7 +8,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for helping with the translations. You can also fix the text yourself in a pull request: see [Help with translations](https://github.com/aasanchez/dnilimpio.es/blob/master/CONTRIBUTING.md#help-with-translations).
+        Thank you for helping with the translations. You can also fix the text yourself in a pull request: see [Help with translations](https://github.com/aasanchez/dnitapado.es/blob/master/CONTRIBUTING.md#help-with-translations).
         Brand names "DNI Tapado.es" and "NagWara" are never translated. Card guide texts must stay faithful to the cited official sources.
         Do not attach a photo of a real identity document. Screenshots made with the synthetic test images are fine.
   - type: dropdown

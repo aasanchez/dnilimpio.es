@@ -16,7 +16,7 @@ test.use({ locale: 'es-ES', baseURL: 'https://dnitapado.es/' })
 const LOCAL = 'http://localhost:4173/'
 /** The public host names the site runs on: one at the root, one under a subpath. */
 const ROOT = 'https://dnitapado.es/'
-const SITES = [ROOT, 'https://aasanchez.github.io/dnilimpio.es/']
+const SITES = [ROOT, 'https://aasanchez.github.io/dnitapado.es/']
 const BEACON = 'https://static.cloudflareinsights.com/beacon.min.js'
 const REPORT = 'https://cloudflareinsights.com/cdn-cgi/rum'
 

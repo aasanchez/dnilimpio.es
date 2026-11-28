@@ -13,7 +13,7 @@ import { DEFAULT_SITE_URL, normalizeSiteUrl } from './src/seo/site.ts'
 import type { Lang } from './src/i18n/langs.ts'
 
 // Override with REPO_URL for forks.
-const REPO_URL = process.env['REPO_URL'] ?? 'https://github.com/aasanchez/dnilimpio.es'
+const REPO_URL = process.env['REPO_URL'] ?? 'https://github.com/aasanchez/dnitapado.es'
 // The site's public address, for search engines and link previews only (src/seo/site.ts). Forks set
 // SITE_URL to their own address.
 const SITE_URL = normalizeSiteUrl(process.env['SITE_URL'] ?? DEFAULT_SITE_URL)

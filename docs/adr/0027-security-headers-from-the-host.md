@@ -53,7 +53,9 @@ Serve <https://dnitapado.es> from **Cloudflare Workers static assets**, with no 
   exactly these headers.
 - **One host.** CI no longer deploys to GitHub Pages. The old address
   <https://aasanchez.github.io/dnilimpio.es/> redirects to dnitapado.es, because the repository's
-  Pages settings keep the custom domain. Two hosts would mean two policies to explain: one with
+  Pages settings keep the custom domain. (Update 2026-11-28: the repository is now
+  `aasanchez/dnitapado.es`. <https://aasanchez.github.io/dnitapado.es/> redirects; the old
+  address returns "Site not found".) Two hosts would mean two policies to explain: one with
   headers and one without.
 - The `<meta>` CSP stays as a fallback, with the service worker's headers, for any host that sends
   no headers (a fork, a local copy).

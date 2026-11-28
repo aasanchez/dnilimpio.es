@@ -11,8 +11,8 @@ describe('verifyArgs', () => {
   it('pins the repository, the workflow, master, the commit and GitHub-hosted runners', () => {
     expect(verifyArgs('dist/index.html', SHA)).toEqual([
       'attestation', 'verify', 'dist/index.html',
-      '--repo', 'aasanchez/dnilimpio.es',
-      '--signer-workflow', 'aasanchez/dnilimpio.es/.github/workflows/ci.yml',
+      '--repo', 'aasanchez/dnitapado.es',
+      '--signer-workflow', 'aasanchez/dnitapado.es/.github/workflows/ci.yml',
       '--source-ref', 'refs/heads/master',
       '--source-digest', SHA,
       '--deny-self-hosted-runners',

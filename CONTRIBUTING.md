@@ -25,9 +25,9 @@ to it instead of repeating it.
 
 | You want to | Do this |
 |---|---|
-| Fix a wrong or unnatural translation | Edit one JSON file and open a pull request ([steps](#fix-a-translation)). If you do not use Git, open a [translation issue](https://github.com/aasanchez/dnilimpio.es/issues/new?template=translation.yml). |
-| Add a language | Open a [translation issue](https://github.com/aasanchez/dnilimpio.es/issues/new?template=translation.yml) first, then follow [Add a new language](#add-a-new-language). |
-| Report a bug or suggest a feature | Open an [issue](https://github.com/aasanchez/dnilimpio.es/issues/new). Never attach a photo of a real document. |
+| Fix a wrong or unnatural translation | Edit one JSON file and open a pull request ([steps](#fix-a-translation)). If you do not use Git, open a [translation issue](https://github.com/aasanchez/dnitapado.es/issues/new?template=translation.yml). |
+| Add a language | Open a [translation issue](https://github.com/aasanchez/dnitapado.es/issues/new?template=translation.yml) first, then follow [Add a new language](#add-a-new-language). |
+| Report a bug or suggest a feature | Open an [issue](https://github.com/aasanchez/dnitapado.es/issues/new). Never attach a photo of a real document. |
 | Change code | Follow [Set up the project](#set-up-the-project) and [Send a pull request](#send-a-pull-request). |
 | Report a security problem | Report it privately ([details](#report-a-security-problem)). |
 
@@ -37,8 +37,8 @@ You need [nvm](https://github.com/nvm-sh/nvm) and pnpm. The versions are pinned:
 [`.nvmrc`](.nvmrc), pnpm in the `packageManager` field of [`package.json`](package.json).
 
 ```bash
-git clone https://github.com/aasanchez/dnilimpio.es.git
-cd dnilimpio.es
+git clone https://github.com/aasanchez/dnitapado.es.git
+cd dnitapado.es
 nvm install && nvm use                  # Node.js version from .nvmrc
 npm install --global pnpm@12.23.0       # same version as packageManager in package.json
 pnpm install --frozen-lockfile          # exact versions from pnpm-lock.yaml
@@ -235,7 +235,7 @@ If you prefer to work locally, edit the file, run `pnpm test tests/unit/i18n.tes
 result in the browser ([Test a language locally](#test-a-language-locally)) and open a pull request.
 
 If you only want to point out a problem, open a
-[translation issue](https://github.com/aasanchez/dnilimpio.es/issues/new?template=translation.yml)
+[translation issue](https://github.com/aasanchez/dnitapado.es/issues/new?template=translation.yml)
 with the current text, your proposed text and where it appears.
 
 The repository also has a [`crowdin.yml`](crowdin.yml) file for Crowdin, a translation platform.
@@ -330,7 +330,7 @@ only Arabic is right to left.
 
 ### Add a new language
 
-Open a [translation issue](https://github.com/aasanchez/dnilimpio.es/issues/new?template=translation.yml)
+Open a [translation issue](https://github.com/aasanchez/dnitapado.es/issues/new?template=translation.yml)
 first, so that we can agree on the language tag and avoid duplicate work. A new language must
 translate both the interface and the card guide.
 
@@ -368,7 +368,7 @@ translate both the interface and the card guide.
 ## Report a security problem
 
 Do not open a public issue. Report it privately through
-[GitHub security advisories](https://github.com/aasanchez/dnilimpio.es/security/advisories/new).
+[GitHub security advisories](https://github.com/aasanchez/dnitapado.es/security/advisories/new).
 
 ## Licence
 

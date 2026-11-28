@@ -5,7 +5,7 @@
 //
 // <dir> holds the files to check: the `dist` artifact, the `release-evidence` artifact, or a copy of
 // the live site. Each file must carry a provenance attestation that GitHub signed for:
-// - this repository (aasanchez/dnilimpio.es),
+// - this repository (aasanchez/dnitapado.es),
 // - the CI workflow on master (.github/workflows/ci.yml, ref refs/heads/master),
 // - exactly the commit given, built on a GitHub-hosted runner.
 // A file with no attestation, or one signed by another repository, workflow, branch or commit, fails.
@@ -21,7 +21,7 @@ import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 
-export const REPO = 'aasanchez/dnilimpio.es'
+export const REPO = 'aasanchez/dnitapado.es'
 export const SIGNER_WORKFLOW = `${REPO}/.github/workflows/ci.yml`
 export const SOURCE_REF = 'refs/heads/master'
 
