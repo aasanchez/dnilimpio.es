@@ -139,7 +139,7 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
      this banner only exists to tell you it isn't needed."* It stays short on purpose; this README lists
      exactly what is sent and stored ([Privacy and security](#privacy-and-security)). **I believe you** closes it; it comes back after 4 days at
      the earliest.
-   - In the footer: **Source code** (this repository, in a new tab), **Check it with your AI** (see
+   - In the footer: **Source code** (this repository, in a new tab), **LinkedIn** (the author's profile, in a new tab), **Check it with your AI** (see
      [Audit it yourself](#audit-it-yourself)), the build version and deploy time, and the NagWara
      product band.
 
@@ -922,7 +922,7 @@ Every spec runs in Chromium. The specs marked **(all browsers)** also run in Fir
 | `layout` | Phone: one column, main button in a sticky bar at the bottom, no sideways scroll. Wide screen: card on the left, tools and main button on the right, steps in the top bar |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
 | `seo` | The served HTML already holds the Spanish title, description and link preview tags; the preview image exists; `robots.txt` and `sitemap.xml` are real files with the site address and every language address; the served HTML holds the hreflang links; one canonical address per language; a language change updates title, description and preview text |
-| `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, release version linked to its GitHub Release, build SHA and relative deploy time (also offline) |
+| `brand`, `nagwara`, `source-link`, `linkedin-link`, `version` | Logo and title, NagWara band, source link and the author's LinkedIn link in a new tab, with no request to LinkedIn, release version linked to its GitHub Release, build SHA and relative deploy time (also offline) |
 | `visual` | Screenshots of the start screen, its footer, the editor, the editor's tools, the review and the stats page at 390 × 844 px, in Spanish and Arabic, compared with the baselines. Runs only in the pinned container (see below, [ADR 0036](docs/adr/0036-visual-regression-in-pinned-container.md)) |
 
 ### Visual regression
@@ -1325,6 +1325,9 @@ Exceptions:
   ([`LicenseRef-NagWara-Marks`](LICENSES/LicenseRef-NagWara-Marks.txt)).
 - **GitHub mark.** The inline GitHub mark ([`src/components/GitHubMark.svelte`](src/components/GitHubMark.svelte))
   comes from Octicons, [MIT](LICENSES/MIT.txt).
+- **LinkedIn mark.** The inline LinkedIn mark ([`src/components/LinkedInMark.svelte`](src/components/LinkedInMark.svelte))
+  comes from Bootstrap Icons, [MIT](LICENSES/MIT.txt). LinkedIn and its logo are trademarks of
+  LinkedIn Corporation; the footer uses them only to link to the author's profile.
 - **Fonts.** The bundled fonts (Bricolage Grotesque, JetBrains Mono, Caveat) are under the
   [SIL Open Font Licence 1.1](LICENSES/OFL-1.1.txt).
 - **Articles.** The text of the articles in [`content/articles/`](content/articles/) is under

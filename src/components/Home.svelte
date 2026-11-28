@@ -7,6 +7,7 @@
   import PrivacyNotice from './PrivacyNotice.svelte'
   import AuditPrompt from './AuditPrompt.svelte'
   import GitHubMark from './GitHubMark.svelte'
+  import LinkedInMark from './LinkedInMark.svelte'
   import NagwaraBand from './NagwaraBand.svelte'
   import InstallApp from './InstallApp.svelte'
   import UpdateReady from './UpdateReady.svelte'
@@ -65,6 +66,8 @@
     <!-- One row, centred, so the links share a line and a baseline. -->
     <div class="flex flex-wrap items-center justify-center gap-x-4">
       <a class="source-link inline-flex min-h-6 items-center gap-[0.4em] text-muted" id="source-link" href={__REPO_URL__} target="_blank" rel="noopener noreferrer"><GitHubMark />{t(lang, 'sourceCode')}</a>
+      <!-- The author's LinkedIn profile: a plain outbound link, no LinkedIn script or image. -->
+      <a class="linkedin-link inline-flex min-h-6 items-center gap-[0.4em] text-muted" id="linkedin-link" href="https://www.linkedin.com/in/aasanchezo/" target="_blank" rel="noopener noreferrer" aria-label={t(lang, 'authorLinkedIn')}><LinkedInMark />LinkedIn</a>
       {#if __ARTICLE_LANGS__.includes(lang)}
         <!-- Articles (ADR 0039): only in a language that has some. -->
         <a class="inline-flex min-h-6 items-center text-muted" id="articles-link" href="./{lang === 'es' ? '' : `${langSegment(lang)}/`}articles/" target="_blank" rel="noopener">{t(lang, 'articlesTitle')}</a>
