@@ -8,7 +8,7 @@
 ## Context
 
 Every commit on `master` deploys, but a deploy had no name people can use. The footer showed only
-the short commit SHA and the deploy time ([PR #21](https://github.com/aasanchez/dnilimpio.es/pull/21)).
+the short commit SHA and the deploy time ([PR #21](https://github.com/aasanchez/dnitapado.es/pull/21)).
 There were no git tags and no GitHub Releases, so there was no list of what changed between two
 deploys, and no lasting place for each deploy's release evidence (the `release-evidence` artifact
 expires after 90 days).

@@ -17,9 +17,9 @@ describe('commit SHA', () => {
     expect(shortSha(SHA)).toBe('2a07023')
   })
   it('links to the commit on the repository, and to nothing when unknown', () => {
-    expect(commitUrl('https://github.com/aasanchez/dnilimpio.es', SHA)).toBe(`https://github.com/aasanchez/dnilimpio.es/commit/${SHA}`)
+    expect(commitUrl('https://github.com/aasanchez/dnitapado.es', SHA)).toBe(`https://github.com/aasanchez/dnitapado.es/commit/${SHA}`)
     expect(commitUrl('https://github.com/fork/x/', SHA)).toBe(`https://github.com/fork/x/commit/${SHA}`)
-    expect(commitUrl('https://github.com/aasanchez/dnilimpio.es', '')).toBeUndefined()
+    expect(commitUrl('https://github.com/aasanchez/dnitapado.es', '')).toBeUndefined()
   })
 })
 
@@ -30,9 +30,9 @@ describe('release version', () => {
     for (const bad of [undefined, '', 'v1.4.8', '1.4', '1.4.8-rc.1', '01.4.8', '1.4.8<script>']) expect(normalizeVersion(bad)).toBe('')
   })
   it('links to the GitHub Release of its tag, and to nothing without a version', () => {
-    expect(releaseUrl('https://github.com/aasanchez/dnilimpio.es', '1.4.8')).toBe('https://github.com/aasanchez/dnilimpio.es/releases/tag/v1.4.8')
+    expect(releaseUrl('https://github.com/aasanchez/dnitapado.es', '1.4.8')).toBe('https://github.com/aasanchez/dnitapado.es/releases/tag/v1.4.8')
     expect(releaseUrl('https://github.com/fork/x/', '1.0.0')).toBe('https://github.com/fork/x/releases/tag/v1.0.0')
-    expect(releaseUrl('https://github.com/aasanchez/dnilimpio.es', '')).toBeUndefined()
+    expect(releaseUrl('https://github.com/aasanchez/dnitapado.es', '')).toBeUndefined()
   })
 })
 

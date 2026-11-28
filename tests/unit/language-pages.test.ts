@@ -94,7 +94,7 @@ describe('language addresses', () => {
 
 describe('prerendered start screens', () => {
   it('renders each language in its own words', async () => {
-    const all = await renderHomes(process.cwd(), { __REPO_URL__: '"https://github.com/aasanchez/dnilimpio.es"', __SITE_URL__: '"https://dnitapado.es/"', __BUILD_SHA__: '""', __BUILD_VERSION__: '""', __BUILD_TIME__: '0', __ARTICLE_LANGS__: '["es"]' }, ['es', 'en', 'ar'])
+    const all = await renderHomes(process.cwd(), { __REPO_URL__: '"https://github.com/aasanchez/dnitapado.es"', __SITE_URL__: '"https://dnitapado.es/"', __BUILD_SHA__: '""', __BUILD_VERSION__: '""', __BUILD_TIME__: '0', __ARTICLE_LANGS__: '["es"]' }, ['es', 'en', 'ar'])
     expect(all.get('es')).toContain('Comparte una copia limpia')
     expect(all.get('en')).toContain(en.homeTitle)
     expect(all.get('en')).toMatch(/<option value="en"[^>]*selected/)

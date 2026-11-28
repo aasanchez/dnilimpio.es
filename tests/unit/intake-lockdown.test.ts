@@ -6,12 +6,12 @@ import {
 import { isVerifiedWorker, type WorkerLike } from '../../src/offline/verify.ts'
 
 const BASE = 'https://dnitapado.es/'
-const SUB = 'https://aasanchez.github.io/dnilimpio.es/'
+const SUB = 'https://aasanchez.github.io/dnitapado.es/'
 
 describe('exactSource', () => {
   it('turns a relative build file into an absolute address, at the root and under a subpath', () => {
     expect(exactSource('./assets/index-ab_C-1.js', BASE)).toBe('https://dnitapado.es/assets/index-ab_C-1.js')
-    expect(exactSource('./assets/ml/model-x.js', SUB)).toBe('https://aasanchez.github.io/dnilimpio.es/assets/ml/model-x.js')
+    expect(exactSource('./assets/ml/model-x.js', SUB)).toBe('https://aasanchez.github.io/dnitapado.es/assets/ml/model-x.js')
   })
   it('refuses anything that is not a plain file address', () => {
     for (const bad of ['./a.js?x=1', './a.js#x', 'blob:https://dnitapado.es/1', 'data:text/javascript,1', 'https://u:p@dnitapado.es/a.js', './a b.js', "./a';.js", 'javascript:1']) {
@@ -31,7 +31,7 @@ describe('buildScripts', () => {
   })
   it('never lists another site\'s script (such as the analytics beacon) or a file outside the app\'s folder', () => {
     const srcs = ['https://static.cloudflareinsights.com/beacon.min.js', 'https://aasanchez.github.io/other/x.js', './assets/index.js']
-    expect(buildScripts(SUB, srcs, null)).toEqual(['https://aasanchez.github.io/dnilimpio.es/assets/index.js'])
+    expect(buildScripts(SUB, srcs, null)).toEqual(['https://aasanchez.github.io/dnitapado.es/assets/index.js'])
   })
   it('survives a missing or broken import map', () => {
     expect(buildScripts(BASE, ['./assets/index.js'], null)).toEqual(['https://dnitapado.es/assets/index.js'])

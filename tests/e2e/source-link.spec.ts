@@ -9,7 +9,7 @@ test('source code link shows the inline GitHub mark and opens the repository in 
   await page.goto('/')
   const link = page.locator('#source-link')
   await expect(link).toHaveAccessibleName('Código fuente')
-  await expect(link).toHaveAttribute('href', 'https://github.com/aasanchez/dnilimpio.es')
+  await expect(link).toHaveAttribute('href', 'https://github.com/aasanchez/dnitapado.es')
   await expect(link).toHaveAttribute('target', '_blank')
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   const mark = link.locator('svg.github-mark')

@@ -9,11 +9,10 @@ document.
 > [!NOTE]
 > **Names and addresses.** The product was called *dnilimpio.es* and is now **DNI Tapado.es** (short
 > mark **DT.es**). The site is served from **<https://dnitapado.es>** by Cloudflare Workers, with
-> HTTP security headers ([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)). The earlier
-> address <https://aasanchez.github.io/dnilimpio.es/> redirects there.
-> The GitHub repository keeps the
-> name `aasanchez/dnilimpio.es` for now, so every link to the source, the CI and the provenance
-> check below uses that name.
+> HTTP security headers ([ADR 0027](docs/adr/0027-security-headers-from-the-host.md)).
+> The GitHub repository was renamed from `aasanchez/dnilimpio.es` to `aasanchez/dnitapado.es` on
+> 28 November 2026. GitHub redirects the old repository links. The old GitHub Pages address
+> <https://aasanchez.github.io/dnilimpio.es/> no longer works; use <https://dnitapado.es>.
 
 > [!IMPORTANT]
 > Automatic detection can miss data. Always check every side of the result before you share it.
@@ -549,13 +548,13 @@ that the host can see when the OCR files are first downloaded, is a limit of any
 described above. The others were fixed in separate pull requests with tests:
 
 - the service worker's deny-by-default rule and the OCR worker's own CSP
-  ([#29](https://github.com/aasanchez/dnilimpio.es/pull/29), [#31](https://github.com/aasanchez/dnilimpio.es/pull/31));
-- OCR cleanup ([#32](https://github.com/aasanchez/dnilimpio.es/pull/32));
-- the end-to-end privacy test ([#33](https://github.com/aasanchez/dnilimpio.es/pull/33));
-- the full post-deploy check ([#34](https://github.com/aasanchez/dnilimpio.es/pull/34));
-- reproducible builds, SBOM and provenance ([#35](https://github.com/aasanchez/dnilimpio.es/pull/35));
-- WebRTC, framing and `pagehide` ([#36](https://github.com/aasanchez/dnilimpio.es/pull/36));
-- buffer clearing and wider lint rules ([#38](https://github.com/aasanchez/dnilimpio.es/pull/38)).
+  ([#29](https://github.com/aasanchez/dnitapado.es/pull/29), [#31](https://github.com/aasanchez/dnitapado.es/pull/31));
+- OCR cleanup ([#32](https://github.com/aasanchez/dnitapado.es/pull/32));
+- the end-to-end privacy test ([#33](https://github.com/aasanchez/dnitapado.es/pull/33));
+- the full post-deploy check ([#34](https://github.com/aasanchez/dnitapado.es/pull/34));
+- reproducible builds, SBOM and provenance ([#35](https://github.com/aasanchez/dnitapado.es/pull/35));
+- WebRTC, framing and `pagehide` ([#36](https://github.com/aasanchez/dnitapado.es/pull/36));
+- buffer clearing and wider lint rules ([#38](https://github.com/aasanchez/dnitapado.es/pull/38)).
 
 A later review (26 November 2026, finding PRIV-003) noted that `connect-src 'self'`, added to load
 source maps in the developer tools, let page code send requests to the site's own origin before
@@ -638,16 +637,20 @@ only; nothing is sent. The text is in [`src/security/audit-prompt.ts`](src/secur
   repository, the CI workflow on `master`, that exact commit and a GitHub-hosted runner. For one file:
 
   ```sh
-  gh attestation verify <file> --repo aasanchez/dnilimpio.es \
-    --signer-workflow aasanchez/dnilimpio.es/.github/workflows/ci.yml \
+  gh attestation verify <file> --repo aasanchez/dnitapado.es \
+    --signer-workflow aasanchez/dnitapado.es/.github/workflows/ci.yml \
     --source-ref refs/heads/master --source-digest <full commit SHA>
   ```
+
+  Releases built before the repository rename on 28 November 2026 are signed for
+  `aasanchez/dnilimpio.es`. To check one of them, use that name in `--repo` and
+  `--signer-workflow`.
 
 - **Release evidence.** Each release run keeps a `release-evidence` artifact for 90 days: the
   SHA-384 of every deployed file (`files.sha384.txt`), the commit, the version and the SBOM. These
   files are attested too, so their signed provenance stays with GitHub after the artifact expires.
   The same files are attached to the version's
-  [GitHub Release](https://github.com/aasanchez/dnilimpio.es/releases), which does not expire.
+  [GitHub Release](https://github.com/aasanchez/dnitapado.es/releases), which does not expire.
 
 - **Rebuild.** The build is reproducible: the same commit gives the same bytes.
 
@@ -664,7 +667,7 @@ only; nothing is sent. The text is in [`src/security/audit-prompt.ts`](src/secur
   against the build (see [Continuous integration](#continuous-integration)).
 
 Security problems: please report them privately through GitHub's
-[security advisories](https://github.com/aasanchez/dnilimpio.es/security/advisories/new), not in a
+[security advisories](https://github.com/aasanchez/dnitapado.es/security/advisories/new), not in a
 public issue.
 
 ## Languages
@@ -1080,9 +1083,11 @@ pull request) to one host:
   provenance of every file, `verify-provenance` checks those signatures, and `lighthouse-live`
   measures the live site.
 
-Nothing is deployed to GitHub Pages any more. The old address
-<https://aasanchez.github.io/dnilimpio.es/> redirects to dnitapado.es, because the repository's
-Pages settings keep `dnitapado.es` as the custom domain.
+Nothing is deployed to GitHub Pages any more. The address
+<https://aasanchez.github.io/dnitapado.es/> redirects to dnitapado.es, because the repository's
+Pages settings keep `dnitapado.es` as the custom domain. The older address
+<https://aasanchez.github.io/dnilimpio.es/> returns "Site not found" since the repository rename:
+GitHub does not redirect Pages addresses of a renamed repository.
 
 Cloudflare zone settings that the repository cannot set, and that `smoke` checks:
 
@@ -1191,7 +1196,7 @@ Every deploy from `master` is a release with a [semantic version](https://semver
   deploys as `1.5.1`.
 - **The tag comes after the deploy.** The `changes` job computes the version before the build, so
   the build (and the rebuild check) carry it. Only when `deploy` succeeds does the `release` job
-  create the tag and the [GitHub Release](https://github.com/aasanchez/dnilimpio.es/releases), with
+  create the tag and the [GitHub Release](https://github.com/aasanchez/dnitapado.es/releases), with
   notes from the merged pull requests and the release evidence attached.
 - **One run at a time.** Runs on `master` wait for each other, so each sees the tag of the run
   before it. Pushes that arrive during a run deploy together, under one version, in the next run.
@@ -1304,7 +1309,7 @@ you open a pull request:
    `SPDX-License-Identifier` header or are listed in [`REUSE.toml`](REUSE.toml).
 
 Pull requests are merged with **Rebase and merge**; see [`CONTRIBUTING.md`](CONTRIBUTING.md) for what each commit needs. Security problems: please report them privately
-through [security advisories](https://github.com/aasanchez/dnilimpio.es/security/advisories/new).
+through [security advisories](https://github.com/aasanchez/dnitapado.es/security/advisories/new).
 
 ## Licence
 
