@@ -13,6 +13,8 @@ import { GUIDE_PAGE } from './pages.ts'
 import { GENERAL_RISK, GUIDE, PLACES, textOf, type Cite, type Entry, type Place } from './entries.ts'
 import { SOURCES } from './sources.ts'
 import { appState, sourceOrder } from './view.ts'
+import { OG_IMAGE, OG_IMAGE_SIZE, OG_LOCALE } from '../seo/site.ts'
+import type { Lang } from '../i18n/langs.ts'
 
 export { GUIDE_PAGE }
 
@@ -21,8 +23,8 @@ export const PAGE_DOCS: readonly DocModel[] = DOCUMENTS.map((d) => d.model)
 
 export interface PageInput {
   readonly doc: DocModel
-  /** Language of the page (BCP 47) and its direction. */
-  readonly lang: string
+  /** Language of the page and its direction. */
+  readonly lang: Lang
   readonly dir: 'ltr' | 'rtl'
   /** Guide text (src/guide/locales/<lang>.json). */
   readonly g: (key: string) => string
@@ -50,6 +52,17 @@ const fill = (s: string, values: Readonly<Record<string, string>>): string => s.
 
 const PLACE_KEY: Readonly<Record<Place, string>> = { front: 'placeFront', back: 'placeBack', chip: 'placeChip' }
 
+/**
+ * The newest date a source of the page was checked (YYYY-MM-DD): the day its facts last changed, for
+ * the sitemap's <lastmod>. The text comes only from these sources (rule 9), so it is the page's date.
+ */
+export function guidePageDate (doc: DocModel): string {
+  return sourceOrder(GUIDE[doc]).map((s) => SOURCES[s].checked).sort().at(-1) ?? ''
+}
+
+/** The document's name without the part in brackets, for the short title: "TIE (…)" becomes "TIE". */
+const shortName = (name: string): string => name.replace(/\s*\([^)]*\)\s*$/, '')
+
 const APP_KEY = { mandatory: 'appMandatory', hidden: 'appHidden', visible: 'appVisible', none: 'appNone' } as const
 
 /** The guide page of one document, as a complete HTML document. */
@@ -61,6 +74,9 @@ export function renderGuidePage (p: PageInput): string {
   const docName = t(`doc_${p.doc}`)
   const title = fill(g('pageTitle'), { doc: docName })
   const description = fill(g('pageDescription'), { doc: docName })
+  // Search results and link previews show about 60 characters: the tab title is the short form.
+  const seoTitle = `${fill(g('pageSeoTitle'), { doc: shortName(docName) })} · ${p.brand}`
+  const image = new URL(OG_IMAGE, p.canonical).href
 
   const cites = (list: readonly Cite[]): string => list.length === 0
     ? ''
@@ -124,9 +140,19 @@ export function renderGuidePage (p: PageInput): string {
 <meta name="referrer" content="no-referrer" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="light dark" />
-<title>${esc(title)} · ${esc(p.brand)}</title>
+<title>${esc(seoTitle)}</title>
 <meta name="description" content="${esc(description)}" />
 <link rel="canonical" href="${esc(p.canonical)}" />
+<meta property="og:type" content="article" />
+<meta property="og:site_name" content="${esc(p.brand)}" />
+<meta property="og:title" content="${esc(seoTitle)}" />
+<meta property="og:description" content="${esc(description)}" />
+<meta property="og:url" content="${esc(p.canonical)}" />
+<meta property="og:locale" content="${OG_LOCALE[p.lang]}" />
+<meta property="og:image" content="${esc(image)}" />
+<meta property="og:image:width" content="${String(OG_IMAGE_SIZE.width)}" />
+<meta property="og:image:height" content="${String(OG_IMAGE_SIZE.height)}" />
+<meta name="twitter:card" content="summary_large_image" />
 <link rel="icon" href="./favicon.ico" sizes="32x32" />
 <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f5ed" />

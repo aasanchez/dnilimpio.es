@@ -47,9 +47,13 @@ hash, relative URLs (rule 6), and every claim cited (rule 9).
 7. **Links.** The pages link to each other and to the app, by relative URLs. Source links go to the
    official sites, with `rel="noopener noreferrer"`, and the page sends no referrer.
 8. **Search.** `sitemap.xml` lists each page (`searchFiles` in `scripts/vite-plugins.ts`), and each
-   page has a `<link rel="canonical">` with its absolute address (`SITE_URL`). That is the only
-   absolute link to the site itself; every other link stays relative, so the build still works under
-   a subpath.
+   page has a `<link rel="canonical">` with its absolute address (`SITE_URL`). The sitemap gives each
+   page a `<lastmod>`: the newest `checked` day of its sources, because the text comes only from them.
+   The `<title>` is a short form of about 60 characters (`pageSeoTitle`); the heading keeps the long
+   one. Link preview tags (Open Graph) repeat the title, the description and the canonical address,
+   and name the site's preview image. The canonical address, `og:url` and `og:image` are the only
+   absolute links to the site itself; they are read by search engines and link previews, never
+   loaded by the page. Every other link stays relative, so the build still works under a subpath.
 
 ## Consequences
 

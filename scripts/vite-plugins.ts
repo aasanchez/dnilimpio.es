@@ -15,6 +15,7 @@ import { STATS_PATH, handleStats } from '../src/stats/endpoint.ts'
 import { isArticlePage } from '../src/articles/paths.ts'
 import { NOT_FOUND_FILE, notFoundPages } from '../src/notfound/page.ts'
 import { GUIDE_PAGES, SW_FILE, THANKS_PAGE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
+import { GUIDE_PAGE, PAGE_DOCS, guidePageDate } from '../src/guide/page.ts'
 import { robotsTxt, sitemapXml, startPageSitemap, staticHead, structuredData, type SitemapUrl } from '../src/seo/site.ts'
 import { LANGS, type Lang } from '../src/i18n/langs.ts'
 import es from '../src/i18n/locales/es.json' with { type: 'json' }
@@ -65,7 +66,7 @@ export function searchFiles (site: string, more: readonly SitemapUrl[] = []): Pl
     },
     generateBundle () {
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(site) })
-      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml([...startPageSitemap(site), ...GUIDE_PAGES.map((p) => ({ loc: new URL(p, site).href })), ...more]) })
+      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml([...startPageSitemap(site), ...PAGE_DOCS.map((d) => ({ loc: new URL(GUIDE_PAGE[d], site).href, lastmod: guidePageDate(d) })), ...more]) })
     },
   }
 }

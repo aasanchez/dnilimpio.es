@@ -57,6 +57,11 @@ describe('crawl files', () => {
     const xml = sitemapXml([{ loc: 'https://dnitapado.es/?a=1&b=2', alternates: [{ hreflang: 'en', href: 'https://dnitapado.es/en' }] }])
     expect(xml).toContain('<loc>https://dnitapado.es/?a=1&amp;b=2</loc>')
     expect(xml).toContain('<xhtml:link rel="alternate" hreflang="en" href="https://dnitapado.es/en"/>')
+    expect(xml).not.toContain('<lastmod>')
+  })
+  it('sitemap.xml gives a page its <lastmod> when the build knows it', () => {
+    expect(sitemapXml([{ loc: 'https://dnitapado.es/guia-tie.html', lastmod: '2026-11-25' }]))
+      .toContain('<loc>https://dnitapado.es/guia-tie.html</loc>\n    <lastmod>2026-11-25</lastmod>\n  </url>')
   })
   it('are files of the build the service worker serves', () => {
     for (const f of ['robots.txt', 'sitemap.xml', 'icons/og-image.png']) expect(isPrecached(f)).toBe(true)
