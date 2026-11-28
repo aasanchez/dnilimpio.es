@@ -10,6 +10,7 @@ import { GENERAL_RISK, GUIDE, textOf } from '../../src/guide/entries.ts'
 import { GUIDE_PAGE, PAGE_DOCS, esc, guidePageDate, renderGuidePage } from '../../src/guide/page.ts'
 import { SOURCES } from '../../src/guide/sources.ts'
 import { sourceOrder } from '../../src/guide/view.ts'
+import { withoutDataBlocks } from '../../src/seo/site.ts'
 import { DOCUMENTS } from '../../src/zones/documents.ts'
 
 const json = (path: string): Record<string, string> => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8')) as Record<string, string>
@@ -53,7 +54,9 @@ describe('guide pages', () => {
       })
 
       it('runs no script and carries the strict guide CSP', () => {
-        expect(html).not.toMatch(/<script|\son\w+=|javascript:/i)
+        // The one <script> element is the JSON-LD data block, which the browser never runs (ADR 0048).
+        expect(html.match(/<script\b/g)).toHaveLength(1)
+        expect(withoutDataBlocks(html)).not.toMatch(/<script|\son\w+=|javascript:/i)
         expect(html).toContain(`<meta http-equiv="Content-Security-Policy" content="${esc(GUIDE_CSP)}" />`)
         expect(html).toContain('<meta name="referrer" content="no-referrer" />')
       })
@@ -92,6 +95,25 @@ describe('guide pages', () => {
         expect(html).toMatch(/<meta property="og:description" content="[^"]{50,160}" \/>/)
       })
 
+      it('tells search engines it is an article that cites its sources, and where it sits in the site', () => {
+        const block = /<script type="application\/ld\+json">([^<]*)<\/script>/.exec(html)?.[1] ?? 'null'
+        const graph = (JSON.parse(block) as { '@graph': Array<Record<string, unknown>> })['@graph']
+        const article = graph.find((x) => x['@type'] === 'Article') ?? {}
+        expect(article['headline']).toBe(/<h1>([^<]*)<\/h1>/.exec(html)?.[1]?.replace(/&#39;/g, "'"))
+        expect(String(article['headline']).length).toBeLessThanOrEqual(110)
+        expect(article['url']).toBe(`https://dnitapado.es/${GUIDE_PAGE[doc]}`)
+        expect(article['inLanguage']).toBe('es')
+        expect(article['image']).toBe('https://dnitapado.es/icons/og-image.png')
+        expect(article['dateModified']).toBe(guidePageDate(doc))
+        expect(article['author']).toEqual({ '@type': 'Organization', name: 'DNI Tapado.es', url: 'https://dnitapado.es/' })
+        expect(article['citation']).toEqual(sourceOrder(GUIDE[doc]).map((s) => SOURCES[s].url))
+        const crumbs = graph.find((x) => x['@type'] === 'BreadcrumbList') ?? {}
+        expect(crumbs['itemListElement']).toEqual([
+          { '@type': 'ListItem', position: 1, name: 'DNI Tapado.es', item: 'https://dnitapado.es/' },
+          { '@type': 'ListItem', position: 2, name: t(`doc_${doc}`).replace(/\s*\(.*\)$/, ''), item: `https://dnitapado.es/${GUIDE_PAGE[doc]}` },
+        ])
+      })
+
       it('dates the page by the newest check of its sources', () => {
         const dates = sourceOrder(GUIDE[doc]).map((s) => SOURCES[s].checked)
         expect(guidePageDate(doc)).toMatch(/^\d{4}-\d{2}-\d{2}$/)
@@ -115,6 +137,10 @@ describe('guide pages', () => {
     expect(short).toContain('<title>&quot;&gt;&lt;b&gt;TIE · DNI Tapado.es</title>')
     expect(short).toContain('content="&quot;&gt;&lt;b&gt;TIE · DNI Tapado.es"')
     expect(short).not.toContain('<b>')
+    // No translated text can close the data block.
+    const closing = render('tie', { g: (k) => (k === 'pageTitle' ? '{doc}</script><script>alert(1)</script>' : g(k)) })
+    expect(closing.match(/<script\b/g)).toHaveLength(1)
+    expect(closing).toContain('\\u003c/script>\\u003cscript>alert(1)\\u003c/script>')
   })
 
   it('their CSP allows no script, no connection and no frame', () => {

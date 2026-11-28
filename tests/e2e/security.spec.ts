@@ -53,6 +53,20 @@ test('the structured data block (ADR 0046) is data only: same on every start pag
   expect(reports).toEqual([])
 })
 
+test('a guide page\'s data block (ADR 0048) is data only under script-src \'none\': never run, no CSP report', async ({ page }) => {
+  const reports: string[] = []
+  page.on('console', (m) => { if (/Content Security Policy|Trusted Type/i.test(m.text())) reports.push(m.text()) })
+  page.on('pageerror', (e) => reports.push(e.message))
+  await page.goto('./guia-tie.html')
+  const found = await page.evaluate(() => [...document.querySelectorAll('script')].map((s) => ({ type: s.getAttribute('type'), src: s.getAttribute('src'), text: s.textContent })))
+  expect(found).toHaveLength(1)
+  expect(found[0]?.type).toBe('application/ld+json')
+  expect(found[0]?.src).toBeNull()
+  const data = JSON.parse(found[0]?.text ?? '') as { '@graph': Array<{ '@type': string }> }
+  expect(data['@graph'].map((x) => x['@type'])).toEqual(['Article', 'BreadcrumbList'])
+  expect(reports).toEqual([])
+})
+
 test('app renders with no CSP violations and no requests outside its origin', async ({ page, baseURL }) => {
   const origin = new URL(baseURL ?? '').origin
   const foreign: string[] = []

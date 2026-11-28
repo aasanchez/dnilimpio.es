@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # 0046. Structured data: one JSON-LD data block on the start pages, never run
 
-- Status: accepted
+- Status: accepted; amended by [0048](0048-guide-structured-data.md) (guide pages get a block too)
 - Date: 2026-11-27
 - Decided by: Alexis (second SEO review of 27 November 2026, item 5)
 
@@ -30,7 +30,8 @@ engines.
 - The CSP does not change. Rule 3 now names this block as its one exception: a data block of type
   `application/ld+json`, written by the build, with no text from a person. `<` is written as
   `<`, so no text can close the element.
-- Pages with no script (card guide, articles, not-found pages) get no block.
+- Pages with no script (card guide, articles, not-found pages) get no block. (Amended by ADR 0048:
+  the card guide pages now get one.)
 
 ## Consequences
 

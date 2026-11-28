@@ -53,3 +53,4 @@ project specification on purpose).
 | [0045](0045-not-found-pages.md) | Not-found pages: a static `404.html` with no script in every folder people reach, in its language; host and service worker send the nearest one with status 404 | proposed |
 | [0046](0046-structured-data.md) | Structured data: one JSON-LD data block (`WebApplication`, language-neutral) in the head of the start pages, written by the build; never run, so no CSP change; the one exception to "no inline scripts" | accepted |
 | [0047](0047-moved-box-stats.md) | Hand-moved cover boxes in the opt-in stats: key `moved`, the new box of each covered field moved by hand, in 0.5% steps of the card; not the default; body cap 1,200 bytes; amends 0029 | accepted |
+| [0048](0048-guide-structured-data.md) | Structured data on the card guide pages: one JSON-LD data block (`Article` dated by its sources, with its citations, and `BreadcrumbList`); never run under `script-src 'none'`; amends 0046 | accepted |

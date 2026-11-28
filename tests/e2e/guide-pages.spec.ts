@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Card guide pages (ADR 0040): static, crawlable pages built from the guide data. Each one loads with
-// its own strict CSP (no script at all), shows the guide in Spanish with its sources, links to the
-// other pages and the app, requests nothing outside the site, and is served by the service worker,
-// offline too.
+// its own strict CSP (no script; one JSON-LD data block the browser never runs, ADR 0048), shows the
+// guide in Spanish with its sources, links to the other pages and the app, requests nothing outside
+// the site, and is served by the service worker, offline too.
 import { expect, test, type Page } from '@playwright/test'
 import { GUIDE_PAGE_CSP } from '../../scripts/headers.ts'
 import { GUIDE_PAGES } from '../../src/offline/precache.ts'
@@ -26,7 +26,9 @@ for (const file of GUIDE_PAGES) {
     expect(res?.headers()['content-security-policy']).toBe(GUIDE_PAGE_CSP)
     await expect(page.locator('html')).toHaveAttribute('lang', 'es')
     await expect(page.locator('h1')).toContainText(': qué es cada dato')
-    await expect(page.locator('script')).toHaveCount(0)
+    // One JSON-LD data block (ADR 0048), which the browser never runs: the CSP reports nothing.
+    await expect(page.locator('script')).toHaveCount(1)
+    await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1)
     // The app's stylesheet applied: its paper background, not the browser's white.
     expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
     // Every citation points to a numbered source on the page.
@@ -64,7 +66,9 @@ test.describe('with the service worker', () => {
       const { problems } = watch(page)
       await page.goto(`./${file}`)
       await expect(page.locator('h1')).toContainText(': qué es cada dato')
-      await expect(page.locator('script')).toHaveCount(0)
+      // One JSON-LD data block (ADR 0048), which the browser never runs: the CSP reports nothing.
+      await expect(page.locator('script')).toHaveCount(1)
+      await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1)
       expect(await page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true)
       expect(problems).toEqual([])
     }

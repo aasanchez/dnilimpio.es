@@ -16,7 +16,7 @@ import { isArticlePage } from '../src/articles/paths.ts'
 import { NOT_FOUND_FILE, notFoundPages } from '../src/notfound/page.ts'
 import { GUIDE_PAGES, SW_FILE, THANKS_PAGE, isOnDemand, isPrecached, parseManifest, type PrecacheFile } from '../src/offline/precache.ts'
 import { GUIDE_PAGE, PAGE_DOCS, guidePageDate } from '../src/guide/page.ts'
-import { robotsTxt, sitemapXml, startPageSitemap, staticHead, structuredData, type SitemapUrl } from '../src/seo/site.ts'
+import { robotsTxt, sitemapXml, startPageSitemap, staticHead, structuredData, withoutDataBlocks, type SitemapUrl } from '../src/seo/site.ts'
 import { LANGS, type Lang } from '../src/i18n/langs.ts'
 import es from '../src/i18n/locales/es.json' with { type: 'json' }
 
@@ -137,7 +137,8 @@ export function subresourceIntegrity (more: { pages?: (indexHtml: string) => Rea
       for (const page of GUIDE_PAGES) {
         const path = join(outDir, page)
         const html = withSri(readFileSync(path, 'utf8'))
-        if (/<script\b/i.test(html) || !/<link rel="stylesheet" [^>]*integrity="sha384-/.test(html)) throw new Error(`${page}: must link its stylesheet with integrity and have no script`)
+        // Its one JSON-LD data block is never run (ADR 0048); any other script fails the build.
+        if (/<script\b/i.test(withoutDataBlocks(html)) || !/<link rel="stylesheet" [^>]*integrity="sha384-/.test(html)) throw new Error(`${page}: must link its stylesheet with integrity and have no script but its data block`)
         writeFileSync(path, html)
       }
 
