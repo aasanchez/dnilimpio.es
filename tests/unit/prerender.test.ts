@@ -11,7 +11,7 @@ describe('renderHome', () => {
     const html = await renderHome(process.cwd(), DEFINE)
     expect(html).toMatch(/^<div class="app /)
     expect(html).toContain('<h1 class="')
-    for (const key of ['kicker', 'homeTitle', 'homeLead', 'chipNoServer', 'chipOffline', 'chipOpenSource', 'chipNoAccount', 'start', 'startHint', 'guideOpen'] as const) {
+    for (const key of ['kicker', 'homeTitle', 'homeLead', 'chipNoServer', 'chipOffline', 'chipOpenSource', 'chipNoAccount', 'start', 'startHint', 'guideOpen', 'howTitle', 'howStep1', 'howStep3', 'faqTitle', 'faqUploadQ', 'faqUploadA', 'faqOneSideA'] as const) {
       expect(html, key).toContain(es[key])
     }
     // The no-cookies notice shows on a first visit: no stored date at build time.

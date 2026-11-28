@@ -16,12 +16,19 @@
   /** The card guide pages (ADR 0040), in the order of the document picker. */
   const guidePages = Object.entries(GUIDE_PAGE) as Array<[DocModel, string]>
 
+  /** The three steps and the common questions on the start page, in reading order. */
+  const howSteps = ['howStep1', 'howStep2', 'howStep3'] as const
+  const faq = [
+    ['faqWhatQ', 'faqWhatA'], ['faqUploadQ', 'faqUploadA'], ['faqTieQ', 'faqTieA'], ['faqWatermarkQ', 'faqWatermarkA'],
+    ['faqOfflineQ', 'faqOfflineA'], ['faqCostQ', 'faqCostA'], ['faqShareQ', 'faqShareA'], ['faqOneSideQ', 'faqOneSideA'],
+  ] as const
+
   const { lang, onStart, notice, onNoticeDismiss, onGuide }: { lang: Lang; onStart: () => void; notice: boolean; onNoticeDismiss: () => void; onGuide: () => void } = $props()
 </script>
 
 <!-- Wide screens: the promise and the start button on the left, the sample card on the right. While the
      notice floats at the bottom, room under the footer lets every footer link scroll above it. -->
-<section class="step home split flex-1 lg:grid-cols-2 lg:[grid-template-areas:'head_stage'_'side_stage'_'act_stage'_'foot_foot'] lg:pt-6 {notice ? 'lg:pb-60' : ''}">
+<section class="step home split flex-1 lg:grid-cols-2 lg:grid-rows-[auto_auto_1fr_auto_auto] lg:[grid-template-areas:'head_stage'_'side_stage'_'act_stage'_'info_info'_'foot_foot'] lg:pt-6 {notice ? 'lg:pb-60' : ''}">
   <div class="area-head flex flex-col gap-4">
     <div>
       <p class="kicker">{t(lang, 'kicker')}</p>
@@ -42,7 +49,8 @@
     </nav>
   </div>
 
-  <div class="panel area-stage" aria-hidden="true">
+  <!-- Not sticky like other steps' stage (area-stage): it would ride over the questions below. -->
+  <div class="panel lg:[grid-area:stage]" aria-hidden="true">
     <div class="px-4 pb-4">
       <!-- Decorative card: blue-grey blocks, three of them already blacked out (positions in styles.css). -->
       <div class="mini-card relative mx-auto mt-5 mb-3.5 aspect-[1.585] w-[min(270px,80%)] -rotate-3 rounded-[10px] border-[1.5px] border-coal bg-card lg:w-[min(360px,80%)]">
@@ -57,6 +65,30 @@
     <li><span class="chip">{t(lang, 'chipOpenSource')}</span></li>
     <li><span class="chip">{t(lang, 'chipNoAccount')}</span></li>
   </ul>
+
+  <!-- How it works and common questions: plain text, so people and search engines read the answers on
+       the start page itself (prerendered, ADR 0041). -->
+  <div class="area-info flex flex-col gap-8 border-t border-hair pt-6 lg:mt-4 lg:grid lg:grid-cols-[2fr_3fr] lg:gap-10" id="home-info">
+    <div>
+      <h2 id="how-title">{t(lang, 'howTitle')}</h2>
+      <ol class="mt-3 flex list-decimal flex-col gap-2 ps-6 text-base" aria-labelledby="how-title">
+        {#each howSteps as key (key)}
+          <li>{t(lang, key)}</li>
+        {/each}
+      </ol>
+    </div>
+    <div>
+      <h2 id="faq-title">{t(lang, 'faqTitle')}</h2>
+      <div class="mt-3 flex flex-col gap-4">
+        {#each faq as [q, a] (q)}
+          <div>
+            <h3 class="text-base">{t(lang, q)}</h3>
+            <p class="mt-1 text-muted">{t(lang, a)}</p>
+          </div>
+        {/each}
+      </div>
+    </div>
+  </div>
 
   <!-- On phones the notice reaches above the action bar: extra room keeps the last link clear of it. -->
   <footer class="area-foot p-4 text-center font-mono text-xs lg:mt-8 lg:border-t lg:border-hair lg:pt-6 {notice ? 'max-lg:pb-14' : ''}">

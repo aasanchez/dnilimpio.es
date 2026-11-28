@@ -23,6 +23,17 @@ test('the served HTML holds the Spanish title, description and preview tags', as
   expect(img.headers()['content-type']).toBe('image/png')
 })
 
+test('the served HTML holds the search words: heading, how it works and the questions', async ({ request }) => {
+  // Search engines read the prerendered start page (ADR 0041, 0044) before any script runs.
+  for (const [path, d] of [['./', es], ['./en', en]] as const) {
+    const html = await (await request.get(path)).text()
+    expect(html).toContain(`>${d['homeTitle'] ?? '-'}</h1>`)
+    for (const key of ['howTitle', 'howStep1', 'howStep2', 'howStep3', 'faqTitle', 'faqWhatQ', 'faqUploadQ', 'faqUploadA', 'faqTieQ', 'faqOneSideQ']) {
+      expect(html, `${path} ${key}`).toContain(d[key] ?? '-')
+    }
+  }
+})
+
 test('robots.txt and sitemap.xml are real files with the site address', async ({ request }) => {
   const robots = await request.get('./robots.txt')
   expect(robots.status()).toBe(200)

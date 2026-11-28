@@ -9,6 +9,7 @@ import { LANGS, type Lang } from '../../src/i18n/langs.ts'
 import { LANGUAGE_SEGMENTS, languagePage, route } from '../../src/offline/precache.ts'
 import { staticHead } from '../../src/seo/site.ts'
 import en from '../../src/i18n/locales/en.json'
+import esDict from '../../src/i18n/locales/es.json'
 
 const SITE = 'https://dnitapado.es/'
 const es = pageText('es')
@@ -95,10 +96,10 @@ describe('language addresses', () => {
 describe('prerendered start screens', () => {
   it('renders each language in its own words', async () => {
     const all = await renderHomes(process.cwd(), { __REPO_URL__: '"https://github.com/aasanchez/dnitapado.es"', __SITE_URL__: '"https://dnitapado.es/"', __BUILD_SHA__: '""', __BUILD_VERSION__: '""', __BUILD_TIME__: '0', __ARTICLE_LANGS__: '["es"]' }, ['es', 'en', 'ar'])
-    expect(all.get('es')).toContain('Comparte una copia limpia')
+    expect(all.get('es')).toContain(esDict.homeTitle)
     expect(all.get('en')).toContain(en.homeTitle)
     expect(all.get('en')).toMatch(/<option value="en"[^>]*selected/)
     expect(all.get('ar')).toMatch(/<option value="ar"[^>]*selected/)
-    expect(all.get('en')).not.toContain('Comparte una copia limpia')
+    expect(all.get('en')).not.toContain(esDict.homeTitle)
   }, 60_000)
 })
