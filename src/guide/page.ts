@@ -5,7 +5,8 @@
 // dialog says, with the same citations.
 //
 // The page runs no script (its CSP has script-src 'none'), holds no photo and loads only this site's
-// stylesheet. Plain TypeScript with no DOM: the build runs it in Node, and so do the unit tests.
+// stylesheet. Its one <script> element is a JSON-LD data block for search engines, which the browser
+// never runs (ADR 0048). Plain TypeScript with no DOM: the build runs it in Node, and so do the unit tests.
 
 import type { DocModel } from '../zones/types.ts'
 import { DOCUMENTS, documentOf } from '../zones/documents.ts'
@@ -13,7 +14,7 @@ import { GUIDE_PAGE } from './pages.ts'
 import { GENERAL_RISK, GUIDE, PLACES, textOf, type Cite, type Entry, type Place } from './entries.ts'
 import { SOURCES } from './sources.ts'
 import { appState, sourceOrder } from './view.ts'
-import { OG_IMAGE, OG_IMAGE_SIZE, OG_LOCALE } from '../seo/site.ts'
+import { OG_IMAGE, OG_IMAGE_SIZE, OG_LOCALE, jsonLd } from '../seo/site.ts'
 import type { Lang } from '../i18n/langs.ts'
 
 export { GUIDE_PAGE }
@@ -58,6 +59,43 @@ const PLACE_KEY: Readonly<Record<Place, string>> = { front: 'placeFront', back: 
  */
 export function guidePageDate (doc: DocModel): string {
   return sourceOrder(GUIDE[doc]).map((s) => SOURCES[s].checked).sort().at(-1) ?? ''
+}
+
+/**
+ * Structured data for search engines (schema.org, ADR 0048): the page is an article by the site,
+ * dated by its sources, that cites them; and its place in the site (BreadcrumbList). One JSON-LD data
+ * block, which the browser never runs.
+ */
+export function guideStructuredData (p: PageInput, headline: string, description: string, image: string): string {
+  const site = new URL('./', p.canonical).href
+  const name = shortName(p.t(`doc_${p.doc}`))
+  const by = { '@type': 'Organization', name: p.brand, url: site }
+  return jsonLd({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Article',
+        headline,
+        description,
+        inLanguage: p.lang,
+        url: p.canonical,
+        mainEntityOfPage: p.canonical,
+        image,
+        dateModified: guidePageDate(p.doc),
+        author: by,
+        publisher: by,
+        isAccessibleForFree: true,
+        citation: sourceOrder(GUIDE[p.doc]).map((s) => SOURCES[s].url),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: p.brand, item: site },
+          { '@type': 'ListItem', position: 2, name, item: p.canonical },
+        ],
+      },
+    ],
+  })
 }
 
 /** The document's name without the part in brackets, for the short title: "TIE (…)" becomes "TIE". */
@@ -153,6 +191,7 @@ export function renderGuidePage (p: PageInput): string {
 <meta property="og:image:width" content="${String(OG_IMAGE_SIZE.width)}" />
 <meta property="og:image:height" content="${String(OG_IMAGE_SIZE.height)}" />
 <meta name="twitter:card" content="summary_large_image" />
+${guideStructuredData(p, title, description, image)}
 <link rel="icon" href="./favicon.ico" sizes="32x32" />
 <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f5ed" />

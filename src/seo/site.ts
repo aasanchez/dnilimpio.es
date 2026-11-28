@@ -90,7 +90,7 @@ export const STRUCTURED_DATA_TYPE = 'application/ld+json'
  * written as `\u003c`, so no text can close the element.
  */
 export function structuredData (site: string): string {
-  const data = {
+  return jsonLd({
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: BRAND,
@@ -103,9 +103,22 @@ export function structuredData (site: string): string {
     isAccessibleForFree: true,
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
     license: 'https://www.gnu.org/licenses/agpl-3.0.html',
-  }
+  })
+}
+
+/**
+ * One JSON-LD data block (ADR 0046, 0048). `<` is written as `\u003c`, so the element holds no `<`
+ * and no text can close it.
+ */
+export function jsonLd (data: Readonly<Record<string, unknown>>): string {
   return `<script type="${STRUCTURED_DATA_TYPE}">${JSON.stringify(data).replaceAll('<', '\\u003c')}</script>`
 }
+
+/**
+ * The page without its JSON-LD data blocks, to check that no other script is left. A data block
+ * holds no `<` (jsonLd() above), so this pattern can only match a whole block.
+ */
+export const withoutDataBlocks = (html: string): string => html.replace(/<script type="application\/ld\+json">[^<]*<\/script>/g, '')
 
 /** robots.txt: every page may be crawled; the sitemap's address. */
 export function robotsTxt (site: string): string {

@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { LANGS } from '../../src/i18n/index.ts'
 import { isPrecached } from '../../src/offline/precache.ts'
-import { HREFLANG_LANGS, OG_LOCALE, canonicalUrl, hreflangAlternates, langUrl, normalizeSiteUrl, pageTitle, robotsTxt, sitemapXml, startPageSitemap, staticHead, structuredData } from '../../src/seo/site.ts'
+import { HREFLANG_LANGS, OG_LOCALE, canonicalUrl, hreflangAlternates, langUrl, normalizeSiteUrl, pageTitle, robotsTxt, sitemapXml, startPageSitemap, staticHead, structuredData, withoutDataBlocks } from '../../src/seo/site.ts'
 import es from '../../src/i18n/locales/es.json'
 
 describe('site address', () => {
@@ -119,6 +119,12 @@ describe('structured data (ADR 0046)', () => {
     expect(d['image']).toBe('https://dnitapado.es/icons/og-image.png')
     expect(d['inLanguage']).toEqual([...LANGS])
     expect(d['offers']).toEqual({ '@type': 'Offer', price: '0', priceCurrency: 'EUR' })
+  })
+  it('withoutDataBlocks() removes data blocks only, never a script the browser runs', () => {
+    expect(withoutDataBlocks(`<p>${block}</p>`)).toBe('<p></p>')
+    for (const s of ['<script>alert(1)</script>', '<script type="module" src="x.js"></script>', '<script type="application/ld+json" src="x.js"></script>', '<script type="application/ld+json"><b></script>']) {
+      expect(withoutDataBlocks(s)).toMatch(/<script/)
+    }
   })
   it('follows the site address, and no text can close the element', () => {
     const fork = structuredData('https://example.org/x/</script><script>alert(1)</script>/')
