@@ -7,7 +7,7 @@ import { GUIDE_CSP, GUIDE_CSP_DIRECTIVES } from '../../scripts/csp.ts'
 import { GUIDE_PAGE_CSP, headersFor, hostHeaderRules } from '../../scripts/headers.ts'
 import { GUIDE_PAGES } from '../../src/offline/precache.ts'
 import { GENERAL_RISK, GUIDE, textOf } from '../../src/guide/entries.ts'
-import { GUIDE_PAGE, PAGE_DOCS, esc, renderGuidePage } from '../../src/guide/page.ts'
+import { GUIDE_PAGE, PAGE_DOCS, esc, guidePageDate, renderGuidePage } from '../../src/guide/page.ts'
 import { SOURCES } from '../../src/guide/sources.ts'
 import { sourceOrder } from '../../src/guide/view.ts'
 import { DOCUMENTS } from '../../src/zones/documents.ts'
@@ -70,11 +70,33 @@ describe('guide pages', () => {
         expect(html).toContain('<a class="button" href="./">')
       })
 
-      it('has a title and a description that name the document', () => {
-        const name = t(`doc_${doc}`)
-        expect(html).toContain(`<title>${esc(name)}: `)
+      it('has a short title and a description that name the document', () => {
+        const name = t(`doc_${doc}`).replace(/\s*\(.*\)$/, '')
+        const title = /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? ''
+        expect(title.startsWith(`${esc(name)}: `)).toBe(true)
+        expect(title.endsWith(' · DNI Tapado.es')).toBe(true)
+        // Search results cut a title at about 60 characters.
+        expect(title.length).toBeLessThanOrEqual(65)
         expect(html).toMatch(/<meta name="description" content="[^"]{50,160}" \/>/)
         expect(html).toContain('<html lang="es" dir="ltr">')
+      })
+
+      it('has the tags a link preview reads, with an absolute image', () => {
+        const title = /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? ''
+        expect(html).toContain(`<meta property="og:title" content="${title}" />`)
+        expect(html).toContain(`<meta property="og:url" content="https://dnitapado.es/${GUIDE_PAGE[doc]}" />`)
+        expect(html).toContain('<meta property="og:type" content="article" />')
+        expect(html).toContain('<meta property="og:locale" content="es_ES" />')
+        expect(html).toContain('<meta property="og:image" content="https://dnitapado.es/icons/og-image.png" />')
+        expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />')
+        expect(html).toMatch(/<meta property="og:description" content="[^"]{50,160}" \/>/)
+      })
+
+      it('dates the page by the newest check of its sources', () => {
+        const dates = sourceOrder(GUIDE[doc]).map((s) => SOURCES[s].checked)
+        expect(guidePageDate(doc)).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+        expect(dates).toContain(guidePageDate(doc))
+        for (const d of dates) expect(d <= guidePageDate(doc)).toBe(true)
       })
 
       it('has no empty text and no unfilled placeholder', () => {
@@ -89,6 +111,10 @@ describe('guide pages', () => {
     const html = render('tie', { g: (k) => (k === 'nie_title' ? '<img src=x onerror=alert(1)>"&' : g(k)) })
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;&quot;&amp;')
     expect(html).not.toContain('<img')
+    const short = render('tie', { g: (k) => (k === 'pageSeoTitle' ? '"><b>{doc}' : g(k)) })
+    expect(short).toContain('<title>&quot;&gt;&lt;b&gt;TIE · DNI Tapado.es</title>')
+    expect(short).toContain('content="&quot;&gt;&lt;b&gt;TIE · DNI Tapado.es"')
+    expect(short).not.toContain('<b>')
   })
 
   it('their CSP allows no script, no connection and no frame', () => {

@@ -19,6 +19,7 @@
   "repealed": "ei ole enää voimassa; mainitaan sen nojalla myönnettyjen korttien vuoksi",
   "newTab": "avautuu uuteen välilehteen",
   "pageTitle": "{doc}: mitä kukin tieto on ja miten kopiota voidaan käyttää väärin",
+  "pageSeoTitle": "{doc}: mitä tietoja siinä on ja mitkä peittää",
   "pageDescription": "Opas asiakirjan {doc} jokaiseen osaan: mikä se on, miten kopiota voidaan käyttää väärin ja mikä virallinen teksti sen sanoo.",
   "pageOther": "Opas kullekin kortille",
   "pageCtaTitle": "Peitä tiedot ennen kuin lähetät kopion",

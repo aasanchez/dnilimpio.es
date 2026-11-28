@@ -71,12 +71,15 @@ test.describe('with the service worker', () => {
   })
 })
 
-test('the sitemap lists each page, and each page names its own address as canonical', async ({ page, request }) => {
+test('the sitemap lists and dates each page, and each page names its own address as canonical and in its preview', async ({ page, request }) => {
   const sitemap = await (await request.get('./sitemap.xml')).text()
   for (const file of GUIDE_PAGES) {
-    expect(sitemap).toContain(`<loc>https://dnitapado.es/${file}</loc>`)
+    expect(sitemap).toMatch(new RegExp(`<loc>https://dnitapado\\.es/${file.replace('.', '\\.')}</loc>\\n {4}<lastmod>\\d{4}-\\d{2}-\\d{2}</lastmod>`))
     await page.goto(`./${file}`)
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://dnitapado.es/${file}`)
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', `https://dnitapado.es/${file}`)
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', 'https://dnitapado.es/icons/og-image.png')
+    expect((await page.title()).length).toBeLessThanOrEqual(65)
   }
 })
 

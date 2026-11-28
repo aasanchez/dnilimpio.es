@@ -117,13 +117,16 @@ export interface SitemapUrl {
   readonly loc: string
   /** The same page in each language (hreflang), absolute URLs. Empty for a page in one language. */
   readonly alternates?: ReadonlyArray<{ readonly hreflang: string; readonly href: string }>
+  /** The day the page's content last changed (YYYY-MM-DD). Left out when the build cannot know it. */
+  readonly lastmod?: string
 }
 
 /** sitemap.xml with optional hreflang alternates (xhtml:link), as search engines read them. */
 export function sitemapXml (urls: readonly SitemapUrl[]): string {
   const body = urls.map((u) => {
     const alt = (u.alternates ?? []).map((a) => `\n    <xhtml:link rel="alternate" hreflang="${escapeAttr(a.hreflang)}" href="${escapeAttr(a.href)}"/>`).join('')
-    return `  <url>\n    <loc>${escapeText(u.loc)}</loc>${alt}\n  </url>`
+    const mod = u.lastmod === undefined ? '' : `\n    <lastmod>${escapeText(u.lastmod)}</lastmod>`
+    return `  <url>\n    <loc>${escapeText(u.loc)}</loc>${mod}${alt}\n  </url>`
   }).join('\n')
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${body}\n</urlset>\n`
 }

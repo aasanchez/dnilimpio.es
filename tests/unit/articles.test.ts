@@ -268,6 +268,11 @@ describe('loading content/articles', () => {
     ])
     expect(urls[3]?.alternates).toEqual([{ hreflang: 'en', href: 'https://dnitapado.es/en/articles/hello' }, { hreflang: 'es', href: 'https://dnitapado.es/articles/hola' }])
     expect(urls[4]?.alternates).toEqual([])
+    // An article's <lastmod> is its last update, else its date; a list has none.
+    expect(urls[3]?.lastmod).toBe('2026-11-27')
+    expect(urls[0]?.lastmod).toBeUndefined()
+    const updated = articleSitemap(SITE, loadArticles(tmp({ 'es/hola.md': FM.replace('date: 2026-11-27', 'date: 2026-11-27\nupdated: 2026-11-28') }), '2026-12-31'))
+    expect(updated[1]?.lastmod).toBe('2026-11-28')
   })
   it('leaves Valencian out of hreflang, as the start page does', () => {
     const v = { lang: 'ca-ES-valencia' as const, group: 'g' }

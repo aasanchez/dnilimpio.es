@@ -86,6 +86,7 @@ export function articleSitemap (site: string, articles: readonly Source[]): Site
   const lists = articleLangs(articles).map((l) => ({ loc: new URL(articleFolder(l), site).href }))
   const pages = articles.map((a) => ({
     loc: new URL(articlePath(a.lang, a.slug), site).href,
+    lastmod: a.meta.updated ?? a.meta.date,
     alternates: alternatesOf(a, articles).map((o) => ({ hreflang: o.lang, href: new URL(articlePath(o.lang, o.article.slug), site).href })),
   }))
   return [...lists, ...pages]
