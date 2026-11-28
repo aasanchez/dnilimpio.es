@@ -190,6 +190,7 @@
 @utility area-head { @variant lg { grid-area: head; } }
 @utility area-side { @variant lg { grid-area: side; } }
 @utility area-foot { @variant lg { grid-area: foot; } }
+@utility area-info { @variant lg { grid-area: info; } }
 @utility area-stage { @variant lg { grid-area: stage; position: sticky; top: 5rem; } }
 
 @layer components {

@@ -133,6 +133,9 @@ at the bottom within thumb reach, and a progress bar at the top (**Photos**, **C
 
 1. **Start screen.** It explains what the tool does and has:
    - **What is on my card?**, the [card guide](#supported-documents).
+   - **How it works** in three steps and eight common questions (what to cover, uploads, TIE and NIE,
+     watermark text, offline use, cost, WhatsApp, one side only), as plain text on the page, so people
+     and search engines read the answers without opening the tool.
    - The **no-cookies notice**, in the place where other sites put a cookie banner. It only informs:
      there is nothing to accept. English text: *"No cookies, no profiles, no data to sell. Your
      document is processed on your device, and the app does not upload it. Every Eurocrat's dream:
@@ -779,6 +782,7 @@ show the current state.
 | Structured data on the card guide pages: article and breadcrumb trail, never run by the browser (ADR 0048) | Done |
 | One address per language (`/en`, `/fr` and so on), with hreflang links and sitemap entries | Done |
 | Start screen prerendered in Spanish in `index.html`, for search engines and a faster first paint (ADR 0041) | Done |
+| Start screen text uses the words people search for (cover data, watermark, DNI, TIE, NIE), with how it works and eight common questions, in every language | Done |
 | Each language's address sends its own page: `lang`, title, description, Open Graph, canonical and start screen in that language, for link previews and crawlers without JavaScript (ADR 0044) | Done |
 | An unknown address gets status 404 and a styled not-found page with no script, in the language of its folder, from the host and the service worker, offline too (ADR 0045) | Done |
 | Languages: 31 in the specification | 13 today |
@@ -868,7 +872,7 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | Redaction | `zones`, `fields`, `masks`, `raster`, `snap` | Zone data for every document (inside the card, sources, defaults), field defaults and warnings, fields with the front alone, manual box maths, every masked pixel opaque black (also after the watermark, checked on the final pixels), Fit to the text (a box only grows, by at most half its size, and stays on the card) |
 | Output | `watermark`, `jpeg`, `pdf` | Watermark wrapping, direction and style limits; JPEG metadata segments dropped; PDF layout (one page; each side at 130% of the ID-1 card size, centred; front above back), images at full resolution, no metadata, no text, deterministic output, file name `redacted-dni.pdf` or `redacted-tie.pdf` |
 | Property tests | `redaction.property`, `geometry.property`, `pdf.property` | Generated inputs, hundreds per property: manual boxes stay on the card; zones to pixels cover the whole rectangle and add less than a pixel; every pixel a mask touches, plus its margin, is opaque black and the rest of the photo is unchanged; after a watermark every masked pixel is still black, and a canvas that leaves one pixel grey is caught; every hidden field of every document, side and box placement exports black; homography corners, round trips and degenerate quads; the warp reads the card only from inside its corners; the PDF layout for any image size; no metadata from any JPEG segment reaches the PDF |
-| Prerender | `prerender` | The build's copy of the start screen is `App.svelte` rendered in Spanish for a first visit (heading, lead, chips, Start, notice); no comments or dialogs; a script, style, event handler or file-loading element fails the build; the copy goes into an empty `<main id="app">` only, marked `inert`; no browser object is left set after the render |
+| Prerender | `prerender` | The build's copy of the start screen is `App.svelte` rendered in Spanish for a first visit (heading, lead, chips, how it works, common questions, Start, notice); no comments or dialogs; a script, style, event handler or file-loading element fails the build; the copy goes into an empty `<main id="app">` only, marked `inert`; no browser object is left set after the render |
 | Language pages | `language-pages` | Each language page is `index.html` with its own `lang`, `dir`, head, canonical, noscript and start screen, and the same scripts and CSP; the build fails when a piece is missing; one page per language but Spanish; the host and the service worker show it at the language's address (not another case, a deeper path or a build without it); the start screen renders in each language |
 | Not-found pages | `not-found` | One page at the root, in the Spanish articles folder and two per other language; each in its language (Arabic right to left), not indexed, with no script, only relative links and the start page linked from its depth; text escaped; the preview server picks the 404.html of the nearest folder, never one outside the build |
 | Audit prompt | `audit-prompt` | The prompt points at the repository and the live site, asks one question limited to the document and one final question for a plain-language conclusion, stays short and states no claim |
@@ -921,7 +925,7 @@ Every spec runs in Chromium. The specs marked **(all browsers)** also run in Fir
 | `a11y` | axe-core scan ([ADR 0042](docs/adr/0042-axe-accessibility-scan.md)) of every screen, from the start screen and its dialogs to the review and the thanks page, in Spanish and Arabic, on a wide screen in light mode and a phone in dark mode: no serious or critical finding against WCAG 2.2 A and AA and axe's best practices |
 | `layout` | Phone: one column, main button in a sticky bar at the bottom, no sideways scroll. Wide screen: card on the left, tools and main button on the right, steps in the top bar |
 | `install` | Manifest with relative URLs, icon sizes, Chromium installability check, install link on Chromium and iOS, hidden once installed |
-| `seo` | The served HTML already holds the Spanish title, description and link preview tags; the preview image exists; `robots.txt` and `sitemap.xml` are real files with the site address and every language address; the served HTML holds the hreflang links; one canonical address per language; a language change updates title, description and preview text |
+| `seo` | The served HTML already holds the Spanish title, description and link preview tags; the served Spanish and English pages hold the heading, how it works and the common questions; the preview image exists; `robots.txt` and `sitemap.xml` are real files with the site address and every language address; the served HTML holds the hreflang links; one canonical address per language; a language change updates title, description and preview text |
 | `brand`, `nagwara`, `source-link`, `version` | Logo and title, NagWara band, source link in a new tab, release version linked to its GitHub Release, build SHA and relative deploy time (also offline) |
 | `visual` | Screenshots of the start screen, its footer, the editor, the editor's tools, the review and the stats page at 390 × 844 px, in Spanish and Arabic, compared with the baselines. Runs only in the pinned container (see below, [ADR 0036](docs/adr/0036-visual-regression-in-pinned-container.md)) |
 
