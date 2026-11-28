@@ -1,38 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The audit prompt states the claims and where the evidence is. These tests keep it honest: every
-// path it names exists, and its list of stats fields is the list the thanks page sends.
-import { existsSync } from 'node:fs'
+// The audit prompt is one neutral question. These tests keep it that way: it points at the
+// repository and the live site, asks one question, asks for evidence and states no claim.
 import { describe, expect, it } from 'vitest'
-import { AUDIT_PROMPT, LIVE_SITE } from '../../src/security/audit-prompt.ts'
-import { encodeStats, type UsageStats } from '../../src/stats/schema.ts'
-
-const sample: UsageStats = { doc: 'tie', ai: 'right', back: true, fields: ['can'], boxes: 0, mark: false, grey: false, lang: 'es', app: 'dev', src: 'file', ocr: false, moved: [], device: 'phone', os: 'android', browser: 'chrome', bv: 131, pwa: false }
+import { AUDIT_PROMPT, LIVE_SITE, REPOSITORY } from '../../src/security/audit-prompt.ts'
 
 describe('audit prompt', () => {
-  it('names only files that exist', () => {
-    const paths = AUDIT_PROMPT.match(/\b(?:src|scripts|worker|tests|docs)\/[\w./-]+\.\w+/g) ?? []
-    expect(paths.length).toBeGreaterThan(5)
-    for (const p of paths) expect(existsSync(p), p).toBe(true)
-  })
-
-  it('lists exactly the stats fields the thanks page sends, in order', () => {
-    const keys = encodeStats(sample).split('&').map((pair) => pair.split('=')[0]).join(', ')
-    expect(AUDIT_PROMPT).toContain(`Fields (src/stats/schema.ts): ${keys}.`)
-  })
-
-  it('names what the receiver adds and what is not absolute', () => {
-    // The Worker stores the country with each row (endpoint.ts dataPoint), so the claim says so.
-    expect(AUDIT_PROMPT).toContain('adds the country Cloudflare reads from the request')
-    // CSP cannot block a top-level navigation, and the stats are usage data.
-    expect(AUDIT_PROMPT).toContain('CSP cannot stop a top-level navigation')
-    expect(AUDIT_PROMPT).not.toMatch(/no analytics|cannot reach any other origin/)
-  })
-
-  it('points at the live site and asks for findings, not a verdict', () => {
+  it('points at the repository and the live site', () => {
+    expect(REPOSITORY).toBe('https://github.com/aasanchez/dnitapado.es')
     expect(LIVE_SITE).toBe('https://dnitapado.es/')
+    expect(AUDIT_PROMPT).toContain(REPOSITORY)
     expect(AUDIT_PROMPT).toContain(LIVE_SITE)
-    expect(AUDIT_PROMPT).toContain('Try to disprove each one.')
-    expect(AUDIT_PROMPT).toContain('Do not give an overall pass or fail.')
-    expect(AUDIT_PROMPT.length).toBeLessThan(3000)
+  })
+
+  it('asks one question about the document and one final question for the conclusion', () => {
+    expect(AUDIT_PROMPT.match(/\?/g)).toHaveLength(2)
+    expect(AUDIT_PROMPT).toContain('Is my document (the photos I load and any data read from them) ever handled by a third party, or by any system or server outside my device')
+  })
+
+  it('limits the question to the document, and keeps the stats in scope if they carry document data', () => {
+    expect(AUDIT_PROMPT).toContain('Answer only about the document.')
+    expect(AUDIT_PROMPT).toContain('The opt-in anonymous usage statistics are out of scope, unless they carry data from the document.')
+  })
+
+  it('asks for evidence and what could not be checked', () => {
+    expect(AUDIT_PROMPT).toContain('Support each point with evidence: file and line, or URL and response.')
+    expect(AUDIT_PROMPT).toContain('Say what you could not check.')
+  })
+
+  it('ends with the final question, answered in plain words as the conclusion', () => {
+    expect(AUDIT_PROMPT.trimEnd()).toMatch(/To conclude, answer in plain, non-technical words: is this site reasonably safe for keeping my personal identity data private\?$/)
+  })
+
+  it('stays short and states no claim for the agent to accept', () => {
+    expect(AUDIT_PROMPT.length).toBeLessThan(800)
+    expect(AUDIT_PROMPT).not.toMatch(/Claims:|is not sent|are not sent|Do not report|no analytics/)
   })
 })

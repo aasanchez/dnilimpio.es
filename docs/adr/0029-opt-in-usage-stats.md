@@ -84,6 +84,8 @@ Options considered:
    document and are sent only on a tap (Alexis: the notice is not a disclaimer for an optional
    feature). The thanks page says what is sent and what is not, before anything is sent.
    The audit prompt names this send and its fixed fields, and asks the auditor to try to disprove the claims.
+   (Since 2026-11-28 the prompt is one question about the document and no longer lists this send;
+   the README and the thanks page still describe it.)
 
 ## Consequences
 
