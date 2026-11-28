@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The audit prompt is one neutral question. These tests keep it that way: it points at the
-// repository and the live site, asks one question, asks for evidence and states no claim.
+// repository and the live site, asks one question and a closing question, and states no claim.
 import { describe, expect, it } from 'vitest'
 import { AUDIT_PROMPT, LIVE_SITE, REPOSITORY } from '../../src/security/audit-prompt.ts'
 
@@ -20,11 +20,6 @@ describe('audit prompt', () => {
   it('limits the question to the document, and keeps the stats in scope if they carry document data', () => {
     expect(AUDIT_PROMPT).toContain('Answer only about the document.')
     expect(AUDIT_PROMPT).toContain('The opt-in anonymous usage statistics are out of scope, unless they carry data from the document.')
-  })
-
-  it('asks for evidence and what could not be checked', () => {
-    expect(AUDIT_PROMPT).toContain('Support each point with evidence: file and line, or URL and response.')
-    expect(AUDIT_PROMPT).toContain('Say what you could not check.')
   })
 
   it('ends with the final question, answered in plain words as the conclusion', () => {

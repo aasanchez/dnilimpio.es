@@ -612,16 +612,14 @@ commit. A local build with `build.sourcemap` turned on is for reading only: its 
 hashes differ from the deployed build.
 
 **With an AI coding agent.** **Check it with your AI** on the start screen (in the footer and in the
-no-cookies notice) opens a short audit prompt to copy into an AI coding agent. It points the
-agent at this repository and the live site at <https://dnitapado.es/>, and asks whether the document
-is ever handled by a third party, or by any system or server outside the device. It limits the answer to the document (the photos and any
-data read from them): the opt-in anonymous usage stats are out of scope, unless they carry data from
-the document. It asks for evidence for each point (file and line, or URL
-and response) and for what the agent could not check. It ends with a final question, answered in
+no-cookies notice) opens a short audit prompt to copy into an AI coding agent. It points the agent
+at this repository and the live site at <https://dnitapado.es/>, and asks whether the document is
+ever handled by a third party, or by any system or server outside the device. It limits the answer
+to the document (the photos and any data read from them): the opt-in anonymous usage stats are out
+of scope, unless they carry data from the document. It ends with a final question, answered in
 plain, non-technical words as the conclusion: is the site reasonably safe for keeping personal
-identity data private? It states no claim and does not argue for one.
-The checks above are the ones to ask for if you want more detail. Copying uses the clipboard
-only; nothing is sent. The text is in [`src/security/audit-prompt.ts`](src/security/audit-prompt.ts).
+identity data private? It states no claim and does not argue for one. The checks above are the
+ones to ask for if you want more detail. Copying uses the clipboard only; nothing is sent. The text is in [`src/security/audit-prompt.ts`](src/security/audit-prompt.ts).
 
 **Check that the live files are the ones built from this repository**
 
@@ -873,7 +871,7 @@ cases, add `PROPERTY_RUNS=5000` and `--testTimeout=0`.
 | Prerender | `prerender` | The build's copy of the start screen is `App.svelte` rendered in Spanish for a first visit (heading, lead, chips, Start, notice); no comments or dialogs; a script, style, event handler or file-loading element fails the build; the copy goes into an empty `<main id="app">` only, marked `inert`; no browser object is left set after the render |
 | Language pages | `language-pages` | Each language page is `index.html` with its own `lang`, `dir`, head, canonical, noscript and start screen, and the same scripts and CSP; the build fails when a piece is missing; one page per language but Spanish; the host and the service worker show it at the language's address (not another case, a deeper path or a build without it); the start screen renders in each language |
 | Not-found pages | `not-found` | One page at the root, in the Spanish articles folder and two per other language; each in its language (Arabic right to left), not indexed, with no script, only relative links and the start page linked from its depth; text escaped; the preview server picks the 404.html of the nearest folder, never one outside the build |
-| Audit prompt | `audit-prompt` | The prompt points at the repository and the live site, asks one question limited to the document and one final question for a plain-language conclusion, asks for evidence and what could not be checked, stays short and states no claim |
+| Audit prompt | `audit-prompt` | The prompt points at the repository and the live site, asks one question limited to the document and one final question for a plain-language conclusion, stays short and states no claim |
 | Keyboard focus | `focus-rescue` | Focus that falls back to the page (also while it still sits on a control that just disabled or removed itself) moves to the first control that takes it; how far to scroll so a focused control clears the sticky top bar, the sticky action bar or the floating notice, without leaving the window |
 | Editor redraws | `redraw` | One render per animation frame, only the side on screen, only when its choices changed; every changed side rendered at once before the review; a failed render is retried; nothing runs after the editor closes |
 | Articles | `articles` | Addresses and slugs, front matter checks (keys, lengths, days, sources required for a guide), Markdown rules (no raw HTML, no `#` heading, no root-absolute or unknown links, images next to the article with a description), pages (CSP, canonical, hreflang, translations, sources, escaping), loading (folders, drafts, future dates, translations of nothing), sitemap (with each article's last update as `<lastmod>`), host rules and service worker routes |
