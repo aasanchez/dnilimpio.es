@@ -89,11 +89,10 @@ test('offers an audit prompt to copy into an AI coding agent, from the notice an
   await reader.goto('/__clipboard')
   const copied = await reader.evaluate(async () => await navigator.clipboard.readText())
   await reader.close()
-  // One neutral question about the document, with evidence asked for and no claim to accept.
+  // One neutral question about the document, with no claim to accept.
   expect(copied).toContain('ever handled by a third party, or by any system or server outside my device')
   expect(copied).toContain('Answer only about the document.')
   expect(copied).toContain('To conclude, answer in plain, non-technical words: is this site reasonably safe')
-  expect(copied).toContain('Support each point with evidence')
   expect(copied.match(/\?/g)).toHaveLength(2)
   expect(copied.length).toBeLessThan(800)
   await page.keyboard.press('Escape')

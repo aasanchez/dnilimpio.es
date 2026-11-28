@@ -2,7 +2,7 @@
 // The prompt the start screen offers to copy into an AI coding agent, so anyone can check the
 // privacy claim against the source code and the live site instead of taking it on trust. English
 // on purpose: coding agents work best with it, and the code it points at is in English.
-// Keep it to one question and a closing question, and neutral: it says where to look and asks for evidence. It states no
+// Keep it to one question and a closing question, and neutral: it says where to look and what to answer. It states no
 // claim, does not explain why something is fine and does not answer findings in advance. It limits
 // the question to the document, so the opt-in usage stats are not reported as a document leak,
 // but still in scope if they carry anything from the document. It ends with a final question
@@ -17,8 +17,6 @@ export const AUDIT_PROMPT = `Read the code at ${REPOSITORY} and check the live s
 Is my document (the photos I load and any data read from them) ever handled by a third party, or by any system or server outside my device?
 
 Answer only about the document. The opt-in anonymous usage statistics are out of scope, unless they carry data from the document.
-
-Support each point with evidence: file and line, or URL and response. Say what you could not check.
 
 To conclude, answer in plain, non-technical words: is this site reasonably safe for keeping my personal identity data private?
 `
